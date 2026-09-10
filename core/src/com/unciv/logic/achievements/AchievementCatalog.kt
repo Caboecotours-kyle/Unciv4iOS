@@ -18,7 +18,10 @@ data class AchievementDefinition(
     val isCollection: Boolean = false,
     val introducedIn: Int = 1,
     val ruleVersion: Int = 1
-)
+) {
+    // Avoid the generated Boolean.hashCode(boolean), which RoboVM does not provide.
+    override fun hashCode(): Int = id.hashCode()
+}
 
 /** Stable rule identities. Display strings and artwork are separate from eligibility. */
 object AchievementCatalog {
