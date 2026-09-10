@@ -1,6 +1,7 @@
 package com.unciv.ui.screens.worldscreen.unit
 
 import com.unciv.logic.automation.Timers
+import com.unciv.logic.achievements.AchievementTracker
 import com.unciv.models.metadata.GameSettings
 import com.unciv.ui.screens.worldscreen.WorldScreen
 import com.unciv.utils.Concurrency
@@ -62,6 +63,7 @@ class AutoPlay(private var autoPlaySettings: GameSettings.GameSettingsAutoPlay) 
         job: suspend () -> Unit,
     ) {
         if (autoPlayTurnInProgress) throw IllegalStateException("Trying to start an AutoPlay job while a job is currently running")
+        if (autoPlaySettings.fullAutoPlayAI) AchievementTracker.disqualify(worldScreen.gameInfo)
         if (!setPlayerTurnAfterEnd) {
             if (!worldScreen.isPlayersTurn) return
             turnEndAuthorized.set(true)

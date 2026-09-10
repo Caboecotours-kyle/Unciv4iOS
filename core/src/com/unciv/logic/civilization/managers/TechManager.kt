@@ -1,5 +1,7 @@
 package com.unciv.logic.civilization.managers
 
+import com.unciv.logic.achievements.AchievementTracker
+
 import com.unciv.Constants
 import com.unciv.logic.IsPartOfGameInfoSerialization
 import com.unciv.logic.automation.Timers.Companion.timeThis
@@ -306,6 +308,7 @@ class TechManager : IsPartOfGameInfoSerialization {
         techsInProgress.remove(techName)
         researchedTechnologies = researchedTechnologies.withItem(newTech)
         addTechToTransients(newTech)
+        AchievementTracker.technologyAcquired(civInfo, techName)
 
         moveToNewEra(showNotification)
 

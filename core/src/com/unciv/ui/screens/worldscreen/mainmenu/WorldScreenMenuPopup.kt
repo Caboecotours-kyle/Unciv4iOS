@@ -33,7 +33,8 @@ class WorldScreenMenuPopup(
         val showSave = !worldScreen.gameInfo.gameParameters.isOnlineMultiplayer
         val showMusic = worldScreen.game.musicController.isMusicAvailable()
         val showConsole = showSave && expertMode
-        val buttonCount = 8 + (if (showSave) 1 else 0) + (if (showMusic) 1 else 0) + (if (showConsole) 1 else 0)
+        val buttonCount = 8 + (if (showSave) 1 else 0) + (if (showMusic) 1 else 0) + (if (showConsole) 1 else 0) +
+            (if (worldScreen.game.achievementsAvailable) 2 else 0)
 
         val emptyPrefHeight = this.prefHeight
         val firstCell = addButton("Main menu") {
@@ -65,6 +66,16 @@ class WorldScreenMenuPopup(
             close()
             worldScreen.game.pushScreen{ VictoryScreen(worldScreen) }
         }.nextColumn()
+        if (worldScreen.game.achievementsAvailable) {
+            addButton("Achievements") {
+                close()
+                worldScreen.game.showAchievements()
+            }.nextColumn()
+            addButton("Achievement guide") {
+                close()
+                worldScreen.game.showAchievementGuide()
+            }.nextColumn()
+        }
         val optionsCell = addButton("Options", KeyboardBinding.Options) {
             close()
             worldScreen.openOptionsPopup()

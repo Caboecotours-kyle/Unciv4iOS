@@ -1,5 +1,7 @@
 package com.unciv.logic.map.tile
 
+import com.unciv.logic.achievements.AchievementTracker
+
 import com.unciv.Constants
 import com.unciv.logic.civilization.Civilization
 import com.unciv.logic.civilization.LocationAction
@@ -218,6 +220,7 @@ class TileImprovementFunctions(val tile: Tile) {
             val wasEncampment = tile.isBarbarianEncampment()
             tile.improvementIsPillaged = false
             tile.setImprovementBasic(null)
+            AchievementTracker.improvementChanged(tile, null)
             updateVisibility()
             updateCity()
             if (!wasEncampment) return
@@ -239,6 +242,7 @@ class TileImprovementFunctions(val tile: Tile) {
             else -> {
                 tile.improvementIsPillaged = false
                 tile.setImprovementBasic(improvement)
+                AchievementTracker.improvementChanged(tile, unit)
                 improvementFieldHasChanged = true
                 if (improvement.hasUnique(UniqueType.Irremovable) || tile.isMarkedForCreatesOneImprovement(improvement.name)) {
                     // I'm not sure what would happen if we try to replace an irremovable improvement

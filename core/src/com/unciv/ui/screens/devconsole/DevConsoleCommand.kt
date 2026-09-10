@@ -1,5 +1,7 @@
 package com.unciv.ui.screens.devconsole
 
+import com.unciv.json.json
+import com.unciv.logic.achievements.AchievementTracker
 import com.unciv.ui.screens.devconsole.CliInput.Companion.getAutocompleteString
 import com.unciv.ui.screens.devconsole.CliInput.Companion.orEmpty
 
@@ -25,7 +27,16 @@ internal open class ConsoleAction(
     override fun handle(console: DevConsolePopup, params: List<CliInput>): DevConsoleResponse {
         return try {
             validateFormat(format, params)
-            action(console, params)
+            val game = console.gameInfo
+            val before = if (game.achievements?.ended == false) json().toJson(game) else null
+            AchievementTracker.beginAction(game)
+            try {
+                action(console, params)
+            } finally {
+                // Read-only and invalid commands do not disqualify a game. No intermediate debug award can escape.
+                if (before != null && before != json().toJson(game)) AchievementTracker.disqualify(game)
+                AchievementTracker.endAction(game, successful = false)
+            }
         } catch (hintException: ConsoleHintException) {
             DevConsoleResponse.hint(hintException.hint)
         } catch (errorException: ConsoleErrorException) {

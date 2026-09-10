@@ -1,5 +1,7 @@
 package com.unciv.logic.map.mapunit
 
+import com.unciv.logic.achievements.AchievementTracker
+
 import com.unciv.Constants
 import com.unciv.logic.IsPartOfGameInfoSerialization
 import com.unciv.logic.MultiFilter
@@ -964,6 +966,8 @@ class MapUnit : IsPartOfGameInfoSerialization {
                 .forEach { unit -> unit.gift(recipient) }
         assignOwner(recipient)
         recipient.cache.updateViewableTiles()
+        AchievementTracker.unitAcquired(this)
+        AchievementTracker.settle(recipient.gameInfo)
     }
 
     /** Destroys the unit and gives stats if its a great person */
@@ -1165,6 +1169,7 @@ class MapUnit : IsPartOfGameInfoSerialization {
     fun capturedBy(captor: Civilization) {
         civ.units.removeUnit(this)
         assignOwner(captor)
+        AchievementTracker.unitAcquired(this)
         currentMovement = 0f
         // It's possible that the unit can no longer stand on the tile it was captured on.
         // For example, because it's embarked and the capturing civ cannot embark units yet.

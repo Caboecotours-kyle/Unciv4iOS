@@ -1,5 +1,8 @@
 package com.unciv.logic.civilization.managers
 
+import com.unciv.logic.achievements.AchievementRules
+import com.unciv.logic.achievements.AchievementTracker
+
 import com.unciv.logic.IsPartOfGameInfoSerialization
 import com.unciv.logic.civilization.Civilization
 import com.unciv.models.ruleset.Policy
@@ -253,6 +256,9 @@ class PolicyManager : IsPartOfGameInfoSerialization {
         }
 
         adoptedPolicies.add(policy.name)
+        if (policy.name == "Rationalism" ||
+            civInfo.gameInfo.ruleset.policyBranches["Rationalism"]?.policies?.any { it.name == policy.name } == true)
+            AchievementTracker.flag(civInfo, AchievementRules.rationalism)
         addPolicyToTransients(policy)
 
         if (!branchCompletion) {

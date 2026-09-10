@@ -5,6 +5,7 @@ import com.badlogic.gdx.scenes.scene2d.ui.TextButton.TextButtonStyle
 import com.unciv.GUI
 import com.unciv.logic.GameInfo
 import com.unciv.logic.UncivShowableException
+import com.unciv.logic.achievements.AchievementTracker
 import com.unciv.logic.files.MapSaver
 import com.unciv.logic.files.UncivFiles
 import com.unciv.models.metadata.GameSettings
@@ -36,7 +37,9 @@ internal class DebugTab(
 
         val curGameInfo = game.gameInfo
         if (curGameInfo != null) {
-            addCheckbox("God mode (current game)", curGameInfo.gameParameters::godMode)
+            addCheckbox("God mode (current game)", curGameInfo.gameParameters::godMode) { enabled ->
+                if (enabled) AchievementTracker.disqualify(curGameInfo)
+            }
         }
 
         addCheckbox("Save games compressed", UncivFiles::saveZipped)
@@ -86,6 +89,8 @@ internal class DebugTab(
                 return@onClick
             }
             DebugUtils.SIMULATE_UNTIL_TURN = simulateUntilTurns
+            if (simulateUntilTurns > GUI.getWorldScreen().gameInfo.turns)
+                AchievementTracker.disqualify(GUI.getWorldScreen().gameInfo)
             invalidInputLabel.isVisible = false
             GUI.getWorldScreen().nextTurn()
         }
@@ -95,6 +100,7 @@ internal class DebugTab(
     }
 
     private fun GameInfo.unlockAllTechs() {
+        AchievementTracker.disqualify(this)
         for (tech in ruleset.technologies.keys) {
             if (tech !in getCurrentPlayerCivilization().tech.techsResearched) {
                 getCurrentPlayerCivilization().tech.addTechnology(tech)
@@ -106,6 +112,7 @@ internal class DebugTab(
     }
 
     private fun GameInfo.giveResources() {
+        AchievementTracker.disqualify(this)
         val ownedTiles = tileMap.values.asSequence().filter { it.getOwner() == getCurrentPlayerCivilization() }
         val resourceTypes = ruleset.tileResources.values.asSequence().filter { it.resourceType == ResourceType.Strategic }
         for ((tile, resource) in ownedTiles zip resourceTypes) {

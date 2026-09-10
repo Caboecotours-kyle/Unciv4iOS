@@ -9,6 +9,7 @@ interface IOSRuntimeFeatures {
     val voluntarySupportAvailable: Boolean
     val secureMultiplayerPasswords: Boolean
     val oggAudioAvailable: Boolean
+    val achievementsAvailable: Boolean
     fun createCloudSaveSync(files: UncivFiles): CloudSaveSync
     fun getMultiplayerPassword(serverUrl: String): String?
     fun setMultiplayerPassword(serverUrl: String, password: String): Boolean
@@ -16,6 +17,8 @@ interface IOSRuntimeFeatures {
     fun initialize()
     fun onForeground()
     fun showVoluntarySupport()
+    fun showAchievements()
+    fun showAchievementGuide()
     fun dispose()
 }
 
@@ -23,6 +26,7 @@ object DefaultIOSRuntimeFeatures : IOSRuntimeFeatures {
     override val voluntarySupportAvailable = false
     override val secureMultiplayerPasswords = false
     override val oggAudioAvailable = false
+    override val achievementsAvailable = false
     override fun createCloudSaveSync(files: UncivFiles) = CloudSaveSync.None
     override fun getMultiplayerPassword(serverUrl: String): String? = null
     override fun setMultiplayerPassword(serverUrl: String, password: String) = false
@@ -30,5 +34,7 @@ object DefaultIOSRuntimeFeatures : IOSRuntimeFeatures {
     override fun initialize() = Unit
     override fun onForeground() = Unit
     override fun showVoluntarySupport() = Unit
+    override fun showAchievements() = Unit
+    override fun showAchievementGuide() = Unit
     override fun dispose() = Unit
 }

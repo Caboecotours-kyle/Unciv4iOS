@@ -244,6 +244,7 @@ open class UncivGame(val isConsoleMode: Boolean = false) : Game(), PlatformSpeci
 
         initializeResources(newGameInfo)
         gameInfo = newGameInfo
+        com.unciv.logic.achievements.AchievementTracker.settle(newGameInfo)
 
         val isLoadingSameGame = worldScreen != null
             && prevGameInfo != null

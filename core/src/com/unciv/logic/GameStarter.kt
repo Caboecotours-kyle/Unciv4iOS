@@ -2,6 +2,7 @@ package com.unciv.logic
 
 import com.unciv.Constants
 import com.unciv.UncivGame
+import com.unciv.logic.achievements.AchievementGameState
 import com.unciv.logic.civilization.AlertType
 import com.unciv.logic.civilization.Civilization
 import com.unciv.logic.civilization.PlayerType
@@ -12,6 +13,7 @@ import com.unciv.logic.map.TileMap
 import com.unciv.logic.map.mapgenerator.MapGenerator
 import com.unciv.logic.map.tile.Tile
 import com.unciv.models.metadata.GameSetupInfo
+import com.unciv.models.metadata.BaseRuleset
 import com.unciv.models.metadata.Player
 import com.unciv.models.ruleset.Ruleset
 import com.unciv.models.ruleset.RulesetCache
@@ -50,6 +52,9 @@ class GameStarter private constructor(
     private lateinit var tileMap: TileMap
 
     init {
+        val hadMods = gameSetupInfo.gameParameters.mods.isNotEmpty() ||
+            BaseRuleset.entries.none { it.fullName == gameSetupInfo.gameParameters.baseRuleset }
+        val generatedMap = gameSetupInfo.mapParameters.name.isEmpty() && gameSetupInfo.mapFile == null
         if (consoleTimings)
             debug("\nGameStarter run with parameters %s, map %s", gameSetupInfo.gameParameters, gameSetupInfo.mapParameters)
 
@@ -122,6 +127,8 @@ class GameStarter private constructor(
             gameInfo.setTransients() // needs to be before placeBarbarianUnit because it depends on the tilemap having its gameInfo set
         }
 
+        gameInfo.achievements = AchievementGameState.create(gameInfo, generatedMap, hadMods)
+
         runAndMeasure("addCivStartingUnits") {
             addCivStartingUnits()
         }
@@ -148,6 +155,7 @@ class GameStarter private constructor(
 
         // This triggers the one-time greeting from Nation.startIntroPart1/2
         addPlayerIntros()
+        gameInfo.achievements?.initializationComplete = true
 
         UncivGame.Current.settings.apply {
             lastGameSetup = gameSetupInfo

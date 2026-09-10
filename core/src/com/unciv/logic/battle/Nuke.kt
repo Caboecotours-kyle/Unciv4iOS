@@ -1,5 +1,7 @@
 package com.unciv.logic.battle
 
+import com.unciv.logic.achievements.AchievementTracker
+
 import com.unciv.logic.city.City
 import com.unciv.logic.civilization.*
 import com.unciv.logic.civilization.diplomacy.DiplomaticModifiers
@@ -58,6 +60,19 @@ object Nuke {
 
     @Suppress("FunctionName")   // Yes we want this name to stand out
     fun NUKE(attacker: MapUnitCombatant, targetTile: Tile) {
+        val game = attacker.getCivInfo().gameInfo
+        val militaryBefore = AchievementTracker.militaryRoster(game)
+        AchievementTracker.beginAction(game)
+        var successful = false
+        try {
+            resolveNuke(attacker, targetTile)
+            successful = true
+        } finally {
+            AchievementTracker.battleEnded(game, militaryBefore, successful)
+        }
+    }
+
+    private fun resolveNuke(attacker: MapUnitCombatant, targetTile: Tile) {
         val attackingCiv = attacker.getCivInfo()
         val nukeStrength = attacker.unit.getMatchingUniques(UniqueType.NuclearWeapon)
             .firstOrNull()?.params?.get(0)?.toInt() ?: return

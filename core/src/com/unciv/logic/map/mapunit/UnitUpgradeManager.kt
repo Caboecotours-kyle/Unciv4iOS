@@ -1,5 +1,7 @@
 package com.unciv.logic.map.mapunit
 
+import com.unciv.logic.achievements.AchievementRules
+import com.unciv.logic.achievements.AchievementTracker
 import com.unciv.models.ruleset.RejectionReasonType
 import com.unciv.models.ruleset.unique.UniqueType
 import com.unciv.models.ruleset.unit.BaseUnit
@@ -85,7 +87,7 @@ class UnitUpgradeManager(val unit: MapUnit) {
      *  It might be desirable to return `newUnit` (or `resurrectedUnit`) if needed -
      *  but then the lambda in UnitActionsUpgrade will complain and need to be forced back to Unit type.
      */
-    fun performUpgrade(upgradedUnit: BaseUnit, isFree: Boolean, goldCostOfUpgrade: Int? = null) {
+    fun performUpgrade(upgradedUnit: BaseUnit, isFree: Boolean, goldCostOfUpgrade: Int? = null, playerInitiated: Boolean = false) {
         // When mashing the upgrade button, you can 'queue' 2 upgrade actions
         //  If both are performed, what you get is the unit is doubled
         //  This prevents this, since we lack another way to do so -_-'  
@@ -101,11 +103,13 @@ class UnitUpgradeManager(val unit: MapUnit) {
          * The only known cause of this currently is "land units upgrading to water units" which fail to be placed.
          */
         if (newUnit == null) {
-            civ.units.placeUnitNearTile(position, unit.baseUnit, copiedFrom = unit)!!
+            civ.units.placeUnitNearTile(position, unit.baseUnit, unit.id, copiedFrom = unit)!!
             return
         }
 
         // Managed to upgrade
+        if (playerInitiated && newUnit.isMilitary()) AchievementTracker.flag(civ, AchievementRules.trainedMilitary)
+        if (newUnit.getTile().position != position) AchievementTracker.discontinuousMovement(newUnit)
         if (!isFree) civ.addGold(-(goldCostOfUpgrade ?: getCostOfUpgrade(upgradedUnit)))
         newUnit.currentMovement = 0f
         // wake up if lost ability to fortify
@@ -117,5 +121,6 @@ class UnitUpgradeManager(val unit: MapUnit) {
         // Re-escort if it was escorting
         if (newUnit.currentTile.position == position && wasEscorting)
             newUnit.startEscorting()
+        AchievementTracker.settle(civ.gameInfo)
     }
 }

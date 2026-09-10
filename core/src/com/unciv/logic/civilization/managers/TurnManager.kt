@@ -1,5 +1,7 @@
 package com.unciv.logic.civilization.managers
 
+import com.unciv.logic.achievements.AchievementTracker
+
 import com.unciv.UncivGame
 import com.unciv.logic.VictoryData
 import com.unciv.logic.automation.civilization.NextTurnAutomation
@@ -26,6 +28,7 @@ class TurnManager(val civInfo: Civilization) {
 
     fun startTurn(progressBar: NextTurnProgress? = null):Unit = timeThis("TurnManager.startTurn") {
         if (civInfo.isSpectator()) return
+        AchievementTracker.startTurn(civInfo)
 
         for (city in civInfo.cities) city.hasSoldBuildingThisTurn = false
 
@@ -344,6 +347,7 @@ class TurnManager(val civInfo: Civilization) {
 
         civInfo.resetMilitaryMightCache()
 
+        AchievementTracker.settle(civInfo.gameInfo, atTurnEnd = civInfo.isHuman())
         updateWinningCiv() // Maybe we did something this turn to win
         
         civInfo.lastTurnProcessedWithVersion = UncivGame.VERSION
@@ -356,6 +360,7 @@ class TurnManager(val civInfo: Civilization) {
         if (victoryType != null) {
             civInfo.gameInfo.victoryData =
                     VictoryData(civInfo, victoryType, civInfo.gameInfo.turns)
+            AchievementTracker.settle(civInfo.gameInfo, winner = civInfo, victoryRoute = victoryType)
 
             // Notify other human players about this civInfo's victory
             for (otherCiv in civInfo.gameInfo.civilizations) {

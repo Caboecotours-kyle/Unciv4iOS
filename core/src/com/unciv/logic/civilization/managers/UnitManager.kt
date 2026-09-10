@@ -1,5 +1,7 @@
 package com.unciv.logic.civilization.managers
 
+import com.unciv.logic.achievements.AchievementTracker
+
 import com.unciv.GUI
 import com.unciv.logic.city.City
 import com.unciv.logic.civilization.Civilization
@@ -108,6 +110,7 @@ class UnitManager(val civInfo: Civilization) {
         // Must happen before the triggers or else things like "[This Unit] loses the [promotionName] promotion"
         //    will trigger *before* the unit actually has the promotion, and then will get the promotion anyway.
         copiedFrom?.copyStatisticsTo(unit)
+        AchievementTracker.unitAcquired(unit)
 
         val triggerNotificationText = "due to gaining a [${unit.name}]"
         for (unique in unit.getUniques().toList()) {

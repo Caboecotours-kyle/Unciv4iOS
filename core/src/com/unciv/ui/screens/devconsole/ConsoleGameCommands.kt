@@ -47,6 +47,7 @@ internal class ConsoleGameCommands : ConsoleCommandNode {
 
     private fun doRemoveSpectator(console: DevConsolePopup, existingSpectator: Civilization) {
         val game = console.gameInfo
+        com.unciv.logic.achievements.AchievementTracker.disqualify(game)
         if (game.currentPlayerCiv == existingSpectator)
             game.currentPlayer = ""
         game.civilizations.remove(existingSpectator)

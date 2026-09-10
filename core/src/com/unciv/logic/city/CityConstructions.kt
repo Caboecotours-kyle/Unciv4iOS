@@ -1,5 +1,7 @@
 package com.unciv.logic.city
 
+import com.unciv.logic.achievements.AchievementTracker
+
 import com.unciv.GUI
 import com.unciv.UncivGame
 import com.unciv.logic.automation.Timers.Companion.timeThis
@@ -484,6 +486,8 @@ class CityConstructions : IsPartOfGameInfoSerialization {
 
     /** Returns false if we tried to construct a unit but it has nowhere to go */
     fun completeConstruction(construction: INonPerpetualConstruction): Boolean {
+        val capitalHadBuilding = construction is Building && city.civ.getCapital()?.cityConstructions
+            ?.getBuiltBuildings()?.any { it.name == construction.name } == true
         var unit: MapUnit? = null
         if (construction is Building) construction.construct(this)
         else if (construction is BaseUnit) {
@@ -567,6 +571,9 @@ class CityConstructions : IsPartOfGameInfoSerialization {
                     pediaAction, NotificationCategory.General, NotificationIcon.Construction, buildingIcon)
             }
         }
+        if (construction is Building) AchievementTracker.buildingProduced(city, construction, capitalHadBuilding)
+        if (construction is BaseUnit) AchievementTracker.militaryProducedOrPurchased(city.civ, construction)
+        AchievementTracker.settle(city.civ.gameInfo)
         return true
     }
 
@@ -587,6 +594,7 @@ class CityConstructions : IsPartOfGameInfoSerialization {
             city.health += (building.cityHealth.toFloat() * city.health.toFloat() / city.getMaxHealth().toFloat()).toInt()
         }
         builtBuildingObjects = builtBuildingObjects.withItem(building)
+        AchievementTracker.buildingOwned(city, building)
         builtBuildings.add(buildingName)
 
         updateUniques()
@@ -791,7 +799,8 @@ class CityConstructions : IsPartOfGameInfoSerialization {
 
         // A purchase should never leave the city idle if we invalidated or emptied the queue
         if (isQueueEmptyOrIdle()) chooseNextConstruction()
-
+        if (construction is BaseUnit) AchievementTracker.militaryProducedOrPurchased(city.civ, construction)
+        AchievementTracker.settle(city.civ.gameInfo)
         return true
     }
 

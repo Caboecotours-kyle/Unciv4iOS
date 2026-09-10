@@ -1,5 +1,7 @@
 package com.unciv.logic.civilization.managers
 
+import com.unciv.logic.achievements.AchievementTracker
+
 import com.unciv.logic.IsPartOfGameInfoSerialization
 import com.unciv.logic.civilization.AlertType
 import com.unciv.logic.civilization.Civilization
@@ -70,6 +72,7 @@ class GoldenAgeManager : IsPartOfGameInfoSerialization {
 
         if (isGoldenAge()){
             turnsLeftForCurrentGoldenAge--
+            if (turnsLeftForCurrentGoldenAge <= 0) AchievementTracker.goldenAgeEnded(civInfo)
             if (turnsLeftForCurrentGoldenAge <= 0)
                 for (unique in civInfo.getTriggeredUniques(UniqueType.TriggerUpponEndingGoldenAge))
                     UniqueTriggerActivation.triggerUnique(unique, civInfo)

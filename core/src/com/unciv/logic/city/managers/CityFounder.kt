@@ -1,6 +1,7 @@
 package com.unciv.logic.city.managers
 
 import com.unciv.Constants
+import com.unciv.logic.achievements.AchievementTracker
 import com.unciv.logic.city.City
 import com.unciv.logic.civilization.Civilization
 import com.unciv.logic.civilization.Proximity
@@ -38,6 +39,7 @@ class CityFounder {
         civInfo.citiesCreated++
 
         civInfo.cities = civInfo.cities.withItem(city)
+        AchievementTracker.cityFounded(city)
 
         val startingEra = civInfo.gameInfo.gameParameters.startingEra
 
@@ -98,6 +100,7 @@ class CityFounder {
                 GameContext(civInfo, city, unit)))
                 UniqueTriggerActivation.triggerUnique(unique, civInfo, city, unit, triggerNotificationText = "due to founding a city")
 
+        AchievementTracker.settle(civInfo.gameInfo)
         return city
     }
 

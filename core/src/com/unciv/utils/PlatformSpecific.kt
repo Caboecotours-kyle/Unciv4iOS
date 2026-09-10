@@ -81,6 +81,11 @@ interface PlatformSpecific {
     /** Opens the platform-owned voluntary support purchase flow. */
     fun showVoluntarySupport() {}
 
+    val achievementsAvailable: Boolean
+        get() = false
+    fun showAchievements() {}
+    fun showAchievementGuide() {}
+
     /** Notifies player that his multiplayer turn started */
     fun notifyTurnStarted() {}
 

@@ -97,7 +97,7 @@ class MainMenuScreen: BaseScreen(), RecreateOnResize {
     private fun getMenuButton(
         text: String,
         icon: String,
-        binding: KeyboardBinding,
+        binding: KeyboardBinding = KeyboardBinding.None,
         function: () -> Unit
     ): Table {
         val table = Table().pad(15f, 30f, 15f, 30f)
@@ -202,6 +202,11 @@ class MainMenuScreen: BaseScreen(), RecreateOnResize {
             { openOptionsPopup() }
         optionsTable.onLongPress { openOptionsPopup(withDebug = true) }
         column2.add(optionsTable).row()
+
+        if (game.achievementsAvailable) {
+            column2.add(getMenuButton("Achievements", "OtherIcons/Star") { game.showAchievements() }).row()
+            column2.add(getMenuButton("Achievement guide", "OtherIcons/Options") { game.showAchievementGuide() }).row()
+        }
 
 
         val table = Table().apply { defaults().pad(10f) }

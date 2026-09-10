@@ -1,5 +1,7 @@
 package com.unciv.logic.map.mapunit
 
+import com.unciv.logic.achievements.AchievementTracker
+
 import com.unciv.logic.IsPartOfGameInfoSerialization
 import com.unciv.models.ruleset.unique.GameContext
 import com.unciv.models.ruleset.unique.UniqueTriggerActivation
@@ -123,11 +125,23 @@ class UnitPromotions : IsPartOfGameInfoSerialization {
         if (promotions.contains(promotionName)) return
         val ruleset = unit.civ.gameInfo.ruleset
         val promotion = ruleset.unitPromotions[promotionName] ?: return
+        AchievementTracker.beginAction(unit.civ.gameInfo)
+        var successful = false
+        try {
+            applyPromotion(promotionName, promotion, isFree)
+            successful = true
+        } finally {
+            AchievementTracker.endAction(unit.civ.gameInfo, successful)
+        }
+    }
+
+    private fun applyPromotion(promotionName: String, promotion: Promotion, isFree: Boolean) {
 
         if (!isFree) {
             if (!promotion.hasUnique(UniqueType.FreePromotion)) {
                 XP -= xpForNextPromotion()
                 numberOfPromotions++
+                AchievementTracker.promotionEarned(unit)
             }
 
             for (unique in unit.getTriggeredUniques(UniqueType.TriggerUponPromotion))

@@ -2,6 +2,8 @@
 
 package com.unciv.logic.map.mapunit.movement
 
+import com.unciv.logic.achievements.AchievementTracker
+
 import com.unciv.Constants
 import com.unciv.UncivGame
 import com.unciv.logic.automation.Timers.Companion.timeThis
@@ -454,6 +456,7 @@ class UnitMovement(val unit: MapUnit) {
                 .sortedBy { it.aerialDistanceTo(origin) }.firstOrNull{ canMoveTo(it) }
 
         if (allowedTile != null) {
+            AchievementTracker.discontinuousMovement(unit)
             unit.removeFromTile() // we "teleport" them away
             unit.putInTile(allowedTile)
             // Cancel sleep or fortification if forcibly displaced - for now, leave movement / auto / explore orders
@@ -492,6 +495,7 @@ class UnitMovement(val unit: MapUnit) {
         val escortUnit = if (unit.isEscorting()) unit.getOtherEscortUnit()!! else null
 
         if (unit.baseUnit.isAirUnit()) { // air units move differently from all other units
+            AchievementTracker.discontinuousMovement(unit)
             if (unit.action != UnitActionType.Automate.value) unit.action = null
             unit.removeFromTile()
             unit.isTransported = false // it has left the carrier by own means
@@ -503,6 +507,7 @@ class UnitMovement(val unit: MapUnit) {
         }
 
         if (unit.isPreparingParadrop()) { // paradropping units move differently
+            AchievementTracker.discontinuousMovement(unit)
             val origin = unit.getTile()
             unit.action = null
             unit.removeFromTile()
@@ -586,6 +591,8 @@ class UnitMovement(val unit: MapUnit) {
         }
 
         val finalTileReached = lastReachedEnterableTile
+        val reachedPath = pathToLastReachableTile.takeWhile { it != finalTileReached } + finalTileReached
+        if (finalTileReached != origin) AchievementTracker.landMovement(unit, listOf(origin) + reachedPath)
 
         // Silly floats which are almost zero
         if (unit.currentMovement < Constants.minimumMovementEpsilon)

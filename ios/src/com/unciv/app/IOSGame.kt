@@ -17,6 +17,9 @@ class IOSGame @JvmOverloads constructor(
     private var cloudSaveService: CloudSaveSync? = null
 
     override val voluntarySupportAvailable get() = runtimeFeatures.voluntarySupportAvailable
+    override val achievementsAvailable get() = runtimeFeatures.achievementsAvailable
+    override fun showAchievements() = runtimeFeatures.showAchievements()
+    override fun showAchievementGuide() = runtimeFeatures.showAchievementGuide()
 
     override val sourceCodeUrl = "${com.unciv.Constants.uncivRepoURL}tree/${IOSSourceRevision.COMMIT}/"
 

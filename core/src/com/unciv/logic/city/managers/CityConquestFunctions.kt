@@ -1,5 +1,7 @@
 package com.unciv.logic.city.managers
 
+import com.unciv.logic.achievements.AchievementTracker
+
 import com.unciv.Constants
 import com.unciv.GUI
 import com.unciv.logic.battle.Battle
@@ -159,6 +161,7 @@ class CityConquestFunctions(val city: City) {
         conquerCity(conqueringCiv, oldCiv, conqueringCiv)
         makePuppet()
         city.cityStats.update()
+        AchievementTracker.settle(conqueringCiv.gameInfo)
     }
 
     private fun makePuppet(){
@@ -213,6 +216,7 @@ class CityConquestFunctions(val city: City) {
         diplomaticRepercussionsForLiberatingCity(conqueringCiv, oldCiv)
 
         conquerCity(conqueringCiv, oldCiv, foundingCiv)
+        if (foundingCiv != conqueringCiv) AchievementTracker.cityLiberated(city)
 
         if (foundingCiv.cities.size == 1) {
             // Resurrection!
@@ -240,7 +244,7 @@ class CityConquestFunctions(val city: City) {
         for (unit in city.getTiles().flatMap { it.getUnits() }.toList())
             if (!unit.movement.canPassThrough(unit.currentTile))
                 unit.movement.teleportToClosestMoveableTile()
-
+        AchievementTracker.settle(conqueringCiv.gameInfo)
     }
 
 
@@ -313,6 +317,7 @@ class CityConquestFunctions(val city: City) {
         city.civ = newCiv
         city.id = if (city.id != NO_ID) city.id else pseudoRandomId(newCiv)
         city.state = GameContext(city)
+        AchievementTracker.cityAcquired(city)
         city.hasJustBeenConquered = false
         city.turnAcquired = city.civ.gameInfo.turns
         city.previousOwner = oldCiv.civID

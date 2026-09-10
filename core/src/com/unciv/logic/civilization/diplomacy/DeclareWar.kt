@@ -1,6 +1,8 @@
 package com.unciv.logic.civilization.diplomacy
 
 import com.unciv.Constants
+import com.unciv.logic.achievements.AchievementRules
+import com.unciv.logic.achievements.AchievementTracker
 import com.unciv.logic.civilization.AlertType
 import com.unciv.logic.civilization.Civilization
 import com.unciv.logic.civilization.DiplomacyAction
@@ -27,6 +29,9 @@ object DeclareWar {
         val civInfo = diplomacyManager.civInfo
         val otherCiv = diplomacyManager.otherCiv
         val otherCivDiplomacy = diplomacyManager.otherCivDiplomacy()
+
+        if (declareWarReason.warType != WarType.DefensivePactWar && declareWarReason.warType != WarType.CityStateAllianceWar)
+            AchievementTracker.flag(civInfo, AchievementRules.declaredWar)
 
         if (otherCiv.isCityState && declareWarReason.warType == WarType.DirectWar)
             handleCityStateDirectAttack(diplomacyManager)
@@ -380,4 +385,3 @@ enum class WarType {
  * the allyCiv needs to be given.
  */
 class DeclareWarReason(val warType: WarType, val allyCiv: Civilization? = null)
-

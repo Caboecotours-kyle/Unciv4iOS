@@ -1,5 +1,6 @@
 package com.unciv.logic.battle
 
+import com.unciv.logic.achievements.AchievementTracker
 import com.unciv.logic.civilization.Civilization
 import com.unciv.logic.civilization.LocationAction
 import com.unciv.logic.civilization.NotificationCategory
@@ -21,6 +22,19 @@ object AirInterception {
     // Random Civ at War will Intercept, prioritizing Air Units,
     // sorted by highest Intercept chance (same as regular Intercept)
     fun airSweep(attacker: MapUnitCombatant, attackedTile: Tile) {
+        val game = attacker.getCivInfo().gameInfo
+        val militaryBefore = AchievementTracker.militaryRoster(game)
+        AchievementTracker.beginAction(game)
+        var successful = false
+        try {
+            resolveAirSweep(attacker, attackedTile)
+            successful = true
+        } finally {
+            AchievementTracker.battleEnded(game, militaryBefore, successful)
+        }
+    }
+
+    private fun resolveAirSweep(attacker: MapUnitCombatant, attackedTile: Tile) {
         // Air Sweep counts as an attack, even if nothing else happens
         attacker.unit.attacksThisTurn++
         // copied and modified from reduceAttackerMovementPointsAndAttacks()
@@ -78,6 +92,12 @@ object AirInterception {
 
             // Damage if Air v Air should work similar to Melee
             val damageDealt: Battle.DamageDealt = Battle.takeDamage(attacker, MapUnitCombatant(interceptor))
+            if (attacker.isDefeated() && damageDealt.defenderDealt > 0)
+                AchievementTracker.killedMilitaryUnit(interceptor, attacker.unit.id,
+                    attacker.getCivInfo().isMajorCiv() && attacker.unit.isMilitary(), null, false)
+            if (interceptor.isDestroyed && damageDealt.attackerDealt > 0)
+                AchievementTracker.killedMilitaryUnit(attacker.unit, interceptor.id,
+                    interceptor.civ.isMajorCiv() && interceptor.isMilitary(), attacker.getTile(), true)
 
             // 5 XP to both
             Battle.addXp(MapUnitCombatant(interceptor), 5, attacker)
@@ -184,6 +204,9 @@ object AirInterception {
         damage = (damage.toFloat() * damageFactor).toInt().coerceAtMost(attacker.unit.health)
 
         attacker.takeDamage(damage)
+        if (attacker.isDefeated() && damage > 0)
+            AchievementTracker.killedMilitaryUnit(interceptor, attacker.unit.id,
+                attacker.getCivInfo().isMajorCiv() && attacker.unit.isMilitary(), null, false)
         if (damage > 0)
             Battle.addXp(MapUnitCombatant(interceptor), 2, attacker)
 
