@@ -203,11 +203,6 @@ class MainMenuScreen: BaseScreen(), RecreateOnResize {
         optionsTable.onLongPress { openOptionsPopup(withDebug = true) }
         column2.add(optionsTable).row()
 
-        if (game.achievementsAvailable) {
-            column2.add(getMenuButton("Achievements", "OtherIcons/Star") { game.showAchievements() }).row()
-        }
-
-
         val table = Table().apply { defaults().pad(10f) }
         table.add(column1)
         if (!singleColumn) table.add(column2)
@@ -251,6 +246,17 @@ class MainMenuScreen: BaseScreen(), RecreateOnResize {
             .surroundWithThinCircle(Color.WHITE)
             .onActivation { Gdx.net.openURI(Constants.uncivRepoURL) }
         rightSideButtons.add(githubButton)
+
+        if (game.achievementsAvailable) {
+            val gold = Color.valueOf("f3ca73")
+            val achievementsButton = ImageGetter.getImage("OtherIcons/AchievementTrophy", gold)
+                .surroundWithCircle(buttonsSize, color = Color.valueOf("112a40"))
+                .surroundWithThinCircle(gold)
+                .onActivation { game.showAchievements() }
+            achievementsButton.name = "Achievements"
+            achievementsButton.addTooltip("Achievements", 30f)
+            rightSideButtons.add(achievementsButton)
+        }
 
         rightSideButtons.pack()
         rightSideButtons.setPosition(stage.width - buttonsPosFromEdge, buttonsPosFromEdge, Align.bottomRight)
