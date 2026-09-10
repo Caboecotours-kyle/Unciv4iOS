@@ -74,7 +74,8 @@ object AchievementTracker {
 
     /** Event facts are kept on the save branch, including when a profile write must be retried. */
     fun eventCompleted(civ: Civilization, id: String) {
-        state(civ)?.history?.completed?.add(id)
+        // Only these V3 clues are fulfilled by a single event. Other hooks settle aggregate rules.
+        if (id == "N03" || id == "N06" || id == "N09") state(civ)?.history?.completed?.add(id)
         settle(civ.gameInfo)
     }
 
@@ -103,7 +104,15 @@ object AchievementTracker {
     }
 
     fun buildingProduced(city: City, building: Building) {
-        if (building.isWonder) state(city.civ)?.history?.builtWonders?.put(building.name, cityKey(city))
+        if (!building.isWonder) return
+        val history = state(city.civ)?.history ?: return
+        history.builtWonders[building.name] = cityKey(city)
+        if (city.civ.goldenAges.isGoldenAge()) history.goldenAgeWonderCities.add(cityKey(city))
+    }
+
+    fun encampmentCleared(unit: MapUnit, tile: Tile) {
+        state(unit.civ)?.history?.unit(unit.id)?.clearedEncampments?.add(AchievementGameState.tileKey(tile))
+        settle(unit.civ.gameInfo)
     }
 
     fun improvementBuilt(tile: Tile, unit: MapUnit?) {
@@ -120,10 +129,10 @@ object AchievementTracker {
                            wasAttacker: Boolean) {
         val history = state(killer.civ)?.history ?: return
         history.completed.add("N06")
+        if (victimWasMajorMilitary) history.unit(killer.id).majorMilitaryKills++
         if (!victimWasMajorMilitary || !wasAttacker || !killer.civ.isCurrentPlayer() || killer.name != "Chu-Ko-Nu") return
         val unit = history.unit(killer.id)
         unit.chuKoNuKillsThisTurn.add(victimId.toString())
-        if (unit.chuKoNuKillsThisTurn.size >= 2) history.completed.add("N34")
     }
 
     fun tradeCompleted(first: Civilization, second: Civilization, trade: Trade) {
@@ -134,8 +143,9 @@ object AchievementTracker {
                 && it.amount > 0) || (it.type == TradeOfferType.Agreement && it.name == "Open Borders")
         }
         if (qualifying) {
-            eventCompleted(first, "N15")
-            eventCompleted(second, "N15")
+            state(first)?.history?.tradePartners?.add(second.civID)
+            state(second)?.history?.tradePartners?.add(first.civID)
+            settle(first.gameInfo)
         }
     }
 
@@ -162,14 +172,21 @@ object AchievementTracker {
             if (city == null) { history.pendingCaptures.remove(cityId); continue }
             if (city.civ != player || !capture.ownershipSettled) continue
             history.pendingCaptures.remove(cityId)
-            if (!capture.foreign || !history.foreignCaptures.add(cityId)) continue
+            if (!capture.foreign) continue
+            val captor = player.units.getUnitById(capture.unitId)
+            if (captor != null && !captor.isDestroyed && captor.isMilitary() &&
+                (history.units[capture.unitId.toString()]?.earnedPromotions ?: 0) >= 3)
+                history.completed.add("N08")
+            if (!history.foreignCaptures.add(cityId)) continue
             if (player.goldenAges.isGoldenAge()) {
                 history.goldenAgeCaptures.add(cityId)
-                if (history.goldenAgeCaptures.size >= 3) history.completed.add("N35")
+                history.goldenAgeCapturedCivilizations.add(city.foundingCivObject!!.civID)
+                if (history.goldenAgeCaptures.size >= 4 && history.goldenAgeCapturedCivilizations.size >= 2)
+                    history.completed.add("N35")
             }
             if (capture.turn == history.turn && player.isCurrentPlayer()) {
                 history.capturedThisTurn.add(cityId)
-                if (history.capturedThisTurn.size >= 2) history.completed.add("N32")
+                if (history.capturedThisTurn.size >= 3) history.completed.add("N32")
             }
         }
     }
@@ -178,5 +195,10 @@ object AchievementTracker {
         city.civ.gameInfo.achievements?.history?.pendingCaptures?.remove(cityKey(city))
     }
 
-    fun goldenAgeEnded(civ: Civilization) { state(civ)?.history?.goldenAgeCaptures?.clear() }
+    fun goldenAgeEnded(civ: Civilization) {
+        val history = state(civ)?.history ?: return
+        history.goldenAgeCaptures.clear()
+        history.goldenAgeCapturedCivilizations.clear()
+        history.goldenAgeWonderCities.clear()
+    }
 }

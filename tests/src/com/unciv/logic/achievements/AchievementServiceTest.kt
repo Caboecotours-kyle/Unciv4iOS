@@ -77,38 +77,46 @@ class AchievementServiceTest {
         assertTrue(service.cloudFacts().unlocks.isEmpty())
     }
 
-    @Test fun eightDistinctWorldWondersAccumulateAcrossQualifiedGamesAndNotDuplicateReloads() {
+    @Test fun twelveDistinctWorldWondersNeedThreeQualifiedGamesAndIgnoreDuplicateReloads() {
         val directory = temporary.newFolder()
         val service = AchievementService(directory)
         val first = AchievementTestFixture()
-        val wonders = first.test.ruleset.buildings.values.filter { it.isWonder }.take(8)
+        val wonders = first.test.ruleset.buildings.values.filter { it.isWonder }.take(12)
         first.history.builtWonders.putAll(wonders.take(4).associate { it.name to "city" })
         service.record(first.game, emptySet())
         service.record(first.game.clone(), emptySet())
         assertEquals(4, service.cloudFacts().v2BuiltWonders.size)
         assertFalse("N26" in service.completed())
         val second = AchievementTestFixture()
-        second.history.builtWonders.putAll(wonders.takeLast(4).associate { it.name to "city" })
+        second.history.builtWonders.putAll(wonders.subList(4, 8).associate { it.name to "city" })
         second.state.recordingVersion = 1
         service.record(second.game, emptySet())
         assertEquals(4, service.cloudFacts().v2BuiltWonders.size)
-        second.state.recordingVersion = 2
+        second.state.recordingVersion = AchievementCatalog.recordingVersion
         service.record(second.game, emptySet())
+        assertFalse("N26" in service.completed())
+        val third = AchievementTestFixture()
+        third.history.builtWonders.putAll(wonders.takeLast(4).associate { it.name to "city" })
+        service.record(third.game, emptySet())
         assertTrue("N26" in AchievementService(directory).completed())
-        assertEquals(8, service.cloudFacts().v2BuiltWonders.size)
+        assertEquals(12, service.cloudFacts().v2BuiltWonders.size)
+        assertEquals(3, service.cloudFacts().wonderGameIds.size)
         assertEquals(setOf("N26"), service.pending())
     }
 
     @Test fun mergingWonderFactsIsIdempotentAndAccountBound() {
         val service = AchievementService(temporary.newFolder())
         val key = service.bindAccount("player")
-        val facts = AchievementProfile().apply { repeat(8) { v2BuiltWonders.add("wonder-$it") } }
+        val facts = AchievementProfile().apply {
+            repeat(12) { v2BuiltWonders.add("wonder-$it") }
+            repeat(3) { wonderGameIds.add("game-$it") }
+        }
         service.mergeCloudFacts("stale-account", facts)
         assertTrue(service.completed().isEmpty())
         service.mergeCloudFacts(key, facts)
         service.mergeCloudFacts(key, facts)
         assertEquals(setOf("N26"), service.completed())
-        assertEquals(8, service.cloudFacts().v2BuiltWonders.size)
+        assertEquals(12, service.cloudFacts().v2BuiltWonders.size)
     }
 
     @Test fun encyclopediaRequiresTheOtherThirtyNineAndNeverItselfOrLegacyAwards() {
@@ -149,7 +157,9 @@ class AchievementServiceTest {
         val service = AchievementService(temporary.newFolder())
         AchievementTracker.service = service
         f.history.completed.add("N32")
-        f.capital.population.setPopulation(10)
+        f.capital.population.setPopulation(15)
+        f.capital.cityConstructions.addBuilding("Library")
+        f.capital.cityConstructions.addBuilding("University")
         f.game.victoryData = VictoryData(f.player.civID, "Scientific", f.game.turns)
         AchievementTracker.settle(f.game)
         assertTrue(f.state.ended)
@@ -185,7 +195,9 @@ class AchievementServiceTest {
         service.record(f.game, setOf("N01"))
         assertTrue(service.completed().isEmpty())
         f.state.accountKey = ""
-        f.state.catalogVersion = 1
-        assertFalse(service.canContribute(f.game))
+        for (version in listOf(0, 1, 2)) {
+            f.state.catalogVersion = version
+            assertFalse(service.canContribute(f.game))
+        }
     }
 }

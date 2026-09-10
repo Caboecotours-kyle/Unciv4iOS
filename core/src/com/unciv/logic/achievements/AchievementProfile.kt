@@ -26,6 +26,7 @@ class AchievementProfile {
     var unlocks = HashMap<String, String>()
     var victories = HashMap<String, String>() // Preserved V1 records; V2 does not use victory collections.
     var v2BuiltWonders = HashSet<String>()
+    var wonderGameIds = HashSet<String>()
     var disqualifiedGames = HashSet<String>()
     var reportedIds = HashSet<String>()
     var claimedByAccount = ""
@@ -35,6 +36,7 @@ class AchievementProfile {
         it.unlocks.putAll(unlocks)
         it.victories.putAll(victories)
         it.v2BuiltWonders.addAll(v2BuiltWonders)
+        it.wonderGameIds.addAll(wonderGameIds)
         it.disqualifiedGames.addAll(disqualifiedGames)
         it.reportedIds.addAll(reportedIds)
         it.claimedByAccount = claimedByAccount
@@ -62,6 +64,7 @@ class AchievementProfile {
         mergeRecords(victories, other.victories)
         disqualifiedGames.addAll(other.disqualifiedGames)
         v2BuiltWonders.addAll(other.v2BuiltWonders)
+        wonderGameIds.addAll(other.wonderGameIds)
     }
 
     companion object {

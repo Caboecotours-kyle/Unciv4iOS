@@ -16,13 +16,17 @@ class AchievementTacticsTest(private val baseRuleset: com.unciv.models.metadata.
     }
     private fun fixture(nation: String = "Rome") = AchievementTestFixture(nation, baseRuleset, speed)
 
-    @Test fun aSingleSelfFoundedCityConnectedToCapitalIsEnough() {
+    @Test fun threeSelfFoundedCitiesMustStayConnectedToCapital() {
         val f = fixture()
         f.player.tech.addTechnology("The Wheel")
         f.game.tileMap.values.forEach { it.setRoadStatus(RoadStatus.Road, f.player) }
         f.player.cache.updateCitiesConnectedToCapital()
         assertFalse("N10" in f.results(end = true))
         val city = f.city(0, 0)
+        f.city(-4, 0)
+        f.player.cache.updateCitiesConnectedToCapital()
+        assertFalse("N10" in f.results(end = true))
+        f.city(4, 0)
         f.player.cache.updateCitiesConnectedToCapital()
         assertTrue("N10" in f.results(end = true))
         assertFalse("N10" in f.results())
@@ -31,11 +35,14 @@ class AchievementTacticsTest(private val baseRuleset: com.unciv.models.metadata.
         assertFalse("N10" in f.results(end = true))
     }
 
-    @Test fun romanInfrastructureIncludesCapitalAndRequiresBothBuildingsInFourSelfFoundedCities() {
+    @Test fun romanInfrastructureRequiresFivePopulousCitiesWithFourBuildings() {
         val f = fixture("Rome")
-        val cities = listOf(f.capital, f.city(-4, 0), f.city(0, 0), f.city(4, 0))
-        for (city in cities) city.cityConstructions.addBuilding("Monument")
-        for (city in cities.take(3)) city.cityConstructions.addBuilding("Granary")
+        val cities = listOf(f.capital, f.city(-4, 0), f.city(0, 0), f.city(4, 0), f.city(8, 0))
+        for (city in cities) {
+            city.population.setPopulation(10)
+            for (name in listOf("Monument", "Library", "Barracks")) city.cityConstructions.addBuilding(name)
+        }
+        for (city in cities.take(4)) city.cityConstructions.addBuilding("Granary")
         assertFalse("N28" in f.results(end = true))
         val granary = f.test.ruleset.buildings.getValue("Granary")
         granary.cost = f.test.ruleset.technologies.getValue(granary.requiredTech!!).column!!.buildingCost
@@ -49,11 +56,12 @@ class AchievementTacticsTest(private val baseRuleset: com.unciv.models.metadata.
         assertFalse("N28" in f.results(end = true))
     }
 
-    @Test fun twoForeignCapturesNeedCompletedOwnershipButMilitaryLossesAreAllowed() {
+    @Test fun threeForeignCapturesNeedCompletedOwnershipButMilitaryLossesAreAllowed() {
         val f = fixture()
         val unit = f.unit("Warrior", 0, 0)
+        f.history.unit(unit.id).earnedPromotions = 3
         val casualty = f.unit("Warrior", 0, 3)
-        val cities = listOf(f.city(2, 0, civ = f.opponents[0]), f.city(4, 0, civ = f.opponents[0]))
+        val cities = listOf(f.city(2, 0, civ = f.opponents[0]), f.city(4, 0, civ = f.opponents[0]), f.city(6, 0, civ = f.opponents[1]))
         AchievementTracker.cityBattleWon(unit, cities[0])
         AchievementTracker.settle(f.game)
         assertFalse("N08" in f.results())
@@ -66,6 +74,9 @@ class AchievementTacticsTest(private val baseRuleset: com.unciv.models.metadata.
         casualty.destroy()
         assertFalse("N32" in f.results())
         AchievementTracker.endAction(f.game)
+        assertFalse("N32" in f.results())
+        AchievementTracker.cityBattleWon(unit, cities[2])
+        cities[2].puppetCity(f.player)
         assertTrue("N32" in f.results())
     }
 
@@ -98,6 +109,7 @@ class AchievementTacticsTest(private val baseRuleset: com.unciv.models.metadata.
     @Test fun chuKoNuKillsMustUseOneUnitOnePlayerTurnAndMajorCivilizationVictims() {
         val f = fixture("China")
         val unit = f.unit("Chu-Ko-Nu", 0, 0)
+        f.history.unit(unit.id).earnedPromotions = 4
         f.kill(unit, 0, 1)
         f.nextTurn()
         f.kill(unit, 1, 1)
@@ -106,15 +118,21 @@ class AchievementTacticsTest(private val baseRuleset: com.unciv.models.metadata.
         f.kill(second, 4, 1)
         assertFalse("N34" in f.results())
         f.kill(unit, 1, 0)
-        assertTrue("N34" in f.results())
+        assertFalse("N34" in f.results())
+        f.history.unit(unit.id).earnedPromotions = 3
+        assertFalse("N34" in f.results(end = true))
+        f.history.unit(unit.id).earnedPromotions = 4
+        assertTrue("N34" in f.results(end = true))
+        unit.destroy()
+        assertFalse("N34" in f.results(end = true))
     }
 
     @Test fun persianContinuousGoldenAgeAllowsExtensionButResetsAfterInterruption() {
         val f = fixture("Persia")
         val unit = f.unit("Warrior", 0, 0)
         f.player.goldenAges.enterGoldenAge()
-        fun capture(x: Int) {
-            val city = f.city(x, 0, civ = f.opponents[0])
+        fun capture(x: Int, opponent: Int = 0) {
+            val city = f.city(x, 0, civ = f.opponents[opponent])
             AchievementTracker.cityBattleWon(unit, city)
             city.puppetCity(f.player)
         }
@@ -128,18 +146,20 @@ class AchievementTacticsTest(private val baseRuleset: com.unciv.models.metadata.
         assertFalse("N35" in f.results())
         capture(8)
         capture(10)
+        assertFalse("N35" in f.results())
+        capture(12, 1)
         assertTrue("N35" in f.results())
     }
     @Test fun harborConnectionsAreAcceptedWithoutAnyRoads() {
         val f = fixture()
-        val city = f.city(0, 0)
+        val cities = listOf(f.city(-4, 0), f.city(0, 0), f.city(4, 0))
         for (tile in f.game.tileMap.values.filter { !it.isCityCenter() })
             f.test.setTileTerrain(tile.position, "Coast")
         f.player.tech.addTechnology("Compass")
         f.capital.cityConstructions.addBuilding("Harbor")
-        city.cityConstructions.addBuilding("Harbor")
+        cities.forEach { it.cityConstructions.addBuilding("Harbor") }
         f.player.cache.updateCitiesConnectedToCapital()
-        assertTrue(city.isConnectedToCapital())
+        assertTrue(cities.all { it.isConnectedToCapital() })
         assertTrue("N10" in f.results(end = true))
     }
 

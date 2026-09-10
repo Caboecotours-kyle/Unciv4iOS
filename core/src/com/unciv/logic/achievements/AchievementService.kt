@@ -30,6 +30,7 @@ class AchievementService(private val directory: File, private val changed: () ->
             current.unlocks = merged.unlocks
             current.victories = merged.victories
             current.v2BuiltWonders = merged.v2BuiltWonders
+            current.wonderGameIds = merged.wonderGameIds
             current.disqualifiedGames = merged.disqualifiedGames
             addCollections(current)
         } else target.load()
@@ -65,7 +66,8 @@ class AchievementService(private val directory: File, private val changed: () ->
         val wonders = state.history.builtWonders.keys.takeIf {
             AchievementCatalog.ineligibility(AchievementCatalog.byId.getValue("N26"), state) == null
         }.orEmpty()
-        if (eligibleIds.all { it in profile.unlocks } && profile.v2BuiltWonders.containsAll(wonders)) return
+        if (eligibleIds.all { it in profile.unlocks } && profile.v2BuiltWonders.containsAll(wonders) &&
+            (wonders.isEmpty() || game.gameId in profile.wonderGameIds)) return
         fun record(id: String = "") = AchievementRecord().apply {
             persistedAt = System.currentTimeMillis()
             gameId = game.gameId
@@ -80,6 +82,7 @@ class AchievementService(private val directory: File, private val changed: () ->
         profile = store(accountKey).update { next ->
             eligibleIds.forEach { next.recordUnlock(record(it)) }
             next.v2BuiltWonders.addAll(wonders)
+            if (wonders.isNotEmpty()) next.wonderGameIds.add(game.gameId)
             addCollections(next)
         }
         changed()
@@ -129,6 +132,7 @@ class AchievementService(private val directory: File, private val changed: () ->
     @Synchronized fun cloudFacts(): AchievementProfile = AchievementProfile().also {
         it.victories.putAll(profile.victories)
         it.v2BuiltWonders.addAll(profile.v2BuiltWonders)
+        it.wonderGameIds.addAll(profile.wonderGameIds)
         it.disqualifiedGames.addAll(profile.disqualifiedGames)
     }
 
@@ -137,19 +141,22 @@ class AchievementService(private val directory: File, private val changed: () ->
         val combined = profile.mergedWith(AchievementProfile().apply {
             victories.putAll(incoming.victories)
             v2BuiltWonders.addAll(incoming.v2BuiltWonders)
+            wonderGameIds.addAll(incoming.wonderGameIds)
             disqualifiedGames.addAll(incoming.disqualifiedGames)
         })
         if (combined.victories == profile.victories && combined.disqualifiedGames == profile.disqualifiedGames &&
-            combined.v2BuiltWonders == profile.v2BuiltWonders) return
+            combined.v2BuiltWonders == profile.v2BuiltWonders && combined.wonderGameIds == profile.wonderGameIds) return
         profile = store(key).update { next ->
             val facts = AchievementProfile().apply {
                 victories.putAll(incoming.victories)
                 v2BuiltWonders.addAll(incoming.v2BuiltWonders)
+                wonderGameIds.addAll(incoming.wonderGameIds)
                 disqualifiedGames.addAll(incoming.disqualifiedGames)
             }
             val merged = next.mergedWith(facts)
             next.victories = merged.victories
             next.v2BuiltWonders = merged.v2BuiltWonders
+            next.wonderGameIds = merged.wonderGameIds
             next.disqualifiedGames = merged.disqualifiedGames
             addCollections(next)
         }
@@ -163,7 +170,7 @@ class AchievementService(private val directory: File, private val changed: () ->
             catalogVersion = AchievementCatalog.version
             ruleVersion = AchievementCatalog.version
         }) }
-        if (profile.v2BuiltWonders.size >= 8) unlock("N26")
+        if (profile.v2BuiltWonders.size >= 12 && profile.wonderGameIds.size >= 3) unlock("N26")
         if (AchievementCatalog.byId.keys.filter { it != "N40" }.all { it in profile.unlocks }) unlock("N40")
     }
 }

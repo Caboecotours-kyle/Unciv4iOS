@@ -1110,7 +1110,7 @@ class MapUnit : IsPartOfGameInfoSerialization {
                 NotificationCategory.War,
                 NotificationIcon.Gold
         )
-        AchievementTracker.eventCompleted(civ, "N07")
+        AchievementTracker.encampmentCleared(this, tile)
     }
 
     fun disband() {

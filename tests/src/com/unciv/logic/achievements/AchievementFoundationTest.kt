@@ -12,21 +12,25 @@ import org.junit.runner.RunWith
 
 @RunWith(BaseTestRunner::class)
 class AchievementFoundationTest {
-    private fun newGame(aiCount: Int = 3): TestGame = TestGame().apply {
+    private fun newGame(aiCount: Int = 4): TestGame = TestGame().apply {
         makeHexagonalMap(3)
+        setDifficulty("Emperor")
         addCiv(ruleset.nations.getValue("Rome"), isPlayer = true)
-        listOf("Greece", "China", "Egypt").take(aiCount).forEach { addCiv(ruleset.nations.getValue(it)) }
+        listOf("Greece", "China", "Egypt", "America").take(aiCount).forEach { addCiv(ruleset.nations.getValue(it)) }
         gameInfo.gameParameters.victoryTypes.addAll(AchievementCatalog.victoryRoutes)
     }
 
     private fun state(testGame: TestGame) = AchievementGameState.create(testGame.gameInfo, true, false)!!
 
-    @Test fun catalogMatchesTheApprovedFortyAndTierBudgets() {
+    @Test fun catalogMatchesTheChinesePreviewFortyAndExactlySixBeginnerClues() {
+        assertTrue(AchievementCatalog.localPreview)
+        assertEquals(3, AchievementCatalog.version)
+        assertEquals(3, AchievementCatalog.recordingVersion)
         assertEquals((1..40).map { "N%02d".format(it) }, AchievementCatalog.definitions.map { it.id })
-        assertEquals(listOf(16, 12, 8, 4), AchievementTier.entries.map { tier ->
+        assertEquals(listOf(6, 12, 14, 8), AchievementTier.entries.map { tier ->
             AchievementCatalog.definitions.count { it.tier == tier }
         })
-        assertEquals(setOf("N30", "N36", "N37", "N38", "N39"),
+        assertEquals(AchievementCatalog.byId.keys - setOf("N01", "N02", "N03", "N05", "N06", "N09", "N40"),
             AchievementCatalog.definitions.filter { it.minimumDifficulty != null }.map { it.id }.toSet())
         assertEquals(setOf("Egypt", "Rome", "China", "Persia"), AchievementCatalog.civilizationAchievements.values.toSet())
         assertEquals(4, AchievementCatalog.civilizationAchievements.size)
@@ -50,7 +54,7 @@ class AchievementFoundationTest {
         val state = state(game)
         assertEquals(game.gameInfo.gameId, state.gameId)
         assertEquals("Rome", state.civilization)
-        assertEquals(3, state.aiOpponents)
+        assertEquals(4, state.aiOpponents)
         assertEquals(0, state.cityStates) // Real placed civilizations, not the requested setting.
         assertEquals(AchievementCatalog.byId.keys, state.availableIds)
         assertNull(AchievementCatalog.ineligibility(AchievementCatalog.byId.getValue("N28"), state))
@@ -91,12 +95,13 @@ class AchievementFoundationTest {
         }
     }
 
-    @Test fun onlyExplicitDifficultyGatesRequireThreeOpponentsAndNeverAllRoutes() {
-        for (id in listOf("N30", "N36", "N37", "N38", "N39")) {
+    @Test fun everyAdvancedClueChecksItsOwnOpponentAndDifficultyGate() {
+        for (id in AchievementCatalog.definitions.filter { it.minimumDifficulty != null }.map { it.id }) {
             val definition = AchievementCatalog.byId.getValue(id)
             val state = state(newGame(2)).apply { difficulty = "Deity"; oneCityChallenge = true }
             assertNotNull(id, AchievementCatalog.ineligibility(definition, state))
-            state.aiOpponents = 3
+            state.aiOpponents = definition.minimumOpponents
+            state.civilization = definition.civilization ?: "Rome"
             state.enabledVictories.clear()
             state.enabledVictories.add("Scientific")
             assertNull(id, AchievementCatalog.ineligibility(definition, state))
@@ -152,7 +157,7 @@ class AchievementFoundationTest {
         val game = newGame().gameInfo
         val state = AchievementGameState.create(game, true, false)!!
         assertTrue(state.canContribute(game, AchievementProfile()))
-        for (oldVersion in listOf(0, 1)) {
+        for (oldVersion in listOf(0, 1, 2)) {
             state.recordingVersion = oldVersion
             assertFalse(state.canContribute(game, AchievementProfile()))
         }
@@ -200,7 +205,7 @@ class AchievementFoundationTest {
             f.city(0, 0)
             assertTrue("N02" in f.results())
             f.player.goldenAges.enterGoldenAge()
-            assertTrue("N04" in f.results())
+            assertFalse("N04" in f.results())
             for (route in AchievementCatalog.victoryRoutes) assertTrue("N01" in f.results(route = route))
         }
     }

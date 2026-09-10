@@ -19,6 +19,9 @@ class AchievementHistory : IsPartOfGameInfoSerialization {
     var englishCaptures = HashSet<String>()
     var samuraiCapitals = HashMap<String, HashSet<String>>()
     var goldenAgeCaptures = HashSet<String>()
+    var goldenAgeCapturedCivilizations = HashSet<String>()
+    var goldenAgeWonderCities = HashSet<String>()
+    var tradePartners = HashSet<String>()
     var pendingCaptures = HashMap<String, AchievementCapture>()
     var mountainParties = ArrayList<AchievementMountainParty>()
     var completed = HashSet<String>()
@@ -43,6 +46,7 @@ class AchievementHistory : IsPartOfGameInfoSerialization {
 
 class AchievementUnitHistory : IsPartOfGameInfoSerialization {
     var majorMilitaryKills = 0
+    var clearedEncampments = HashSet<String>()
     var earnedPromotions = 0
     var samuraiMilitaryKill = false
     var chuKoNuKillsThisTurn = HashSet<String>()
