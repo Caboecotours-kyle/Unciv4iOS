@@ -1,5 +1,7 @@
 package com.unciv.logic.trade
 
+import com.unciv.logic.achievements.AchievementTracker
+
 import com.unciv.Constants
 import com.unciv.logic.city.managers.SpyFleeReason
 import com.unciv.logic.civilization.AlertType
@@ -112,7 +114,7 @@ class TradeLogic(val ourCivilization: Civilization, val otherCivilization: Civil
         return offers
     }
 
-    fun acceptTrade(applyGifts: Boolean = true) {
+    fun acceptTrade(applyGifts: Boolean = true): Unit = AchievementTracker.action(ourCivilization.gameInfo) {
         val ourDiploManager = ourCivilization.getDiplomacyManager(otherCivilization)!!
         val theirDiploManager = otherCivilization.getDiplomacyManager(ourCivilization)!!
 
@@ -282,5 +284,6 @@ class TradeLogic(val ourCivilization: Civilization, val otherCivilization: Civil
 
         otherCivilization.cache.updateCivResources()
         otherCivilization.updateStatsForNextTurn()
+        AchievementTracker.tradeCompleted(ourCivilization, otherCivilization, currentTrade)
     }
 }

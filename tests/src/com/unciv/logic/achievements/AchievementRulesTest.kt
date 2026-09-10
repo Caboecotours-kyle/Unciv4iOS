@@ -1,193 +1,167 @@
 package com.unciv.logic.achievements
 
-import com.unciv.logic.map.MapType
-import com.unciv.testing.BaseTestRunner
 import org.junit.Assert.*
 import org.junit.Test
 import org.junit.runner.RunWith
 
-@RunWith(BaseTestRunner::class)
-class AchievementRulesTest {
-    @Test fun victoryAwardsRequireTheWinnerRouteAndHistoricalRestrictions() {
-        val f = AchievementTestFixture()
-        f.state.oneCityChallenge = true
-        f.state.difficulty = "Deity"
-        assertTrue(f.results().isEmpty())
-        assertTrue(AchievementRules.evaluate(f.game, winner = f.opponents[0], victoryRoute = "Scientific").isEmpty())
-        assertTrue(f.results(route = "Time").isEmpty())
-        assertEquals(setOf("A05", "A10", "A21", "A22", "A25", "A37"), f.results(route = "Scientific"))
-        assertEquals(setOf("A06", "A10", "A21", "A22", "A28", "A38"), f.results(route = "Cultural"))
-        assertEquals(setOf("A07", "A08", "A21", "A22", "A27"), f.results(route = "Diplomatic"))
-        assertEquals(setOf("A09", "A21", "A22"), f.results(route = "Domination"))
-        f.history.maximumCities = 4
-        f.history.restrictions.addAll(listOf(AchievementRules.worldWonder, AchievementRules.modernTechnologyOrUnit,
-            AchievementRules.declaredWar, AchievementRules.giftedCityStateGold, AchievementRules.rationalism,
-            AchievementRules.trainedMilitary))
-        for (route in AchievementCatalog.victoryRoutes)
-            assertEquals(setOf("A21", "A22"), f.results(route = route))
-        f.state.difficulty = "Prince"
-        assertTrue(f.results(route = "Scientific").isEmpty())
+@RunWith(org.junit.runners.Parameterized::class)
+@org.junit.runners.Parameterized.UseParametersRunnerFactory(com.unciv.testing.TestRunnerFactory::class)
+class AchievementRulesTest(private val baseRuleset: com.unciv.models.metadata.BaseRuleset) {
+    companion object {
+        @JvmStatic @org.junit.runners.Parameterized.Parameters(name = "{0}")
+        fun parameters() = com.unciv.models.metadata.BaseRuleset.entries.map { arrayOf(it) }
     }
+    private fun fixture(nation: String = "Rome") = AchievementTestFixture(nation, baseRuleset)
 
-    @Test fun recapturingASelfFoundedCityAlsoBreaksPeacefulVictory() {
-        val f = AchievementTestFixture()
-        val unit = f.unit("Warrior", 0, 0)
-        val own = f.city(1, 0)
-        own.moveToCiv(f.opponents[0])
-        AchievementTracker.cityBattleWon(unit, own)
-        own.puppetCity(f.player)
-        assertTrue(f.history.foreignCaptures.isEmpty())
-        assertFalse("A10" in f.results(route = "Scientific"))
-    }
-
-    @Test fun sixBuiltWondersInThreeFoundingCitiesSurviveOwnershipLoss() {
-        val f = AchievementTestFixture("Egypt")
-        val cities = listOf(f.capital, f.city(0, 0), f.city(4, 0))
-        val wonders = listOf("The Pyramids", "Stonehenge", "The Great Library", "The Oracle", "The Great Lighthouse", "Colossus")
-        wonders.forEachIndexed { index, name ->
-            cities[index / 2].cityConstructions.completeConstruction(f.test.ruleset.buildings.getValue(name))
+    @Test fun firstWinIncludesEveryOfficialRouteAtLowestDifficultyWithOneOpponent() {
+        val routes = mapOf("Scientific" to "N17", "Cultural" to "N18", "Domination" to "N19", "Diplomatic" to "N20", "Time" to null)
+        for ((route, medal) in routes) {
+            val f = fixture()
+            f.state.difficulty = "Settler"
+            f.state.aiOpponents = 1
+            f.state.enabledVictories = hashSetOf(route)
+            val result = f.results(route = route)
+            assertTrue(route, "N01" in result)
+            assertEquals(setOfNotNull(medal), result.intersect(setOf("N17", "N18", "N19", "N20")))
+            assertFalse("N36" in result)
+            assertFalse("N01" in f.results())
+            assertFalse("N01" in AchievementRules.evaluate(f.game, true, f.opponents[0], route))
         }
-        assertTrue("A11" in f.results(route = "Cultural"))
-        cities[1].moveToCiv(f.opponents[0])
-        assertTrue("A11" in f.results(route = "Cultural"))
-        f.history.builtWonders.remove(wonders.last())
-        assertFalse("A11" in f.results(route = "Cultural"))
     }
 
-    @Test fun academiesNeedFourOwnedWorkingCitiesAndRealScientistProvenance() {
-        val f = AchievementTestFixture("Babylon")
-        val cities = listOf(f.city(-4, 0), f.city(0, 0), f.city(4, 0), f.city(8, 0))
-        val tiles = cities.map { city ->
-            val tile = city.getCenterTile().neighbors.first { !it.isCityCenter() }
-            city.expansion.takeOwnership(tile)
-            tile.setImprovement("Academy", f.player, f.unit("Great Scientist", tile.position.x, tile.position.y))
-            city.workedTiles.add(tile.position)
-            tile
+    @Test fun highDifficultyWinsIncludeTimeAndOnlyExplicitChallengesAddRestrictions() {
+        val f = fixture()
+        for (route in AchievementCatalog.victoryRoutes) {
+            f.state.difficulty = "King"
+            assertFalse("N36" in f.results(route = route))
+            f.state.difficulty = "Emperor"
+            assertTrue("N36" in f.results(route = route))
+            assertFalse("N37" in f.results(route = route))
+            f.state.difficulty = "Deity"
+            assertTrue("N37" in f.results(route = route))
         }
-        assertTrue("A12" in f.results(route = "Scientific"))
-        tiles[0].improvementIsPillaged = true
-        assertFalse("A12" in f.results(route = "Scientific"))
-        tiles[0].setImprovement("Repair", f.player)
-        assertTrue("A12" in f.results(route = "Scientific"))
-        cities[0].workedTiles.clear()
-        assertFalse("A12" in f.results(route = "Scientific"))
-        cities[0].workedTiles.add(tiles[0].position)
-        tiles[0].setImprovement("Academy", f.player, f.unit("Great Engineer", -3, 2))
-        assertFalse("A12" in f.results(route = "Scientific"))
+        assertFalse("N01" in f.results(route = "Unknown"))
     }
 
-    @Test fun sameCityMustWorkThreeDifferentUnpillagedGreatImprovements() {
-        val f = AchievementTestFixture()
-        val city = f.city(0, 0, 4)
-        val tiles = city.getCenterTile().neighbors.take(3).toList()
-        listOf("Academy" to "Great Scientist", "Manufactory" to "Great Engineer", "Customs house" to "Great Merchant")
-            .forEachIndexed { i, (improvement, name) ->
-                val tile = tiles[i]
-                city.expansion.takeOwnership(tile)
-                tile.setImprovement(improvement, f.player, f.unit(name, tile.position.x, tile.position.y))
-                city.workedTiles.add(tile.position)
-            }
-        city.workedTiles.clear()
-        city.workedTiles.addAll(tiles.map { it.position })
-        assertFalse("A24" in f.results())
-        assertTrue("A24" in f.results(end = true))
-        tiles[0].improvementIsPillaged = true
-        assertFalse("A24" in f.results(end = true))
-        tiles[0].setImprovement("Customs house", f.player, f.unit("Great Merchant", 3, 3))
-        assertFalse("A24" in f.results(end = true))
-    }
-
-    @Test fun populationAchievementsUseOneFinalHappySnapshotAndHistory() {
-        val f = AchievementTestFixture("India")
-        f.capital.population.setPopulation(20)
-        val cities = listOf(f.city(-4, 0, 20), f.city(0, 0, 20))
-        f.player.stats.happiness = 0
-        assertFalse("A15" in f.results())
-        assertTrue("A15" in f.results(end = true))
-        f.player.stats.happiness = -1
-        assertFalse("A15" in f.results(end = true))
-        f.player.stats.happiness = 0
-        f.history.maximumCities = 4
-        assertFalse("A15" in f.results(end = true))
-        f.city(4, 0, 10)
-        f.player.stats.happiness = 0
-        assertTrue("A03" in f.results(end = true))
-        cities[0].moveToCiv(f.opponents[0])
-        f.player.stats.happiness = 0
-        assertFalse("A03" in f.results(end = true))
-    }
-
-    @Test fun sixCultureCitiesMustAllBeSelfFoundedAndStillOwnedAtVictory() {
-        val f = AchievementTestFixture()
-        f.capital.population.setPopulation(10)
-        val cities = listOf(-8, -4, 0, 4, 8).map { f.city(it, 0, 10) }
-        assertTrue("A26" in f.results(route = "Cultural"))
-        cities[0].population.setPopulation(9)
-        assertFalse("A26" in f.results(route = "Cultural"))
-        cities[0].population.setPopulation(10)
-        cities[0].moveToCiv(f.opponents[0])
-        assertFalse("A26" in f.results(route = "Cultural"))
-    }
-
-    @Test fun cityStateAllianceCountsOnlyLivingAlliesAndKeepsOwnershipHistory() {
-        val f = AchievementTestFixture("Greece")
-        f.state.cityStates = 8
-        val states = f.test.ruleset.nations.values.filter { it.isCityState }.take(6).mapIndexed { i, nation ->
-            f.test.addCiv(nation).also {
-                f.city(-10 + i * 3, -3, civ = it)
-                it.allyCiv = f.player
-            }
+    @Test fun populationAndGoldUseTheSameEndOfTurnSnapshotAndDoNotSumPastIncome() {
+        val f = fixture()
+        for ((population, first, second) in listOf(Triple(9, false, false), Triple(10, true, false), Triple(19, true, false), Triple(20, true, true))) {
+            f.capital.population.setPopulation(population)
+            assertEquals(first, "N11" in f.results(end = true))
+            assertEquals(second, "N21" in f.results(end = true))
+            assertFalse("N11" in f.results())
         }
-        assertTrue("A16" in f.results(route = "Diplomatic"))
-        states[0].allyCiv = null
-        assertFalse("A16" in f.results(route = "Diplomatic"))
+        f.player.addGold(499 - f.player.gold)
+        assertFalse("N12" in f.results(end = true))
+        f.player.addGold(1)
+        assertTrue("N12" in f.results(end = true))
+        assertFalse("N12" in f.results())
+        f.player.addGold(1499)
+        assertFalse("N23" in f.results(end = true))
+        f.player.addGold(1)
+        assertTrue("N23" in f.results(end = true))
+        f.player.addGold(-2000)
+        assertFalse("N12" in f.results(end = true))
+    }
+
+    @Test fun cityStateAlliancesRequireOneOrThreeSimultaneousLivingAllies() {
+        val f = fixture()
+        val states = f.test.ruleset.nations.values.filter { it.isCityState }.take(3).mapIndexed { i, nation ->
+            f.test.addCiv(nation).also { f.city(-8 + i * 4, 0, civ = it) }
+        }
+        assertFalse("N13" in f.results(end = true))
         states[0].allyCiv = f.player
-        val city = states[0].cities.first()
-        city.moveToCiv(f.player)
-        city.moveToCiv(states[0])
-        assertFalse("A16" in f.results(route = "Diplomatic"))
+        assertTrue("N13" in f.results(end = true))
+        assertFalse("N13" in f.results())
+        states[1].allyCiv = f.player
+        assertFalse("N25" in f.results(end = true))
+        states[2].allyCiv = f.player
+        assertTrue("N25" in f.results(end = true))
+        states[0].allyCiv = null
+        assertFalse("N25" in f.results(end = true))
     }
 
-    @Test fun twoContinentsCountTheInitialLandmassesAndSelfFoundedCenters() {
-        val f = AchievementTestFixture()
-        val cities = listOf(f.city(-4, 0), f.city(0, 0), f.city(4, 0), f.city(8, 0))
-        f.state.mapType = MapType.twoContinents
-        f.state.targetLandmasses = arrayListOf(
-            cities.take(2).mapTo(HashSet()) { AchievementGameState.tileKey(it.getCenterTile()) },
-            cities.drop(2).mapTo(HashSet()) { AchievementGameState.tileKey(it.getCenterTile()) })
-        assertTrue("A17" in f.results(route = "Scientific"))
-        cities[0].moveToCiv(f.opponents[0])
-        assertFalse("A17" in f.results(route = "Scientific"))
+    @Test fun fourProsperousCitiesNeedFifteenPopulationAndNonnegativeHappiness() {
+        val f = fixture()
+        val cities = listOf(f.capital, f.city(-4, 0), f.city(0, 0), f.city(4, 0))
+        cities.forEach { it.population.setPopulation(15) }
+        f.player.stats.happiness = 0
+        assertTrue("N29" in f.results(end = true))
+        assertFalse("N29" in f.results())
+        cities.last().population.setPopulation(14)
+        f.player.stats.happiness = 0
+        assertFalse("N29" in f.results(end = true))
+        cities.last().population.setPopulation(15)
+        f.city(8, 0, 1)
+        f.player.stats.happiness = -1
+        assertFalse("N29" in f.results(end = true))
+        f.player.stats.happiness = 0
+        assertTrue("N29" in f.results(end = true)) // A fifth small city is allowed.
+        cities.last().moveToCiv(f.opponents[0])
+        f.player.stats.happiness = 0
+        assertFalse("N29" in f.results(end = true))
     }
 
-    @Test fun archipelagoCountsDistinctCitiesAndNavalConquestSources() {
-        val f = AchievementTestFixture()
-        f.state.mapType = MapType.archipelago
-        f.history.foreignCaptures.addAll(listOf("a", "b", "c"))
-        f.history.navalCaptures.add("a")
-        assertFalse("A18" in f.results(route = "Domination"))
-        f.history.navalCaptures.add("b")
-        assertTrue("A18" in f.results(route = "Domination"))
-        f.state.mapType = MapType.pangaea
-        assertFalse("A18" in f.results(route = "Domination"))
+    @Test fun eightDifferentWorldWondersNeedPrinceAndOneGame() {
+        val f = fixture()
+        val wonders = f.test.ruleset.buildings.values.filter { it.isWonder }.take(8)
+        for (wonder in wonders.take(7)) f.capital.cityConstructions.completeConstruction(wonder)
+        assertFalse("N30" in f.results())
+        f.capital.cityConstructions.completeConstruction(wonders.last())
+        assertTrue("N30" in f.results())
+        f.state.difficulty = "Warlord"
+        assertFalse("N30" in f.results())
     }
 
-    @Test fun veteranArmyRequiresThreeSurvivingLogicalUnitsWithEarnedPromotions() {
-        val f = AchievementTestFixture()
-        val units = listOf(0, 3, 6).map { f.unit("Warrior", it, 0) }
-        units.forEach {
-            it.promotions.XP = 1000
-            for (name in listOf("Shock I", "Shock II", "Shock III")) it.promotions.addPromotion(name)
-        }
-        assertTrue("A29" in f.results(route = "Domination"))
-        units[0].destroy()
-        assertFalse("A29" in f.results(route = "Domination"))
+    @Test fun religionCoverageCountsOwnFoundedMajorityAndCurrentForeignOwnership() {
+        val f = fixture()
+        org.junit.Assume.assumeTrue(f.game.isReligionEnabled())
+        val religion = f.test.addReligion(f.player)
+        religion.addBelief(f.test.ruleset.beliefs.values.first { it.type == com.unciv.models.ruleset.BeliefType.Founder })
+        val owned = listOf(f.capital) + listOf(-8, -4, 0, 4, 8, -8).mapIndexed { i, x -> f.city(x, if (i == 5) 4 else 0, 10) }
+        val foreign = f.opponents.map { it.getCapital()!! }
+        val cities = owned + foreign
+        cities.forEach { it.population.setPopulation(10) }
+        for (city in cities.take(9)) city.religion.addPressure(religion.name, 100000)
+        assertFalse("N33" in f.results(end = true))
+        cities.last().religion.addPressure(religion.name, 100000)
+        assertTrue("N33" in f.results(end = true))
+        assertFalse("N33" in f.results())
+        foreign[0].moveToCiv(f.player)
+        assertFalse("N33" in f.results(end = true))
+        foreign[0].moveToCiv(f.opponents[0])
+        val otherReligion = f.test.addReligion(f.opponents[0])
+        f.player.religionManager.religion = otherReligion
+        assertFalse("N33" in f.results(end = true))
     }
 
-    @Test fun koreanScienceRestrictionIsHistoricalAndCivilizationSpecific() {
-        val f = AchievementTestFixture("Korea")
-        assertTrue("A33" in f.results(route = "Scientific"))
-        AchievementTracker.flag(f.player, AchievementRules.scientistResearch)
-        assertFalse("A33" in f.results(route = "Scientific"))
+    @Test fun oneCityScienceRequiresTheSwitchAndTheCompleteOwnershipHistory() {
+        val f = fixture()
+        f.state.difficulty = "Emperor"
+        assertFalse("N38" in f.results(route = "Scientific"))
+        f.state.oneCityChallenge = true
+        assertTrue("N38" in f.results(route = "Scientific"))
+        assertFalse("N38" in f.results(route = "Time"))
+        val before = f.state.clone()
+        val acquired = f.city(0, 0, civ = f.opponents[0])
+        acquired.moveToCiv(f.player)
+        acquired.moveToCiv(f.opponents[0])
+        assertEquals(1, f.player.cities.size)
+        assertFalse("N38" in f.results(route = "Scientific"))
+        f.game.achievements = before
+        assertTrue("N38" in f.results(route = "Scientific"))
+    }
+
+    @Test fun wonderlessCultureAllowsNationalWondersButRemembersAcquiredWorldWonders() {
+        val f = fixture()
+        f.state.difficulty = "Emperor"
+        f.capital.cityConstructions.addBuilding("National College")
+        assertTrue("N39" in f.results(route = "Cultural"))
+        assertFalse("N39" in f.results(route = "Scientific"))
+        val acquired = f.city(0, 0, civ = f.opponents[0])
+        acquired.cityConstructions.addBuilding("The Pyramids")
+        acquired.moveToCiv(f.player)
+        acquired.moveToCiv(f.opponents[0])
+        assertFalse("N39" in f.results(route = "Cultural"))
     }
 }

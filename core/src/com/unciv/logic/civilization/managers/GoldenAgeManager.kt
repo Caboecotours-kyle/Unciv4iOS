@@ -52,7 +52,7 @@ class GoldenAgeManager : IsPartOfGameInfoSerialization {
         return turnsToGoldenAge.toInt()
     }
 
-    fun enterGoldenAge(unmodifiedNumberOfTurns: Int = 10) {
+    fun enterGoldenAge(unmodifiedNumberOfTurns: Int = 10): Unit = AchievementTracker.action(civInfo.gameInfo) {
         turnsLeftForCurrentGoldenAge += calculateGoldenAgeLength(unmodifiedNumberOfTurns)
         civInfo.addNotification("You have entered a Golden Age!",
             CivilopediaAction("Tutorial/Golden Age"),
@@ -64,6 +64,7 @@ class GoldenAgeManager : IsPartOfGameInfoSerialization {
         //Golden Age can happen mid turn with Great Artist effects
         for (city in civInfo.cities)
             city.cityStats.update()
+        if (isGoldenAge()) AchievementTracker.eventCompleted(civInfo, "N04")
     }
 
     fun endTurn(happiness: Int) {

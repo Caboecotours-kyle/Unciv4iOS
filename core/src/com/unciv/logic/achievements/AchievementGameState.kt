@@ -2,8 +2,6 @@ package com.unciv.logic.achievements
 
 import com.unciv.logic.GameInfo
 import com.unciv.logic.IsPartOfGameInfoSerialization
-import com.unciv.logic.map.MapType
-import com.unciv.logic.map.TileMap
 import com.unciv.logic.map.tile.Tile
 
 /** Branch-local facts only. Permanent unlocks and disqualifications belong in the profile. */
@@ -21,6 +19,7 @@ class AchievementGameState : IsPartOfGameInfoSerialization {
     var mapType = ""
     var aiOpponents = 0
     var cityStates = 0
+    var religionEnabled = false
     var oneCityChallenge = false
     var availableIds = HashSet<String>()
     var enabledVictories = HashSet<String>()
@@ -45,6 +44,7 @@ class AchievementGameState : IsPartOfGameInfoSerialization {
         it.mapType = mapType
         it.aiOpponents = aiOpponents
         it.cityStates = cityStates
+        it.religionEnabled = religionEnabled
         it.oneCityChallenge = oneCityChallenge
         it.availableIds.addAll(availableIds)
         it.enabledVictories.addAll(enabledVictories)
@@ -59,7 +59,7 @@ class AchievementGameState : IsPartOfGameInfoSerialization {
     fun canContribute(game: GameInfo, profile: AchievementProfile): Boolean =
         recordingVersion >= AchievementCatalog.firstCompleteRecordingVersion &&
             recordingVersion <= AchievementCatalog.recordingVersion &&
-            gameId == game.gameId && !ended && gameId !in profile.disqualifiedGames
+            catalogVersion == AchievementCatalog.version && gameId == game.gameId && !ended && gameId !in profile.disqualifiedGames
 
     companion object {
         fun create(game: GameInfo, generatedMap: Boolean, hadMods: Boolean): AchievementGameState? {
@@ -79,44 +79,17 @@ class AchievementGameState : IsPartOfGameInfoSerialization {
                 mapType = game.tileMap.mapParameters.type
                 aiOpponents = game.civilizations.count { it.isAI() && it.isMajorCiv() }
                 cityStates = game.civilizations.count { it.isCityState }
+                religionEnabled = game.isReligionEnabled()
                 oneCityChallenge = game.gameParameters.oneCityChallenge
                 history.startTurn(game.turns)
                 availableIds.addAll(AchievementCatalog.byId.keys)
                 enabledVictories.addAll(game.gameParameters.victoryTypes)
                 AchievementCatalog.definitions.mapNotNull { it.requiredUnit }
                     .filterTo(availableUnits) { it in game.ruleset.units }
-                if (mapType == MapType.twoContinents)
-                    targetLandmasses.addAll(findTargetLandmasses(game.tileMap))
             }
         }
 
         fun tileKey(tile: Tile) = "${tile.position.x},${tile.position.y}"
 
-        /** Includes impassable land and uses actual neighbors, including world-wrap edges. */
-        fun findTargetLandmasses(map: TileMap): List<HashSet<String>> {
-            val remaining = map.values.filter { it.isLand }.toMutableSet()
-            val groups = ArrayList<Set<Tile>>()
-            while (remaining.isNotEmpty()) {
-                val start = remaining.first()
-                remaining.remove(start)
-                val group = hashSetOf(start)
-                val queue = ArrayDeque<Tile>()
-                queue.add(start)
-                while (queue.isNotEmpty()) {
-                    for (neighbor in queue.removeFirst().neighbors) {
-                        if (remaining.remove(neighbor)) {
-                            group.add(neighbor)
-                            queue.add(neighbor)
-                        }
-                    }
-                }
-                groups.add(group)
-            }
-            val coordinates = compareBy<Tile> { it.position.x }.thenBy { it.position.y }
-            return groups.sortedWith(compareByDescending<Set<Tile>> { it.size }
-                .thenBy { it.minWith(coordinates).position.x }
-                .thenBy { it.minWith(coordinates).position.y })
-                .take(2).map { group -> group.mapTo(HashSet()) { tileKey(it) } }
-        }
     }
 }

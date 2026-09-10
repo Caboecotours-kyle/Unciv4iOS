@@ -29,6 +29,7 @@ class AchievementService(private val directory: File, private val changed: () ->
             val merged = current.mergedWith(guest)
             current.unlocks = merged.unlocks
             current.victories = merged.victories
+            current.v2BuiltWonders = merged.v2BuiltWonders
             current.disqualifiedGames = merged.disqualifiedGames
             addCollections(current)
         } else target.load()
@@ -56,9 +57,15 @@ class AchievementService(private val directory: File, private val changed: () ->
     @Synchronized fun record(game: GameInfo, ids: Set<String>, victoryRoute: String? = null) {
         val state = game.achievements ?: return
         if (!canContribute(game)) return
-        val victoryQualifies = victoryRoute in AchievementCatalog.victoryRoutes &&
-            AchievementCatalog.ineligibility(AchievementCatalog.byId.getValue("A19"), state) == null
-        if (ids.all { it in profile.unlocks } && (!victoryQualifies || game.gameId in profile.victories)) return
+        val eligibleIds = ids.filterTo(HashSet()) {
+            AchievementCatalog.byId[it]?.let { definition ->
+                !definition.isCollection && AchievementCatalog.ineligibility(definition, state) == null
+            } == true
+        }
+        val wonders = state.history.builtWonders.keys.takeIf {
+            AchievementCatalog.ineligibility(AchievementCatalog.byId.getValue("N26"), state) == null
+        }.orEmpty()
+        if (eligibleIds.all { it in profile.unlocks } && profile.v2BuiltWonders.containsAll(wonders)) return
         fun record(id: String = "") = AchievementRecord().apply {
             persistedAt = System.currentTimeMillis()
             gameId = game.gameId
@@ -68,11 +75,11 @@ class AchievementService(private val directory: File, private val changed: () ->
             this.victoryRoute = victoryRoute.orEmpty()
             turn = game.turns
             catalogVersion = state.catalogVersion
-            ruleVersion = 1
+            ruleVersion = AchievementCatalog.version
         }
         profile = store(accountKey).update { next ->
-            ids.forEach { next.recordUnlock(record(it)) }
-            if (victoryQualifies) next.recordVictory(record())
+            eligibleIds.forEach { next.recordUnlock(record(it)) }
+            next.v2BuiltWonders.addAll(wonders)
             addCollections(next)
         }
         changed()
@@ -87,8 +94,8 @@ class AchievementService(private val directory: File, private val changed: () ->
         if (owner == accountKey) { profile = updated; changed() }
     }
 
-    @Synchronized fun pending(): Set<String> = profile.unlocks.keys.intersect(AchievementCatalog.byId.keys) - profile.reportedIds
-    @Synchronized fun completed(): Set<String> = profile.unlocks.keys.intersect(AchievementCatalog.byId.keys)
+    @Synchronized fun pending(): Set<String> = profile.unlocks.keys.intersect(AchievementCatalog.reportableIds) - profile.reportedIds
+    @Synchronized fun completed(): Set<String> = profile.unlocks.keys.intersect(AchievementCatalog.knownIds)
     @Synchronized fun isBoundTo(gamePlayerId: String): Boolean = accountKey == playerKey(gamePlayerId)
 
     private fun playerKey(gamePlayerId: String) = MessageDigest.getInstance("SHA-256")
@@ -96,18 +103,18 @@ class AchievementService(private val directory: File, private val changed: () ->
 
     @Synchronized fun acknowledge(key: String, ids: Set<String>) {
         if (key != accountKey) return
-        profile = store(key).update { it.reportedIds.addAll(ids.intersect(it.unlocks.keys)) }
+        profile = store(key).update { it.reportedIds.addAll(ids.intersect(it.unlocks.keys).intersect(AchievementCatalog.reportableIds)) }
     }
 
     @Synchronized fun restoreCompleted(key: String, ids: Set<String>) {
         if (key != accountKey) return
-        val known = ids.intersect(AchievementCatalog.byId.keys)
+        val known = ids.intersect(AchievementCatalog.reportableIds)
         if (known.all { it in profile.unlocks && it in profile.reportedIds }) return
         profile = store(key).update { next ->
             for (id in known) {
                 if (id !in next.unlocks) next.recordUnlock(AchievementRecord().apply {
                     achievementId = id
-                    catalogVersion = AchievementCatalog.version
+                    catalogVersion = 1
                     ruleVersion = 1
                     // No fabricated game, date, civilization or difficulty for a Game Center restoration.
                 })
@@ -121,6 +128,7 @@ class AchievementService(private val directory: File, private val changed: () ->
     /** Only custom facts, not game saves or Game Center's completed-state cache. */
     @Synchronized fun cloudFacts(): AchievementProfile = AchievementProfile().also {
         it.victories.putAll(profile.victories)
+        it.v2BuiltWonders.addAll(profile.v2BuiltWonders)
         it.disqualifiedGames.addAll(profile.disqualifiedGames)
     }
 
@@ -128,16 +136,20 @@ class AchievementService(private val directory: File, private val changed: () ->
         if (key != accountKey) return
         val combined = profile.mergedWith(AchievementProfile().apply {
             victories.putAll(incoming.victories)
+            v2BuiltWonders.addAll(incoming.v2BuiltWonders)
             disqualifiedGames.addAll(incoming.disqualifiedGames)
         })
-        if (combined.victories == profile.victories && combined.disqualifiedGames == profile.disqualifiedGames) return
+        if (combined.victories == profile.victories && combined.disqualifiedGames == profile.disqualifiedGames &&
+            combined.v2BuiltWonders == profile.v2BuiltWonders) return
         profile = store(key).update { next ->
             val facts = AchievementProfile().apply {
                 victories.putAll(incoming.victories)
+                v2BuiltWonders.addAll(incoming.v2BuiltWonders)
                 disqualifiedGames.addAll(incoming.disqualifiedGames)
             }
             val merged = next.mergedWith(facts)
             next.victories = merged.victories
+            next.v2BuiltWonders = merged.v2BuiltWonders
             next.disqualifiedGames = merged.disqualifiedGames
             addCollections(next)
         }
@@ -145,17 +157,13 @@ class AchievementService(private val directory: File, private val changed: () ->
     }
 
     private fun addCollections(profile: AchievementProfile) {
-        val fulfilled = listOf(
-            "A19" to (profile.collectedCivilizations().size >= 5),
-            "A20" to (profile.matchedVictoryRoutes("A20") == 4),
-            "A39" to (profile.completedCivilizationChallenges().size >= 6),
-            "A40" to (profile.matchedVictoryRoutes("A40") == 4)
-        )
-        for ((id, complete) in fulfilled) if (complete) profile.recordUnlock(AchievementRecord().apply {
+        fun unlock(id: String) { profile.recordUnlock(AchievementRecord().apply {
             achievementId = id
             persistedAt = System.currentTimeMillis()
             catalogVersion = AchievementCatalog.version
-            ruleVersion = 1
-        })
+            ruleVersion = AchievementCatalog.version
+        }) }
+        if (profile.v2BuiltWonders.size >= 8) unlock("N26")
+        if (AchievementCatalog.byId.keys.filter { it != "N40" }.all { it in profile.unlocks }) unlock("N40")
     }
 }

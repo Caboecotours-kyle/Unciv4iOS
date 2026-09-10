@@ -151,7 +151,7 @@ class CityConquestFunctions(val city: City) {
 
 
     /** This happens when we either puppet OR annex, basically whenever we conquer a city and don't liberate it */
-    fun puppetCity(conqueringCiv: Civilization) {
+    fun puppetCity(conqueringCiv: Civilization): Unit = AchievementTracker.action(conqueringCiv.gameInfo) {
         val oldCiv = city.civ
 
         // must be before moving the city to the conquering civ,
@@ -161,7 +161,7 @@ class CityConquestFunctions(val city: City) {
         conquerCity(conqueringCiv, oldCiv, conqueringCiv)
         makePuppet()
         city.cityStats.update()
-        AchievementTracker.settle(conqueringCiv.gameInfo)
+        AchievementTracker.cityConquered(city)
     }
 
     private fun makePuppet(){

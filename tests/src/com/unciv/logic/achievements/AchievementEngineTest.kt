@@ -7,20 +7,19 @@ import com.unciv.logic.city.City
 import com.unciv.logic.civilization.Civilization
 import com.unciv.logic.map.HexCoord
 import com.unciv.logic.map.mapunit.MapUnit
-import com.unciv.logic.map.tile.RoadStatus
 import com.unciv.models.metadata.BaseRuleset
-import com.unciv.testing.BaseTestRunner
 import com.unciv.testing.TestGame
 import org.junit.After
 import org.junit.Assert.*
 import org.junit.Test
 import org.junit.runner.RunWith
 
-internal class AchievementTestFixture(nation: String = "Rome") {
-    val test = TestGame().apply { makeHexagonalMap(12) }
+internal class AchievementTestFixture(nation: String = "Rome", baseRuleset: BaseRuleset = BaseRuleset.Civ_V_GnK,
+                                      speed: String = "Standard", aiCount: Int = 3, difficulty: String = "Prince") {
+    val test = TestGame(baseRuleset = baseRuleset).apply { setSpeed(speed); setDifficulty(difficulty); makeHexagonalMap(12) }
     val game = test.gameInfo
     val player = test.addCiv(test.ruleset.nations.getValue(nation), isPlayer = true)
-    val opponents = listOf("Greece", "China", "Egypt", "Rome").filter { it != nation }.take(3)
+    val opponents = listOf("Greece", "China", "Egypt", "Rome").filter { it != nation }.take(aiCount)
         .map { test.addCiv(test.ruleset.nations.getValue(it)) }
     val capital = test.addCity(player, test.getTile(-8, -8))
     val state: AchievementGameState
@@ -32,7 +31,7 @@ internal class AchievementTestFixture(nation: String = "Rome") {
         game.currentPlayer = player.civID
         game.currentPlayerCiv = player
         game.gameParameters.victoryTypes.addAll(AchievementCatalog.victoryRoutes)
-        game.gameParameters.baseRuleset = BaseRuleset.Civ_V_GnK.fullName
+        game.gameParameters.baseRuleset = baseRuleset.fullName
         state = AchievementGameState.create(game, true, false)!!.apply {
             recordingVersion = AchievementCatalog.firstCompleteRecordingVersion
             initializationComplete = true
@@ -62,250 +61,251 @@ internal class AchievementTestFixture(nation: String = "Rome") {
     }
 }
 
-@RunWith(BaseTestRunner::class)
-class AchievementEngineTest {
+@RunWith(org.junit.runners.Parameterized::class)
+@org.junit.runners.Parameterized.UseParametersRunnerFactory(com.unciv.testing.TestRunnerFactory::class)
+class AchievementEngineTest(private val baseRuleset: com.unciv.models.metadata.BaseRuleset) {
+    companion object {
+        @JvmStatic @org.junit.runners.Parameterized.Parameters(name = "{0}")
+        fun parameters() = com.unciv.models.metadata.BaseRuleset.entries.map { arrayOf(it) }
+    }
+    private fun fixture(nation: String = "Rome") = AchievementTestFixture(nation, baseRuleset)
 
+    @get:org.junit.Rule val temporary = org.junit.rules.TemporaryFolder()
     @After fun clearService() { AchievementTracker.service = null }
 
-    @Test fun battleKillsAndEarnedPromotionsUseRealSources() {
-        val f = AchievementTestFixture()
-        val veteran = f.unit("Swordsman", 0, 0)
-        repeat(3) { f.kill(veteran, 1 + it, 0) }
-        veteran.promotions.addPromotion("Drill I", isFree = true)
-        veteran.promotions.XP = 100
-        veteran.promotions.addPromotion("Shock I")
-        assertFalse("A01" in f.results())
-        veteran.promotions.addPromotion("Shock II")
-        assertTrue("A01" in f.results())
-        val facts = f.history.units.getValue(veteran.id.toString())
-        assertEquals(3, facts.majorMilitaryKills)
-        assertEquals(2, facts.earnedPromotions)
-        veteran.upgrade.performUpgrade(f.test.ruleset.units.getValue("Longswordsman"), isFree = true)
-        assertTrue("A01" in f.results())
+    @Test fun firstExpansionRequiresASecondFoundedCityRatherThanAnAcquisition() {
+        val f = fixture()
+        assertFalse("N02" in f.results())
+        val foreign = f.city(0, 0, civ = f.opponents[0])
+        foreign.moveToCiv(f.player)
+        assertFalse("N02" in f.results())
+        f.city(4, 0)
+        assertTrue("N02" in f.results())
+        assertEquals(2, f.history.foundedCities.size)
     }
 
-    @Test fun barbarianKillsDoNotBecomeMajorCivilizationKills() {
-        val f = AchievementTestFixture()
-        val veteran = f.unit("Swordsman", 0, 0)
-        val barbarians = f.test.addBarbarianCiv()
-        val victim = f.unit("Warrior", 1, 0, barbarians).apply { health = 1 }
-        Battle.attack(MapUnitCombatant(veteran), MapUnitCombatant(victim))
-        assertEquals(0, f.history.units[veteran.id.toString()]?.majorMilitaryKills ?: 0)
+    @Test fun policyOpenerAndFullBranchUseCompletedAdoptionIncludingFreePolicies() {
+        val f = fixture()
+        val branch = f.test.ruleset.policyBranches.getValue("Tradition")
+        f.player.policies.freePolicies = 10
+        assertFalse("N03" in f.results())
+        f.player.policies.adopt(branch)
+        assertTrue("N03" in f.results())
+        assertFalse("N22" in f.results())
+        for (policy in branch.policies.dropLast(1)) f.player.policies.adopt(policy)
+        assertTrue("N22" in f.results())
     }
 
-    @Test fun chuKoNuKillsMustShareAPlayerTurn() {
-        val f = AchievementTestFixture("China")
-        val unit = f.unit("Chu-Ko-Nu", 0, 0)
-        f.kill(unit, 0, 1)
-        f.nextTurn()
-        f.kill(unit, 1, 1)
-        assertFalse("A13" in f.results())
-        f.kill(unit, 1, 0)
-        assertTrue("A13" in f.results())
-    }
-
-    @Test fun conquestWaitsForOwnershipAndCompleteBattleLosses() {
-        val f = AchievementTestFixture()
-        val attacker = f.unit("Warrior", 0, 0)
-        val lostUnit = f.unit("Warrior", 0, 3)
-        val first = f.city(1, 0, civ = f.opponents[0])
-        val second = f.city(3, 0, civ = f.opponents[0])
-        AchievementTracker.cityBattleWon(attacker, first)
-        AchievementTracker.settle(f.game)
-        assertTrue(f.history.foreignCaptures.isEmpty())
-        first.puppetCity(f.player)
-        val before = AchievementTracker.militaryRoster(f.game)
+    @Test fun goldenAgeEventsWaitForOuterActionAndPersistWithoutRequiringVictory() {
+        val f = fixture()
+        val directory = temporary.newFolder()
+        val service = AchievementService(directory)
+        AchievementTracker.service = service
         AchievementTracker.beginAction(f.game)
-        AchievementTracker.cityBattleWon(attacker, second)
-        second.puppetCity(f.player)
-        assertFalse("A02" in f.results())
-        lostUnit.destroy()
-        AchievementTracker.battleEnded(f.game, before, true)
-        assertEquals(2, f.history.foreignCaptures.size)
-        assertFalse("A02" in f.results())
+        f.player.goldenAges.enterGoldenAge()
+        assertFalse("N04" in service.completed())
+        AchievementTracker.endAction(f.game)
+        assertTrue("N04" in service.completed())
+        assertNull(f.game.victoryData)
+        assertTrue("N04" in service.pending())
     }
 
-    @Test fun twoForeignCitiesWithNoLossUnlockAndLaterLossDoesNotRevoke() {
-        val f = AchievementTestFixture()
-        val unit = f.unit("Warrior", 0, 0)
-        for (city in listOf(f.city(1, 0, civ = f.opponents[0]), f.city(3, 0, civ = f.opponents[0]))) {
-            AchievementTracker.cityBattleWon(unit, city)
-            city.puppetCity(f.player)
-        }
-        assertTrue("A02" in f.results())
-        AchievementTracker.militaryLost(f.player)
-        assertTrue("A02" in f.results())
-        assertEquals(2, f.history.foreignCaptures.size)
-    }
-
-    @Test fun directLiberationIsNotOwnershipButTemporaryCityTransfersAreHistory() {
-        val f = AchievementTestFixture()
-        val unit = f.unit("Warrior", 0, 0)
-        val city = f.city(1, 0, civ = f.opponents[0])
-        city.moveToCiv(f.opponents[1])
-        AchievementTracker.cityBattleWon(unit, city)
-        city.liberateCity(f.player)
-        assertTrue(f.history.foreignCaptures.isEmpty())
-        assertFalse(AchievementRules.capturedAnyCity in f.history.restrictions)
-        city.moveToCiv(f.player)
-        city.moveToCiv(f.opponents[0])
-        assertEquals(2, f.history.maximumCities)
-        assertTrue(AchievementRules.foreignCity in f.history.restrictions)
-        assertEquals(1, f.player.cities.size)
-    }
-
-    @Test fun wondersRequireProductionInTwoSelfFoundedCitiesInSameTurn() {
-        val f = AchievementTestFixture("Egypt")
-        val second = f.city(0, 0)
-        f.capital.cityConstructions.addBuilding("The Pyramids")
-        second.cityConstructions.addBuilding("Stonehenge")
-        assertFalse("A04" in f.results())
-        f.capital.cityConstructions.completeConstruction(f.test.ruleset.buildings.getValue("The Great Library"))
-        f.nextTurn()
-        second.cityConstructions.completeConstruction(f.test.ruleset.buildings.getValue("The Oracle"))
-        assertFalse("A04" in f.results())
-        f.capital.cityConstructions.completeConstruction(f.test.ruleset.buildings.getValue("The Great Lighthouse"))
-        assertTrue("A04" in f.results())
-        assertTrue(AchievementRules.worldWonder in f.history.restrictions)
+    @Test fun worldsWondersCountActualCompletionIncludingProductionInAcquiredCities() {
+        val f = fixture("Egypt")
+        val acquired = f.city(0, 0, civ = f.opponents[0])
+        acquired.cityConstructions.addBuilding("The Pyramids")
+        acquired.moveToCiv(f.player)
+        assertFalse("N05" in f.results())
+        f.capital.cityConstructions.completeConstruction(f.test.ruleset.buildings.getValue("National College"))
+        assertFalse("N05" in f.results())
+        for (name in listOf("Stonehenge", "The Great Library", "The Oracle"))
+            acquired.cityConstructions.completeConstruction(f.test.ruleset.buildings.getValue(name))
+        assertTrue("N05" in f.results())
+        assertTrue("N27" in f.results())
         assertEquals(3, f.history.builtWonders.size)
+        assertNull(f.game.victoryData)
     }
 
-    @Test fun industrialEraAndNationalWondersCannotCompleteTwinWonders() {
-        val f = AchievementTestFixture("Egypt")
-        val second = f.city(0, 0)
-        f.player.tech.addTechnology("Industrialization")
-        f.capital.cityConstructions.completeConstruction(f.test.ruleset.buildings.getValue("The Pyramids"))
-        second.cityConstructions.completeConstruction(f.test.ruleset.buildings.getValue("Stonehenge"))
-        assertFalse("A04" in f.results())
+    @Test fun majorMilitaryAndBarbarianKillsUnlockButCivilianCaptureDoesNot() {
+        val f = fixture()
+        val unit = f.unit("Swordsman", 0, 0)
+        val enemy = f.opponents[0]
+        f.player.diplomacyFunctions.makeCivilizationsMeet(enemy)
+        f.player.getDiplomacyManager(enemy)!!.declareWar()
+        val worker = f.unit("Worker", 1, 0, enemy)
+        Battle.attack(MapUnitCombatant(unit), MapUnitCombatant(worker))
+        assertFalse("N06" in f.results())
+        f.kill(unit, 2, 0)
+        assertTrue("N06" in f.results())
+        val second = fixture()
+        val barbarian = second.test.addBarbarianCiv()
+        val attacker = second.unit("Swordsman", 0, 0)
+        val victim = second.unit("Warrior", 1, 0, barbarian).apply { health = 1 }
+        Battle.attack(MapUnitCombatant(attacker), MapUnitCombatant(victim))
+        assertTrue("N06" in second.results())
     }
 
-    @Test fun militaryCreationSourcesAndPoliciesKeepHistoricalRestrictions() {
-        val f = AchievementTestFixture()
-        f.unit("Warrior", 0, 0) // gift/initial placement is allowed for A27.
-        assertFalse(AchievementRules.trainedMilitary in f.history.restrictions)
-        f.capital.cityConstructions.completeConstruction(f.test.ruleset.units.getValue("Warrior"))
-        assertTrue(AchievementRules.trainedMilitary in f.history.restrictions)
-        val oldBranch = f.game.clone()
-        f.player.tech.addTechnology("Industrialization", showNotification = false)
-        assertTrue(AchievementRules.modernTechnologyOrUnit in f.history.restrictions)
-        assertFalse(AchievementRules.modernTechnologyOrUnit in oldBranch.achievements!!.history.restrictions)
-        f.player.policies.freePolicies = 1
-        f.player.policies.adopt(f.test.ruleset.policies.getValue("Rationalism"))
-        f.player.policies.removePolicy(f.test.ruleset.policies.getValue("Rationalism"), assumeWasFree = true)
-        assertTrue(AchievementRules.rationalism in f.history.restrictions)
-    }
-
-    @Test fun modernMilitaryGiftsViolateOldWorldEvenWithoutTheTechnology() {
-        val f = AchievementTestFixture()
-        assertFalse(f.player.tech.isResearched("Replaceable Parts"))
-        f.unit("Great War Infantry", 0, 0)
-        assertTrue(AchievementRules.modernTechnologyOrUnit in f.history.restrictions)
-        assertFalse(AchievementRules.trainedMilitary in f.history.restrictions)
-    }
-
-    @Test fun successfulChosenUpgradesIncludeZeroCostButFailedAndAutomaticOnesDoNot() {
-        val f = AchievementTestFixture()
+    @Test fun encampmentMustBeClearedByPlayerMovement() {
+        val f = fixture()
         val unit = f.unit("Warrior", 0, 0)
-        unit.upgrade.performUpgrade(f.test.ruleset.units.getValue("Swordsman"), isFree = true)
-        assertFalse(AchievementRules.trainedMilitary in f.history.restrictions)
-        val successor = f.player.units.getCivUnits().single { it.id == unit.id }
-        successor.upgrade.performUpgrade(f.test.ruleset.units.getValue("Longswordsman"), isFree = true, playerInitiated = true)
-        assertTrue(AchievementRules.trainedMilitary in f.history.restrictions)
+        val tile = f.test.getTile(1, 0)
+        tile.setImprovement("Barbarian encampment")
+        assertFalse("N07" in f.results())
+        unit.movement.moveToTile(tile)
+        assertTrue("N07" in f.results())
+        assertFalse(tile.isBarbarianEncampment())
     }
 
-    @Test fun greatImprovementProvenanceSurvivesRepairButNotReplacementOrPreview() {
-        val f = AchievementTestFixture("Babylon")
-        val city = f.city(0, 0)
-        val tile = f.test.getTile(0, 1)
-        city.expansion.takeOwnership(tile)
-        city.workedTiles.add(tile.position)
-        val scientist = f.unit("Great Scientist", 0, 1)
-        tile.setImprovement("Academy", f.player, scientist)
-        val key = AchievementGameState.tileKey(tile)
-        assertEquals("Academy", f.history.greatImprovements[key])
-        tile.clone().setImprovement("Farm", f.player)
-        assertEquals("Academy", f.history.greatImprovements[key])
-        tile.improvementIsPillaged = true
-        tile.setImprovement("Repair", f.player)
-        assertEquals("Academy", f.history.greatImprovements[key])
-        tile.removeImprovement()
-        tile.setImprovement("Academy", f.opponents[0], null)
-        assertFalse(key in f.history.greatImprovements)
+    @Test fun workerCompletionExcludesRepairClonesAndPreviouslyOwnedImprovements() {
+        for (name in listOf("Farm", "Mine", "Pasture")) {
+            val f = fixture()
+            val tile = f.test.getTile(0, 0)
+            val worker = f.unit("Worker", 0, 0)
+            tile.setImprovement(name, f.player)
+            assertFalse("N09" in f.results())
+            tile.improvementIsPillaged = true
+            tile.setImprovement("Repair", f.player, worker)
+            assertFalse("N09" in f.results())
+            tile.clone().setImprovement(name, f.player, worker)
+            assertFalse("N09" in f.results())
+            tile.removeImprovement()
+            com.unciv.UncivGame.Current.settings.tutorialTasksCompleted.add("Construct an improvement")
+            tile.queueImprovement(name, 2)
+            assertFalse(tile.doWorkerTurn(worker))
+            assertFalse("N09" in f.results())
+            assertTrue(tile.doWorkerTurn(worker))
+            assertTrue(name, "N09" in f.results())
+        }
     }
 
-    @Test fun goldenAgeInterruptionResetsTheAttemptWhileExtensionKeepsIt() {
-        val f = AchievementTestFixture("Persia")
+    @Test fun naturalWonderOnlyNeedsVisibilityAndCannotAwardAnUnseenWonder() {
+        val f = fixture()
+        val tile = f.test.getTile(0, 0)
+        tile.naturalWonder = "Mount Fuji"
+        tile.setTerrainTransients()
+        assertFalse("N16" in f.results())
+        f.player.viewableTiles = hashSetOf(tile)
+        f.player.cache.discoverNaturalWonders()
+        assertTrue("N16" in f.results())
+        assertFalse(tile.getUnits().any())
+    }
+
+    @Test fun completedTradesIncludeGoldIncomeResourcesAndOpenBordersInEitherDirection() {
+        val offers = listOf(
+            "Gold" to com.unciv.logic.trade.TradeOfferType.Gold,
+            "Gold per turn" to com.unciv.logic.trade.TradeOfferType.Gold_Per_Turn,
+            "Silk" to com.unciv.logic.trade.TradeOfferType.Luxury_Resource,
+            "Iron" to com.unciv.logic.trade.TradeOfferType.Strategic_Resource,
+            "Open Borders" to com.unciv.logic.trade.TradeOfferType.Agreement
+        )
+        for ((name, type) in offers) for (reverse in listOf(false, true)) {
+            val f = fixture()
+            val other = f.opponents[0]
+            f.player.diplomacyFunctions.makeCivilizationsMeet(other)
+            f.player.addGold(100)
+            other.addGold(100)
+            val trade = com.unciv.logic.trade.TradeLogic(if (reverse) other else f.player, if (reverse) f.player else other)
+            trade.currentTrade.ourOffers.add(com.unciv.logic.trade.TradeOffer(name, type, amount = 1, speed = f.game.speed))
+            assertFalse("N15" in f.results())
+            trade.acceptTrade(applyGifts = false)
+            assertTrue("$name reverse=$reverse", "N15" in f.results())
+        }
+    }
+
+    @Test fun embassyOnlyAgreementDoesNotBecomeAQualifyingTrade() {
+        val f = fixture()
+        val other = f.opponents[0]
+        f.player.diplomacyFunctions.makeCivilizationsMeet(other)
+        val trade = com.unciv.logic.trade.TradeLogic(f.player, other)
+        trade.currentTrade.ourOffers.add(com.unciv.logic.trade.TradeOffer("Embassy", com.unciv.logic.trade.TradeOfferType.Embassy, speed = f.game.speed))
+        trade.acceptTrade(applyGifts = false)
+        assertFalse("N15" in f.results())
+    }
+
+    @Test fun pantheonAndEnhancementRequireCompletingTheBeliefChoice() {
+        val f = fixture()
+        org.junit.Assume.assumeTrue(f.game.isReligionEnabled())
+        val manager = f.player.religionManager
+        val beliefs = f.test.ruleset.beliefs.values
+        val pantheon = beliefs.first { it.type == com.unciv.models.ruleset.BeliefType.Pantheon }
+        manager.chooseBeliefs(listOf(pantheon), useFreeBeliefs = true)
+        assertTrue("N14" in f.results())
+        assertFalse("N24" in f.results())
+        val prophet = f.unit("Great Prophet", -8, -8)
+        manager.foundReligion(prophet)
+        assertEquals(com.unciv.logic.civilization.managers.ReligionState.FoundingReligion, manager.religionState)
+        manager.chooseBeliefs(listOf(beliefs.first { it.type == com.unciv.models.ruleset.BeliefType.Founder }))
+        manager.useProphetForEnhancingReligion(prophet)
+        assertEquals(com.unciv.logic.civilization.managers.ReligionState.EnhancingReligion, manager.religionState)
+        assertFalse("N24" in f.results())
+        manager.chooseBeliefs(listOf(beliefs.first { it.type == com.unciv.models.ruleset.BeliefType.Enhancer }))
+        assertTrue("N24" in f.results())
+        assertTrue(manager.religion!!.isEnhancedReligion())
+    }
+
+    @Test fun fifthEarnedPromotionNeedsTheSameLivingMilitaryUnitAndSurvivesUpgrade() {
+        val f = fixture()
         val unit = f.unit("Warrior", 0, 0)
-        f.player.goldenAges.enterGoldenAge()
-        fun capture(x: Int) {
-            val city = f.city(x, 0, civ = f.opponents[0])
-            AchievementTracker.cityBattleWon(unit, city)
-            city.puppetCity(f.player)
-        }
-        capture(2)
-        f.player.goldenAges.enterGoldenAge()
-        capture(4)
-        assertEquals(2, f.history.goldenAgeCaptures.size)
-        while (f.player.goldenAges.isGoldenAge()) f.player.goldenAges.endTurn(0)
-        f.player.goldenAges.enterGoldenAge()
-        capture(6)
-        assertFalse("A14" in f.results())
-        capture(8)
-        capture(10)
-        assertTrue("A14" in f.results())
+        unit.promotions.XP = 1000
+        unit.promotions.addPromotion("Drill I", isFree = true)
+        val names = listOf("Shock I", "Shock II", "Shock III", "Drill II", "Drill III")
+        for (name in names.take(4)) unit.promotions.addPromotion(name)
+        assertFalse("N31" in f.results())
+        unit.upgrade.performUpgrade(f.test.ruleset.units.getValue("Spearman"), isFree = true)
+        val upgraded = f.player.units.getUnitById(unit.id)!!
+        upgraded.promotions.addPromotion(names.last())
+        assertTrue("N31" in f.results())
+        assertEquals(5, f.history.units.getValue(unit.id.toString()).earnedPromotions)
+        upgraded.destroy()
+        assertTrue("N31" in f.results()) // Already earned medals remain unlocked.
     }
 
-    @Test fun keshiksRequireRealPostKillMovementAndDistanceForTwoSurvivors() {
-        val f = AchievementTestFixture("Mongolia")
-        val first = f.unit("Keshik", 0, 0)
-        val second = f.unit("Keshik", 4, 0)
-        f.kill(first, 0, 1)
-        f.kill(second, 4, 1)
-        assertFalse("A35" in f.results(end = true))
-        first.movement.moveToTile(f.test.getTile(-2, 0))
-        second.movement.moveToTile(f.test.getTile(2, 0))
-        assertTrue("A35" in f.results(end = true))
-        AchievementTracker.discontinuousMovement(second)
-        assertFalse("A35" in f.results(end = true))
-    }
-
-    @Test fun mountainCrossingUsesRealPathAndCompletesAfterThePartySurvives() {
-        val f = AchievementTestFixture("Carthage")
-        f.unit("Great General", -4, -4)
-        assertTrue("Mountain" in f.player.passableImpassables)
-        val city = f.city(2, 0, civ = f.opponents[0])
-        f.player.diplomacyFunctions.makeCivilizationsMeet(f.opponents[0])
-        f.player.getDiplomacyManager(f.opponents[0])!!.declareWar()
-        val first = f.unit("Warrior", -1, 0)
-        val second = f.unit("Warrior", -1, 3)
-        for (y in listOf(0, 3)) {
-            f.test.setTileTerrain(HexCoord(0, y), "Mountain")
-            for (x in -1..1) f.test.getTile(x, y).setRoadStatus(RoadStatus.Road, f.player)
-        }
-        first.movement.moveToTile(f.test.getTile(1, 0))
-        second.movement.moveToTile(f.test.getTile(1, 3))
-        assertTrue(f.history.unit(first.id).crossedMountainThisTurn)
-        assertTrue(f.history.unit(second.id).crossedMountainThisTurn)
-        AchievementTracker.cityBattleWon(first, city)
-        city.puppetCity(f.player)
-        assertFalse("A36" in f.results())
-        AchievementTracker.settle(f.game, atTurnEnd = true)
-        assertTrue("A36" in f.results())
-    }
-
-    @Test fun historyRoundTripAndUndoDeepCopyNestedEvents() {
-        val f = AchievementTestFixture("Mongolia")
-        val unit = f.unit("Keshik", 0, 0)
-        f.kill(unit, 0, 1)
-        f.history.romanBuildings["city"] = hashSetOf("Granary")
-        val copy = f.state.clone()
-        copy.history.unit(unit.id).keshikAttacks.clear()
-        copy.history.romanBuildings.getValue("city").clear()
-        assertEquals(1, f.history.unit(unit.id).keshikAttacks.size)
-        assertEquals(setOf("Granary"), f.history.romanBuildings["city"])
+    @Test fun saveAndUndoDeepCopyV2EventsWithoutUpgradingLegacyMarkers() {
+        val f = fixture()
+        val branch = f.game.clone()
+        f.city(0, 0)
+        f.player.goldenAges.enterGoldenAge()
+        assertEquals(1, branch.achievements!!.history.foundedCities.size)
+        assertFalse("N04" in branch.achievements!!.history.completed)
         val restored = json().fromJson(AchievementGameState::class.java, json().toJson(f.state))
-        assertEquals(1, restored.history.unit(unit.id).majorMilitaryKills)
-        assertEquals(1, restored.history.unit(unit.id).keshikAttacks.size)
+        assertEquals(f.history.foundedCities, restored.history.foundedCities)
+        assertTrue("N04" in restored.history.completed)
         assertEquals(0, restored.actionDepth)
+        f.state.recordingVersion = 1
+        assertTrue(f.results().isEmpty())
     }
+    @Test fun officialTimeVictoryTriggersFirstWinAtTheTurnLimit() {
+        val f = AchievementTestFixture(baseRuleset = baseRuleset, aiCount = 1, difficulty = "Settler")
+        val service = AchievementService(temporary.newFolder())
+        AchievementTracker.service = service
+        f.game.gameParameters.victoryTypes = arrayListOf("Time")
+        f.game.gameParameters.maxTurns = 10
+        assertEquals("Settler", f.state.difficulty)
+        assertEquals(1, f.state.aiOpponents)
+        assertEquals(1, f.game.civilizations.count { it.isAI() && it.isMajorCiv() })
+        f.state.enabledVictories = hashSetOf("Time")
+        f.capital.population.setPopulation(30)
+        f.game.turns = 9
+        com.unciv.logic.civilization.managers.TurnManager(f.player).updateWinningCiv()
+        assertNull(f.game.victoryData)
+        assertFalse("N01" in service.completed())
+        f.game.turns = 10
+        com.unciv.logic.civilization.managers.TurnManager(f.player).updateWinningCiv()
+        assertEquals("Time", f.game.victoryData!!.victoryType)
+        assertTrue("N01" in service.completed())
+        assertTrue(f.state.ended)
+    }
+
+    @Test fun fifthPromotionDoesNotQualifyAUnitKilledBeforeTheActionSettles() {
+        val f = fixture()
+        val unit = f.unit("Warrior", 0, 0)
+        unit.promotions.XP = 1000
+        for (name in listOf("Shock I", "Shock II", "Shock III", "Drill I")) unit.promotions.addPromotion(name)
+        AchievementTracker.action(f.game) {
+            unit.promotions.addPromotion("Drill II")
+            unit.destroy()
+        }
+        assertFalse("N31" in f.results())
+    }
+
 }

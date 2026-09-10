@@ -23,14 +23,13 @@ object AirInterception {
     // sorted by highest Intercept chance (same as regular Intercept)
     fun airSweep(attacker: MapUnitCombatant, attackedTile: Tile) {
         val game = attacker.getCivInfo().gameInfo
-        val militaryBefore = AchievementTracker.militaryRoster(game)
         AchievementTracker.beginAction(game)
         var successful = false
         try {
             resolveAirSweep(attacker, attackedTile)
             successful = true
         } finally {
-            AchievementTracker.battleEnded(game, militaryBefore, successful)
+            AchievementTracker.endAction(game, successful)
         }
     }
 
@@ -94,10 +93,10 @@ object AirInterception {
             val damageDealt: Battle.DamageDealt = Battle.takeDamage(attacker, MapUnitCombatant(interceptor))
             if (attacker.isDefeated() && damageDealt.defenderDealt > 0)
                 AchievementTracker.killedMilitaryUnit(interceptor, attacker.unit.id,
-                    attacker.getCivInfo().isMajorCiv() && attacker.unit.isMilitary(), null, false)
+                    attacker.getCivInfo().isMajorCiv() && attacker.unit.isMilitary(), false)
             if (interceptor.isDestroyed && damageDealt.attackerDealt > 0)
                 AchievementTracker.killedMilitaryUnit(attacker.unit, interceptor.id,
-                    interceptor.civ.isMajorCiv() && interceptor.isMilitary(), attacker.getTile(), true)
+                    interceptor.civ.isMajorCiv() && interceptor.isMilitary(), true)
 
             // 5 XP to both
             Battle.addXp(MapUnitCombatant(interceptor), 5, attacker)
@@ -206,7 +205,7 @@ object AirInterception {
         attacker.takeDamage(damage)
         if (attacker.isDefeated() && damage > 0)
             AchievementTracker.killedMilitaryUnit(interceptor, attacker.unit.id,
-                attacker.getCivInfo().isMajorCiv() && attacker.unit.isMilitary(), null, false)
+                attacker.getCivInfo().isMajorCiv() && attacker.unit.isMilitary(), false)
         if (damage > 0)
             Battle.addXp(MapUnitCombatant(interceptor), 2, attacker)
 

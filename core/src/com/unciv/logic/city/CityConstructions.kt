@@ -485,14 +485,12 @@ class CityConstructions : IsPartOfGameInfoSerialization {
     }
 
     /** Returns false if we tried to construct a unit but it has nowhere to go */
-    fun completeConstruction(construction: INonPerpetualConstruction): Boolean {
-        val capitalHadBuilding = construction is Building && city.civ.getCapital()?.cityConstructions
-            ?.getBuiltBuildings()?.any { it.name == construction.name } == true
+    fun completeConstruction(construction: INonPerpetualConstruction): Boolean = AchievementTracker.action(city.civ.gameInfo) {
         var unit: MapUnit? = null
         if (construction is Building) construction.construct(this)
         else if (construction is BaseUnit) {
             unit = construction.construct(this, null)
-                ?: return false // unable to place unit
+                ?: return@action false // unable to place unit
 
             /* check if it's true that we should load saved promotion for the unitType,
                Then check if the player want to rebuild the unit the saved promotion,
@@ -571,10 +569,8 @@ class CityConstructions : IsPartOfGameInfoSerialization {
                     pediaAction, NotificationCategory.General, NotificationIcon.Construction, buildingIcon)
             }
         }
-        if (construction is Building) AchievementTracker.buildingProduced(city, construction, capitalHadBuilding)
-        if (construction is BaseUnit) AchievementTracker.militaryProducedOrPurchased(city.civ, construction)
-        AchievementTracker.settle(city.civ.gameInfo)
-        return true
+        if (construction is Building) AchievementTracker.buildingProduced(city, construction)
+        true
     }
 
     fun addBuilding(buildingName: String) {
@@ -799,7 +795,6 @@ class CityConstructions : IsPartOfGameInfoSerialization {
 
         // A purchase should never leave the city idle if we invalidated or emptied the queue
         if (isQueueEmptyOrIdle()) chooseNextConstruction()
-        if (construction is BaseUnit) AchievementTracker.militaryProducedOrPurchased(city.civ, construction)
         AchievementTracker.settle(city.civ.gameInfo)
         return true
     }

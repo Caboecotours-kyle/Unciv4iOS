@@ -1,7 +1,5 @@
 package com.unciv.logic.civilization.diplomacy
 
-import com.unciv.logic.achievements.AchievementRules
-import com.unciv.logic.achievements.AchievementTracker
 
 import com.unciv.Constants
 import com.unciv.logic.automation.civilization.NextTurnAutomation
@@ -220,7 +218,6 @@ class CityStateFunctions(val civInfo: Civilization) {
         if (!civInfo.isCityState) throw Exception("You can only gain influence with City-States!")
         donorCiv.addGold(-giftAmount)
         civInfo.addGold(giftAmount)
-        AchievementTracker.flag(donorCiv, AchievementRules.giftedCityStateGold)
         civInfo.getDiplomacyManager(donorCiv)!!.addInfluence(influenceGainedByGift(donorCiv, giftAmount).toFloat())
         civInfo.questManager.receivedGoldGift(donorCiv)
     }

@@ -39,7 +39,7 @@ class AchievementProfileTest {
         val profile = AchievementProfile()
         assertTrue(profile.recordVictory(record("same", route = "Cultural", time = 200)))
         assertFalse(profile.recordVictory(record("same", route = "Scientific", time = 1)))
-        assertEquals("Cultural", profile.victoryRecords("A20").single().victoryRoute)
+        assertEquals("Cultural", AchievementProfile.decode(profile.victories.values.single()).victoryRoute)
         assertEquals(1, profile.mergedWith(profile.clone()).victories.size)
     }
 
@@ -47,11 +47,11 @@ class AchievementProfileTest {
         val a = AchievementProfile().apply { recordVictory(record("same", route = "Scientific", time = 200)) }
         val b = AchievementProfile().apply { recordVictory(record("same", route = "Cultural", time = 100)) }
         assertEquals(a.mergedWith(b).victories, b.mergedWith(a).victories)
-        assertEquals("Cultural", a.mergedWith(b).victoryRecords("A20").single().victoryRoute)
+        assertEquals("Cultural", AchievementProfile.decode(a.mergedWith(b).victories.values.single()).victoryRoute)
         val c = AchievementProfile().apply {
             recordVictory(record("same", route = "Domination", time = 100).apply { recordId = "0000" })
         }
-        assertEquals("Domination", b.mergedWith(c).victoryRecords("A20").single().victoryRoute)
+        assertEquals("Domination", AchievementProfile.decode(b.mergedWith(c).victories.values.single()).victoryRoute)
         assertEquals(a.mergedWith(b).mergedWith(c).victories, a.mergedWith(b.mergedWith(c)).victories)
     }
 
@@ -79,42 +79,20 @@ class AchievementProfileTest {
         val restored = json().fromJson(AchievementProfile::class.java, json().toJson(remote))
         val merged = AchievementProfile().mergedWith(restored)
         assertEquals(future, merged.unlocks["A99"])
-        assertTrue(merged.completedCivilizationChallenges().isEmpty())
         assertTrue(merged.reportedIds.isEmpty())
     }
 
-    @Test fun fourCivsAndFourRoutesAreInsufficientWithoutDistinctPairing() {
-        val profile = AchievementProfile()
-        for ((index, route) in AchievementCatalog.victoryRoutes.withIndex())
-            profile.recordVictory(record("rome-$index", route = route))
-        for (civ in listOf("Greece", "China", "Egypt"))
-            profile.recordVictory(record(civ, civ, "Scientific"))
-        assertEquals(4, profile.collectedCivilizations().size)
-        assertEquals(2, profile.matchedVictoryRoutes("A20"))
-        profile.recordVictory(record("china-culture", "China", "Cultural"))
-        profile.recordVictory(record("egypt-domination", "Egypt", "Domination"))
-        assertEquals(4, profile.matchedVictoryRoutes("A20"))
-        assertEquals(0, profile.matchedVictoryRoutes("A40"))
-    }
-
-    @Test fun emperorCollectionChecksEachContributionAndCatalogEpoch() {
-        val profile = AchievementProfile()
-        for ((index, route) in AchievementCatalog.victoryRoutes.withIndex())
-            profile.recordVictory(record("game-$index", "civ-$index", route).apply { difficulty = "Emperor" })
-        assertEquals(4, profile.matchedVictoryRoutes("A40"))
-        val older = AchievementProfile().apply {
-            recordVictory(record("old").apply { catalogVersion = 0 })
-        }
-        assertTrue(older.collectedCivilizations().isEmpty())
-        val missingVersion = AchievementProfile.decode("{recordId:old,gameId:old,civilization:Rome,difficulty:Prince,victoryRoute:Scientific}")
-        assertEquals(0, missingVersion.catalogVersion)
-    }
-
-    @Test fun civilizationCollectionUsesTheExplicitTwelveItemWhitelist() {
-        val profile = AchievementProfile()
-        for (id in listOf("A11", "A12", "A13", "A14", "A15", "A16", "A01", "A21"))
-            profile.recordUnlock(record(id).apply { achievementId = id })
-        assertEquals(setOf("Egypt", "Babylon", "China", "Persia", "India", "Greece"), profile.completedCivilizationChallenges())
+    @Test fun wonderCollectionUnionIsIdempotentAndDoesNotAliasSnapshots() {
+        val a = AchievementProfile().apply { v2BuiltWonders.addAll(listOf("The Pyramids", "Stonehenge")) }
+        val b = AchievementProfile().apply { v2BuiltWonders.addAll(listOf("Stonehenge", "The Oracle")) }
+        val merged = a.mergedWith(b)
+        assertEquals(a.mergedWith(b).v2BuiltWonders, b.mergedWith(a).v2BuiltWonders)
+        assertEquals(3, merged.mergedWith(merged).v2BuiltWonders.size)
+        merged.v2BuiltWonders.clear()
+        assertEquals(2, a.v2BuiltWonders.size)
+        val restored = json().fromJson(AchievementProfile::class.java, json().toJson(a))
+        assertEquals(a.v2BuiltWonders, restored.v2BuiltWonders)
+        assertTrue(json().fromJson(AchievementProfile::class.java, "{storageVersion:1}").v2BuiltWonders.isEmpty())
     }
 
     @Test fun durableStoreSurvivesRestartAndDoesNotAliasItsReturnedSnapshot() {

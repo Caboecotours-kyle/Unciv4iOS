@@ -61,14 +61,13 @@ object Nuke {
     @Suppress("FunctionName")   // Yes we want this name to stand out
     fun NUKE(attacker: MapUnitCombatant, targetTile: Tile) {
         val game = attacker.getCivInfo().gameInfo
-        val militaryBefore = AchievementTracker.militaryRoster(game)
         AchievementTracker.beginAction(game)
         var successful = false
         try {
             resolveNuke(attacker, targetTile)
             successful = true
         } finally {
-            AchievementTracker.battleEnded(game, militaryBefore, successful)
+            AchievementTracker.endAction(game, successful)
         }
     }
 
@@ -256,6 +255,9 @@ object Nuke {
             } else {
                 defender.takeDamage(damage)
             }
+            if (unit.isMilitary() && unit.isDestroyed && unit.civ != attacker.getCivInfo() &&
+                attacker.getCivInfo().isAtWarWith(unit.civ))
+                AchievementTracker.eventCompleted(attacker.getCivInfo(), "N06")
             Battle.postBattleNotifications(attacker, defender, defender.getTile())
             Battle.destroyIfDefeated(defender.getCivInfo(), attacker.getCivInfo())
         }

@@ -1,129 +1,157 @@
 package com.unciv.logic.achievements
 
 import com.unciv.logic.map.tile.RoadStatus
-import com.unciv.testing.BaseTestRunner
 import org.junit.Assert.*
 import org.junit.Test
 import org.junit.runner.RunWith
 
-@RunWith(BaseTestRunner::class)
-class AchievementTacticsTest {
-    @Test fun capitalNeedsFiveOtherConnectedSelfFoundedCities() {
-        val f = AchievementTestFixture()
-        f.capital.population.setPopulation(8)
-        val cities = listOf(-8, -4, 0, 4, 8).map { f.city(it, 0, 8) }
+@RunWith(org.junit.runners.Parameterized::class)
+@org.junit.runners.Parameterized.UseParametersRunnerFactory(com.unciv.testing.TestRunnerFactory::class)
+class AchievementTacticsTest(private val baseRuleset: com.unciv.models.metadata.BaseRuleset, private val speed: String) {
+    companion object {
+        @JvmStatic @org.junit.runners.Parameterized.Parameters(name = "{0}, {1}")
+        fun parameters() = com.unciv.models.metadata.BaseRuleset.entries.flatMap { base ->
+            listOf("Quick", "Standard", "Epic", "Marathon").map { arrayOf<Any>(base, it) }
+        }
+    }
+    private fun fixture(nation: String = "Rome") = AchievementTestFixture(nation, baseRuleset, speed)
+
+    @Test fun aSingleSelfFoundedCityConnectedToCapitalIsEnough() {
+        val f = fixture()
         f.player.tech.addTechnology("The Wheel")
         f.game.tileMap.values.forEach { it.setRoadStatus(RoadStatus.Road, f.player) }
         f.player.cache.updateCitiesConnectedToCapital()
-        f.player.stats.happiness = 0
-        assertTrue("A23" in f.results(end = true))
-        cities[0].population.setPopulation(7)
-        assertFalse("A23" in f.results(end = true))
-        cities[0].population.setPopulation(8)
-        cities[0].moveToCiv(f.opponents[0])
-        f.player.stats.happiness = 0
-        assertFalse("A23" in f.results(end = true))
-    }
-
-    @Test fun combinedArmsIncludesTheFinalOccupierButExcludesZeroDamageAndOldTurns() {
-        val f = AchievementTestFixture()
-        val city = f.city(3, 0, civ = f.opponents[0])
-        val archer = f.unit("Archer", 0, 0)
-        val catapult = f.unit("Catapult", 0, 2)
-        val warrior = f.unit("Warrior", 1, 0)
-        AchievementTracker.cityDamaged(archer, city, 1)
-        f.nextTurn()
-        AchievementTracker.cityDamaged(catapult, city, 1)
-        AchievementTracker.cityDamaged(archer, city, 0)
-        AchievementTracker.cityBattleWon(warrior, city)
-        city.puppetCity(f.player)
-        assertFalse("A30" in f.results())
+        assertFalse("N10" in f.results(end = true))
+        val city = f.city(0, 0)
+        f.player.cache.updateCitiesConnectedToCapital()
+        assertTrue("N10" in f.results(end = true))
+        assertFalse("N10" in f.results())
         city.moveToCiv(f.opponents[0])
-        AchievementTracker.cityDamaged(archer, city, 1)
-        AchievementTracker.cityBattleWon(warrior, city)
-        city.puppetCity(f.player)
-        assertTrue("A30" in f.results())
+        f.player.cache.updateCitiesConnectedToCapital()
+        assertFalse("N10" in f.results(end = true))
     }
 
-    @Test fun englishNavalCapturesRequireOwnShipDamageInTheCaptureTurn() {
-        val f = AchievementTestFixture("England")
-        for (x in -4..6) for (y in -3..0) f.test.getTile(x, y).apply { baseTerrain = "Coast"; setTerrainTransients() }
-        val ship = f.unit("Ship of the Line", 0, -2)
-        val melee = f.unit("Trireme", -2, -2)
-        val cities = listOf(-2, 2, 6).map { f.city(it, 1, civ = f.opponents[0]) }
-        cities.forEach {
-            assertTrue(it.isCoastal())
-            AchievementTracker.cityDamaged(ship, it, 10)
-            AchievementTracker.cityBattleWon(melee, it)
-            it.puppetCity(f.player)
-        }
-        assertTrue("A31" in f.results())
-        assertEquals(3, f.history.navalCaptures.size)
+    @Test fun romanInfrastructureIncludesCapitalAndRequiresBothBuildingsInFourSelfFoundedCities() {
+        val f = fixture("Rome")
+        val cities = listOf(f.capital, f.city(-4, 0), f.city(0, 0), f.city(4, 0))
+        for (city in cities) city.cityConstructions.addBuilding("Monument")
+        for (city in cities.take(3)) city.cityConstructions.addBuilding("Granary")
+        assertFalse("N28" in f.results(end = true))
+        val granary = f.test.ruleset.buildings.getValue("Granary")
+        granary.cost = f.test.ruleset.technologies.getValue(granary.requiredTech!!).column!!.buildingCost
+        f.player.addGold(5000)
+        val beforeGold = f.player.gold
+        assertTrue(cities.last().cityConstructions.purchaseConstruction("Granary", -1, automatic = false))
+        assertTrue("Gold before=$beforeGold after=${f.player.gold}", f.player.gold < beforeGold)
+        assertTrue("N28" in f.results(end = true))
+        assertFalse("N28" in f.results())
+        cities.last().moveToCiv(f.opponents[0])
+        assertFalse("N28" in f.results(end = true))
     }
 
-    @Test fun romanBuildingTriplesNeedTheSameThreeTypesAcrossFourCurrentCities() {
-        val f = AchievementTestFixture("Rome")
-        val cities = listOf(-6, -2, 2, 6).map { f.city(it, 0) }
-        val names = listOf("Monument", "Granary", "Library", "Market")
-        names.forEach { f.capital.cityConstructions.addBuilding(it) }
-        cities.forEachIndexed { index, city ->
-            names.filterIndexed { i, _ -> i != index }.forEach {
-                city.cityConstructions.completeConstruction(f.test.ruleset.buildings.getValue(it))
-            }
-        }
-        assertFalse("A32" in f.results()) // Each type occurs three times; there is no common triple.
-        cities.forEachIndexed { index, city ->
-            city.cityConstructions.completeConstruction(f.test.ruleset.buildings.getValue(names[index]))
-        }
-        assertTrue("A32" in f.results())
+    @Test fun twoForeignCapturesNeedCompletedOwnershipButMilitaryLossesAreAllowed() {
+        val f = fixture()
+        val unit = f.unit("Warrior", 0, 0)
+        val casualty = f.unit("Warrior", 0, 3)
+        val cities = listOf(f.city(2, 0, civ = f.opponents[0]), f.city(4, 0, civ = f.opponents[0]))
+        AchievementTracker.cityBattleWon(unit, cities[0])
+        AchievementTracker.settle(f.game)
+        assertFalse("N08" in f.results())
+        cities[0].puppetCity(f.player)
+        assertTrue("N08" in f.results())
+        assertFalse("N32" in f.results())
+        AchievementTracker.beginAction(f.game)
+        AchievementTracker.cityBattleWon(unit, cities[1])
+        cities[1].puppetCity(f.player)
+        casualty.destroy()
+        assertFalse("N32" in f.results())
+        AchievementTracker.endAction(f.game)
+        assertTrue("N32" in f.results())
     }
 
-    @Test fun samuraiMatchingRetainsASecondLineageEvenWhenTheCapitalWasPreviouslyCaptured() {
-        val f = AchievementTestFixture("Japan")
-        val first = f.unit("Samurai", 0, 0)
-        val second = f.unit("Samurai", 3, 0)
-        f.kill(first, 0, 1)
-        f.kill(second, 3, 1)
-        val capitals = f.opponents.take(2).map { it.getCapital()!! }
-        capitals.forEach {
-            AchievementTracker.cityBattleWon(first, it)
-            it.puppetCity(f.player)
-        }
-        assertFalse("A34" in f.results())
-        capitals[0].moveToCiv(f.opponents[0])
-        second.upgrade.performUpgrade(f.test.ruleset.units.getValue("Rifleman"), isFree = true)
-        val successor = f.player.units.getCivUnits().single { it.id == second.id }
-        AchievementTracker.cityBattleWon(successor, capitals[0])
-        capitals[0].puppetCity(f.player)
-        assertTrue("A34" in f.results())
+    @Test fun duplicateCitiesDifferentTurnsTradesAndDirectLiberationDoNotQualifyAsTwoCaptures() {
+        val f = fixture()
+        val unit = f.unit("Warrior", 0, 0)
+        val first = f.city(2, 0, civ = f.opponents[0])
+        AchievementTracker.cityBattleWon(unit, first)
+        first.puppetCity(f.player)
+        first.moveToCiv(f.opponents[0])
+        AchievementTracker.cityBattleWon(unit, first)
+        first.puppetCity(f.player)
+        assertEquals(1, f.history.foreignCaptures.size)
+        assertFalse("N32" in f.results())
+        f.nextTurn()
+        val second = f.city(4, 0, civ = f.opponents[0])
+        AchievementTracker.cityBattleWon(unit, second)
+        second.puppetCity(f.player)
+        assertFalse("N32" in f.results())
+        val liberated = f.city(6, 0, civ = f.opponents[0])
+        liberated.moveToCiv(f.opponents[1])
+        AchievementTracker.cityBattleWon(unit, liberated)
+        liberated.liberateCity(f.player)
+        val traded = f.city(8, 0, civ = f.opponents[0])
+        traded.moveToCiv(f.player)
         assertEquals(2, f.history.foreignCaptures.size)
+        assertFalse("N32" in f.results())
     }
 
-    @Test fun mountainPartyAllowsItsMemberThroughTurnThreeButNotTurnFour() {
-        fun attempt(delay: Int, member: Boolean): Boolean {
-            val f = AchievementTestFixture("Carthage")
-            val first = f.unit("Warrior", 0, 0)
-            val second = f.unit("Warrior", 3, 0)
-            f.history.unit(first.id).crossedMountainThisTurn = true
-            f.history.unit(second.id).crossedMountainThisTurn = true
-            AchievementTracker.finishTurnFacts(f.player)
-            repeat(delay) { f.nextTurn() }
-            val city = f.city(6, 0, civ = f.opponents[0])
-            val captor = if (member) first else f.unit("Warrior", 4, 2)
-            AchievementTracker.cityBattleWon(captor, city)
+    @Test fun chuKoNuKillsMustUseOneUnitOnePlayerTurnAndMajorCivilizationVictims() {
+        val f = fixture("China")
+        val unit = f.unit("Chu-Ko-Nu", 0, 0)
+        f.kill(unit, 0, 1)
+        f.nextTurn()
+        f.kill(unit, 1, 1)
+        assertFalse("N34" in f.results())
+        val second = f.unit("Chu-Ko-Nu", 4, 0)
+        f.kill(second, 4, 1)
+        assertFalse("N34" in f.results())
+        f.kill(unit, 1, 0)
+        assertTrue("N34" in f.results())
+    }
+
+    @Test fun persianContinuousGoldenAgeAllowsExtensionButResetsAfterInterruption() {
+        val f = fixture("Persia")
+        val unit = f.unit("Warrior", 0, 0)
+        f.player.goldenAges.enterGoldenAge()
+        fun capture(x: Int) {
+            val city = f.city(x, 0, civ = f.opponents[0])
+            AchievementTracker.cityBattleWon(unit, city)
             city.puppetCity(f.player)
-            return "A36" in f.results()
         }
-        assertTrue(attempt(3, true))
-        assertFalse(attempt(4, true))
-        assertFalse(attempt(1, false))
+        capture(2)
+        f.player.goldenAges.enterGoldenAge()
+        capture(4)
+        assertEquals(2, f.history.goldenAgeCaptures.size)
+        while (f.player.goldenAges.isGoldenAge()) f.player.goldenAges.endTurn(0)
+        f.player.goldenAges.enterGoldenAge()
+        capture(6)
+        assertFalse("N35" in f.results())
+        capture(8)
+        capture(10)
+        assertTrue("N35" in f.results())
+    }
+    @Test fun harborConnectionsAreAcceptedWithoutAnyRoads() {
+        val f = fixture()
+        val city = f.city(0, 0)
+        for (tile in f.game.tileMap.values.filter { !it.isCityCenter() })
+            f.test.setTileTerrain(tile.position, "Coast")
+        f.player.tech.addTechnology("Compass")
+        f.capital.cityConstructions.addBuilding("Harbor")
+        city.cityConstructions.addBuilding("Harbor")
+        f.player.cache.updateCitiesConnectedToCapital()
+        assertTrue(city.isConnectedToCapital())
+        assertTrue("N10" in f.results(end = true))
     }
 
-    @Test fun modernGiftAndCaptureAcquisitionRecordTheSameRestriction() {
-        val f = AchievementTestFixture()
-        val modern = f.unit("Great War Infantry", 0, 0, f.opponents[0])
-        assertFalse(AchievementRules.modernTechnologyOrUnit in f.history.restrictions)
-        modern.gift(f.player)
-        assertTrue(AchievementRules.modernTechnologyOrUnit in f.history.restrictions)
+    @Test fun aPendingConquestCannotLaterBecomeACaptureThroughCityTrade() {
+        val f = fixture()
+        val unit = f.unit("Warrior", 0, 0)
+        val city = f.city(2, 0, civ = f.opponents[0])
+        AchievementTracker.cityBattleWon(unit, city)
+        city.moveToCiv(f.player)
+        AchievementTracker.settle(f.game)
+        assertFalse("N08" in f.results())
+        assertTrue(f.history.foreignCaptures.isEmpty())
     }
+
 }

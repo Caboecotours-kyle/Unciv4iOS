@@ -1,6 +1,5 @@
 package com.unciv.ui.screens.worldscreen.unit.actions
 
-import com.unciv.logic.achievements.AchievementRules
 import com.unciv.logic.achievements.AchievementTracker
 
 import com.unciv.logic.civilization.NotificationCategory
@@ -27,8 +26,6 @@ object UnitActionsGreatPerson {
                 action = {
                     unit.civ.tech.addScience(unit.civ.tech.getScienceFromGreatScientist())
                     unit.consume()
-                    if (unit.baseUnit.isGreatPersonOfType("Science"))
-                        AchievementTracker.flag(unit.civ, AchievementRules.scientistResearch)
                     AchievementTracker.settle(unit.civ.gameInfo)
                 }.takeIf {
                     unit.hasMovement()

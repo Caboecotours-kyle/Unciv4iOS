@@ -3,14 +3,15 @@ package com.unciv.logic.achievements
 import com.unciv.json.json
 import com.unciv.logic.IsPartOfGameInfoSerialization
 
-/** Only facts required by R3. This entire object follows the current save/undo branch. */
+/** Branch-local source facts. Legacy fields remain readable but are not used to award V2 medals. */
 class AchievementHistory : IsPartOfGameInfoSerialization {
+    var foundedCities = HashSet<String>()
     var maximumCities = 0
     var nextCitySerial = 0
     var cityKeys = HashMap<String, String>() // Current settlement at each coordinate, assigned only when founded.
     var restrictions = HashSet<String>()
     var units = HashMap<String, AchievementUnitHistory>()
-    var builtWonders = HashMap<String, String>() // World wonder -> self-founded city ID.
+    var builtWonders = HashMap<String, String>() // World wonder -> city ID at actual completion (including a city acquired earlier).
     var romanBuildings = HashMap<String, HashSet<String>>()
     var greatImprovements = HashMap<String, String>() // Tile -> improvement made by our Great Person.
     var foreignCaptures = HashSet<String>()
@@ -33,13 +34,8 @@ class AchievementHistory : IsPartOfGameInfoSerialization {
     fun startTurn(turnNumber: Int) {
         if (turn == turnNumber) return
         turn = turnNumber
-        militaryLossThisTurn = false
         capturedThisTurn.clear()
-        wonderCitiesThisTurn.clear()
-        cityDamageClasses.clear()
-        shipOfTheLineDamage.clear()
         units.values.forEach { it.startTurn() }
-        mountainParties.removeAll { turnNumber > it.turn + 3 }
     }
 
     fun clone(): AchievementHistory = json().fromJson(AchievementHistory::class.java, json().toJson(this))
@@ -57,10 +53,6 @@ class AchievementUnitHistory : IsPartOfGameInfoSerialization {
 
     fun startTurn() {
         chuKoNuKillsThisTurn.clear()
-        keshikAttacks.clear()
-        mountainEntry = ""
-        crossedMountainThisTurn = false
-        cityCapturedAfterCrossing = false
     }
 }
 
@@ -76,6 +68,7 @@ class AchievementMountainParty : IsPartOfGameInfoSerialization {
 
 /** Kept while the human's conquer/liberate choice is pending, including across a save. */
 class AchievementCapture : IsPartOfGameInfoSerialization {
+    var ownershipSettled = false
     var unitId = 0
     var turn = 0
     var foreign = false

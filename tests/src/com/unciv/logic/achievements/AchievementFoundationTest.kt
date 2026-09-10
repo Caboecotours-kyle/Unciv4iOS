@@ -1,11 +1,9 @@
 package com.unciv.logic.achievements
 
-import com.unciv.Constants
 import com.unciv.json.json
 import com.unciv.logic.GameInfo
 import com.unciv.logic.civilization.PlayerType
 import com.unciv.logic.map.MapType
-import com.unciv.models.metadata.BaseRuleset
 import com.unciv.testing.BaseTestRunner
 import com.unciv.testing.TestGame
 import org.junit.Assert.*
@@ -24,16 +22,18 @@ class AchievementFoundationTest {
     private fun state(testGame: TestGame) = AchievementGameState.create(testGame.gameInfo, true, false)!!
 
     @Test fun catalogMatchesTheApprovedFortyAndTierBudgets() {
-        assertEquals((1..40).map { "A%02d".format(it) }.toSet(), AchievementCatalog.byId.keys)
-        assertEquals(40, AchievementCatalog.definitions.size)
-        assertEquals(listOf(6, 14, 12, 6, 2), AchievementTier.entries.map { tier ->
+        assertEquals((1..40).map { "N%02d".format(it) }, AchievementCatalog.definitions.map { it.id })
+        assertEquals(listOf(16, 12, 8, 4), AchievementTier.entries.map { tier ->
             AchievementCatalog.definitions.count { it.tier == tier }
         })
-        assertEquals(listOf(6, 29, 2, 3), listOf(null, "Prince", "Emperor", "Deity").map { difficulty ->
-            AchievementCatalog.definitions.count { it.minimumDifficulty == difficulty }
-        })
-        assertEquals(12, AchievementCatalog.civilizationAchievements.size)
-        assertEquals(12, AchievementCatalog.civilizationAchievements.values.toSet().size)
+        assertEquals(setOf("N30", "N36", "N37", "N38", "N39"),
+            AchievementCatalog.definitions.filter { it.minimumDifficulty != null }.map { it.id }.toSet())
+        assertEquals(setOf("Egypt", "Rome", "China", "Persia"), AchievementCatalog.civilizationAchievements.values.toSet())
+        assertEquals(4, AchievementCatalog.civilizationAchievements.size)
+        assertEquals(AchievementCatalog.byId.keys, AchievementCatalog.reportableIds)
+        assertTrue(AchievementCatalog.legacyIds.none { it in AchievementCatalog.reportableIds })
+        assertEquals("com.aishuati.unciv.achievement.n01", AchievementCatalog.gameCenterId("N01"))
+        assertThrows(IllegalArgumentException::class.java) { AchievementCatalog.gameCenterId("A01") }
     }
 
     @Test fun difficultyUsesBuiltInOrderAndRejectsUnknownValues() {
@@ -53,7 +53,7 @@ class AchievementFoundationTest {
         assertEquals(3, state.aiOpponents)
         assertEquals(0, state.cityStates) // Real placed civilizations, not the requested setting.
         assertEquals(AchievementCatalog.byId.keys, state.availableIds)
-        assertNull(AchievementCatalog.ineligibility(AchievementCatalog.byId.getValue("A32"), state))
+        assertNull(AchievementCatalog.ineligibility(AchievementCatalog.byId.getValue("N28"), state))
     }
 
     @Test fun globalInvalidSettingsNeverProduceARecord() {
@@ -80,41 +80,47 @@ class AchievementFoundationTest {
         assertNull(AchievementGameState.create(newGame(0).gameInfo, true, false))
     }
 
-    @Test fun sixOpenDifficultyAchievementsWorkWithOneOpponentAndNoVictories() {
+    @Test fun ordinaryAchievementsAcceptLowestDifficultyOneOpponentAndDisabledVictoryRoutes() {
         val game = newGame(1)
         game.gameInfo.difficulty = "Settler"
         game.gameInfo.gameParameters.victoryTypes.clear()
         val state = state(game)
-        val applicable = AchievementCatalog.definitions.filter { AchievementCatalog.ineligibility(it, state) == null }
-        assertEquals(setOf("A01", "A02", "A03", "A04", "A23", "A24"), applicable.map { it.id }.toSet())
+        for (definition in AchievementCatalog.definitions.filter { it.minimumDifficulty == null }) {
+            state.civilization = definition.civilization ?: "Rome"
+            assertNull(definition.id, AchievementCatalog.ineligibility(definition, state))
+        }
     }
 
-    @Test fun princeRequiresThreeOpponentsAndAllFourRoutes() {
-        val definition = AchievementCatalog.byId.getValue("A06")
-        assertNotNull(AchievementCatalog.ineligibility(definition, state(newGame(2))))
-        val state = state(newGame())
-        assertNull(AchievementCatalog.ineligibility(definition, state))
-        state.enabledVictories.remove("Diplomatic")
-        assertNotNull(AchievementCatalog.ineligibility(definition, state))
+    @Test fun onlyExplicitDifficultyGatesRequireThreeOpponentsAndNeverAllRoutes() {
+        for (id in listOf("N30", "N36", "N37", "N38", "N39")) {
+            val definition = AchievementCatalog.byId.getValue(id)
+            val state = state(newGame(2)).apply { difficulty = "Deity"; oneCityChallenge = true }
+            assertNotNull(id, AchievementCatalog.ineligibility(definition, state))
+            state.aiOpponents = 3
+            state.enabledVictories.clear()
+            state.enabledVictories.add("Scientific")
+            assertNull(id, AchievementCatalog.ineligibility(definition, state))
+            state.difficulty = AchievementCatalog.difficulties[AchievementCatalog.difficulties.indexOf(definition.minimumDifficulty) - 1]
+            assertNotNull(id, AchievementCatalog.ineligibility(definition, state))
+        }
     }
 
-    @Test fun individualRequirementsAndNewCatalogIdsAreNotInferred() {
-        val state = state(newGame())
-        for (id in listOf("A05", "A13", "A16", "A17", "A18", "A22"))
+    @Test fun civilizationOneCityAndNewCatalogIdsAreNotInferred() {
+        val state = state(newGame()).apply { difficulty = "Emperor" }
+        for (id in listOf("N27", "N34", "N35", "N38", "N37"))
             assertNotNull(id, AchievementCatalog.ineligibility(AchievementCatalog.byId.getValue(id), state))
         state.oneCityChallenge = true
-        assertNull(AchievementCatalog.ineligibility(AchievementCatalog.byId.getValue("A05"), state))
-        assertNotNull(AchievementCatalog.ineligibility(AchievementDefinition("A41", AchievementTier.Introductory, null, introducedIn = 2), state))
+        assertNull(AchievementCatalog.ineligibility(AchievementCatalog.byId.getValue("N38"), state))
+        assertNotNull(AchievementCatalog.ineligibility(AchievementDefinition("N41", AchievementTier.Simple), state))
     }
 
-    @Test fun missingUnitAndMissingCivilizationAbilityAreInapplicable() {
-        val state = state(newGame())
-        state.civilization = "China"
-        state.availableUnits.remove("Chu-Ko-Nu")
-        assertNotNull(AchievementCatalog.ineligibility(AchievementCatalog.byId.getValue("A13"), state))
-        state.civilization = "Carthage"
-        state.baseRuleset = BaseRuleset.Civ_V_Vanilla.fullName
-        assertNotNull(AchievementCatalog.ineligibility(AchievementCatalog.byId.getValue("A36"), state))
+    @Test fun missingUnitOrDisabledReligionIsInapplicable() {
+        val state = state(newGame()).apply { civilization = "China"; availableUnits.remove("Chu-Ko-Nu") }
+        assertNotNull(AchievementCatalog.ineligibility(AchievementCatalog.byId.getValue("N34"), state))
+        state.religionEnabled = false
+        for (id in listOf("N14", "N24", "N33"))
+            assertNotNull(AchievementCatalog.ineligibility(AchievementCatalog.byId.getValue(id), state))
+        assertNull(AchievementCatalog.ineligibility(AchievementCatalog.byId.getValue("N01"), state))
     }
 
     @Test fun legacySaveAndCloneDoNotCreateEligibility() {
@@ -130,10 +136,10 @@ class AchievementFoundationTest {
         game.achievements = AchievementGameState.create(game, true, false)
         game.achievements!!.targetLandmasses.add(hashSetOf("0,0", "1,0"))
         val copy = game.clone()
-        copy.achievements!!.availableIds.remove("A01")
+        copy.achievements!!.availableIds.remove("N01")
         copy.achievements!!.targetLandmasses[0].clear()
         copy.achievements!!.ended = true
-        assertTrue("A01" in game.achievements!!.availableIds)
+        assertTrue("N01" in game.achievements!!.availableIds)
         assertEquals(2, game.achievements!!.targetLandmasses[0].size)
         assertFalse(game.achievements!!.ended)
         val loaded = json().fromJson(GameInfo::class.java, json().toJson(game))
@@ -146,27 +152,15 @@ class AchievementFoundationTest {
         val game = newGame().gameInfo
         val state = AchievementGameState.create(game, true, false)!!
         assertTrue(state.canContribute(game, AchievementProfile()))
-        state.recordingVersion = 0
-        assertFalse(state.canContribute(game, AchievementProfile()))
+        for (oldVersion in listOf(0, 1)) {
+            state.recordingVersion = oldVersion
+            assertFalse(state.canContribute(game, AchievementProfile()))
+        }
         val missingVersions = json().fromJson(AchievementGameState::class.java, "{gameId:old}")
         assertEquals(0, missingVersions.catalogVersion)
         assertEquals(0, missingVersions.recordingVersion)
         state.recordingVersion = AchievementCatalog.firstCompleteRecordingVersion + 1
         assertFalse(state.canContribute(game, AchievementProfile()))
-    }
-
-    @Test fun mountainsConnectLandButWaterDoesNot() {
-        val game = newGame()
-        for (tile in game.tileMap.values) game.setTileTerrain(tile.position, Constants.ocean)
-        for (x in -2..2) game.setTileTerrain(game.getTile(x, 0).position, Constants.grassland)
-        game.setTileTerrain(game.getTile(0, 0).position, Constants.mountain)
-        val land = AchievementGameState.findTargetLandmasses(game.tileMap)
-        assertEquals(1, land.size)
-        assertEquals(5, land.single().size)
-        game.setTileTerrain(game.getTile(0, 0).position, Constants.ocean)
-        val separate = AchievementGameState.findTargetLandmasses(game.tileMap)
-        assertEquals(listOf(2, 2), separate.map { it.size })
-        assertTrue(AchievementGameState.tileKey(game.getTile(-2, 0)) in separate[0])
     }
 
     @Test fun actualUpgradeAndFailedUpgradeKeepUnitIdentity() {
@@ -184,4 +178,31 @@ class AchievementFoundationTest {
         assertEquals(71, restored.health)
         assertEquals(1, civ.units.getCivUnits().count())
     }
+    @Test fun bothBuiltInRulesetsSupportTheCatalogWithReligionExplicitlyScoped() {
+        for (base in com.unciv.models.metadata.BaseRuleset.entries) {
+            val f = AchievementTestFixture(baseRuleset = base)
+            for (definition in AchievementCatalog.definitions) {
+                f.state.difficulty = "Deity"
+                f.state.oneCityChallenge = true
+                f.state.civilization = definition.civilization ?: "Rome"
+                val reason = AchievementCatalog.ineligibility(definition, f.state)
+                if (definition.requiresReligion && base == com.unciv.models.metadata.BaseRuleset.Civ_V_Vanilla)
+                    assertNotNull("${base.name} ${definition.id}", reason)
+                else assertNull("${base.name} ${definition.id}", reason)
+                definition.civilization?.let { assertTrue(it in f.test.ruleset.nations) }
+                definition.requiredUnit?.let { assertTrue(it in f.test.ruleset.units) }
+            }
+            assertTrue(f.test.ruleset.buildings.keys.containsAll(listOf("Monument", "Granary", "Utopia Project")))
+            assertTrue(f.test.ruleset.tileImprovements.keys.containsAll(listOf("Farm", "Mine", "Pasture")))
+            assertTrue(f.test.ruleset.victories.keys.containsAll(AchievementCatalog.victoryRoutes))
+            assertTrue(f.test.ruleset.buildings.values.count { it.isWonder } >= 8)
+            assertEquals(1, f.history.foundedCities.size)
+            f.city(0, 0)
+            assertTrue("N02" in f.results())
+            f.player.goldenAges.enterGoldenAge()
+            assertTrue("N04" in f.results())
+            for (route in AchievementCatalog.victoryRoutes) assertTrue("N01" in f.results(route = route))
+        }
+    }
+
 }

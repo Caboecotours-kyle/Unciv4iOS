@@ -4,20 +4,17 @@ import com.unciv.logic.GameInfo
 import com.unciv.logic.map.MapType
 import com.unciv.models.metadata.BaseRuleset
 
-enum class AchievementTier { Introductory, Advanced, Challenge, Expert, Pinnacle }
+enum class AchievementTier { Simple, Intermediate, Hard, Extreme }
 
 data class AchievementDefinition(
     val id: String,
     val tier: AchievementTier,
-    val minimumDifficulty: String? = "Prince",
+    val minimumDifficulty: String? = null,
     val civilization: String? = null,
-    val mapType: String? = null,
     val oneCityChallenge: Boolean = false,
-    val minimumCityStates: Int = 0,
     val requiredUnit: String? = null,
-    val isCollection: Boolean = false,
-    val introducedIn: Int = 1,
-    val ruleVersion: Int = 1
+    val requiresReligion: Boolean = false,
+    val isCollection: Boolean = false
 ) {
     // Avoid the generated Boolean.hashCode(boolean), which RoboVM does not provide.
     override fun hashCode(): Int = id.hashCode()
@@ -25,60 +22,65 @@ data class AchievementDefinition(
 
 /** Stable rule identities. Display strings and artwork are separate from eligibility. */
 object AchievementCatalog {
-    const val version = 1
+    const val version = 2
 
-    // Version 0 development saves remain ineligible; version 1 records the complete source history.
-    const val recordingVersion = 1
-    const val firstCompleteRecordingVersion = 1
+    // V1 saves lack the first-action and religion facts required by this catalog. Never upgrade on load.
+    const val recordingVersion = 2
+    const val firstCompleteRecordingVersion = 2
 
     val difficulties = listOf("Settler", "Chieftain", "Warlord", "Prince", "King", "Emperor", "Immortal", "Deity")
-    val victoryRoutes = setOf("Scientific", "Cultural", "Domination", "Diplomatic")
+    val victoryRoutes = setOf("Scientific", "Cultural", "Domination", "Diplomatic", "Time")
 
     val definitions = listOf(
-        AchievementDefinition("A01", AchievementTier.Introductory, null),
-        AchievementDefinition("A02", AchievementTier.Advanced, null),
-        AchievementDefinition("A03", AchievementTier.Introductory, null),
-        AchievementDefinition("A04", AchievementTier.Introductory, null),
-        AchievementDefinition("A05", AchievementTier.Challenge, oneCityChallenge = true),
-        AchievementDefinition("A06", AchievementTier.Challenge),
-        AchievementDefinition("A07", AchievementTier.Advanced),
-        AchievementDefinition("A08", AchievementTier.Advanced),
-        AchievementDefinition("A09", AchievementTier.Challenge),
-        AchievementDefinition("A10", AchievementTier.Advanced),
-        AchievementDefinition("A11", AchievementTier.Challenge, civilization = "Egypt"),
-        AchievementDefinition("A12", AchievementTier.Advanced, civilization = "Babylon"),
-        AchievementDefinition("A13", AchievementTier.Introductory, civilization = "China", requiredUnit = "Chu-Ko-Nu"),
-        AchievementDefinition("A14", AchievementTier.Advanced, civilization = "Persia"),
-        AchievementDefinition("A15", AchievementTier.Challenge, civilization = "India"),
-        AchievementDefinition("A16", AchievementTier.Advanced, civilization = "Greece", minimumCityStates = 8),
-        AchievementDefinition("A17", AchievementTier.Challenge, mapType = MapType.twoContinents),
-        AchievementDefinition("A18", AchievementTier.Advanced, mapType = MapType.archipelago),
-        AchievementDefinition("A19", AchievementTier.Challenge, isCollection = true),
-        AchievementDefinition("A20", AchievementTier.Challenge, isCollection = true),
-        AchievementDefinition("A21", AchievementTier.Expert, "Emperor"),
-        AchievementDefinition("A22", AchievementTier.Expert, "Deity"),
-        AchievementDefinition("A23", AchievementTier.Advanced, null),
-        AchievementDefinition("A24", AchievementTier.Introductory, null),
-        AchievementDefinition("A25", AchievementTier.Challenge),
-        AchievementDefinition("A26", AchievementTier.Challenge),
-        AchievementDefinition("A27", AchievementTier.Expert),
-        AchievementDefinition("A28", AchievementTier.Advanced, oneCityChallenge = true),
-        AchievementDefinition("A29", AchievementTier.Challenge),
-        AchievementDefinition("A30", AchievementTier.Advanced),
-        AchievementDefinition("A31", AchievementTier.Advanced, civilization = "England", requiredUnit = "Ship of the Line"),
-        AchievementDefinition("A32", AchievementTier.Introductory, civilization = "Rome"),
-        AchievementDefinition("A33", AchievementTier.Advanced, civilization = "Korea"),
-        AchievementDefinition("A34", AchievementTier.Expert, civilization = "Japan", requiredUnit = "Samurai"),
-        AchievementDefinition("A35", AchievementTier.Advanced, civilization = "Mongolia", requiredUnit = "Keshik"),
-        AchievementDefinition("A36", AchievementTier.Challenge, civilization = "Carthage"),
-        AchievementDefinition("A37", AchievementTier.Pinnacle, "Deity", oneCityChallenge = true),
-        AchievementDefinition("A38", AchievementTier.Pinnacle, "Deity"),
-        AchievementDefinition("A39", AchievementTier.Expert, isCollection = true),
-        AchievementDefinition("A40", AchievementTier.Expert, "Emperor", isCollection = true)
+        AchievementDefinition("N01", AchievementTier.Simple),
+        AchievementDefinition("N02", AchievementTier.Simple),
+        AchievementDefinition("N03", AchievementTier.Simple),
+        AchievementDefinition("N04", AchievementTier.Simple),
+        AchievementDefinition("N05", AchievementTier.Simple),
+        AchievementDefinition("N06", AchievementTier.Simple),
+        AchievementDefinition("N07", AchievementTier.Simple),
+        AchievementDefinition("N08", AchievementTier.Simple),
+        AchievementDefinition("N09", AchievementTier.Simple),
+        AchievementDefinition("N10", AchievementTier.Simple),
+        AchievementDefinition("N11", AchievementTier.Simple),
+        AchievementDefinition("N12", AchievementTier.Simple),
+        AchievementDefinition("N13", AchievementTier.Simple),
+        AchievementDefinition("N14", AchievementTier.Simple, requiresReligion = true),
+        AchievementDefinition("N15", AchievementTier.Simple),
+        AchievementDefinition("N16", AchievementTier.Simple),
+        AchievementDefinition("N17", AchievementTier.Intermediate),
+        AchievementDefinition("N18", AchievementTier.Intermediate),
+        AchievementDefinition("N19", AchievementTier.Intermediate),
+        AchievementDefinition("N20", AchievementTier.Intermediate),
+        AchievementDefinition("N21", AchievementTier.Intermediate),
+        AchievementDefinition("N22", AchievementTier.Intermediate),
+        AchievementDefinition("N23", AchievementTier.Intermediate),
+        AchievementDefinition("N24", AchievementTier.Intermediate, requiresReligion = true),
+        AchievementDefinition("N25", AchievementTier.Intermediate),
+        AchievementDefinition("N26", AchievementTier.Intermediate, isCollection = true),
+        AchievementDefinition("N27", AchievementTier.Intermediate, civilization = "Egypt"),
+        AchievementDefinition("N28", AchievementTier.Intermediate, civilization = "Rome"),
+        AchievementDefinition("N29", AchievementTier.Hard),
+        AchievementDefinition("N30", AchievementTier.Hard, minimumDifficulty = "Prince"),
+        AchievementDefinition("N31", AchievementTier.Hard),
+        AchievementDefinition("N32", AchievementTier.Hard),
+        AchievementDefinition("N33", AchievementTier.Hard, requiresReligion = true),
+        AchievementDefinition("N34", AchievementTier.Hard, civilization = "China", requiredUnit = "Chu-Ko-Nu"),
+        AchievementDefinition("N35", AchievementTier.Hard, civilization = "Persia"),
+        AchievementDefinition("N36", AchievementTier.Hard, minimumDifficulty = "Emperor"),
+        AchievementDefinition("N37", AchievementTier.Extreme, minimumDifficulty = "Deity"),
+        AchievementDefinition("N38", AchievementTier.Extreme, minimumDifficulty = "Emperor", oneCityChallenge = true),
+        AchievementDefinition("N39", AchievementTier.Extreme, minimumDifficulty = "Emperor"),
+        AchievementDefinition("N40", AchievementTier.Extreme, isCollection = true)
     )
     val byId = definitions.associateBy { it.id }
+
+    // Retired V1 awards remain readable, but only the independent V2 catalog is submitted.
+    val legacyIds = (1..40).mapTo(HashSet()) { "A%02d".format(it) }
+    val reportableIds = byId.keys
+    val knownIds = reportableIds + legacyIds
     fun gameCenterId(id: String): String {
-        require(id in byId)
+        require(id in reportableIds) { "This achievement has no Game Center mapping" }
         return "com.aishuati.unciv.achievement.${id.lowercase()}"
     }
     val civilizationAchievements = definitions.filter { it.civilization != null }.associate { it.id to it.civilization!! }
@@ -112,17 +114,14 @@ object AchievementCatalog {
 
     /** Initial per-achievement applicability; ordinary branch history is checked by its evaluator. */
     fun ineligibility(definition: AchievementDefinition, state: AchievementGameState): String? = when {
+        state.aiOpponents < 1 -> "At least one AI opponent is required"
         definition.id !in state.availableIds -> "Start a new game to attempt this achievement"
         !meetsDifficulty(state.difficulty, definition.minimumDifficulty) -> "The difficulty is too low"
         definition.minimumDifficulty != null && state.aiOpponents < 3 -> "At least three AI opponents are required"
-        definition.minimumDifficulty != null && !state.enabledVictories.containsAll(victoryRoutes) -> "All four major victory routes are required"
         definition.civilization != null && definition.civilization != state.civilization -> "A different civilization is required"
-        definition.mapType != null && definition.mapType != state.mapType -> "A different map type is required"
         definition.oneCityChallenge && !state.oneCityChallenge -> "One City Challenge is required"
-        definition.minimumCityStates > state.cityStates -> "More starting city-states are required"
         definition.requiredUnit != null && definition.requiredUnit !in state.availableUnits -> "This ruleset does not support the required unit"
-        definition.id == "A17" && state.targetLandmasses.size < 2 -> "Two separate landmasses are required"
-        definition.id == "A36" && state.baseRuleset != BaseRuleset.Civ_V_GnK.fullName -> "This ruleset does not support the required ability"
+        definition.requiresReligion && !state.religionEnabled -> "Religion must be enabled"
         else -> null
     }
 }

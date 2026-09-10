@@ -105,7 +105,6 @@ object Battle {
 
     fun attack(attacker: ICombatant, defender: ICombatant): DamageDealt {
         val game = attacker.getCivInfo().gameInfo
-        val militaryBefore = AchievementTracker.militaryRoster(game)
         AchievementTracker.beginAction(game)
         var successful = false
         try {
@@ -113,14 +112,13 @@ object Battle {
             successful = true
             return result
         } finally {
-            AchievementTracker.battleEnded(game, militaryBefore, successful)
+            AchievementTracker.endAction(game, successful)
         }
     }
 
     private fun resolveAttack(attacker: ICombatant, defender: ICombatant): DamageDealt {
         debug("%s %s attacked %s %s", attacker.getCivInfo().civID, attacker.getName(), defender.getCivInfo().civID, defender.getName())
         val attackedTile = defender.getTile()
-        val attackOrigin = attacker.getTile()
         val defenderWasMajorMilitary = defender is MapUnitCombatant && defender.unit.isMilitary() && defender.getCivInfo().isMajorCiv()
         val attackerWasMajorMilitary = attacker is MapUnitCombatant && attacker.unit.isMilitary() && attacker.getCivInfo().isMajorCiv()
         if (attacker is MapUnitCombatant) {
@@ -153,13 +151,17 @@ object Battle {
         // As ravignir clarified in issue #4374, this only works for aggressor
         val captureMilitaryUnitSuccess = BattleUnitCapture.tryCaptureMilitaryUnit(attacker, defender, attackedTile)
 
-        if (attacker is MapUnitCombatant && defender is CityCombatant)
-            AchievementTracker.cityDamaged(attacker.unit, defender.city, damageDealt.attackerDealt)
-        if (attacker is MapUnitCombatant && defender is MapUnitCombatant && defender.isDefeated() &&
-            !captureMilitaryUnitSuccess && damageDealt.attackerDealt > 0)
-            AchievementTracker.killedMilitaryUnit(attacker.unit, defender.unit.id, defenderWasMajorMilitary, attackOrigin, true)
-        if (attacker is MapUnitCombatant && defender is MapUnitCombatant && attacker.isDefeated() && damageDealt.defenderDealt > 0)
-            AchievementTracker.killedMilitaryUnit(defender.unit, attacker.unit.id, attackerWasMajorMilitary, null, false)
+        if (defender is MapUnitCombatant && defender.unit.isMilitary() && defender.isDefeated() &&
+            !captureMilitaryUnitSuccess && damageDealt.attackerDealt > 0) {
+            if (attacker is MapUnitCombatant)
+                AchievementTracker.killedMilitaryUnit(attacker.unit, defender.unit.id, defenderWasMajorMilitary, true)
+            else AchievementTracker.eventCompleted(attacker.getCivInfo(), "N06")
+        }
+        if (attacker is MapUnitCombatant && attacker.unit.isMilitary() && attacker.isDefeated() && damageDealt.defenderDealt > 0) {
+            if (defender is MapUnitCombatant)
+                AchievementTracker.killedMilitaryUnit(defender.unit, attacker.unit.id, attackerWasMajorMilitary, false)
+            else AchievementTracker.eventCompleted(defender.getCivInfo(), "N06")
+        }
 
         if (!captureMilitaryUnitSuccess) // capture creates a new unit, but `defender` still is the original, so this function would still show a kill message
             postBattleNotifications(attacker, defender, attackedTile, attacker.getTile(), damageDealt)

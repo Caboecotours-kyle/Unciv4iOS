@@ -66,7 +66,7 @@ object UnitActionsUpgrade {
                 goldCostOfUpgrade = goldCostOfUpgrade,
                 newResourceRequirements = resourceRequirementsDelta,
                 action = {
-                    unit.upgrade.performUpgrade(upgradedUnit, isFree, goldCostOfUpgrade, playerInitiated = !isFree)
+                    unit.upgrade.performUpgrade(upgradedUnit, isFree, goldCostOfUpgrade)
                 }.takeIf {
                     isFree || (
                         unit.civ.gold >= goldCostOfUpgrade

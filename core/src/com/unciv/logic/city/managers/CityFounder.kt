@@ -17,7 +17,7 @@ import com.unciv.utils.withItem
 import yairm210.purity.annotations.Readonly
 
 class CityFounder {
-    fun foundCity(civInfo: Civilization, cityLocation: HexCoord, unit: MapUnit? = null): City {
+    fun foundCity(civInfo: Civilization, cityLocation: HexCoord, unit: MapUnit? = null): City = AchievementTracker.action(civInfo.gameInfo) {
         val city = City()
 
         city.foundingCivObject = civInfo
@@ -100,8 +100,7 @@ class CityFounder {
                 GameContext(civInfo, city, unit)))
                 UniqueTriggerActivation.triggerUnique(unique, civInfo, city, unit, triggerNotificationText = "due to founding a city")
 
-        AchievementTracker.settle(civInfo.gameInfo)
-        return city
+        city
     }
 
     private object NamingConstants {

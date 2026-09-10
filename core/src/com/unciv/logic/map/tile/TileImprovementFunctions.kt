@@ -220,7 +220,6 @@ class TileImprovementFunctions(val tile: Tile) {
             val wasEncampment = tile.isBarbarianEncampment()
             tile.improvementIsPillaged = false
             tile.setImprovementBasic(null)
-            AchievementTracker.improvementChanged(tile, null)
             updateVisibility()
             updateCity()
             if (!wasEncampment) return
@@ -242,7 +241,6 @@ class TileImprovementFunctions(val tile: Tile) {
             else -> {
                 tile.improvementIsPillaged = false
                 tile.setImprovementBasic(improvement)
-                AchievementTracker.improvementChanged(tile, unit)
                 improvementFieldHasChanged = true
                 if (improvement.hasUnique(UniqueType.Irremovable) || tile.isMarkedForCreatesOneImprovement(improvement.name)) {
                     // I'm not sure what would happen if we try to replace an irremovable improvement
@@ -276,6 +274,7 @@ class TileImprovementFunctions(val tile: Tile) {
             triggerImprovementUniques(improvement, civToActivateBroaderEffects, unit)
 
         updateCity()
+        if (improvementFieldHasChanged) AchievementTracker.improvementBuilt(tile, unit)
     }
 
     private fun triggerImprovementUniques(

@@ -1,5 +1,7 @@
 package com.unciv.logic.civilization.managers
 
+import com.unciv.logic.achievements.AchievementTracker
+
 import com.unciv.logic.IsPartOfGameInfoSerialization
 import com.unciv.logic.city.City
 import com.unciv.logic.civilization.Civilization
@@ -420,7 +422,7 @@ class ReligionManager : IsPartOfGameInfoSerialization {
     @Readonly fun getBeliefsToChooseAtFounding(): Counter<BeliefType> = getBeliefsToChooseAtProphetUse(false)
     @Readonly fun getBeliefsToChooseAtEnhancing(): Counter<BeliefType> = getBeliefsToChooseAtProphetUse(true)
 
-    fun chooseBeliefs(beliefs: List<Belief>, useFreeBeliefs: Boolean = false) {
+    fun chooseBeliefs(beliefs: List<Belief>, useFreeBeliefs: Boolean = false): Unit = AchievementTracker.action(civInfo.gameInfo) {
         // Remove the free beliefs in case we had them
         // Must be done first in case when gain more later
         freeBeliefs.clear()
@@ -463,6 +465,10 @@ class ReligionManager : IsPartOfGameInfoSerialization {
         }
 
         civInfo.updateStatsForNextTurn()  // a belief can have an immediate effect on stats
+        if (civInfo.gameInfo.isReligionEnabled() && religion?.foundingCivName == civInfo.civID) {
+            if (religionState == ReligionState.Pantheon) AchievementTracker.eventCompleted(civInfo, "N14")
+            if (religionState == ReligionState.EnhancedReligion) AchievementTracker.eventCompleted(civInfo, "N24")
+        }
     }
 
 

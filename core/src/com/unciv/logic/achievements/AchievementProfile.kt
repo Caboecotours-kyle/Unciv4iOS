@@ -24,7 +24,8 @@ class AchievementRecord {
 class AchievementProfile {
     var storageVersion = 1
     var unlocks = HashMap<String, String>()
-    var victories = HashMap<String, String>()
+    var victories = HashMap<String, String>() // Preserved V1 records; V2 does not use victory collections.
+    var v2BuiltWonders = HashSet<String>()
     var disqualifiedGames = HashSet<String>()
     var reportedIds = HashSet<String>()
     var claimedByAccount = ""
@@ -33,13 +34,14 @@ class AchievementProfile {
         it.storageVersion = storageVersion
         it.unlocks.putAll(unlocks)
         it.victories.putAll(victories)
+        it.v2BuiltWonders.addAll(v2BuiltWonders)
         it.disqualifiedGames.addAll(disqualifiedGames)
         it.reportedIds.addAll(reportedIds)
         it.claimedByAccount = claimedByAccount
     }
 
     fun recordUnlock(record: AchievementRecord): Boolean {
-        require(record.achievementId in AchievementCatalog.byId)
+        require(record.achievementId in AchievementCatalog.knownIds)
         if (record.achievementId in unlocks) return false
         unlocks[record.achievementId] = json().toJson(record)
         return true
@@ -59,35 +61,7 @@ class AchievementProfile {
         mergeRecords(unlocks, other.unlocks)
         mergeRecords(victories, other.victories)
         disqualifiedGames.addAll(other.disqualifiedGames)
-    }
-
-    fun victoryRecords(achievementId: String): List<AchievementRecord> {
-        val definition = AchievementCatalog.byId.getValue(achievementId)
-        return victories.values.map(::decode).filter {
-            it.catalogVersion >= definition.introducedIn &&
-                it.victoryRoute in AchievementCatalog.victoryRoutes &&
-                AchievementCatalog.meetsDifficulty(it.difficulty, definition.minimumDifficulty)
-        }
-    }
-
-    fun collectedCivilizations() = victoryRecords("A19").map { it.civilization }.toSet()
-
-    fun completedCivilizationChallenges() = unlocks.keys
-        .mapNotNull { AchievementCatalog.civilizationAchievements[it] }.toSet()
-
-    /** Maximum matching of real civilization-route pairs, not independent totals. */
-    fun matchedVictoryRoutes(achievementId: String): Int {
-        val candidates = victoryRecords(achievementId).groupBy { it.victoryRoute }
-        val routes = AchievementCatalog.victoryRoutes.toList()
-        fun match(index: Int, used: Set<String>): Int {
-            if (index == routes.size) return 0
-            var best = match(index + 1, used)
-            for (civ in candidates[routes[index]].orEmpty().map { it.civilization }.distinct()) {
-                if (civ !in used) best = maxOf(best, 1 + match(index + 1, used + civ))
-            }
-            return best
-        }
-        return match(0, emptySet())
+        v2BuiltWonders.addAll(other.v2BuiltWonders)
     }
 
     companion object {

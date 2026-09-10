@@ -241,7 +241,7 @@ class PolicyManager : IsPartOfGameInfoSerialization {
     }
 
 
-    fun adopt(policy: Policy, branchCompletion: Boolean = false) {
+    fun adopt(policy: Policy, branchCompletion: Boolean = false): Unit = AchievementTracker.action(civInfo.gameInfo) {
 
         if (!branchCompletion) {
             if (freePolicies > 0) freePolicies--
@@ -256,9 +256,6 @@ class PolicyManager : IsPartOfGameInfoSerialization {
         }
 
         adoptedPolicies.add(policy.name)
-        if (policy.name == "Rationalism" ||
-            civInfo.gameInfo.ruleset.policyBranches["Rationalism"]?.policies?.any { it.name == policy.name } == true)
-            AchievementTracker.flag(civInfo, AchievementRules.rationalism)
         addPolicyToTransients(policy)
 
         if (!branchCompletion) {
@@ -290,6 +287,8 @@ class PolicyManager : IsPartOfGameInfoSerialization {
         }
 
         if (!canAdoptPolicy()) shouldOpenPolicyPicker = false
+        AchievementTracker.eventCompleted(civInfo, "N03")
+        if (branchCompletion) AchievementTracker.eventCompleted(civInfo, "N22")
     }
 
     /**

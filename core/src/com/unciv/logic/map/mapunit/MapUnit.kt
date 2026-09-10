@@ -966,7 +966,6 @@ class MapUnit : IsPartOfGameInfoSerialization {
                 .forEach { unit -> unit.gift(recipient) }
         assignOwner(recipient)
         recipient.cache.updateViewableTiles()
-        AchievementTracker.unitAcquired(this)
         AchievementTracker.settle(recipient.gameInfo)
     }
 
@@ -1111,6 +1110,7 @@ class MapUnit : IsPartOfGameInfoSerialization {
                 NotificationCategory.War,
                 NotificationIcon.Gold
         )
+        AchievementTracker.eventCompleted(civ, "N07")
     }
 
     fun disband() {
@@ -1169,7 +1169,6 @@ class MapUnit : IsPartOfGameInfoSerialization {
     fun capturedBy(captor: Civilization) {
         civ.units.removeUnit(this)
         assignOwner(captor)
-        AchievementTracker.unitAcquired(this)
         currentMovement = 0f
         // It's possible that the unit can no longer stand on the tile it was captured on.
         // For example, because it's embarked and the capturing civ cannot embark units yet.

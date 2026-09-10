@@ -38,7 +38,7 @@ import kotlin.random.Random
  *  @param addGlobalUniques optional global uniques to add to the ruleset
  *  @param forUITesting default initializes UncivGame.Current and its settings, `true` initializes ImageGetter ruleset instead. Needed for FasterUIDevelopment.
  */
-class TestGame(vararg addGlobalUniques: String, forUITesting: Boolean = false) {
+class TestGame(vararg addGlobalUniques: String, forUITesting: Boolean = false, baseRuleset: BaseRuleset = BaseRuleset.Civ_V_GnK) {
 
     private var objectsCreated = 0
     val ruleset: Ruleset
@@ -64,11 +64,12 @@ class TestGame(vararg addGlobalUniques: String, forUITesting: Boolean = false) {
         // Create a new ruleset we can easily edit, and set the important variables of gameInfo
         if (RulesetCache.isEmpty())
             RulesetCache.loadRulesets(noMods = true)
-        ruleset = RulesetCache[BaseRuleset.Civ_V_GnK.fullName]!!.clone()
+        ruleset = RulesetCache[baseRuleset.fullName]!!.clone()
         ruleset.addGlobalUniques(*addGlobalUniques)
         if (forUITesting)
             ImageGetter.ruleset = ruleset
 
+        gameInfo.gameParameters.baseRuleset = baseRuleset.fullName
         gameInfo.ruleset = ruleset
         gameInfo.difficulty = "Prince"
         gameInfo.gameParameters.speed = Speed.DEFAULTFORSIMULATION

@@ -1,5 +1,7 @@
 package com.unciv.logic.civilization.transients
 
+import com.unciv.logic.achievements.AchievementTracker
+
 import com.unciv.Constants
 import com.unciv.logic.city.City
 import com.unciv.logic.civilization.Civilization
@@ -285,6 +287,7 @@ class CivInfoTransientCache(val civInfo: Civilization) {
 
             // G&K in particular; update the happiness counter in the top bar in the world screen
             civInfo.updateStatsForNextTurn()
+            AchievementTracker.eventCompleted(civInfo, "N16")
         }
     }
 
