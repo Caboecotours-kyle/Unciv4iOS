@@ -205,7 +205,6 @@ class MainMenuScreen: BaseScreen(), RecreateOnResize {
 
         if (game.achievementsAvailable) {
             column2.add(getMenuButton("Achievements", "OtherIcons/Star") { game.showAchievements() }).row()
-            column2.add(getMenuButton("Achievement guide", "OtherIcons/Options") { game.showAchievementGuide() }).row()
         }
 
 
