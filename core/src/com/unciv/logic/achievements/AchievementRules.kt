@@ -18,7 +18,7 @@ object AchievementRules {
         val ownCities = player.cities.filter { it.foundingCivObject == player }
         fun add(id: String, fulfilled: Boolean) { if (fulfilled) result.add(id) }
         fun hasBuildings(city: com.unciv.logic.city.City, vararg names: String): Boolean =
-            city.cityConstructions.getBuiltBuildings().map { it.name }.toSet().containsAll(names.toList())
+            names.all { city.cityConstructions.containsBuildingOrEquivalent(it) }
         val livingUnits = player.units.getCivUnits().filter { it.isMilitary() && !it.isDestroyed }.toList()
         val mostWondersInOwnedCity = player.cities.maxOfOrNull { city ->
             history.builtWonders.values.count { it == AchievementTracker.cityKey(city) }
@@ -35,7 +35,7 @@ object AchievementRules {
         add("N30", mostWondersInOwnedCity >= 8)
         add("N31", livingUnits.any {
             val record = history.units[it.id.toString()]
-            record != null && record.earnedPromotions >= 5 && record.majorMilitaryKills >= 10
+            record != null && record.combatPromotions >= 5 && record.majorMilitaryKills >= 10
         })
 
         if (atTurnEnd) {
@@ -54,7 +54,7 @@ object AchievementRules {
             add("N29", player.getHappiness() >= 10 && ownCities.count { it.population.population >= 20 } >= 4 && history.foreignCaptures.isEmpty())
             add("N34", livingUnits.any {
                 val record = history.units[it.id.toString()]
-                it.name == "Chu-Ko-Nu" && record != null && record.earnedPromotions >= 4 && record.chuKoNuKillsThisTurn.size >= 2
+                it.name == "Chu-Ko-Nu" && record != null && record.combatPromotions >= 4 && record.chuKoNuKillsThisTurn.size >= 2
             })
             if (game.isReligionEnabled()) {
                 val religion = player.religionManager.religion

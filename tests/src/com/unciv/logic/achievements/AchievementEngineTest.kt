@@ -15,8 +15,12 @@ import org.junit.Test
 import org.junit.runner.RunWith
 
 internal class AchievementTestFixture(nation: String = "Rome", baseRuleset: BaseRuleset = BaseRuleset.Civ_V_GnK,
-                                      speed: String = "Standard", aiCount: Int = 4, difficulty: String = "Emperor") {
-    val test = TestGame(baseRuleset = baseRuleset).apply { setSpeed(speed); setDifficulty(difficulty); makeHexagonalMap(12) }
+                                      speed: String = "Standard", aiCount: Int = 4, difficulty: String = "Emperor",
+                                      oneCityChallenge: Boolean = false) {
+    val test = TestGame(baseRuleset = baseRuleset).apply {
+        setSpeed(speed); setDifficulty(difficulty); makeHexagonalMap(12)
+        gameInfo.gameParameters.oneCityChallenge = oneCityChallenge
+    }
     val game = test.gameInfo
     val player = test.addCiv(test.ruleset.nations.getValue(nation), isPlayer = true)
     val opponents = listOf("Greece", "China", "Egypt", "Rome", "America").filter { it != nation }.take(aiCount)
@@ -54,6 +58,13 @@ internal class AchievementTestFixture(nation: String = "Rome", baseRuleset: Base
     }
     fun results(end: Boolean = false, route: String? = null) =
         AchievementRules.evaluate(game, end, player.takeIf { route != null }, route)
+    fun earnCombatExperience(unit: MapUnit, amount: Int) {
+        while (history.unit(unit.id).combatExperience < amount) {
+            nextTurn()
+            unit.health = 100
+            kill(unit, 1, 1)
+        }
+    }
     fun nextTurn() {
         game.turns++
         AchievementTracker.startTurn(player)
@@ -270,7 +281,7 @@ class AchievementEngineTest(private val baseRuleset: com.unciv.models.metadata.B
     @Test fun fifthEarnedPromotionNeedsTheSameLivingMilitaryUnitAndSurvivesUpgrade() {
         val f = fixture()
         val unit = f.unit("Warrior", 0, 0)
-        unit.promotions.XP = 1000
+        f.earnCombatExperience(unit, 150)
         unit.promotions.addPromotion("Drill I", isFree = true)
         val names = listOf("Shock I", "Shock II", "Shock III", "Drill II", "Drill III")
         for (name in names.take(4)) unit.promotions.addPromotion(name)
@@ -278,12 +289,10 @@ class AchievementEngineTest(private val baseRuleset: com.unciv.models.metadata.B
         unit.upgrade.performUpgrade(f.test.ruleset.units.getValue("Spearman"), isFree = true)
         val upgraded = f.player.units.getUnitById(unit.id)!!
         upgraded.promotions.addPromotion(names.last())
-        assertFalse("N31" in f.results())
-        f.history.unit(unit.id).majorMilitaryKills = 9
-        f.kill(upgraded, 1, 1)
-        assertEquals(10, f.history.unit(unit.id).majorMilitaryKills)
         assertTrue("N31" in f.results())
+        assertTrue(f.history.unit(unit.id).majorMilitaryKills >= 10)
         assertEquals(5, f.history.units.getValue(unit.id.toString()).earnedPromotions)
+        assertEquals(5, f.history.units.getValue(unit.id.toString()).combatPromotions)
         upgraded.destroy()
         assertTrue("N31" in f.results()) // Already earned medals remain unlocked.
     }
@@ -329,7 +338,7 @@ class AchievementEngineTest(private val baseRuleset: com.unciv.models.metadata.B
     @Test fun fifthPromotionDoesNotQualifyAUnitKilledBeforeTheActionSettles() {
         val f = fixture()
         val unit = f.unit("Warrior", 0, 0)
-        unit.promotions.XP = 1000
+        f.earnCombatExperience(unit, 150)
         for (name in listOf("Shock I", "Shock II", "Shock III", "Drill I")) unit.promotions.addPromotion(name)
         f.history.unit(unit.id).majorMilitaryKills = 10
         AchievementTracker.action(f.game) {

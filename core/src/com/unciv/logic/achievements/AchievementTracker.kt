@@ -121,8 +121,17 @@ object AchievementTracker {
             eventCompleted(unit.civ, "N09")
     }
 
-    fun promotionEarned(unit: MapUnit) {
-        state(unit.civ)?.history?.unit(unit.id)?.let { it.earnedPromotions++ }
+    fun combatExperienceEarned(unit: MapUnit, amount: Int) {
+        state(unit.civ)?.history?.unit(unit.id)?.let { it.combatExperience += amount }
+    }
+
+    fun promotionEarned(unit: MapUnit, experienceCost: Int) {
+        state(unit.civ)?.history?.unit(unit.id)?.let {
+            it.earnedPromotions++
+            // Spend recorded combat XP first. A mixed training/combat payment is not a combat promotion.
+            if (it.combatExperience >= experienceCost) it.combatPromotions++
+            it.combatExperience = maxOf(0, it.combatExperience - experienceCost)
+        }
     }
 
     fun killedMilitaryUnit(killer: MapUnit, victimId: Int, victimWasMajorMilitary: Boolean,
@@ -132,7 +141,7 @@ object AchievementTracker {
         if (victimWasMajorMilitary) history.unit(killer.id).majorMilitaryKills++
         if (!victimWasMajorMilitary || !wasAttacker || !killer.civ.isCurrentPlayer() || killer.name != "Chu-Ko-Nu") return
         val unit = history.unit(killer.id)
-        unit.chuKoNuKillsThisTurn.add(victimId.toString())
+        if (unit.combatPromotions >= 4) unit.chuKoNuKillsThisTurn.add(victimId.toString())
     }
 
     fun tradeCompleted(first: Civilization, second: Civilization, trade: Trade) {
@@ -153,6 +162,7 @@ object AchievementTracker {
         val history = state(unit.civ)?.history ?: return
         history.pendingCaptures[cityKey(city)] = AchievementCapture().apply {
             unitId = unit.id
+            combatPromotions = history.units[unit.id.toString()]?.combatPromotions ?: 0
             turn = unit.civ.gameInfo.turns
             foreign = city.foundingCivObject?.let { it != unit.civ && it.isMajorCiv() } == true
         }
@@ -175,9 +185,9 @@ object AchievementTracker {
             if (!capture.foreign) continue
             val captor = player.units.getUnitById(capture.unitId)
             if (captor != null && !captor.isDestroyed && captor.isMilitary() &&
-                (history.units[capture.unitId.toString()]?.earnedPromotions ?: 0) >= 3)
+                capture.combatPromotions >= 3)
                 history.completed.add("N08")
-            if (!history.foreignCaptures.add(cityId)) continue
+            history.foreignCaptures.add(cityId)
             if (player.goldenAges.isGoldenAge()) {
                 history.goldenAgeCaptures.add(cityId)
                 history.goldenAgeCapturedCivilizations.add(city.foundingCivObject!!.civID)

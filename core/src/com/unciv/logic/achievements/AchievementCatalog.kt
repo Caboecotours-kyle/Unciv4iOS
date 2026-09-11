@@ -126,4 +126,38 @@ object AchievementCatalog {
         definition.requiresReligion && !state.religionEnabled -> "Religion must be enabled"
         else -> null
     }
+
+    /** Read-only setup guidance, not an unlock predicate or a promise of future completion. */
+    fun currentGameIneligibility(definition: AchievementDefinition, game: GameInfo?): String? {
+        if (definition.id == "N40") return null // The collection belongs to the profile, across games.
+        val state = game?.achievements
+        if (state == null || state.recordingVersion != recordingVersion || state.catalogVersion != version ||
+            state.gameId != game.gameId)
+            return "Start a new eligible single-player game"
+        if (state.ended) return "This game no longer records achievements"
+        ineligibility(definition, state)?.let { return it }
+        val id = definition.id
+        if (state.oneCityChallenge && id in setOf("N02", "N10", "N12", "N14", "N28", "N29"))
+            return "One City Challenge prevents the required expansion"
+        if (id == "N07" && game.gameParameters.noBarbarians) return "Barbarians are disabled"
+        if (id == "N16" && game.tileMap.values.mapNotNull { it.naturalWonder }.toSet().size < 3)
+            return "This map has fewer than three different natural wonders"
+        val cityStates = game.civilizations.filter { it.isCityState }
+        if (id == "N13" && cityStates.map { it.cityStateType }.toSet().size < 3 ||
+            id == "N23" && cityStates.size < 4 ||
+            id == "N25" && (cityStates.size < 5 || cityStates.map { it.cityStateType }.toSet().size < 3))
+            return "This game has too few city-states or city-state types"
+        val routes = when (id) {
+            "N01" -> victoryRoutes
+            "N17", "N38" -> setOf("Scientific")
+            "N18", "N39" -> setOf("Cultural")
+            "N19" -> setOf("Domination")
+            "N20" -> setOf("Diplomatic")
+            "N36", "N37" -> victoryRoutes - "Time"
+            else -> emptySet()
+        }
+        if (routes.isNotEmpty() && routes.none { it in state.enabledVictories })
+            return "The required victory route is disabled"
+        return null
+    }
 }

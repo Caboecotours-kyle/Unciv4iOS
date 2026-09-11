@@ -59,7 +59,7 @@ class AchievementTacticsTest(private val baseRuleset: com.unciv.models.metadata.
     @Test fun threeForeignCapturesNeedCompletedOwnershipButMilitaryLossesAreAllowed() {
         val f = fixture()
         val unit = f.unit("Warrior", 0, 0)
-        f.history.unit(unit.id).earnedPromotions = 3
+        f.history.unit(unit.id).combatPromotions = 3
         val casualty = f.unit("Warrior", 0, 3)
         val cities = listOf(f.city(2, 0, civ = f.opponents[0]), f.city(4, 0, civ = f.opponents[0]), f.city(6, 0, civ = f.opponents[1]))
         AchievementTracker.cityBattleWon(unit, cities[0])
@@ -109,7 +109,7 @@ class AchievementTacticsTest(private val baseRuleset: com.unciv.models.metadata.
     @Test fun chuKoNuKillsMustUseOneUnitOnePlayerTurnAndMajorCivilizationVictims() {
         val f = fixture("China")
         val unit = f.unit("Chu-Ko-Nu", 0, 0)
-        f.history.unit(unit.id).earnedPromotions = 4
+        f.history.unit(unit.id).combatPromotions = 4
         f.kill(unit, 0, 1)
         f.nextTurn()
         f.kill(unit, 1, 1)
@@ -119,9 +119,9 @@ class AchievementTacticsTest(private val baseRuleset: com.unciv.models.metadata.
         assertFalse("N34" in f.results())
         f.kill(unit, 1, 0)
         assertFalse("N34" in f.results())
-        f.history.unit(unit.id).earnedPromotions = 3
+        f.history.unit(unit.id).combatPromotions = 3
         assertFalse("N34" in f.results(end = true))
-        f.history.unit(unit.id).earnedPromotions = 4
+        f.history.unit(unit.id).combatPromotions = 4
         assertTrue("N34" in f.results(end = true))
         unit.destroy()
         assertFalse("N34" in f.results(end = true))

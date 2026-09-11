@@ -650,6 +650,7 @@ object Battle {
 
         val xpGained = (baseXP * xpModifier).toInt()
         promotions.XP += xpGained
+        AchievementTracker.combatExperienceEarned(thisCombatant.unit, xpGained)
 
         if (!otherIsBarbarian && civ.isMajorCiv()) { // Can't get great generals from Barbarians
             var greatGeneralUnits = civ.gameInfo.ruleset.greatGeneralUnits

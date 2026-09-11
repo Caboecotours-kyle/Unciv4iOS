@@ -56,12 +56,12 @@ class AchievementPreviewTest {
         val f = AchievementTestFixture()
         val unit = f.unit("Warrior", 0, 0)
         val city = f.city(2, 0, civ = f.opponents[0])
-        f.history.unit(unit.id).earnedPromotions = 2
+        f.history.unit(unit.id).combatPromotions = 2
         AchievementTracker.cityBattleWon(unit, city)
         city.puppetCity(f.player)
         assertFalse("N08" in f.results())
         city.moveToCiv(f.opponents[0])
-        f.history.unit(unit.id).earnedPromotions = 3
+        f.history.unit(unit.id).combatPromotions = 3
         AchievementTracker.cityBattleWon(unit, city)
         city.puppetCity(f.player)
         assertTrue("N08" in f.results())

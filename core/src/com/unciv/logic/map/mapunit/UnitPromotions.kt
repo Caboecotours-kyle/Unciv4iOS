@@ -139,9 +139,10 @@ class UnitPromotions : IsPartOfGameInfoSerialization {
 
         if (!isFree) {
             if (!promotion.hasUnique(UniqueType.FreePromotion)) {
-                XP -= xpForNextPromotion()
+                val experienceCost = xpForNextPromotion()
+                XP -= experienceCost
                 numberOfPromotions++
-                AchievementTracker.promotionEarned(unit)
+                AchievementTracker.promotionEarned(unit, experienceCost)
             }
 
             for (unique in unit.getTriggeredUniques(UniqueType.TriggerUponPromotion))

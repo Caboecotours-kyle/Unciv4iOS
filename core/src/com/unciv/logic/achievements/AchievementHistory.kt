@@ -48,6 +48,9 @@ class AchievementUnitHistory : IsPartOfGameInfoSerialization {
     var majorMilitaryKills = 0
     var clearedEncampments = HashSet<String>()
     var earnedPromotions = 0
+    // Missing fields stay zero: earlier saves did not record where promotion XP came from.
+    var combatExperience = 0
+    var combatPromotions = 0
     var samuraiMilitaryKill = false
     var chuKoNuKillsThisTurn = HashSet<String>()
     var keshikAttacks = ArrayList<AchievementRetreat>()
@@ -74,6 +77,7 @@ class AchievementMountainParty : IsPartOfGameInfoSerialization {
 class AchievementCapture : IsPartOfGameInfoSerialization {
     var ownershipSettled = false
     var unitId = 0
+    var combatPromotions = 0
     var turn = 0
     var foreign = false
     var originalCapital = false
