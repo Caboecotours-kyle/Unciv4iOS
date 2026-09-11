@@ -21,7 +21,6 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.io.IOException
-import java.util.concurrent.atomic.AtomicBoolean
 
 class IOSModHttpClientEngineTests {
     @Test
@@ -66,7 +65,7 @@ class IOSModHttpClientEngineTests {
             val request = async { client.get("https://example.com/mod.zip") }
             val pending = transport.requests.receive()
             request.cancelAndJoin()
-            assertTrue(pending.cancelled.get())
+            assertTrue(withTimeout(5_000) { pending.cancelled.await() })
         } finally {
             client.close()
         }
@@ -116,8 +115,8 @@ class IOSModHttpClientEngineTests {
         val listener: IOSModHttpListener,
         private val onResume: (PendingRequest) -> Unit,
     ) : IOSModHttpTask {
-        val cancelled = AtomicBoolean()
+        val cancelled = kotlinx.coroutines.CompletableDeferred<Boolean>()
         override fun resume() = onResume(this)
-        override fun cancel() { cancelled.set(true) }
+        override fun cancel() { cancelled.complete(true) }
     }
 }
