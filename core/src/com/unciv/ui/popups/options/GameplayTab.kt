@@ -1,16 +1,9 @@
 package com.unciv.ui.popups.options
 
-import com.unciv.ui.components.extensions.toTextButton
-import com.unciv.ui.components.input.onClick
-
 internal class GameplayTab(
     optionsPopup: OptionsPopup
 ) : OptionsPopupTab(optionsPopup) {
     override fun lateInitialize() {
-        if (game.achievementsAvailable) {
-            add("Achievement guide".toTextButton().onClick { game.showAchievementGuide() })
-                .colspan(2).fillX().padBottom(10f).row()
-        }
         addCheckbox("Check for idle units", settings::checkForDueUnits, updateWorld = true)
         addCheckbox("'Next unit' button cycles idle units", settings::checkForDueUnitsCycles, updateWorld = true)
         addCheckbox("Show Small Skip/Cycle Unit Button", settings::smallUnitButton, updateWorld = true)
