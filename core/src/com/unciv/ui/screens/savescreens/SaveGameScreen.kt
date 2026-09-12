@@ -164,7 +164,7 @@ class SaveGameScreen(private val gameInfo: GameInfo) :
 
         screenTable.apply {
             setFillParent(Gdx.app.type != com.badlogic.gdx.Application.ApplicationType.iOS)
-            setSize(stage.width, stage.height)
+            setSize(this@SaveGameScreen.stage.width, this@SaveGameScreen.stage.height)
             background = skinStrings.getUiBackground(
                 "SaveGameScreen/Background",
                 tintColor = skinStrings.skinConfig.clearColor,

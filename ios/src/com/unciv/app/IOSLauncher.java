@@ -18,7 +18,7 @@ public final class IOSLauncher extends IOSApplication.Delegate {
         config.preventScreenDimming = true;
         config.orientationLandscape = true;
         config.orientationPortrait = true;
-        config.preferredFramesPerSecond = 60;
+        config.preferredFramesPerSecond = 30;
         config.useAccelerometer = false;
         config.useCompass = false;
         config.useAudio = true;

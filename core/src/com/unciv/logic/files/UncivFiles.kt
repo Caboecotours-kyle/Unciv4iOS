@@ -54,6 +54,7 @@ class UncivFiles(
     }
 
     val autosaves = Autosaves(this)
+    val saveMetrics = SaveFileMetrics()
 
     var cloudSaveSync: CloudSaveSync = CloudSaveSync.None
 
@@ -83,6 +84,10 @@ class UncivFiles(
         val location = "${saveFolder}/$gameName"
         val localFile = getLocalFile(location)
         val externalFile = files.external(location)
+        if (saveFolder == SAVE_FILES_FOLDER) {
+            SaveFileWriter.recover(localFile)
+            if (files.isExternalStorageAvailable) SaveFileWriter.recover(externalFile)
+        }
 
         val toReturn = if (files.isExternalStorageAvailable && (
                 externalFile.exists() && !localFile.exists() || // external file is only valid choice
@@ -128,18 +133,27 @@ class UncivFiles(
         // This construct instead of asSequence causes the actual list() to happen when the
         // first element is pulled, not right now before a Sequence is wrapped around the result.
         // Note that any performance gains are moot when logging is on: See the the `debug` below.
-        val localFiles = Sequence { getLocalFile(saveFolder).list().iterator() }
+        val localFiles = Sequence {
+            val directory = getLocalFile(saveFolder)
+            if (saveFolder == SAVE_FILES_FOLDER) SaveFileWriter.recoverDirectory(directory)
+            directory.list().iterator()
+        }
 
         val externalFiles = when {
             !files.isExternalStorageAvailable -> emptySequence()
             getDataFolder().file().absolutePath == files.external("").file().absolutePath -> emptySequence()
-            else -> Sequence { files.external(saveFolder).list().iterator() }
+            else -> Sequence {
+                val directory = files.external(saveFolder)
+                if (saveFolder == SAVE_FILES_FOLDER) SaveFileWriter.recoverDirectory(directory)
+                directory.list().iterator()
+            }
         }
 
         debug("Local files: %s, external files: %s",
             { localFiles.joinToString(prefix = "[", postfix = "]", transform = { it.file().absolutePath }) },
             { externalFiles.joinToString(prefix = "[", postfix = "]", transform = { it.file().absolutePath }) })
-        return localFiles + externalFiles
+        val saves = localFiles + externalFiles
+        return if (saveFolder == SAVE_FILES_FOLDER) saves.filter { !SaveFileWriter.isTemporary(it) } else saves
     }
 
     /**
@@ -156,8 +170,9 @@ class UncivFiles(
      * @return `true` if successful.
      * @throws SecurityException when delete access was denied
      */
-    fun deleteSave(file: FileHandle): Boolean {
+    fun deleteSave(file: FileHandle): Boolean = SaveFileLocks.withLock(file) {
         debug("Deleting save %s", file.path())
+        SaveFileWriter.recover(file)
         val deleted = file.delete()
         if (deleted) {
             try {
@@ -166,7 +181,7 @@ class UncivFiles(
                 Log.error("Could not record local cloud-save deletion", ex)
             }
         }
-        return deleted
+        deleted
     }
 
     //endregion
@@ -190,12 +205,16 @@ class UncivFiles(
         try {
             debug("Saving GameInfo %s to %s", game.gameId, file.path())
             game.version = CompatibilityVersion.CURRENT_COMPATIBILITY_VERSION
-            FileConversions.writeJson(file, game, saveZipped)
-            try {
-                cloudSaveSync.onLocalSave(file, game)
-            } catch (ex: Exception) {
-                // A cloud backup failure must never turn a completed local save into a failure.
-                Log.error("Could not queue cloud-save upload", ex)
+            SaveFileLocks.withLock(file) {
+                val started = System.nanoTime()
+                SaveFileWriter.write(file) { temporary -> FileConversions.writeJson(temporary, game, saveZipped) }
+                saveMetrics.record(SavePhase.LocalSave, System.nanoTime() - started, bytesWritten = file.length())
+                try {
+                    cloudSaveSync.onLocalSave(file, game)
+                } catch (ex: Exception) {
+                    // A cloud backup failure must never turn a completed local save into a failure.
+                    Log.error("Could not queue cloud-save upload", ex)
+                }
             }
             saveCompletionCallback(null)
         } catch (ex: Exception) {
@@ -265,27 +284,33 @@ class UncivFiles(
             loadGameFromFile(getSave(gameName))
 
     fun loadGameFromFile(gameFile: FileHandle): GameInfo {
-        if (gameFile.length() == 0L) throw emptyFile(gameFile)
+        val gameInfo = SaveFileLocks.withLock(gameFile) {
+            SaveFileWriter.recover(gameFile)
+            if (gameFile.length() == 0L) throw emptyFile(gameFile)
 
-        val gameInfo = try {
-            FileConversions.readJson(gameFile, GameInfo::class.java)
-        } catch (ex: Exception) {
-            Log.error("Exception while deserializing GameInfo JSON", ex)
-            val onlyVersion = FileConversions.readJson(gameFile, GameInfoSerializationVersion::class.java)!!
-            throw IncompatibleGameInfoVersionException(onlyVersion.version, ex)
-        } ?: throw UncivShowableException("The file data seems to be corrupted.")
+            val parsed = try {
+                FileConversions.readJson(gameFile, GameInfo::class.java)
+            } catch (ex: Exception) {
+                Log.error("Exception while deserializing GameInfo JSON", ex)
+                val onlyVersion = FileConversions.readJson(gameFile, GameInfoSerializationVersion::class.java)!!
+                throw IncompatibleGameInfoVersionException(onlyVersion.version, ex)
+            } ?: throw UncivShowableException("The file data seems to be corrupted.")
 
-        if (gameInfo.version > CompatibilityVersion.CURRENT_COMPATIBILITY_VERSION) {
-            // this means there wasn't an immediate error while serializing, but this version will cause other errors later down the line
-            throw IncompatibleGameInfoVersionException(gameInfo.version)
+            if (parsed.version > CompatibilityVersion.CURRENT_COMPATIBILITY_VERSION) {
+                // this means there wasn't an immediate error while serializing, but this version will cause other errors later down the line
+                throw IncompatibleGameInfoVersionException(parsed.version)
+            }
+            parsed
         }
         gameInfo.setTransients()
         return gameInfo
     }
 
     fun loadGamePreviewFromFile(gameFile: FileHandle): GameInfoPreview {
-        val preview = FileConversions.readJson(gameFile, GameInfoPreview::class.java)
-            ?: throw emptyFile(gameFile)
+        val preview = SaveFileLocks.withLock(gameFile) {
+            SaveFileWriter.recover(gameFile)
+            FileConversions.readJson(gameFile, GameInfoPreview::class.java) ?: throw emptyFile(gameFile)
+        }
         preview.migrateCivID()
         return preview
     }
@@ -536,7 +561,10 @@ class UncivFiles(
 
 class Autosaves(val files: UncivFiles) {
 
+    /** The tail includes every previously submitted autosave, so joining it drains the queue. */
+    @Volatile
     var autoSaveJob: Job? = null
+        private set
 
     /**
      * Auto-saves a snapshot of the [gameInfo] in a new thread.
@@ -545,14 +573,20 @@ class Autosaves(val files: UncivFiles) {
         // The save takes a long time (up to a few seconds on large games!) and we can do it while the player continues his game.
         // On the other hand if we alter the game data while it's being serialized we could get a concurrent modification exception.
         // So what we do is we clone all the game data and serialize the clone.
-        return requestAutoSaveUnCloned(gameInfo.clone(), nextTurn)
+        val started = System.nanoTime()
+        val cloned = gameInfo.clone()
+        files.saveMetrics.record(SavePhase.Clone, System.nanoTime() - started)
+        return requestAutoSaveUnCloned(cloned, nextTurn)
     }
 
     /**
      * In a new thread, auto-saves the [gameInfo] directly - only use this with [GameInfo] objects that are guaranteed not to be changed while the autosave is in progress!
      */
+    @Synchronized
     fun requestAutoSaveUnCloned(gameInfo: GameInfo, nextTurn: Boolean = false): Job {
+        val previous = autoSaveJob
         val job = Concurrency.run("autoSaveUnCloned") {
+            previous?.join()
             autoSave(gameInfo, nextTurn)
         }
         autoSaveJob = job
@@ -563,21 +597,27 @@ class Autosaves(val files: UncivFiles) {
         // get GameSettings to check the maxAutosavesStored in the autoSave function
         val settings = files.getGeneralSettings()
 
+        val primary = files.getSave(AUTOSAVE_FILE_NAME)
         try {
-            files.saveGame(gameInfo, AUTOSAVE_FILE_NAME)
+            SaveFileLocks.withLock(primary) {
+                files.saveGame(gameInfo, primary)
+                if (nextTurn) {
+                    // Copy this exact save while its slot is still locked. Another autosave or
+                    // cloud replacement must not supply the bytes for this turn's history entry.
+                    val history = files.pathToFileHandle(SAVE_FILES_FOLDER)
+                        .child("$AUTOSAVE_FILE_NAME-${gameInfo.currentPlayer}-${gameInfo.turns}")
+                    val started = System.nanoTime()
+                    SaveFileWriter.write(history) { temporary -> primary.copyTo(temporary) }
+                    files.saveMetrics.record(SavePhase.HistoryCopy, System.nanoTime() - started,
+                        primary.length(), history.length())
+                }
+            }
         } catch (oom: OutOfMemoryError) {
             Log.error("Ran out of memory during autosave", oom)
-            return false  // not much we can do here
+            return false
         }
 
-        if (!nextTurn) return true
-
-        // keep auto-saves for the last `settings.maxAutosavesStored` turns
-        val newAutosaveFile = files.pathToFileHandle(SAVE_FILES_FOLDER)
-            .child("$AUTOSAVE_FILE_NAME-${gameInfo.currentPlayer}-${gameInfo.turns}")
-        files.getSave(AUTOSAVE_FILE_NAME).copyTo(newAutosaveFile)
-
-        purgeOldAutosaves(settings.maxAutosavesStored)
+        if (nextTurn) purgeOldAutosaves(settings.maxAutosavesStored)
         return true
     }
 
@@ -595,20 +635,28 @@ class Autosaves(val files: UncivFiles) {
             files.deleteSave(file)
     }
 
-    fun loadLatestAutosave(): GameInfo {
+    fun loadLatestAutosave(onRecovered: (GameInfo) -> Unit = {}): GameInfo {
         return try {
             files.loadGameByName(AUTOSAVE_FILE_NAME)
-        } catch (_: Exception) {
-            // silent fail if we can't read the autosave for any reason - try to load the last autosave by timestamp first
-            val autosaves = files.getSaves().filter {
-                it.name() != AUTOSAVE_FILE_NAME &&
-                it.name().startsWith(AUTOSAVE_FILE_NAME)
+        } catch (primaryFailure: Exception) {
+            for (file in getAutosaveHistory().sortedByDescending { it.lastModified() }) {
+                val recovered = try {
+                    files.loadGameFromFile(file)
+                } catch (ex: Exception) {
+                    primaryFailure.addSuppressed(ex)
+                    continue
+                }
+                onRecovered(recovered)
+                return recovered
             }
-            files.loadGameFromFile(autosaves.maxBy { it.lastModified() })
+            // Keep the useful load error even when there are no history files, or all of them fail.
+            throw primaryFailure
         }
     }
 
-    fun autosaveExists(): Boolean = files.getSave(AUTOSAVE_FILE_NAME).exists()
+    private fun getAutosaveHistory() = files.getSaves().filter { it.name().startsWith("$AUTOSAVE_FILE_NAME-") }
+
+    fun autosaveExists(): Boolean = files.getSave(AUTOSAVE_FILE_NAME).exists() || getAutosaveHistory().any()
 }
 
 class IncompatibleGameInfoVersionException(

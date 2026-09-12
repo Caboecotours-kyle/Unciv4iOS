@@ -1,6 +1,7 @@
 package com.unciv.ui.audio
 
 import com.badlogic.gdx.Files.FileType
+import com.badlogic.gdx.Application.ApplicationType
 import com.badlogic.gdx.Gdx
 import com.badlogic.gdx.audio.Music
 import com.badlogic.gdx.files.FileHandle
@@ -16,6 +17,9 @@ import java.net.HttpURLConnection
 import java.net.URI
 import java.util.EnumSet
 import java.util.Timer
+import java.util.concurrent.ScheduledFuture
+import java.util.concurrent.ScheduledThreadPoolExecutor
+import java.util.concurrent.TimeUnit
 import kotlin.concurrent.thread
 import kotlin.concurrent.timer
 import kotlin.math.roundToInt
@@ -30,7 +34,16 @@ import kotlin.math.roundToInt
  * * This plays entirely independent of all other functionality as linked above.
  * * Can load from internal (jar,apk) - music is always local, nothing is packaged into a release.
  */
-class MusicController {
+class MusicController internal constructor(
+    private val demandExecutor: ScheduledThreadPoolExecutor?,
+    private val nanoTime: () -> Long,
+) {
+    constructor() : this(
+        if (Gdx.app.type == ApplicationType.iOS) ScheduledThreadPoolExecutor(1) { runnable ->
+            Thread(runnable, "MusicTimer").apply { isDaemon = true }
+        }.apply { setRemoveOnCancelPolicy(true) } else null,
+        System::nanoTime,
+    )
     companion object {
         /** Mods live in Local - but this file prepares for music living in External just in case */
         private val musicLocation = FileType.Local
@@ -141,8 +154,11 @@ class MusicController {
 
     /** Pause in seconds between tracks unless [chooseTrack] is called to force a track change */
     var silenceLength: Float
-        get() = silenceLengthInTicks.toFloat() / ticksPerSecond
-        set(value) { silenceLengthInTicks = (ticksPerSecond * value).toInt() }
+        get() = readState { silenceLengthInTicks.toFloat() / ticksPerSecond }
+        set(value) = withState {
+            silenceLengthInTicks = (ticksPerSecond * value).toInt()
+            silenceStartedAt?.let { silenceDeadline = it + silenceNanos() + silenceExtraNanos }
+        }
 
     private var silenceLengthInTicks =
         (settings.pauseBetweenTracks * ticksPerSecond).roundToInt()
@@ -154,6 +170,25 @@ class MusicController {
     private var ticksOfSilence: Int = 0
 
     private var musicTimer: Timer? = null
+
+    private val controllerLock = Any()
+    private var demandFuture: ScheduledFuture<*>? = null
+    private var demandDeadline = Long.MAX_VALUE
+    private var scheduleEpoch = 0L
+    private var fadeDeadline: Long? = null
+    private var healthDeadline: Long? = null
+    private var silenceStartedAt: Long? = null
+    private var silenceDeadline: Long? = null
+    private var silenceExtraNanos = 0L
+    private var systemSuspended = false
+    private var overlayResumeOnForeground = false
+    private var terminating = false
+    private var demandClosed = false
+    private var mainLoadEpoch = 0L
+    private var overlayLoadEpoch = 0L
+    private var mainLoadPending = false
+    private var changePending = false
+    private var changeRevision = 0L
 
     private enum class ControllerState(val canPause: Boolean = false, val showTrack: Boolean = false) {
         /** Own timer stopped, if using the HardenedGdxAudio callback just do nothing */
@@ -218,7 +253,7 @@ class MusicController {
      *
      *  Callbacks will be safely called on the GL thread.
      */
-    fun onChange(listener: ((MusicTrackInfo)->Unit)?) {
+    fun onChange(listener: ((MusicTrackInfo)->Unit)?) = withState {
         if (listener == null) onTrackChangeListeners.clear()
         else onTrackChangeListeners.add(listener)
         fireOnChange()
@@ -230,12 +265,10 @@ class MusicController {
     fun isMusicAvailable() = getAllMusicFiles().any()
 
     /** @return `true` if there's a current music track and if it's actively playing */
-    fun isPlaying(): Boolean {
-        return current?.isPlaying() == true
-    }
+    fun isPlaying(): Boolean = readState { current?.isPlaying() == true }
 
     /** @return Sequence of most recently played tracks, oldest first, current last */
-    fun getHistory() = musicHistory.asSequence().map { MusicTrackInfo.parse(it) }
+    fun getHistory() = readState { musicHistory.toList() }.asSequence().map { MusicTrackInfo.parse(it) }
 
     /** @return Sequence of all available and enabled music tracks */
     fun getAllMusicFileInfo() = getAllMusicFiles().map {
@@ -247,6 +280,161 @@ class MusicController {
 
     private val settings get() = UncivGame.Current.settings
 
+    private inline fun <T> readState(block: () -> T): T =
+        if (demandExecutor == null) block() else synchronized(controllerLock) { block() }
+
+    private inline fun <T> withState(block: () -> T): T {
+        if (demandExecutor == null || Thread.holdsLock(controllerLock)) return block()
+        try {
+            return synchronized(controllerLock) {
+                try { block() } finally { reconcileDemandTimer() }
+            }
+        } finally {
+            dispatchDemandChange()
+        }
+    }
+
+    private fun demandTracks() = listOfNotNull(current, next, overlay)
+    private fun silenceNanos() = (silenceLengthInTicks.toDouble() / ticksPerSecond * 1_000_000_000L).toLong()
+
+    private fun cancelDemandTimer() {
+        scheduleEpoch++
+        demandFuture?.cancel(false)
+        demandFuture = null
+        demandDeadline = Long.MAX_VALUE
+    }
+
+    private fun reconcileDemandTimer() {
+        val executor = demandExecutor ?: return
+        if (systemSuspended || demandClosed) {
+            cancelDemandTimer()
+            fadeDeadline = null
+            healthDeadline = null
+            return
+        }
+        val now = nanoTime()
+        val tracks = demandTracks()
+        val fading = tracks.any { it.state == MusicTrackController.State.FadeIn || it.state == MusicTrackController.State.FadeOut }
+        fadeDeadline = if (fading) fadeDeadline ?: (now + 50_000_000L) else null
+        healthDeadline = if (!fading && tracks.any { it.state == MusicTrackController.State.Playing })
+            healthDeadline ?: (now + 1_000_000_000L) else null
+        var deadline = minOf(fadeDeadline ?: Long.MAX_VALUE, healthDeadline ?: Long.MAX_VALUE)
+        if (state == ControllerState.Silence) deadline = minOf(deadline, silenceDeadline ?: Long.MAX_VALUE)
+        val needsTransition = when (state) {
+            ControllerState.Playing, ControllerState.PlaySingle -> current == null && (next != null || !mainLoadPending)
+            ControllerState.Shutdown, ControllerState.Cleanup -> !fading
+            else -> false
+        }
+        if (needsTransition) deadline = now
+        if (deadline == Long.MAX_VALUE) {
+            cancelDemandTimer()
+            return
+        }
+        if (demandFuture != null && demandDeadline <= deadline) return
+        cancelDemandTimer()
+        val epoch = scheduleEpoch
+        demandDeadline = deadline
+        demandFuture = executor.schedule({ demandPulse(epoch) }, (deadline - now).coerceAtLeast(0L), TimeUnit.NANOSECONDS)
+    }
+
+    private fun enterDemandSilence(extraNanos: Long = 0L) {
+        state = ControllerState.Silence
+        silenceStartedAt = nanoTime()
+        silenceExtraNanos = extraNanos
+        silenceDeadline = silenceStartedAt!! + silenceNanos() + extraNanos
+        fireOnChange()
+    }
+
+    private fun demandPulse(epoch: Long) {
+        var chooseEpoch: Long? = null
+        withState {
+            if (epoch != scheduleEpoch || systemSuspended || demandClosed) return
+            demandFuture = null
+            demandDeadline = Long.MAX_VALUE
+            val now = nanoTime()
+            val fadeDue = fadeDeadline?.let { now >= it } == true
+            val healthDue = healthDeadline?.let { now >= it } == true
+            if (fadeDue) {
+                fadeDeadline = null
+                for (track in demandTracks()) {
+                    try { track.timerTick() }
+                    catch (ex: Exception) { track.clear(); Log.error("Error fading music", ex) }
+                }
+            }
+            if (healthDue) healthDeadline = null
+            fun finished(track: MusicTrackController): Boolean =
+                !track.state.canPlay || track.state == MusicTrackController.State.Idle ||
+                    ((fadeDue || healthDue) && !track.isPlaying())
+
+            if (state == ControllerState.Playing || state == ControllerState.PlaySingle || state == ControllerState.Shutdown) {
+                if (current?.let(::finished) == true) clearCurrent()
+            }
+            if (next?.let(::finished) == true) clearNext()
+            if (!overlayPausing && overlay?.let(::finished) == true) clearOverlay()
+
+            when (state) {
+                ControllerState.Playing, ControllerState.PlaySingle -> {
+                    if (current == null && next != null) {
+                        current = next
+                        next = null
+                        fireOnChange()
+                    }
+                    if (current == null && !mainLoadPending) {
+                        if (state == ControllerState.PlaySingle) shutdown()
+                        else enterDemandSilence()
+                    }
+                }
+                ControllerState.Silence -> if (silenceDeadline?.let { now >= it } == true) {
+                    silenceStartedAt = null
+                    silenceDeadline = null
+                    state = ControllerState.Idle
+                    chooseEpoch = mainLoadEpoch
+                }
+                ControllerState.Shutdown, ControllerState.Cleanup ->
+                    if (demandTracks().none { it.state == MusicTrackController.State.FadeOut }) shutdown()
+                else -> Unit
+            }
+        }
+        val request = chooseEpoch ?: return
+        val file = chooseFile("", MusicMood.Ambient, MusicTrackChooserFlags.default) ?: return
+        startDemandTrack(file, MusicTrackChooserFlags.default, request)
+    }
+
+    private fun queueDemandCompletion(track: MusicTrackController, epoch: Long) {
+        val executor = demandExecutor ?: return
+        synchronized(controllerLock) {
+            if (demandClosed) return
+            executor.execute {
+                withState {
+                    if (systemSuspended || demandClosed || !track.acceptsCompletion(epoch) || track.music?.isLooping == true) return@withState
+                    when {
+                        current === track && (state == ControllerState.Playing || state == ControllerState.PlaySingle || state == ControllerState.Shutdown) -> clearCurrent()
+                        next === track -> clearNext()
+                        overlay === track && !overlayPausing -> clearOverlay()
+                    }
+                }
+            }
+        }
+    }
+
+    private fun dispatchDemandChange() {
+        if (demandExecutor == null) return
+        val notification = synchronized(controllerLock) {
+            if (!changePending) return
+            changePending = false
+            Triple(changeRevision, MusicTrackInfo.parse(currentlyPlaying()), onTrackChangeListeners.toList())
+        }
+        if (notification.third.isEmpty()) return
+        Concurrency.runOnGLThread {
+            if (readState { changeRevision } != notification.first) return@runOnGLThread
+            try { notification.third.forEach { it(notification.second) } }
+            catch (ex: Throwable) {
+                Log.debug("onTrackChange event invoke failed", ex)
+                withState { onTrackChangeListeners.clear() }
+            }
+        }
+    }
+
     private fun clearCurrent() {
         current?.clear()
         current = null
@@ -257,6 +445,7 @@ class MusicController {
     }
 
     private fun startTimer() {
+        if (demandExecutor != null) return
         if (!needOwnTimer || musicTimer != null) return
         // Start background TimerTask which manages track changes and fades -
         // on desktop, we get callbacks from the app.loop instead
@@ -267,6 +456,10 @@ class MusicController {
     }
 
     private fun stopTimer() {
+        if (demandExecutor != null) {
+            cancelDemandTimer()
+            return
+        }
         if (musicTimer == null) return
         musicTimer?.cancel()
         musicTimer = null
@@ -329,14 +522,39 @@ class MusicController {
 
     /** Forceful shutdown of music playback and timers - see [gracefulShutdown] */
     private fun shutdown() {
+        if (demandExecutor != null) {
+            mainLoadEpoch++
+            overlayLoadEpoch++
+            mainLoadPending = false
+            silenceStartedAt = null
+            silenceDeadline = null
+        }
         state = ControllerState.Idle
         fireOnChange()
         // keep onTrackChangeListener! OptionsPopup will want to know when we start up again
         stopTimer()
-        clearNext()
-        clearCurrent()
-        clearOverlay()
-        musicHistory.clear()
+        try {
+            if (demandExecutor != null) {
+                val tracks = demandTracks()
+                current = null
+                next = null
+                overlay = null
+                for (track in tracks) {
+                    try { track.clear() }
+                    catch (ex: Exception) { Log.error("Error disposing music", ex) }
+                }
+            } else {
+                clearNext()
+                clearCurrent()
+                clearOverlay()
+            }
+        } finally {
+            musicHistory.clear()
+            if (demandExecutor != null && terminating) {
+                demandClosed = true
+                demandExecutor.shutdown()
+            }
+        }
         Log.debug("MusicController shut down.")
     }
 
@@ -374,7 +592,7 @@ class MusicController {
         getDefault: () -> FileHandle = { getFile(folder) }
     ) = sequence<FileHandle> {
         yieldAll(
-            (settings.visualMods + mods).asSequence()
+            (settings.visualMods + readState { mods.toSet() }).asSequence()
                 .map { getFile(modPath).child(it).child(folder) }
         )
         yield(getDefault())
@@ -403,6 +621,7 @@ class MusicController {
         // get a path list (as strings) of music folder candidates - existence unchecked
         val prefixMustMatch = flags.contains(MusicTrackChooserFlags.PrefixMustMatch)
         val suffixMustMatch = flags.contains(MusicTrackChooserFlags.SuffixMustMatch)
+        val history = readState { musicHistory.toSet() }
         return getAllMusicFiles()
             .filter {
                 (!prefixMustMatch || it.nameWithoutExtension().startsWith(prefix))
@@ -414,7 +633,7 @@ class MusicController {
             .sortedWith(compareBy(
                 { if (it.nameWithoutExtension().startsWith(prefix)) 0 else 1 }
                 , { if (it.nameWithoutExtension().endsWith(suffix)) 0 else 1 }
-                , { if (it.path() in musicHistory) 1 else 0 }
+                , { if (it.path() in history) 1 else 0 }
             // Then just pick the first one.
             // Not as wasteful as it looks - need to check all names anyway
             )).firstOrNull()
@@ -424,6 +643,11 @@ class MusicController {
     }
 
     private fun fireOnChange() {
+        if (demandExecutor != null) {
+            changeRevision++
+            changePending = true
+            return
+        }
         if (onTrackChangeListeners.isEmpty()) return
         Concurrency.runOnGLThread {
             fireOnChange(MusicTrackInfo.parse(currentlyPlaying()))
@@ -443,7 +667,7 @@ class MusicController {
     //region State changing methods
 
     /** This tells the music controller about active mods - all are allowed to provide tracks */
-    fun setModList ( newMods: HashSet<String> ) {
+    fun setModList ( newMods: HashSet<String> ) = withState {
         // This is hooked in most places where ImageGetter.setNewRuleset is called.
         // Changes in permanent audiovisual mods are effective without this notification.
         // Only the map editor isn't hooked, so if we wish to play mod-nation-specific tunes in the
@@ -469,7 +693,7 @@ class MusicController {
         suffix: String = MusicMood.Ambient,
         flags: EnumSet<MusicTrackChooserFlags> = MusicTrackChooserFlags.default
     ): Boolean {
-        if (baseVolume == 0f) return false
+        if (readState { baseVolume == 0f || terminating }) return false
 
         val musicFile = chooseFile(prefix, suffix, flags)
 
@@ -491,6 +715,7 @@ class MusicController {
         musicFile: FileHandle,
         flags: EnumSet<MusicTrackChooserFlags> = MusicTrackChooserFlags.default
     ): Boolean {
+        if (demandExecutor != null) return startDemandTrack(musicFile, flags)
         if (musicFile.path() == currentlyPlaying())
             return true  // picked file already playing
         if (!musicFile.exists())
@@ -533,6 +758,63 @@ class MusicController {
         return true
     }
 
+    private fun startDemandTrack(
+        file: FileHandle,
+        flags: EnumSet<MusicTrackChooserFlags>,
+        expectedEpoch: Long? = null,
+    ): Boolean {
+        if (!file.exists()) return false
+        val request = withState {
+            if (terminating || baseVolume == 0f || (expectedEpoch != null && expectedEpoch != mainLoadEpoch)) return false
+            if (file.path() == currentlyPlaying() && (current != null || next != null)) return true
+            val epoch = ++mainLoadEpoch
+            mainLoadPending = true
+            clearNext()
+            silenceStartedAt = null
+            silenceDeadline = null
+            Pair(epoch, MusicTrackController(baseVolume * maxVolume))
+        }
+        val candidate = request.second
+        candidate.load(file, onError = {
+            withState {
+                if (request.first != mainLoadEpoch || terminating) return@withState
+                mainLoadPending = false
+                enterDemandSilence()
+            }
+        }, onSuccess = {
+            withState {
+                if (request.first != mainLoadEpoch || terminating) {
+                    candidate.clear()
+                    return@withState
+                }
+                mainLoadPending = false
+                candidate.onCompletion(::queueDemandCompletion)
+                if (musicHistory.size >= musicHistorySize) musicHistory.removeFirst()
+                musicHistory.addLast(file.path())
+                if (systemSuspended) {
+                    clearCurrent()
+                    current = candidate
+                    state = ControllerState.PauseOnShutdown
+                    fireOnChange()
+                    return@withState
+                }
+                if (!candidate.play()) {
+                    candidate.clear()
+                    enterDemandSilence(silenceNanos() + 50_050_000_000L)
+                    return@withState
+                }
+                val step = defaultFadingStep / (if (MusicTrackChooserFlags.SlowFade in flags) 5 else 1)
+                candidate.startFade(MusicTrackController.State.FadeIn, step)
+                if (current?.state == MusicTrackController.State.Idle) clearCurrent()
+                else current?.startFade(MusicTrackController.State.FadeOut, step)
+                next = candidate
+                state = if (MusicTrackChooserFlags.PlaySingle in flags) ControllerState.PlaySingle else ControllerState.Playing
+                fireOnChange()
+            }
+        })
+        return true
+    }
+
     /** Variant of [chooseTrack] that tries several moods ([suffixes]) until a match is chosen */
     fun chooseTrack(
         prefix: String = "",
@@ -561,6 +843,31 @@ class MusicController {
      * @param speedFactor accelerate (>1) or slow down (<1) the fade-out. Clamped to 1/1000..1000.
      */
     fun pause(speedFactor: Float = 1f, onShutdown: Boolean = false) {
+        if (demandExecutor != null) {
+            withState {
+                if (terminating) return
+                mainLoadEpoch++
+                overlayLoadEpoch++
+                mainLoadPending = false
+                if (onShutdown) {
+                    if (systemSuspended) return@withState
+                    systemSuspended = true
+                    overlayResumeOnForeground = !overlayPausing && overlay?.state?.canPlay == true && overlay?.state != MusicTrackController.State.Idle
+                    if (state.canPause) state = ControllerState.PauseOnShutdown
+                    demandTracks().forEach { it.pauseImmediately() }
+                    overlayPausing = true
+                    return@withState
+                }
+                if (state.canPause) state = ControllerState.Pause
+                silenceStartedAt = null
+                silenceDeadline = null
+                val step = defaultFadingStep * speedFactor.coerceIn(0.001f..1000f)
+                current?.startFade(MusicTrackController.State.FadeOut, step)
+                next?.startFade(MusicTrackController.State.FadeOut, step)
+                pauseOverlay()
+            }
+            return
+        }
         Log.debug("MusicTrackController.pause called")
 
         if (!state.canPause) return // for example, we're already in "pause" and we activated "pause on shutdown"
@@ -575,6 +882,16 @@ class MusicController {
     }
     
     fun resumeFromShutdown(){
+        if (demandExecutor != null) {
+            val shouldResume = withState {
+                systemSuspended = false
+                if (overlayResumeOnForeground) resumeOverlay()
+                overlayResumeOnForeground = false
+                state == ControllerState.PauseOnShutdown
+            }
+            if (shouldResume) resume()
+            return
+        }
         if (state == ControllerState.PauseOnShutdown) resume()
     }
 
@@ -585,6 +902,21 @@ class MusicController {
      * @param speedFactor accelerate (>1) or slow down (<1) the fade-in. Clamped to 1/1000..1000.
      */
     fun resume(speedFactor: Float = 1f) {
+        if (demandExecutor != null) {
+            var choose = false
+            withState {
+                if (terminating || systemSuspended) return
+                val paused = state == ControllerState.Pause || state == ControllerState.PauseOnShutdown
+                if (paused && current?.state?.canPlay == true && current?.music != null) {
+                    current!!.startFade(MusicTrackController.State.FadeIn, defaultFadingStep * speedFactor.coerceIn(0.001f..1000f))
+                    state = ControllerState.Playing
+                    current!!.play()
+                } else if (paused || state == ControllerState.Cleanup) choose = true
+                resumeOverlay()
+            }
+            if (choose) chooseTrack()
+            return
+        }
         Log.debug("MusicTrackController.resume called")
         if ((state == ControllerState.Pause || state == ControllerState.PauseOnShutdown)
                 && current != null
@@ -608,7 +940,7 @@ class MusicController {
     /** Fade out then shutdown with a given [duration] in seconds,
      *  defaults to a 'slow' fade (4.5s) */
     @Suppress("MemberVisibilityCanBePrivate")
-    fun fadeoutToSilence(duration: Float = defaultFadeDuration * 5) {
+    fun fadeoutToSilence(duration: Float = defaultFadeDuration * 5) = withState {
         val fadingStep = 1f / ticksPerSecond / duration
         current?.startFade(MusicTrackController.State.FadeOut, fadingStep)
         next?.startFade(MusicTrackController.State.FadeOut, fadingStep)
@@ -617,7 +949,7 @@ class MusicController {
     }
 
     /** Update playback volume, to be called from options popup */
-    fun setVolume(volume: Float) {
+    fun setVolume(volume: Float) = withState {
         baseVolume = volume
         if ( volume < 0.01 ) shutdown()
         else if (isPlaying()) current!!.setVolume(baseVolume * maxVolume)
@@ -625,6 +957,18 @@ class MusicController {
 
     /** Soft shutdown of music playback, with fadeout */
     fun gracefulShutdown() {
+        if (demandExecutor != null) {
+            withState {
+                if (demandClosed) return
+                terminating = true
+                mainLoadEpoch++
+                overlayLoadEpoch++
+                mainLoadPending = false
+                if (systemSuspended || demandTracks().none { it.state.canPlay && it.state != MusicTrackController.State.Idle }) shutdown()
+                else fadeoutToSilence(defaultFadeDuration)
+            }
+            return
+        }
         if (state == ControllerState.Cleanup) shutdown()
         else fadeoutToSilence(defaultFadeDuration)
     }
@@ -687,6 +1031,32 @@ class MusicController {
     /** Play [file], [optionally][fadeIn] fading in to [volume] then looping if [isLooping] is set */
     @Suppress("MemberVisibilityCanBePrivate")  // open to future use
     fun playOverlay(file: FileHandle, volume: Float, isLooping: Boolean, fadeIn: Boolean) {
+        if (demandExecutor != null) {
+            val epoch = withState {
+                if (terminating) return
+                ++overlayLoadEpoch
+            }
+            val candidate = MusicTrackController(volume, initialFadeVolume = if (fadeIn) 0f else 1f)
+            candidate.load(file) {
+                withState {
+                    if (epoch != overlayLoadEpoch || terminating) {
+                        candidate.clear()
+                        return@withState
+                    }
+                    clearOverlay()
+                    candidate.onCompletion(::queueDemandCompletion)
+                    candidate.music?.isLooping = isLooping
+                    overlay = candidate
+                    overlayPausing = systemSuspended
+                    overlayResumeOnForeground = systemSuspended
+                    if (!systemSuspended) {
+                        candidate.play()
+                        candidate.startFade(MusicTrackController.State.FadeIn)
+                    }
+                }
+            }
+            return
+        }
         // newMusic() is GL-thread-safe (no OpenAL calls), so loading can happen here on any thread.
         // play() and dispose() make OpenAL calls, so those must run on the GL thread.
         val controller = MusicTrackController(volume, initialFadeVolume = if (fadeIn) 0f else 1f)
@@ -705,7 +1075,15 @@ class MusicController {
     }
 
     /** Fade out any playing overlay then clean up */
-    fun stopOverlay() {
+    fun stopOverlay() = withState {
+        if (demandExecutor != null) {
+            overlayLoadEpoch++
+            overlayResumeOnForeground = false
+            if (systemSuspended) {
+                clearOverlay()
+                return@withState
+            }
+        }
         overlayPausing = false
         overlay?.startFade(MusicTrackController.State.FadeOut)
     }
@@ -716,6 +1094,7 @@ class MusicController {
     }
 
     private fun resumeOverlay() {
+        if (demandExecutor != null) overlayPausing = false
         overlay?.run {
             if (!state.canPlay || state == MusicTrackController.State.Playing) return
             startFade(MusicTrackController.State.FadeIn)
@@ -734,7 +1113,7 @@ class MusicController {
         overlay = null
     }
 
-    fun setOverlayVolume(volume: Float) {
+    fun setOverlayVolume(volume: Float) = withState {
         overlay?.setVolume(volume)
     }
     //endregion

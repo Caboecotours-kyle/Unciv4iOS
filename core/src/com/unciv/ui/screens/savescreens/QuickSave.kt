@@ -72,8 +72,9 @@ object QuickSave {
             }
 
             val savedGame: GameInfo
+            var recoveredTurn: Int? = null
             try {
-                savedGame = screen.game.files.autosaves.loadLatestAutosave()
+                savedGame = screen.game.files.autosaves.loadLatestAutosave { recoveredTurn = it.turns }
             } catch (_: OutOfMemoryError) {
                 outOfMemory()
                 return@run
@@ -125,6 +126,10 @@ object QuickSave {
                 try {
                     screen.game.loadGame(savedGame)
                     loadingPopup.close() // It's no longer on stage, but having an event receiver would keep it alive
+                    if (recoveredTurn != null) launchOnGLThread {
+                        val resumedScreen = screen.game.getScreen() ?: return@launchOnGLThread
+                        ToastPopup("Recovered autosave from turn [$recoveredTurn].", resumedScreen)
+                    }
                 } catch (_: OutOfMemoryError) {
                     outOfMemory()
                 } catch (ex: Exception) {

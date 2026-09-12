@@ -28,15 +28,34 @@ internal class MusicTrackController(private var volume: Float, initialFadeVolume
         private set
     private var fadeStep = MusicController.defaultFadingStep
     private var fadeVolume: Float = initialFadeVolume
+    private var playbackEpoch = 0L
+    private var completionHandler: ((MusicTrackController, Long) -> Unit)? = null
+
+    fun onCompletion(handler: (MusicTrackController, Long) -> Unit) {
+        completionHandler = handler
+    }
+
+    fun acceptsCompletion(epoch: Long) =
+        epoch == playbackEpoch && state.canPlay && state != State.Idle && music != null
+
+    fun pauseImmediately() {
+        if (!state.canPlay) return
+        playbackEpoch++
+        music?.pause()
+        fadeVolume = 0f
+        state = State.Idle
+    }
 
     //region Functions for MusicController
 
     /** Clean up and dispose resources */
     fun clear() {
+        playbackEpoch++
         state = State.None
         if (music == null) return
-        music!!.dispose()
+        val oldMusic = music!!
         music = null
+        oldMusic.dispose()
     }
 
     /** Loads [file] into this controller's [music] and optionally calls [onSuccess] when done.
@@ -161,6 +180,7 @@ internal class MusicTrackController(private var volume: Float, initialFadeVolume
             }
             fadeVolume = 0f
             music!!.volume = 0f
+            playbackEpoch++
             music!!.pause()
         } catch (_: Throwable) {}
         state = State.Idle
@@ -170,7 +190,14 @@ internal class MusicTrackController(private var volume: Float, initialFadeVolume
         return try {
             music.volume = volume * fadeVolume
             // for fade-over this could be called by the end of the previous track:
-            if (!music.isPlaying) music.play()
+            if (!music.isPlaying) {
+                val handler = completionHandler
+                if (handler != null) {
+                    val epoch = ++playbackEpoch
+                    music.setOnCompletionListener { handler(this, epoch) }
+                }
+                music.play()
+            }
             true
         } catch (ex: Throwable) {
             audioExceptionHandler(ex)

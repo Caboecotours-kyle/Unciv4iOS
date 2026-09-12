@@ -475,8 +475,8 @@ open class UncivGame(val isConsoleMode: Boolean = false) : Game(), PlatformSpeci
         if (::musicController.isInitialized) musicController.pause(onShutdown = true)
         onlineMultiplayerOrNull?.pause()
         val curGameInfo = gameInfo
-        // Since we're pausing the game, we don't need to clone it before autosave - no one else will touch it
-        if (curGameInfo != null) files.autosaves.requestAutoSaveUnCloned(curGameInfo)
+        // The save may wait behind another request and still be queued when the game resumes.
+        if (curGameInfo != null) files.autosaves.requestAutoSave(curGameInfo)
         Timers.singleton.endTiming()
         super.pause()
     }
@@ -533,7 +533,7 @@ private fun logRunningThreads() {
     fun goToMainMenu(): MainMenuScreen {
         val curGameInfo = gameInfo
         if (curGameInfo != null) {
-            files.autosaves.requestAutoSaveUnCloned(curGameInfo) // Can save gameInfo directly because the user can't modify it on the MainMenuScreen
+            files.autosaves.requestAutoSave(curGameInfo) // The player may return while this save is still queued.
         }
         val mainMenuScreen = pushScreen{ MainMenuScreen() }
         return mainMenuScreen

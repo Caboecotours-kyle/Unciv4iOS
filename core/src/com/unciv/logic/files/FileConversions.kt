@@ -42,22 +42,25 @@ object FileConversions {
     /** Reads [file] as JSON of [type], transparently gunzip+base64-decoding it if that's how it was saved -
      *  otherwise (or if that fails), falls back to reading it as plain JSON text. */
     fun <T> readJson(file: FileHandle, type: Class<T>): T? {
-        val reader = try {
-            unzippedInputStream(file.read()).reader(Charsets.UTF_8)
-        } catch (ex: Exception) {
-            file.reader(Charsets.UTF_8.name())
+        return file.read().use { input ->
+            val reader = try {
+                unzippedInputStream(input).reader(Charsets.UTF_8)
+            } catch (ex: Exception) {
+                file.reader(Charsets.UTF_8.name())
+            }
+            reader.use { json().fromJson(type, it) }
         }
-        return reader.use { json().fromJson(type, it) }
     }
 
     /** Writes [obj] as JSON to [file], gzip-compressing and base64-encoding it first if [zip] is true. */
     fun writeJson(file: FileHandle, obj: Any, zip: Boolean) {
-        if (zip) {
-            zippedOutputStream(file.write(false)).writer(Charsets.UTF_8).use {
-                json().toJson(obj, it)
-            }
-        } else {
-            json().toJson(obj, file)
+        file.write(false).use { output ->
+            val encoded = if (zip) zippedOutputStream(output) else output
+            val serializer = json()
+            serializer.setWriter(encoded.writer(Charsets.UTF_8))
+            // Json.toJson closes quietly and can swallow the final buffered write/close error.
+            // Publication must only happen after every byte (including the gzip footer) succeeds.
+            serializer.writer.use { serializer.writeValue(obj) }
         }
     }
 }
