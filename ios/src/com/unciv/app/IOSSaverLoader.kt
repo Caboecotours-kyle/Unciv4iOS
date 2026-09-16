@@ -6,8 +6,10 @@ import org.robovm.apple.dispatch.DispatchQueue
 import org.robovm.apple.foundation.NSArray
 import org.robovm.apple.foundation.NSData
 import org.robovm.apple.foundation.NSDataReadingOptions
+import org.robovm.apple.foundation.NSDataWritingOptions
 import org.robovm.apple.foundation.NSFileCoordinator
 import org.robovm.apple.foundation.NSFileCoordinatorReadingOptions
+import org.robovm.apple.foundation.NSFileCoordinatorWritingOptions
 import org.robovm.apple.foundation.NSURL
 import org.robovm.apple.uikit.UIApplication
 import org.robovm.apple.uikit.UIDocumentPickerDelegateAdapter
@@ -16,7 +18,12 @@ import org.robovm.apple.uikit.UISceneActivationState
 import org.robovm.apple.uikit.UIViewController
 import org.robovm.apple.uikit.UIWindowScene
 import org.robovm.apple.uniformtypeid.UTType
+import java.io.ByteArrayInputStream
+import java.io.ByteArrayOutputStream
 import java.io.File
+import java.io.IOException
+import java.io.InputStream
+import java.io.OutputStream
 import java.net.URI
 import java.net.URLDecoder
 import java.util.UUID
@@ -25,8 +32,55 @@ internal class IOSSaverLoader(
     private val documentPicker: IOSDocumentPicker = UIKitIOSDocumentPicker()
 ) : PlatformSaverLoader {
 
+    override fun requestSaveLocation(
+        suggestedLocation: String,
+        mimeType: String,
+        onLocationChosen: (OutputStream, String) -> Unit,
+        onError: (Exception) -> Unit
+    ) {
+        val completion = PickerCompletion { exception ->
+            onError(exception.asShowablePickerFailure(SAVE_PICKER_FAILURE))
+        }
+        try {
+            documentPicker.save(
+                ByteArray(0),
+                suggestedLocation,
+                { location ->
+                    completion.succeed {
+                        onLocationChosen(IOSCoordinatedOutputStream(NSURL(location)), location)
+                    }
+                },
+                { completion.fail(PlatformSaverLoader.Cancelled()) },
+                completion::fail
+            )
+        } catch (ex: Exception) {
+            completion.fail(ex)
+        }
+    }
+
+    override fun requestLoadLocation(
+        onLocationChosen: (InputStream, String) -> Unit,
+        onError: (Exception) -> Unit
+    ) {
+        val completion = PickerCompletion { exception ->
+            onError(exception.asShowablePickerFailure(LOAD_PICKER_FAILURE))
+        }
+        try {
+            documentPicker.load(
+                { data, location ->
+                    completion.succeed { onLocationChosen(ByteArrayInputStream(data), location) }
+                },
+                { completion.fail(PlatformSaverLoader.Cancelled()) },
+                completion::fail
+            )
+        } catch (ex: Exception) {
+            completion.fail(ex)
+        }
+    }
+
     override fun saveGame(
         data: String,
+        isZipped: Boolean,
         suggestedLocation: String,
         onSaved: (location: String) -> Unit,
         onError: (ex: Exception) -> Unit
@@ -36,7 +90,7 @@ internal class IOSSaverLoader(
         }
         try {
             documentPicker.save(
-                data,
+                data.toByteArray(Charsets.UTF_8),
                 suggestedLocation,
                 { location -> completion.succeed { onSaved(location) } },
                 { completion.fail(PlatformSaverLoader.Cancelled()) },
@@ -56,7 +110,9 @@ internal class IOSSaverLoader(
         }
         try {
             documentPicker.load(
-                { data, location -> completion.succeed { onLoaded(data, location) } },
+                { data, location ->
+                    completion.succeed { onLoaded(String(data, Charsets.UTF_8), location) }
+                },
                 { completion.fail(PlatformSaverLoader.Cancelled()) },
                 completion::fail
             )
@@ -64,6 +120,13 @@ internal class IOSSaverLoader(
             completion.fail(ex)
         }
     }
+
+    fun saveGame(
+        data: String,
+        suggestedLocation: String,
+        onSaved: (location: String) -> Unit,
+        onError: (ex: Exception) -> Unit
+    ) = saveGame(data, false, suggestedLocation, onSaved, onError)
 
     private companion object {
         const val SAVE_PICKER_FAILURE = "The save could not be exported through the iOS document picker"
@@ -78,7 +141,7 @@ private fun Exception.asShowablePickerFailure(message: String): Exception = when
 
 internal interface IOSDocumentPicker {
     fun save(
-        data: String,
+        data: ByteArray,
         suggestedLocation: String,
         onSaved: (location: String) -> Unit,
         onCancelled: () -> Unit,
@@ -86,7 +149,7 @@ internal interface IOSDocumentPicker {
     )
 
     fun load(
-        onLoaded: (data: String, location: String) -> Unit,
+        onLoaded: (data: ByteArray, location: String) -> Unit,
         onCancelled: () -> Unit,
         onError: (Exception) -> Unit
     )
@@ -117,7 +180,7 @@ private class UIKitIOSDocumentPicker : IOSDocumentPicker {
     private var activeDelegate: UIDocumentPickerDelegateAdapter? = null
 
     override fun save(
-        data: String,
+        data: ByteArray,
         suggestedLocation: String,
         onSaved: (location: String) -> Unit,
         onCancelled: () -> Unit,
@@ -160,7 +223,7 @@ private class UIKitIOSDocumentPicker : IOSDocumentPicker {
     }
 
     override fun load(
-        onLoaded: (data: String, location: String) -> Unit,
+        onLoaded: (data: ByteArray, location: String) -> Unit,
         onCancelled: () -> Unit,
         onError: (Exception) -> Unit
     ) = runOnMain(onError) {
@@ -189,7 +252,7 @@ private class UIKitIOSDocumentPicker : IOSDocumentPicker {
                     }
 
                     runOnIO(onError) {
-                        onLoaded(readText(url), url.absoluteString)
+                        onLoaded(readBytes(url), url.absoluteString)
                     }
                 }
             }
@@ -225,20 +288,17 @@ private class UIKitIOSDocumentPicker : IOSDocumentPicker {
         callback()
     }
 
-    private fun readText(url: NSURL): String {
+    private fun readBytes(url: NSURL): ByteArray {
         val securityScopeStarted = url.startAccessingSecurityScopedResource()
         try {
-            var text: String? = null
+            var data: ByteArray? = null
             NSFileCoordinator().coordinateReadingItem(
                 url,
                 NSFileCoordinatorReadingOptions.None
             ) { coordinatedURL ->
-                text = String(
-                    NSData.read(coordinatedURL, NSDataReadingOptions.None).bytes,
-                    Charsets.UTF_8
-                )
+                data = NSData.read(coordinatedURL, NSDataReadingOptions.None).bytes
             }
-            return text ?: throw UncivShowableException("The selected document could not be read")
+            return data ?: throw UncivShowableException("The selected document could not be read")
         } finally {
             if (securityScopeStarted) url.stopAccessingSecurityScopedResource()
         }
@@ -319,6 +379,30 @@ private class UIKitIOSDocumentPicker : IOSDocumentPicker {
     }
 }
 
+private class IOSCoordinatedOutputStream(private val url: NSURL) : ByteArrayOutputStream() {
+    private val securityScopeStarted = url.startAccessingSecurityScopedResource()
+    private var closed = false
+
+    @Synchronized
+    override fun close() {
+        if (closed) return
+        closed = true
+        try {
+            NSFileCoordinator().coordinateWritingItem(
+                url,
+                NSFileCoordinatorWritingOptions.ForReplacing
+            ) { coordinatedURL ->
+                NSData(toByteArray()).write(coordinatedURL, NSDataWritingOptions.Atomic)
+            }
+        } catch (ex: Exception) {
+            throw IOException("The selected document could not be written", ex)
+        } finally {
+            if (securityScopeStarted) url.stopAccessingSecurityScopedResource()
+            super.close()
+        }
+    }
+}
+
 internal fun iosSuggestedSaveFileName(suggestedLocation: String): String {
     val encodedName = suggestedLocation.substringBefore('?').substringBefore('#').substringAfterLast('/')
     val decodedName = try {
@@ -367,24 +451,32 @@ internal class TemporaryExport private constructor(
         private const val directoryPrefix = "unciv-export-"
 
         fun create(data: String, fileName: String): TemporaryExport =
+            create(data.toByteArray(Charsets.UTF_8), fileName) { it.usableSpace }
+
+        fun create(data: ByteArray, fileName: String): TemporaryExport =
             create(data, fileName) { it.usableSpace }
 
         internal fun create(
             data: String,
             fileName: String,
             usableSpace: (File) -> Long
+        ): TemporaryExport = create(data.toByteArray(Charsets.UTF_8), fileName, usableSpace)
+
+        internal fun create(
+            data: ByteArray,
+            fileName: String,
+            usableSpace: (File) -> Long
         ): TemporaryExport {
             val temporaryRoot = temporaryRoot()
                 ?: throw UncivShowableException("The iOS temporary directory is unavailable")
-            val encodedData = data.toByteArray(Charsets.UTF_8)
-            if (usableSpace(temporaryRoot) < encodedData.size.toLong())
+            if (usableSpace(temporaryRoot) < data.size.toLong())
                 throw UncivShowableException("There is not enough free space to export this save")
             val directory = File(temporaryRoot, "$directoryPrefix${UUID.randomUUID()}")
             if (!directory.mkdir())
                 throw UncivShowableException("Could not create a temporary export directory")
             val file = File(directory, fileName)
             try {
-                file.writeBytes(encodedData)
+                file.writeBytes(data)
             } catch (ex: Exception) {
                 directory.delete()
                 throw ex

@@ -27,7 +27,7 @@ class IOSSaverLoaderTests {
             { data, location -> loaded += data to location },
             errors::add
         )
-        picker.loadSuccess!!("save data", "file:///save")
+        picker.loadSuccess!!("save data".toByteArray(), "file:///save")
         picker.loadCancelled!!()
         picker.loadError!!(IllegalStateException("late error"))
 
@@ -61,7 +61,7 @@ class IOSSaverLoaderTests {
         val outcomes = listOf(
             Thread {
                 start.await()
-                picker.loadSuccess!!("save data", "file:///save")
+                picker.loadSuccess!!("save data".toByteArray(), "file:///save")
             },
             Thread {
                 start.await()
@@ -108,7 +108,7 @@ class IOSSaverLoaderTests {
         picker.saveSuccess!!("file:///new/My%20Game")
         picker.saveError!!(IllegalStateException("late error"))
 
-        assertEquals("serialized game", picker.savedData)
+        assertEquals("serialized game", picker.savedData?.toString(Charsets.UTF_8))
         assertEquals("file:///previous/My%20Game", picker.suggestedLocation)
         assertEquals(listOf("file:///new/My%20Game"), saved)
         assertTrue(errors.isEmpty())
@@ -161,7 +161,7 @@ class IOSSaverLoaderTests {
             errors::add
         )
         picker.loadError!!(expected)
-        picker.loadSuccess!!("late data", "file:///late-save")
+        picker.loadSuccess!!("late data".toByteArray(), "file:///late-save")
         picker.loadCancelled!!()
 
         assertTrue(loaded.isEmpty())
@@ -276,17 +276,17 @@ class IOSSaverLoaderTests {
 
     private class FakeDocumentPicker : IOSDocumentPicker {
         var failureToThrow: Exception? = null
-        var savedData: String? = null
+        var savedData: ByteArray? = null
         var suggestedLocation: String? = null
         var saveSuccess: ((String) -> Unit)? = null
         var saveCancelled: (() -> Unit)? = null
         var saveError: ((Exception) -> Unit)? = null
-        var loadSuccess: ((String, String) -> Unit)? = null
+        var loadSuccess: ((ByteArray, String) -> Unit)? = null
         var loadCancelled: (() -> Unit)? = null
         var loadError: ((Exception) -> Unit)? = null
 
         override fun save(
-            data: String,
+            data: ByteArray,
             suggestedLocation: String,
             onSaved: (location: String) -> Unit,
             onCancelled: () -> Unit,
@@ -301,7 +301,7 @@ class IOSSaverLoaderTests {
         }
 
         override fun load(
-            onLoaded: (data: String, location: String) -> Unit,
+            onLoaded: (data: ByteArray, location: String) -> Unit,
             onCancelled: () -> Unit,
             onError: (Exception) -> Unit
         ) {
