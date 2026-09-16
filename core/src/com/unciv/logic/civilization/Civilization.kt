@@ -100,8 +100,10 @@ class Civilization : IsPartOfGameInfoSerialization {
     @Transient
     var viewableTiles = setOf<Tile>()
 
+    /** For each tile some detector unit of ours can see, the unit filters ([UniqueType.CanSeeInvisibleUnits])
+     *  it could detect there - independent of what (if anything) currently occupies the tile. */
     @Transient
-    var viewableInvisibleUnitsTiles = setOf<Tile>()
+    var viewableInvisibleUnitsTiles = mapOf<Tile, Set<String>>()
 
     /** This is for performance since every movement calculation depends on this, see MapUnit comment */
     @Transient
@@ -455,11 +457,12 @@ class Civilization : IsPartOfGameInfoSerialization {
 
     @Readonly
     fun getPreferredVictoryTypes(): List<String> {
-        val victoryTypes = gameInfo.gameParameters.victoryTypes
+        // A victory this civilization cannot achieve is not worth working towards
+        val victoryTypes = victoryManager.getAvailableVictories().map { it.name }
         if (victoryTypes.size == 1)
             return listOf(victoryTypes.first()) // That is the most relevant one
         val victoryType: List<String> = listOf(nation.preferredVictoryType, getPersonality().preferredVictoryType)
-            .filter { it in gameInfo.gameParameters.victoryTypes && it in gameInfo.ruleset.victories }
+            .filter { it in victoryTypes }
         return victoryType.ifEmpty { listOf(Constants.neutralVictoryType) }
 
     }

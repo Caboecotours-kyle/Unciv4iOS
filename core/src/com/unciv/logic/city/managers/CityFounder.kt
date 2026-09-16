@@ -90,6 +90,7 @@ class CityFounder {
         addStartingBuildings(city, civInfo, startingEra)
         
         city.resetDisabledConstructions()
+        city.resetSpecialistsControl()
 
         for (unique in civInfo.getTriggeredUniques(UniqueType.TriggerUponFoundingCity,
             GameContext(civInfo, city, unit)

@@ -118,6 +118,7 @@ class GameSettings {
     var automatedUnitsCanUpgrade = false
     var automatedUnitsChoosePromotions = false
     var citiesAutoBombardAtEndOfTurn = false
+    var autoAssignSpecialistsInNewCities = true
 
     //// Autoplay
     var autoPlay = GameSettingsAutoPlay()

@@ -67,13 +67,13 @@ object WorldMapTileUpdater {
                 // Fade out population icons
                 group.layerMisc.dimPopulation(true)
 
-                val shownImprovementName = group.tile.getShownImprovement(unit.civ)
+                val shownImprovementName = group.tileView.getShownImprovement()
                 val shownImprovement = unit.civ.gameInfo.ruleset.tileImprovements[shownImprovementName]
 
                 // Fade out improvement icons (but not barb camps or ruins)
                 if (shownImprovement != null &&
-                    !shownImprovement.isBarbarianCampEquivalent(group.tile.stateThisTile) &&
-                    !shownImprovement.isAncientRuinsEquivalent(unit.cache.state))
+                    !shownImprovement.isBarbarianCampEquivalent() &&
+                    !shownImprovement.isAncientRuinsEquivalent())
                     group.layerImprovement.dimImprovement(true)
             }
         }
@@ -190,7 +190,7 @@ object WorldMapTileUpdater {
                 if (nukeBlastRadius >= 0)
                     selectedTile!!.getTile().getTilesInDistance(nukeBlastRadius)
                         // Should not display invisible submarine units even if the tile is visible.
-                        .filter { targetTile -> (targetTile.isVisible(unit.civ) && targetTile.getUnits().any { !it.isInvisible(unit.civ) })
+                        .filter { targetTile -> (targetTile.isVisible(unit.civ) && targetTile.getUnits().any { it.isVisibleTo(unit.civ) })
                                 || (targetTile.isCityCenter() && unit.civ.hasExplored(targetTile)) }
                         .map { AttackableTile(unit.getTile(), it, 1f, null) }
                         .toList()
@@ -227,7 +227,7 @@ object WorldMapTileUpdater {
     private fun WorldMapHolder.updateTilesForSelectedSpy(spy: Spy) {
         for (group in tileGroups.values) {
             group.layerOverlay.reset()
-            if (!group.tile.isCityCenter())
+            if (!group.tileView.isCityCenter())
                 group.layerImprovement.dimImprovement(true)
             group.layerCityButton.moveDown()
         }
