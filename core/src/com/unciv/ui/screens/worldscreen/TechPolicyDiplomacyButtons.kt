@@ -111,7 +111,7 @@ class TechPolicyDiplomacyButtons(val worldScreen: WorldScreen) : Table(BaseScree
         if (game.gameInfo!!.isEspionageEnabled())
             updateEspionageButton()
         pack()
-        setPosition(worldScreen.safeAreaBoundsInWorld().x + 10f, worldScreen.topBar.y - height - 15f)
+        setPosition(10f, worldScreen.topBar.y - height - 15f)
         return result
     }
 

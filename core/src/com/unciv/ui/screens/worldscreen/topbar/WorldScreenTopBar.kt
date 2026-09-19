@@ -109,7 +109,6 @@ class WorldScreenTopBar(internal val worldScreen: WorldScreen) : Table() {
     /** Performs the layout tricks mentioned in the class Kdoc */
     private fun updateLayout() {
         val targetWidth = stage.width
-        val safeArea = worldScreen.safeAreaBoundsInWorld()
         val statsWidth = statsTable.prefWidth
         val resourceWidth = resourceTable.prefWidth
         val overviewWidth = overviewButton.minWidth
@@ -159,9 +158,8 @@ class WorldScreenTopBar(internal val worldScreen: WorldScreen) : Table() {
         setSize(targetWidth, prefHeight)  // sizing to prefHeight is half a pack()
         setPosition(0f, stage.height - prefHeight)
 
-        selectedCivTable.setPosition(safeArea.x, (centerButtonsToHeight - selectedCivHeight) / 2f)
-        overviewButton.setPosition(safeArea.x + safeArea.width - overviewWidth,
-            (centerButtonsToHeight - overviewHeight) / 2f)
+        selectedCivTable.setPosition(0f, (centerButtonsToHeight - selectedCivHeight) / 2f)
+        overviewButton.setPosition(targetWidth - overviewWidth, (centerButtonsToHeight - overviewHeight) / 2f)
         addActor(selectedCivTable) // needs to be after size
         addActor(overviewButton)
     }

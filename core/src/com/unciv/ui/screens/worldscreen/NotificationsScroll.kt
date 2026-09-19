@@ -216,8 +216,7 @@ class NotificationsScroll(
         }
 
         // Do the positioning here since WorldScreen may also call update when just its geometry changed
-        val safeArea = worldScreen.safeAreaBoundsInWorld()
-        setPosition(safeArea.x + safeArea.width - width * scaleFactor, 0f)
+        setPosition(stage.width - width * scaleFactor, 0f)
         restoreButton.setPosition(coveredNotificationsBottom)
     }
 

@@ -447,10 +447,9 @@ class WorldScreen(
 
             
             minimapWrapper.update(getGameViewConsideringForOfWar().civView.getCiv())
-            minimapWrapper.x = safeArea.x + safeArea.width - minimapWrapper.width
             bottomTileInfoTable.civView = getGameViewConsideringForOfWar().civView
             bottomTileInfoTable.updateTileTable(mapHolder.selectedTile)
-            bottomTileInfoTable.x = safeArea.x + safeArea.width - bottomTileInfoTable.width
+            bottomTileInfoTable.x = stage.width - bottomTileInfoTable.width
             bottomTileInfoTable.y = if (game.settings.showMinimap) minimapWrapper.height + 5f else 0f
 
             battleTable.update()
@@ -523,9 +522,7 @@ class WorldScreen(
 
         val posZoomFromRight = if (game.settings.showMinimap) minimapWrapper.width
         else bottomTileInfoTable.width
-        val safeArea = safeAreaBoundsInWorld()
-        zoomController.setPosition(safeArea.x + safeArea.width - posZoomFromRight - 10f,
-            safeArea.y + 10f, Align.bottomRight)
+        zoomController.setPosition(stage.width - posZoomFromRight - 10f, 10f, Align.bottomRight)
     }
 
     @Readonly
@@ -996,8 +993,7 @@ class WorldScreen(
         if(statusButtons.width > maxWidth) {
             statusButtons.update(true)
         }
-        val safeArea = safeAreaBoundsInWorld()
-        statusButtons.setPosition(safeArea.x + safeArea.width - statusButtons.width - 10f,
+        statusButtons.setPosition(stage.width - statusButtons.width - 10f,
             topBar.y - statusButtons.height - 10f)
 
         // Update chat button position to always be below techPolicyAndDiplomacy
@@ -1047,8 +1043,7 @@ class WorldScreen(
             mapHolder.reloadMaxZoom()
             mapHolder.zoom(mapHolder.scaleX)
             notificationsScroll.width = stage.width / 2
-            val safeArea = safeAreaBoundsInWorld()
-            minimapWrapper.x = safeArea.x + safeArea.width - minimapWrapper.width
+            minimapWrapper.x = stage.width - minimapWrapper.width
             battleTable.width = stage.width / 3
             battleTable.x = stage.width / 3
             bottomUnitTable.shouldUpdate = true
