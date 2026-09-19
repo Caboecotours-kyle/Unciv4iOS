@@ -3,9 +3,9 @@
 This module ports the Unciv `4.21.14` compatibility baseline to iPhone and iPad
 with MobiVM `2.3.26` and libGDX `1.14.2`. The universal application is simulator
 first, full-screen and single-scene. Display settings offer Landscape (default),
-Portrait and Auto, plus an independent “Extend to screen edges” preference
-(default off). Map content can extend beyond safe insets while controls remain
-inside them. Split View, Stage Manager resizing, multiple windows and Mac Catalyst
+Portrait and Auto, plus an independent “Extend to fullscreen” preference
+(default off). When enabled, map content and controls can extend beyond safe
+insets. Split View, Stage Manager resizing, multiple windows and Mac Catalyst
 are outside the current scope. Its
 bundle identifier is `com.aishuati.unciv`, display name is `Unciv4iOS`, bundle
 build is `1`, and deployment target is iOS `15.0`.
@@ -123,11 +123,13 @@ Mod management is enabled through the existing GitHub catalog, URL download,
 installation, update, and missing-Mod download flows.
 Its Ktor client uses an NSURLSession-backed streaming engine on iOS because
 the CIO engine requires JDK APIs unavailable in RoboVM. Ktor continues to
-handle redirects and progress, and the existing Mod installer is unchanged.
+handle redirects and progress. The temporary ZIP receiver uses the same safe
+extraction and Mod-folder validation.
 
 Chat, API v2, Dropbox storage, background polling, push notifications, deep
-links, HTTP/LAN servers, and default music download stay
-disabled on iOS. Foreground multiplayer
+links, LAN multiplayer servers, and default music download stay disabled on iOS.
+The Mod Manager can start a temporary local upload server while its receiver is
+open. Foreground multiplayer
 downloads are cancelled on backgrounding; an in-flight turn PUT gets only a
 finite UIKit background-task window and remains explicitly unconfirmed if that
 window expires.

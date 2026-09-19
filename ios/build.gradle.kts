@@ -141,6 +141,11 @@ val verifyIosConfiguration by tasks.registering {
         }
 
         requirePlistEntry("MinimumOSVersion", "<string>${Regex.escape(expectedIosMinimumVersion)}</string>")
+        val localNetworkDescription = "Receive a Mod ZIP from a computer on your local Wi-Fi so you can test it."
+        requirePlistEntry(
+            "NSLocalNetworkUsageDescription",
+            "<string>${Regex.escape(localNetworkDescription)}</string>",
+        )
         val appNamePlaceholder = Regex.escape("\${app.name}")
         requirePlistEntry("CFBundleDisplayName", "<string>$appNamePlaceholder</string>")
         requirePlistEntry("CFBundleName", "<string>$appNamePlaceholder</string>")
@@ -203,7 +208,6 @@ val verifyIosConfiguration by tasks.registering {
             "NSAllowsArbitraryLoadsForMedia",
             "NSAllowsArbitraryLoadsInWebContent",
             "NSAllowsLocalNetworking",
-            "NSLocalNetworkUsageDescription",
             "NSBonjourServices",
             "aps-environment",
             "com.apple.developer.associated-domains",

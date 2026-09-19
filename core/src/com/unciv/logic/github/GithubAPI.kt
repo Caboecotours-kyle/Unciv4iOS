@@ -21,6 +21,8 @@ import java.util.zip.ZipInputStream
 import kotlinx.coroutines.Job
 import java.io.File
 import java.io.FileFilter
+import java.io.InputStream
+import java.util.UUID
 import kotlin.coroutines.coroutineContext
 
 enum class DownloadAndExtractState {
@@ -494,11 +496,58 @@ object GithubAPI {
             return null
         }
 
+        return installExtractedMod(unzipDestination, modNameFromFileName, defaultBranch, modsFolder, this)
+    }
+
+    internal suspend fun installUploadedModArchive(
+        stream: InputStream,
+        archiveFileName: String,
+        modsFolder: FileHandle,
+        maxUncompressedBytes: Long,
+        maxEntries: Int = 20_000,
+    ): FileHandle {
+        val uploadedName = archiveFileName.substringAfterLast('/').substringAfterLast('\\')
+        val nameWithoutExtension = if (uploadedName.endsWith(".zip", ignoreCase = true))
+            uploadedName.dropLast(4)
+        else uploadedName
+        val defaultModName = nameWithoutExtension
+            .filter { it.isLetterOrDigit() || it == ' ' || it == '-' || it == '_' }
+            .take(80)
+            .trim()
+            .ifEmpty { "Uploaded Mod" }
+        val unzipDestination = modsFolder.child("temp-upload-${UUID.randomUUID()}")
+        modsFolder.mkdirs()
+
+        try {
+            ZipInputStream(stream).use { zipStream ->
+                extractZipStream(zipStream, unzipDestination, maxUncompressedBytes, maxEntries)
+            }
+            if (!unzipDestination.exists() || unzipDestination.list().isEmpty())
+                throw UncivShowableException("The Mod archive is empty")
+
+            val repo = Repo().apply {
+                name = defaultModName
+                direct_zip_url = "local-upload"
+            }
+            return installExtractedMod(unzipDestination, defaultModName, "", modsFolder, repo)
+        } catch (ex: Exception) {
+            if (unzipDestination.exists()) unzipDestination.deleteDirectory()
+            throw ex
+        }
+    }
+
+    private fun installExtractedMod(
+        unzipDestination: FileHandle,
+        modNameFromFileName: String,
+        defaultBranch: String,
+        modsFolder: FileHandle,
+        repo: Repo,
+    ): FileHandle {
         val (innerFolder, modName) = resolveZipStructure(unzipDestination, modNameFromFileName)
 
-        // modName can be "$repoName-$defaultBranch"
-        val finalDestinationName = modName.replace("-$defaultBranch", "").repoNameToFolderName()
-        // finalDestinationName is now the mod name as we display it. Folder name needs to be identical.
+        // GitHub branch archives contain a folder named "$repoName-$defaultBranch".
+        val modNameWithoutBranch = if (defaultBranch.isEmpty()) modName else modName.replace("-$defaultBranch", "")
+        val finalDestinationName = modNameWithoutBranch.repoNameToFolderName()
         val finalDestination = modsFolder.child(finalDestinationName)
 
         // prevent mixing new content with old
@@ -522,26 +571,46 @@ object GithubAPI {
         if (tempBackup != null)
             if (tempBackup.isDirectory) tempBackup.deleteDirectory() else tempBackup.delete()
 
-        Github.rewriteModOptions(this, finalDestination)
+        Github.rewriteModOptions(repo, finalDestination)
         return finalDestination
     }
 
-    private suspend fun extractZipStream(stream: ZipInputStream, unzipDestination: FileHandle) {
+    private suspend fun extractZipStream(
+        stream: ZipInputStream,
+        unzipDestination: FileHandle,
+        maxUncompressedBytes: Long? = null,
+        maxEntries: Int? = null,
+    ) {
         // Note: resolveZipStructure re-iterates the content from the file system. We might do that here,
         // or keep the names for reuse, but that's complicated. Perf gains might not be worth it.
 
         val job = coroutineContext[Job]
         val destinationPath = unzipDestination.file().canonicalPath + File.separator
+        var extractedBytes = 0L
+        var entryCount = 0
         // Actual unpacking
         try {
             while (job?.isActive != false) {
                 val entry = stream.nextEntry ?: break
+                entryCount++
+                if (maxEntries != null && entryCount > maxEntries)
+                    throw UncivShowableException("Mod archive contains too many files")
                 if (entry.isDirectory) continue  // means we're not creating empty subdirectories, the subdirectory's contents come in other entries
                 val dest = unzipDestination.child(entry.name).file().canonicalFile
                 if (!dest.path.startsWith(destinationPath))
                     throw ZipException("ZIP entry points outside the destination")
                 dest.parentFile?.mkdirs() // Gdx `parent` would hide the null Java delivers when at root
-                dest.outputStream().use { stream.copyTo(it) }
+                dest.outputStream().use { output ->
+                    val buffer = ByteArray(DEFAULT_BUFFER_SIZE)
+                    while (true) {
+                        val count = stream.read(buffer)
+                        if (count < 0) break
+                        extractedBytes += count
+                        if (maxUncompressedBytes != null && extractedBytes > maxUncompressedBytes)
+                            throw UncivShowableException("Mod archive expands beyond the allowed size")
+                        output.write(buffer, 0, count)
+                    }
+                }
                 stream.closeEntry()
             }
         } catch (ex: ZipException) {

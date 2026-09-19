@@ -5,12 +5,15 @@ import com.badlogic.gdx.graphics.Color
 import com.badlogic.gdx.graphics.GL20
 import com.badlogic.gdx.scenes.scene2d.Actor
 import com.badlogic.gdx.scenes.scene2d.Touchable
+import com.badlogic.gdx.scenes.scene2d.ui.Label
 import com.badlogic.gdx.scenes.scene2d.ui.ScrollPane
 import com.badlogic.gdx.scenes.scene2d.ui.Table
 import com.badlogic.gdx.scenes.scene2d.ui.TextButton
+import com.badlogic.gdx.utils.Align
 import com.badlogic.gdx.utils.SerializationException
 import com.unciv.UncivGame
 import com.unciv.logic.UncivShowableException
+import com.unciv.logic.files.LocalModTransferServer
 import com.unciv.logic.github.DownloadAndExtractState
 import com.unciv.logic.github.Github
 import com.unciv.logic.github.Github.repoNameToFolderName
@@ -34,6 +37,7 @@ import com.unciv.ui.components.input.onClick
 import com.unciv.ui.components.input.onChange
 import com.unciv.ui.components.widgets.AutoScrollPane
 import com.unciv.ui.components.widgets.UncivTextField
+import com.unciv.ui.components.fonts.Fonts
 import com.unciv.ui.images.ImageGetter
 import com.unciv.ui.popups.ConfirmPopup
 import com.unciv.ui.popups.Popup
@@ -121,9 +125,14 @@ class ModManagementScreen private constructor(
     // cleanup - background processing needs to be stopped on exit and memory freed
     private var runningSearchJob: Job? = null
     private var stopBackgroundTasks = false
+    private var screenDisposed = false
+    private var localModTransferServer: LocalModTransferServer? = null
 
     override fun dispose() {
         // make sure the worker threads will not continue trying their time-intensive job
+        screenDisposed = true
+        localModTransferServer?.close()
+        localModTransferServer = null
         runningSearchJob?.cancel()
         stopBackgroundTasks = true
         super.dispose()
@@ -180,6 +189,14 @@ class ModManagementScreen private constructor(
             it.isEnabled = game.platformCapabilities.onlineModManagement
             ModManagementStyle.styleButton(it)
         }
+        val headerActions = Table()
+        headerActions.add(linkButton).growX().minWidth(0f).minHeight(58f).row()
+        if (game.platformCapabilities.localModTransfer) {
+            val receiveButton = "Receive Mod".toTextButton()
+            receiveButton.onClick { openLocalModReceiver() }
+            ModManagementStyle.styleButton(receiveButton)
+            headerActions.add(receiveButton).growX().minWidth(0f).minHeight(58f).padTop(6f)
+        }
         val tabs = Table().apply {
             background = ModManagementStyle.rounded(ModManagementStyle.surface)
             pad(4f)
@@ -195,11 +212,11 @@ class ModManagementScreen private constructor(
             header.row()
             val navigation = Table()
             navigation.add(tabs).minWidth(0f).growX().padRight(12f)
-            navigation.add(linkButton).width(linkWidth).minHeight(58f)
+            navigation.add(headerActions).width(linkWidth)
             header.add(navigation).colspan(2).growX().padTop(10f)
         } else {
             header.add(tabs).padRight(16f)
-            header.add(linkButton).width(linkWidth).minHeight(58f)
+            header.add(headerActions).width(linkWidth)
         }
         root.add(header).growX().padBottom(12f).row()
         root.add(body).grow().minHeight(0f)
@@ -447,6 +464,77 @@ class ModManagementScreen private constructor(
             popup.open()
         }
         return downloadButton
+    }
+
+    private fun openLocalModReceiver() {
+        localModTransferServer?.close()
+        val popup = Popup(this)
+        val receiver = try {
+            LocalModTransferServer(game.files.getModsFolder()) { modName ->
+                Concurrency.runOnGLThread("ModTransferInstalled") {
+                    if (screenDisposed) return@runOnGLThread
+                    val toast = ToastPopup("[$modName] received!", this@ModManagementScreen)
+                    reloadCachesAfterModChange(delete = false, modName) {
+                        toast.close()
+                        ToastPopup(
+                            "{[$modName] was received, but is defective!}\n{For more information, see Options-Locate mod errors.}",
+                            this@ModManagementScreen,
+                            4000L,
+                        )
+                    }
+                    if (RulesetCache[modName]?.modOptions?.hasUnique(UniqueType.ModIsAudioVisualOnly) == true)
+                        game.settings.visualMods.add(modName)
+                    updateInstalledModUIData(modName)
+                    refreshInstalledModTable()
+                    popup.close()
+                }
+            }
+        } catch (ex: Exception) {
+            ToastPopup("Could not start Mod receiver: [${ex.message ?: "Unknown error"}]", this)
+            return
+        }
+        localModTransferServer = receiver
+        popup.closeListeners += {
+            receiver.close()
+            if (localModTransferServer === receiver) localModTransferServer = null
+        }
+        val closeButton = popup.addCloseButton().actor
+        closeButton.remove()
+        popup.add(Table().apply {
+            add().expandX()
+            add(closeButton)
+        }).row()
+        popup.addGoodSizedLabel("Open this address on your computer:", size = 20).row()
+        val rawLabelStyle = Label.LabelStyle(BaseScreen.skin.get(Label.LabelStyle::class.java)).apply {
+            font = Fonts.font
+        }
+        val urlToken = "UNCIV_RECEIVER_URL_TOKEN"
+        val codeToken = "UNCIV_ACCESS_CODE_TOKEN"
+        popup.add(Label(receiver.uploadUrl, rawLabelStyle).apply {
+            setFontScale(18f / Fonts.ORIGINAL_FONT_SIZE)
+            setAlignment(Align.center)
+            wrap = true
+        }).width(stage.width * 0.78f).row()
+        val accessCodeLabel = "Access code: [$codeToken]".tr().replace(codeToken, receiver.accessCode)
+        popup.add(Label(accessCodeLabel, rawLabelStyle).apply {
+            setFontScale(24f / Fonts.ORIGINAL_FONT_SIZE)
+            setAlignment(Align.center)
+            wrap = true
+        }).width(stage.width / 2).row()
+        popup.addGoodSizedLabel("Keep the phone and computer on the same Wi-Fi network. Allow local network access if iOS asks.", size = 18).row()
+        popup.addGoodSizedLabel("The receiver stops after one upload or when you close this window.", size = 18).row()
+        popup.addButton("Copy address") {
+            Gdx.app.clipboard.contents = receiver.uploadUrl
+            ToastPopup("Address copied", this)
+        }
+        popup.addButton("Copy address + code") {
+            Gdx.app.clipboard.contents = ("Receiver URL: [$urlToken]\nAccess code: [$codeToken]")
+                .tr()
+                .replace(urlToken, receiver.uploadUrl)
+                .replace(codeToken, receiver.accessCode)
+            ToastPopup("Address and access code copied", this)
+        }.row()
+        popup.open()
     }
 
     /** Used as onClick handler for the online Mod list buttons */

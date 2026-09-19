@@ -47,7 +47,7 @@ class SafeAreaViewportTest {
         `when`(Gdx.graphics.backBufferHeight).thenReturn(height * 3)
     }
 
-    @Test fun safeControlsProjectToTheSamePixelsInBothModes() {
+    @Test fun fullscreenModeUsesTheEntireScreenWhileSafeModeUsesInsets() {
         for ((width, height, insets) in listOf(
             Triple(852, 393, SafeInsets(59, 0, 0, 21)),
             Triple(852, 393, SafeInsets(0, 0, 59, 21)),
@@ -57,24 +57,24 @@ class SafeAreaViewportTest {
             screen(width, height)
             val viewport = SafeAreaViewport(500f)
             viewport.updateDisplay(width, height, insets, false)
-            val safeWidth = viewport.worldWidth
-            val safeHeight = viewport.worldHeight
-            val safeOrigin = viewport.project(Vector2())
-            val safeCorner = viewport.project(Vector2(safeWidth, safeHeight))
+            val safe = insets.applyTo(width, height)
+            assertEquals(safe.x, viewport.screenX)
+            assertEquals(safe.y, viewport.screenY)
+            assertEquals(safe.width, viewport.screenWidth)
+            assertEquals(safe.height, viewport.screenHeight)
             viewport.updateDisplay(width, height, insets, true)
-            assertEquals(safeWidth, viewport.worldWidth, 0.001f)
-            assertEquals(safeHeight, viewport.worldHeight, 0.001f)
-            assertTrue(safeOrigin.epsilonEquals(viewport.project(Vector2()), 0.001f))
-            assertTrue(safeCorner.epsilonEquals(viewport.project(Vector2(safeWidth, safeHeight)), 0.001f))
-            val bounds = viewport.drawingBounds
-            assertTrue(Vector2().epsilonEquals(viewport.project(Vector2(bounds.x, bounds.y)), 0.001f))
+            assertEquals(0, viewport.screenX)
+            assertEquals(0, viewport.screenY)
+            assertEquals(width, viewport.screenWidth)
+            assertEquals(height, viewport.screenHeight)
+            assertEquals(Rectangle(0f, 0f, viewport.worldWidth, viewport.worldHeight), viewport.drawingBounds)
+            val safeBounds = viewport.safeAreaBoundsInWorld
+            assertEquals(safe.x * viewport.worldWidth / width, safeBounds.x, 0.001f)
+            assertEquals(safe.y * viewport.worldHeight / height, safeBounds.y, 0.001f)
+            assertEquals(safe.width * viewport.worldWidth / width, safeBounds.width, 0.001f)
+            assertEquals(safe.height * viewport.worldHeight / height, safeBounds.height, 0.001f)
             assertTrue(Vector2(width.toFloat(), height.toFloat()).epsilonEquals(
-                viewport.project(Vector2(bounds.x + bounds.width, bounds.y + bounds.height)), 0.001f))
-            for (point in listOf(Vector2(), Vector2(safeWidth / 2, safeHeight / 2), Vector2(bounds.x + 1, bounds.y + 1))) {
-                val pixel = viewport.project(point.cpy())
-                pixel.y = height - pixel.y
-                assertTrue(point.epsilonEquals(viewport.unproject(pixel), 0.001f))
-            }
+                viewport.project(Vector2(viewport.worldWidth, viewport.worldHeight)), 0.001f))
         }
     }
 
@@ -88,11 +88,10 @@ class SafeAreaViewportTest {
         stage.addActor(map)
         val button = Actor().apply { setBounds(0f, 0f, 50f, 50f) }
         stage.addActor(button)
-        assertSame(map, stage.hit(oldBounds.x + 1, 20f, true))
+        assertSame(map, stage.hit(oldBounds.x + 1, oldBounds.y + oldBounds.height / 2f, true))
         assertSame(button, stage.hit(20f, 20f, true))
         viewport.updateDisplay(852, 393, SafeInsets(0, 0, 59, 21), true)
-        assertEquals(0f, viewport.drawingBounds.x, 0.001f)
-        assertNotEquals(oldBounds.x, viewport.drawingBounds.x)
+        assertEquals(oldBounds, viewport.drawingBounds)
         viewport.updateDisplay(852, 393, SafeInsets(0, 0, 59, 21), false)
         assertEquals(Rectangle(0f, 0f, viewport.worldWidth, viewport.worldHeight), viewport.drawingBounds)
         stage.dispose()

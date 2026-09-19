@@ -1,6 +1,5 @@
 package com.unciv.ui.screens.basescreen
 
-import com.badlogic.gdx.graphics.glutils.HdpiUtils
 import com.badlogic.gdx.math.Rectangle
 import com.badlogic.gdx.utils.viewport.ExtendViewport
 import com.unciv.utils.SafeInsets
@@ -14,6 +13,21 @@ class SafeAreaViewport(virtualSize: Float) : ExtendViewport(virtualSize, virtual
 
     val drawingBounds = Rectangle()
 
+    /** Safe area expressed in stage coordinates while edge-to-edge rendering is enabled. */
+    val safeAreaBoundsInWorld: Rectangle
+        get() {
+            if (!edgeToEdge || displayWidth <= 0 || displayHeight <= 0)
+                return Rectangle(0f, 0f, worldWidth, worldHeight)
+
+            val safe = insets.applyTo(displayWidth, displayHeight)
+            return Rectangle(
+                safe.x * worldWidth / displayWidth,
+                safe.y * worldHeight / displayHeight,
+                safe.width * worldWidth / displayWidth,
+                safe.height * worldHeight / displayHeight,
+            )
+        }
+
     fun updateDisplay(width: Int, height: Int, insets: SafeInsets, edgeToEdge: Boolean) {
         this.insets = insets
         this.edgeToEdge = edgeToEdge
@@ -25,7 +39,8 @@ class SafeAreaViewport(virtualSize: Float) : ExtendViewport(virtualSize, virtual
         if (safe.width <= 0 || safe.height <= 0) return
         displayWidth = screenWidth
         displayHeight = screenHeight
-        super.update(safe.width, safe.height, centerCamera)
+        if (edgeToEdge) super.update(screenWidth, screenHeight, centerCamera)
+        else super.update(safe.width, safe.height, centerCamera)
     }
 
     override fun apply(centerCamera: Boolean) {
@@ -38,21 +53,8 @@ class SafeAreaViewport(virtualSize: Float) : ExtendViewport(virtualSize, virtual
             return
         }
 
-        val unitsPerPixelX = worldWidth / safe.width
-        val unitsPerPixelY = worldHeight / safe.height
-        drawingBounds.set(
-            -insets.left * unitsPerPixelX, -insets.bottom * unitsPerPixelY,
-            displayWidth * unitsPerPixelX, displayHeight * unitsPerPixelY
-        )
+        drawingBounds.set(0f, 0f, worldWidth, worldHeight)
         setScreenBounds(0, 0, displayWidth, displayHeight)
-        HdpiUtils.glViewport(screenX, screenY, screenWidth, screenHeight)
-        // worldWidth/Height remain the safe layout size used by all existing HUD widgets.
-        camera.viewportWidth = drawingBounds.width
-        camera.viewportHeight = drawingBounds.height
-        if (centerCamera) camera.position.set(
-            drawingBounds.x + drawingBounds.width / 2,
-            drawingBounds.y + drawingBounds.height / 2, 0f
-        )
-        camera.update()
+        super.apply(centerCamera)
     }
 }

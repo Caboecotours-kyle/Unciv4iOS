@@ -12,6 +12,7 @@ data class PlatformCapabilities(
     val multiplayerChat: Boolean = true,
     val defaultMusicDownload: Boolean = true,
     val onlineModManagement: Boolean = true,
+    val localModTransfer: Boolean = false,
     val multiplayerServerRequiresHttps: Boolean = false,
     val multiplayerApiV1Only: Boolean = false,
     val secureMultiplayerServerPasswords: Boolean = false,
@@ -23,6 +24,7 @@ data class PlatformCapabilities(
         result = 31 * result + (if (multiplayerChat) 1231 else 1237)
         result = 31 * result + (if (defaultMusicDownload) 1231 else 1237)
         result = 31 * result + (if (onlineModManagement) 1231 else 1237)
+        result = 31 * result + (if (localModTransfer) 1231 else 1237)
         result = 31 * result + (if (multiplayerServerRequiresHttps) 1231 else 1237)
         result = 31 * result + (if (multiplayerApiV1Only) 1231 else 1237)
         result = 31 * result + (if (secureMultiplayerServerPasswords) 1231 else 1237)

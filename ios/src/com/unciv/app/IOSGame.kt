@@ -34,6 +34,7 @@ class IOSGame @JvmOverloads constructor(
         multiplayerChat = false,
         defaultMusicDownload = false,
         onlineModManagement = true,
+        localModTransfer = true,
         multiplayerServerRequiresHttps = true,
         multiplayerApiV1Only = true,
         secureMultiplayerServerPasswords = runtimeFeatures.secureMultiplayerPasswords,

@@ -205,6 +205,10 @@ abstract class BaseScreen : Screen {
     /** @return `true` if the screen is higher than it is wide _and_ resolution is at most 1050x700 */
     fun isCrampedPortrait() = isPortrait() &&
             game.settings.screenSize.virtualHeight <= 700
+
+    internal fun safeAreaBoundsInWorld() =
+        (stage.viewport as SafeAreaViewport).safeAreaBoundsInWorld
+
     /** @return `true` if the screen is narrower than 4:3 landscape */
     fun isNarrowerThan4to3() = stage.isNarrowerThan4to3()
 

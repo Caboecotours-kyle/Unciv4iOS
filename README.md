@@ -73,6 +73,8 @@ Note: Dropbox-backed multiplayer has been removed upstream and is not supported 
 In-app Mod management is now available: the Mods screen lists the GitHub
 catalog, and Mods can be downloaded by URL, installed, updated and removed
 from inside the app. Missing Mods can also be downloaded when loading a save.
+The iOS Mod Manager can receive a packaged Mod ZIP from a computer on the same
+Wi-Fi network for quick testing on the phone.
 Downloads run through an NSURLSession-backed streaming engine under Ktor - see
 [ios/README.md](ios/README.md#platform-capability-boundary) for the capability
 boundary.

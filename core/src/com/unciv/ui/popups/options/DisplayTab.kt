@@ -32,11 +32,11 @@ internal class DisplayTab(
         addScreenSizeSelectBox()
         addScreenOrientationSelectBox()
         if (Gdx.app.type == Application.ApplicationType.iOS) {
-            addCheckbox("Extend to screen edges", settings::iosUseDisplayCutout) {
+            addCheckbox("Extend to fullscreen", settings::iosUseDisplayCutout) {
                 Display.setCutout(it)
                 settings.save()
             }
-            add("Maps and backgrounds extend to the screen edges. Controls stay in the safe area.".tr()
+            add("Maps, backgrounds, and controls extend to the screen edges.".tr()
                 .let { WrappableLabel(it, optionsPopup.tabs.prefWidth, fontSize = 14).apply { wrap = true } })
                 .colspan(2).growX().row()
         }
