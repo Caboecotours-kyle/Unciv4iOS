@@ -96,8 +96,7 @@ class MinimapHolder(val mapHolder: WorldMapHolder) : Table() {
 
         pack()
         if (stage != null) {
-            val safeArea = worldScreen.safeAreaBoundsInWorld()
-            x = safeArea.x + safeArea.width - width
+            x = stage.width - width
         }
 
         addListener(ResizeDragListener(civInfo))
