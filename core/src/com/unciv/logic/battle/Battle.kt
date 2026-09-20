@@ -375,7 +375,7 @@ object Battle {
         if (civUnit is MapUnitCombatant) {
             bonusUniques.addAll(civUnit.getMatchingUniques(UniqueType.KillUnitPlunder, gameContext, true))
         } else {
-            bonusUniques.addAll(civUnit.getCivInfo().getMatchingUniques(UniqueType.KillUnitPlunder, gameContext))
+            civUnit.getCivInfo().forEachMatchingUnique(UniqueType.KillUnitPlunder, gameContext) { bonusUniques.add(it) }
         }
 
         val cityWithReligion =
@@ -383,7 +383,7 @@ object Battle {
                 it.isCityCenter() && it.getCity()!!.getMatchingUniques(UniqueType.KillUnitPlunderNearCity, gameContext).any()
             }?.getCity()
         if (cityWithReligion != null) {
-            bonusUniques.addAll(cityWithReligion.getMatchingUniques(UniqueType.KillUnitPlunderNearCity, gameContext))
+            cityWithReligion.forEachMatchingUnique(UniqueType.KillUnitPlunderNearCity, gameContext) { bonusUniques.add(it) }
         }
         return bonusUniques
     }
@@ -586,7 +586,7 @@ object Battle {
     private fun tryHealAfterKilling(attacker: ICombatant) {
         if (attacker !is MapUnitCombatant) return
         
-        for (unique in attacker.unit.getMatchingUniques(UniqueType.HealsAfterKilling, checkCivInfoUniques = true)) {
+        attacker.unit.forEachMatchingUnique(UniqueType.HealsAfterKilling, checkCivInfoUniques = true) { unique ->
             val amountToHeal = unique.params[0].toInt()
             attacker.unit.healBy(amountToHeal)
         }
@@ -899,9 +899,10 @@ object Battle {
     internal class FakeUnitForExtraRangedAttack(val mapUnitCombatant: MapUnitCombatant, val baseRangedStrength: Int) : ICombatant by mapUnitCombatant {
         override fun getAttackingStrength(defender: ICombatant?): Int {
             val state = GameContext(this, defender, this.getTile(), CombatAction.Attack)
-            val extraStrength =
-                mapUnitCombatant.unit.getMatchingUniques(UniqueType.StrengthAmount, state)
-                    .sumOf { it.params[0].toInt() }
+            var extraStrength = 0
+            mapUnitCombatant.unit.forEachMatchingUnique(UniqueType.StrengthAmount, state) {
+                extraStrength += it.params[0].toInt()
+            }
             return baseRangedStrength + extraStrength // Is always ranged
         }
 

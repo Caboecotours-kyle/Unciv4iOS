@@ -1,3 +1,17 @@
+## 4.22.1
+
+Fixed crash on "ID from clipboard" when clipboard not set
+
+Scrollable events show scrollbars
+
+Allow modders to specify modOptions.constants.maxRiverLength as 0 to avoid river generation entirely
+
+Tweaked auto map size - By O-spin
+
+Performance improvements - By Ambeco
+
+Add map generator settings clipboard actions - By LouisDeconinck
+
 ## 4.22.0
 
 Invisible units no longer invisible to their own civ

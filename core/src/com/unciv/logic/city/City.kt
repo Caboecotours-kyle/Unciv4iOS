@@ -14,7 +14,7 @@ import com.unciv.logic.city.managers.SpyFleeReason
 import com.unciv.logic.civilization.Civilization
 import com.unciv.logic.civilization.transients.CapitalConnectionsFinder.CapitalConnectionMedium
 import com.unciv.logic.map.HexCoord
-import com.unciv.logic.map.PathingMap
+import com.unciv.logic.map.pathingmap.PathingMap
 import com.unciv.logic.map.TileMap
 import com.unciv.logic.map.mapunit.MapUnit
 import com.unciv.logic.map.mapunit.UnitPromotions
@@ -789,8 +789,9 @@ class City : IsPartOfGameInfoSerialization, INamed {
             = unique.getModifiers(trigger).any(triggerFilter) && unique.conditionalsApply(gameContext)
         fun buildingFilter(unique: Unique): Boolean
             = unique.isLocalEffect && uniqueFilter(unique)
-        cityConstructions.builtBuildingUniqueMap.forEachUnique(::buildingFilter, op)
-        religion.forEachUnique(::uniqueFilter, op)
+        fun multipliedOp(unique: Unique) = unique.forEachMultiplied(gameContext, op)
+        cityConstructions.builtBuildingUniqueMap.forEachUnique(::buildingFilter, ::multipliedOp)
+        religion.forEachUnique(::uniqueFilter, ::multipliedOp)
     }
 
     //endregion
