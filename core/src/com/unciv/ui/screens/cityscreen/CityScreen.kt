@@ -388,7 +388,8 @@ class CityScreen(
 
         val tileMapGroup = TileGroupMap(mapScrollPane, tileGroups, tileGroupsToUnwrap = tilesToUnwrap)
         mapScrollPane.actor = tileMapGroup
-        mapScrollPane.setSize(stage.width, stage.height)
+        val bounds = (stage.viewport as com.unciv.ui.screens.basescreen.SafeAreaViewport).drawingBounds
+        mapScrollPane.setBounds(bounds.x, bounds.y, bounds.width, bounds.height)
         stage.addActor(mapScrollPane)
 
         mapScrollPane.layout() // center scrolling

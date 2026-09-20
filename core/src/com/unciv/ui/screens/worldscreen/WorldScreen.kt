@@ -104,7 +104,7 @@ class WorldScreen(
     val autoPlay: AutoPlay,
     private val viewingCiv: Civilization,
     restoreState: RestoreState? = null
-) : BaseScreen() {
+) : BaseScreen(useFullScreenLayout = true) {
     /** When set, causes the screen to update in the next [render][render] event */
     var shouldUpdate = false
 
@@ -183,7 +183,8 @@ class WorldScreen(
         // notifications are right-aligned, they take up only as much space as necessary.
         notificationsScroll.width = stage.width / 2
 
-        minimapWrapper.x = stage.width - minimapWrapper.width
+        val safeArea = safeAreaBoundsInWorld()
+        minimapWrapper.x = safeArea.x + safeArea.width - minimapWrapper.width
 
         // This is the most memory-intensive operation we have currently, most OutOfMemory errors will occur here
         mapHolder.addTiles()
@@ -447,9 +448,10 @@ class WorldScreen(
 
             
             minimapWrapper.update(getGameViewConsideringForOfWar().civView.getCiv())
+            minimapWrapper.x = safeArea.x + safeArea.width - minimapWrapper.width
             bottomTileInfoTable.civView = getGameViewConsideringForOfWar().civView
             bottomTileInfoTable.updateTileTable(mapHolder.selectedTile)
-            bottomTileInfoTable.x = stage.width - bottomTileInfoTable.width
+            bottomTileInfoTable.x = safeArea.x + safeArea.width - bottomTileInfoTable.width
             bottomTileInfoTable.y = if (game.settings.showMinimap) minimapWrapper.height + 5f else 0f
 
             battleTable.update()
@@ -522,7 +524,12 @@ class WorldScreen(
 
         val posZoomFromRight = if (game.settings.showMinimap) minimapWrapper.width
         else bottomTileInfoTable.width
-        zoomController.setPosition(stage.width - posZoomFromRight - 10f, 10f, Align.bottomRight)
+        val safeArea = safeAreaBoundsInWorld()
+        zoomController.setPosition(
+            safeArea.x + safeArea.width - posZoomFromRight - 10f,
+            10f,
+            Align.bottomRight
+        )
     }
 
     @Readonly
@@ -989,11 +996,12 @@ class WorldScreen(
         updateMultiplayerStatusButton()
 
         statusButtons.update(false)
-        val maxWidth = stage.width - techPolicyAndDiplomacy.width - 25f
+        val safeArea = safeAreaBoundsInWorld()
+        val maxWidth = safeArea.width - techPolicyAndDiplomacy.width - 25f
         if(statusButtons.width > maxWidth) {
             statusButtons.update(true)
         }
-        statusButtons.setPosition(stage.width - statusButtons.width - 10f,
+        statusButtons.setPosition(safeArea.x + safeArea.width - statusButtons.width - 10f,
             topBar.y - statusButtons.height - 10f)
 
         // Update chat button position to always be below techPolicyAndDiplomacy
@@ -1043,7 +1051,8 @@ class WorldScreen(
             mapHolder.reloadMaxZoom()
             mapHolder.zoom(mapHolder.scaleX)
             notificationsScroll.width = stage.width / 2
-            minimapWrapper.x = stage.width - minimapWrapper.width
+            val safeArea = safeAreaBoundsInWorld()
+            minimapWrapper.x = safeArea.x + safeArea.width - minimapWrapper.width
             battleTable.width = stage.width / 3
             battleTable.x = stage.width / 3
             bottomUnitTable.shouldUpdate = true

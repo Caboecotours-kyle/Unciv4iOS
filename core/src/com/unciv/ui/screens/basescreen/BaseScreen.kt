@@ -43,7 +43,7 @@ import com.unciv.utils.Display
 // First - not a leak; second - passes out a pure function
 @Suppress("LeakingThis")
 
-abstract class BaseScreen : Screen {
+abstract class BaseScreen(private val useFullScreenLayout: Boolean = false) : Screen {
 
     val game: UncivGame = UncivGame.Current
     val stage: Stage
@@ -66,7 +66,7 @@ abstract class BaseScreen : Screen {
         val height = screenSize.virtualHeight
 
         /** The ExtendViewport sets the _minimum_(!) world size - the actual world size will be larger, fitted to screen/window aspect ratio. */
-        stage = UncivStage(SafeAreaViewport(height))
+        stage = UncivStage(SafeAreaViewport(height, useFullScreenLayout))
         applySafeArea()
 
         if (enableSceneDebug.active && this !is CrashScreen && this !is GameStartScreen)

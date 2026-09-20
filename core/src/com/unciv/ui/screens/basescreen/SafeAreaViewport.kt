@@ -1,11 +1,15 @@
 package com.unciv.ui.screens.basescreen
 
+import com.badlogic.gdx.graphics.glutils.HdpiUtils
 import com.badlogic.gdx.math.Rectangle
 import com.badlogic.gdx.utils.viewport.ExtendViewport
 import com.unciv.utils.SafeInsets
 
 /** Keeps stage layout in safe-area coordinates while optionally drawing beyond those bounds. */
-class SafeAreaViewport(virtualSize: Float) : ExtendViewport(virtualSize, virtualSize) {
+class SafeAreaViewport(
+    virtualSize: Float,
+    private val useFullScreenLayout: Boolean = false,
+) : ExtendViewport(virtualSize, virtualSize) {
     private var insets = SafeInsets()
     private var displayWidth = 0
     private var displayHeight = 0
@@ -13,10 +17,10 @@ class SafeAreaViewport(virtualSize: Float) : ExtendViewport(virtualSize, virtual
 
     val drawingBounds = Rectangle()
 
-    /** Safe area expressed in stage coordinates while edge-to-edge rendering is enabled. */
+    /** Safe area expressed in stage coordinates. */
     val safeAreaBoundsInWorld: Rectangle
         get() {
-            if (!edgeToEdge || displayWidth <= 0 || displayHeight <= 0)
+            if (!edgeToEdge || !useFullScreenLayout || displayWidth <= 0 || displayHeight <= 0)
                 return Rectangle(0f, 0f, worldWidth, worldHeight)
 
             val safe = insets.applyTo(displayWidth, displayHeight)
@@ -39,7 +43,7 @@ class SafeAreaViewport(virtualSize: Float) : ExtendViewport(virtualSize, virtual
         if (safe.width <= 0 || safe.height <= 0) return
         displayWidth = screenWidth
         displayHeight = screenHeight
-        if (edgeToEdge) super.update(screenWidth, screenHeight, centerCamera)
+        if (edgeToEdge && useFullScreenLayout) super.update(screenWidth, screenHeight, centerCamera)
         else super.update(safe.width, safe.height, centerCamera)
     }
 
@@ -53,8 +57,28 @@ class SafeAreaViewport(virtualSize: Float) : ExtendViewport(virtualSize, virtual
             return
         }
 
-        drawingBounds.set(0f, 0f, worldWidth, worldHeight)
+        if (useFullScreenLayout) {
+            drawingBounds.set(0f, 0f, worldWidth, worldHeight)
+            setScreenBounds(0, 0, displayWidth, displayHeight)
+            super.apply(centerCamera)
+            return
+        }
+
+        val unitsPerPixelX = worldWidth / safe.width
+        val unitsPerPixelY = worldHeight / safe.height
+        drawingBounds.set(
+            -insets.left * unitsPerPixelX, -insets.bottom * unitsPerPixelY,
+            displayWidth * unitsPerPixelX, displayHeight * unitsPerPixelY
+        )
         setScreenBounds(0, 0, displayWidth, displayHeight)
-        super.apply(centerCamera)
+        HdpiUtils.glViewport(screenX, screenY, screenWidth, screenHeight)
+        // UI keeps using the safe stage size while maps and backgrounds use drawingBounds.
+        camera.viewportWidth = drawingBounds.width
+        camera.viewportHeight = drawingBounds.height
+        if (centerCamera) camera.position.set(
+            drawingBounds.x + drawingBounds.width / 2,
+            drawingBounds.y + drawingBounds.height / 2, 0f
+        )
+        camera.update()
     }
 }

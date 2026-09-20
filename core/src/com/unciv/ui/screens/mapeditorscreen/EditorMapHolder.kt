@@ -114,7 +114,8 @@ class EditorMapHolder(
             tileGroup.update()
         }
 
-        setSize(stage.width, stage.height)
+        val bounds = (stage.viewport as com.unciv.ui.screens.basescreen.SafeAreaViewport).drawingBounds
+        setBounds(bounds.x, bounds.y, bounds.width, bounds.height)
 
         layout()
 

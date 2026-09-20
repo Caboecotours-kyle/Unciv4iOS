@@ -216,7 +216,8 @@ class NotificationsScroll(
         }
 
         // Do the positioning here since WorldScreen may also call update when just its geometry changed
-        setPosition(stage.width - width * scaleFactor, 0f)
+        val safeArea = worldScreen.safeAreaBoundsInWorld()
+        setPosition(safeArea.x + safeArea.width - width * scaleFactor, 0f)
         restoreButton.setPosition(coveredNotificationsBottom)
     }
 
@@ -472,7 +473,7 @@ class NotificationsScroll(
         /** Set RestoreButton position - relative to the screen as parent is stage.root */
         fun setPosition(coveredNotificationsBottom: Float) =
             setPosition(
-                this@NotificationsScroll.stage.width - restoreButtonPad,
+                worldScreen.safeAreaBoundsInWorld().run { x + width - restoreButtonPad },
                 coveredNotificationsBottom + restoreButtonPad,
                 Align.bottomRight
             )
