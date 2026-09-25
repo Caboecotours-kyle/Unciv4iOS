@@ -1,0 +1,36 @@
+# TestFlight release for this fork (bundle com.kylepopp.unciv, team W843447LPP).
+# Credentials come from the environment, never from this repo:
+#   ASC_KEY_ID, ASC_ISSUER_ID, ASC_KEY_PATH  (App Store Connect API key)
+# Run from tools/ios-release on the Mac:  fastlane profile | fastlane upload ipa:<path>
+
+BUNDLE_ID = "com.kylepopp.unciv"
+PROFILE_NAME = "Unciv Pocket App Store"
+
+def api_token
+  Spaceship::ConnectAPI::Token.create(key_id: ENV.fetch("ASC_KEY_ID"), issuer_id: ENV.fetch("ASC_ISSUER_ID"),
+                                      filepath: ENV.fetch("ASC_KEY_PATH"))
+end
+
+# Creates (or reuses) the App Store distribution profile and installs it where RoboVM looks.
+lane :profile do
+  Spaceship::ConnectAPI.token = api_token
+  bundle = Spaceship::ConnectAPI::BundleId.find(BUNDLE_ID) || UI.user_error!("#{BUNDLE_ID} is not registered")
+  certs = Spaceship::ConnectAPI::Certificate.all.select { |c| c.certificate_type == "DISTRIBUTION" && c.valid? }
+  UI.user_error!("no valid Apple Distribution certificate") if certs.empty?
+  existing = Spaceship::ConnectAPI::Profile.all.find { |p| p.name == PROFILE_NAME && p.profile_state == "ACTIVE" }
+  profile = existing || Spaceship::ConnectAPI::Profile.create(name: PROFILE_NAME, profile_type: "IOS_APP_STORE",
+                                                              bundle_id_id: bundle.id, certificate_ids: certs.map(&:id))
+  dir = File.expand_path("~/Library/MobileDevice/Provisioning Profiles")
+  FileUtils.mkdir_p(dir)
+  path = File.join(dir, "#{profile.uuid}.mobileprovision")
+  File.binwrite(path, Base64.decode64(profile.profile_content))
+  UI.success("Profile #{profile.name} (#{profile.uuid}) installed")
+  File.write("profile-uuid.txt", profile.uuid)
+end
+
+# Uploads a signed IPA to TestFlight without waiting for Apple's processing.
+lane :upload do |options|
+  api_key = app_store_connect_api_key(key_id: ENV.fetch("ASC_KEY_ID"), issuer_id: ENV.fetch("ASC_ISSUER_ID"),
+                                      key_filepath: ENV.fetch("ASC_KEY_PATH"))
+  upload_to_testflight(api_key: api_key, ipa: options[:ipa], skip_waiting_for_build_processing: true)
+end
