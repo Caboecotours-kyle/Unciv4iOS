@@ -27,11 +27,13 @@ FEATURES = {
     "Hill": (["f_hill1", "f_hill2"], 164, 146), "Marsh": (["f_marsh"], 150, 146), "Oasis": (["f_atoll"], 130, 144),
     "Flood plains": (["f_flood"], 164, 146), "Ice": (["f_ice"], 160, 146), "Atoll": (["f_atoll"], 150, 146), "Fallout": (["f_fallout"], 150, 146),
 }
-DECOR = {"Grassland": "f_grass", "Plains": "f_plains", "Desert": "f_desert1", "Tundra": "f_tundra", "Snow": "f_snow", "Ocean": "s_rock1"}
+DECOR = {"Grassland": "f_grass", "Plains": "f_plains", "Desert": "f_desert1", "Tundra": "f_tundra", "Snow": "f_snow"}
 
 
 def magick(*args):
-    subprocess.run(["magick", *map(str, args)], check=True)
+    *ops, out = map(str, args)
+    # strip timestamps so an unchanged image exports byte-identical and git sees no churn
+    subprocess.run(["magick", *ops, "-define", "png:exclude-chunks=date,time,tIME", "-strip", out], check=True)
 
 
 def hexpts(cy=CY, h=H):
@@ -153,7 +155,8 @@ def main():
             write(f"Tiles/{name}{'' if i == 0 else i + 1}.png", sprites=[(key, size, bottom)]); n += 1
     for t in load("Terrains.json"):
         if t["type"] == "NaturalWonder":
-            write(f"Tiles/{t['name']}.png", sprites=[(f"nw_{t['name']}", 186, 154)]); n += 1
+            # a natural wonder replaces the base image, so it carries the slab of the terrain it turns into
+            write(f"Tiles/{t['name']}.png", slab(t.get("turnsInto", "Grassland")), [(f"nw_{t['name']}", 186, 154)]); n += 1
     for r in load("TileResources.json"):
         write(f"Tiles/{r['name']}.png", sprites=[(f"r_{r['name']}", 74, 158, 138)]); n += 1
     for i in load("TileImprovements.json"):
