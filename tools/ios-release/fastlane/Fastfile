@@ -34,3 +34,19 @@ lane :upload do |options|
                                       key_filepath: ENV.fetch("ASC_KEY_PATH"))
   upload_to_testflight(api_key: api_key, ipa: options[:ipa], skip_waiting_for_build_processing: true)
 end
+
+# Puts an App Store Connect user in the internal testing group, which gets every build without Beta App Review.
+# Usage: fastlane tester email:someone@example.com
+lane :tester do |options|
+  Spaceship::ConnectAPI.token = api_token
+  app = Spaceship::ConnectAPI::App.find(BUNDLE_ID) || UI.user_error!("no App Store Connect app for #{BUNDLE_ID}")
+  group = app.get_beta_groups.find { |g| g.name == "Internal" } ||
+          app.create_beta_group(group_name: "Internal", is_internal_group: true, has_access_to_all_builds: true)
+  email = options.fetch(:email)
+  if group.fetch_beta_testers.any? { |t| t.email.casecmp?(email) }
+    UI.message("#{email} is already in #{group.name}")
+  else
+    Spaceship::ConnectAPI::BetaTester.create(email: email, beta_group_ids: [group.id])
+    UI.success("Added #{email} to #{group.name}")
+  end
+end
