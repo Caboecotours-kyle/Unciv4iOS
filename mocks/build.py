@@ -9,7 +9,7 @@ DIRS = ["Images.ConstructionIcons/UnitActionIcons", "Images.ConstructionIcons/Un
 # names passed through variables rather than literal ic('...') calls
 EXTRA = ["Library", "Warrior", "Granary", "Shrine", "Walls", "Settler", "Bowman", "Temple", "Archer", "Water Mill",
          "Trireme", "Monument", "Swordsman", "Fortify", "Sleep", "Explore", "Skip", "ShowMore", "RangedStrength",
-         "Settings", "HexagonOutline", "Cities", "Resources", "CrosshairB", "ForwardArrow", "MenuIcon", "Star", "MoveTo", "NationSwap"]
+         "Settings", "HexagonOutline", "Cities", "Resources", "CrosshairB", "ForwardArrow", "MenuIcon", "Star", "MoveTo", "NationSwap", "Worker", "Hoplite", "Settler"]
 
 src = pathlib.Path(sys.argv[1])
 html = src.read_text()
@@ -18,7 +18,7 @@ names = {n for n in re.findall(r"ic\('([^']+)'", html) if not n.endswith('_')} |
 techs = json.loads((src.parent / "techs.json").read_text())
 names |= {"t_" + t[0] for t in techs}
 unlocks = {u[0] for t in techs for u in t[6]}
-res = ["Wheat", "Horses", "Fish", "Iron", "Gems", "Cattle"]
+res = sorted(f.stem for f in (ROOT / "Images.Icons/ResourceIcons").glob("*.png"))
 
 def uri(p):
     return "data:image/png;base64," + base64.b64encode(p.read_bytes()).decode()

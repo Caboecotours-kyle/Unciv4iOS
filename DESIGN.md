@@ -12,6 +12,7 @@ Polytopia's grammar: flat, crisp, toy-like low-poly. Bold color blocks read firs
 - **Hex shapes are always code-drawn** so they tile exactly. Everything standing on a tile is a sprite.
 - **Sprites on tiles:** terrain features (with 2 to 3 variants per common feature, picked per tile), resources, improvements, natural wonders, wonder landmarks, units. All share one style: simple chunky low-poly, two tones per color, no faces or fine ornament, no outlines, reads at 24px.
 - **Cities (chosen 2026-09-25):** one sprite per era; the look changes with the owner's era (mud brick, stone, brick and smokestacks, towers), not with population. Roofs and flags are key green and take the owner's color. A wonder stands at the front right of its city tile. Population lives on the city banner.
+- **Zoom (chosen 2026-09-25):** default is about 5 hexes across the screen (Polytopia scale; Civ 6 on iPhone was criticized for units too small to tap). Drag pans, pinch zooms from 0.5x to 2.2x. Past 0.8x the map turns strategic by itself, replacing Civ's separate Strategic View button: decorations and sprites hide, units become civ-colored chips with their silhouette, resources become pins, borders thicken. City banners and labels hold one screen size at every zoom.
 - **Fog:** unexplored tiles are covered by white clouds.
 - **Borders:** civ-colored line inset on the owner's edge, 12% civ tint on owned tiles.
 
