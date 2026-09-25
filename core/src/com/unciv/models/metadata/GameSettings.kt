@@ -80,7 +80,7 @@ class GameSettings {
     var showSettlersSuggestedCityLocations = true
     var showTileYields = false
     var showWorkedTiles = false
-    var showResourcesAndImprovements = true
+    var showResourcesAndImprovements = false // the tileset draws resources and improvements as sprites
     var showPixelImprovements = true
     var unitIconOpacity = 1f // default corresponds to fully opaque
 

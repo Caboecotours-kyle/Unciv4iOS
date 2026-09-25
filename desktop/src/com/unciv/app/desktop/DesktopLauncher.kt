@@ -144,8 +144,17 @@ internal object DesktopLauncher {
 
 
 
+        // --capture=out.png renders one frame of a quickstarted game to a file with no visible window (--reveal shows the whole map)
+        val captureFile = arg.find { it.startsWith("--capture=") }?.substringAfter("=")?.let { File(it) }
+        if (captureFile != null) {
+            config.setInitialVisible(false)
+            config.setWindowedMode(786, 1704) // matches CaptureGame PHONE_W x PHONE_H
+        }
+        val game = if (captureFile != null) CaptureGame(config, customDataDir, captureFile, "--reveal" in arg)
+            else DesktopGame(config, customDataDir)
+
         // HardenGdxAudio extends Lwjgl3Application, and the Lwjgl3Application constructor runs as long as the game runs
-        HardenGdxAudio(DesktopGame(config, customDataDir), config)
+        HardenGdxAudio(game, config)
         exitProcess(0)
     }
 
