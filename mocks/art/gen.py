@@ -11,7 +11,7 @@ STYLE = pathlib.Path(OUT / "style.txt").read_text().strip()
 def generate(job):
     body = {
         "model": "gpt-6-luna", "stream": True,
-        "input": f"Generate an image. {job['prompt']}\n\n{STYLE if job.get('key', True) else job.get('style', STYLE)}",
+        "input": f"Generate an image. {job['prompt']}\n\n{job.get('style', STYLE)}",
         "tools": [{"type": "image_generation", "size": job.get("size", "1024x1024"), "quality": job.get("quality", "medium")}],
         "tool_choice": {"type": "image_generation"},
     }
@@ -30,7 +30,8 @@ def generate(job):
     if not image:
         raise RuntimeError("no image returned")
     raw = OUT / "raw" / f"{job['name']}.png"
-    raw.parent.mkdir(exist_ok=True)
+    raw.parent.mkdir(parents=True, exist_ok=True)
+    (OUT / job["name"]).parent.mkdir(parents=True, exist_ok=True)
     raw.write_bytes(base64.b64decode(image))
     final = OUT / f"{job['name']}.png"
     if job.get("key", True):

@@ -9,7 +9,7 @@ DIRS = ["Images.ConstructionIcons/UnitActionIcons", "Images.ConstructionIcons/Un
 # names passed through variables rather than literal ic('...') calls
 EXTRA = ["Library", "Warrior", "Granary", "Shrine", "Walls", "Settler", "Bowman", "Temple", "Archer", "Water Mill",
          "Trireme", "Monument", "Swordsman", "Fortify", "Sleep", "Explore", "Skip", "ShowMore", "RangedStrength",
-         "Settings", "HexagonOutline", "Cities", "Resources", "CrosshairB", "ForwardArrow", "MenuIcon", "Star"]
+         "Settings", "HexagonOutline", "Cities", "Resources", "CrosshairB", "ForwardArrow", "MenuIcon", "Star", "MoveTo", "NationSwap"]
 
 src = pathlib.Path(sys.argv[1])
 html = src.read_text()
@@ -50,9 +50,13 @@ for f in sorted((src.parent / "art").glob("*.png")):
     size = "320x320" if f.stem.startswith("p_") else "128x128"
     webp = subprocess.run(["magick", str(f), "-resize", size, "-quality", "88", "webp:-"], capture_output=True, check=True).stdout
     art[key] = "data:image/webp;base64," + base64.b64encode(webp).decode()
+simple = {}
+for f in sorted((src.parent / "art" / "simple").glob("*.png")):
+    webp = subprocess.run(["magick", str(f), "-resize", "128x128", "-quality", "88", "webp:-"], capture_output=True, check=True).stdout
+    simple[f.stem[2:]] = "data:image/webp;base64," + base64.b64encode(webp).decode()
 if "Walls" in art:
     art["Walls of Babylon"] = art["Walls"]
 
 out = src.with_name(src.name.replace(".src", ""))
-out.write_text(html.replace("/*ICONS*/{}", json.dumps(icons)).replace("/*TECHS*/[]", json.dumps(techs)).replace("/*ART*/{}", json.dumps(art)))
+out.write_text(html.replace("/*ICONS*/{}", json.dumps(icons)).replace("/*TECHS*/[]", json.dumps(techs)).replace("/*ART*/{}", json.dumps(art)).replace("/*ART_SIMPLE*/{}", json.dumps(simple)))
 print(f"{out}: {len(icons)} icons, {out.stat().st_size // 1024} KB; missing: {missing}")
