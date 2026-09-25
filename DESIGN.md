@@ -29,6 +29,18 @@ Polytopia's grammar: flat, crisp, toy-like low-poly. Bold color blocks read firs
 - **App icon:** the floating hex island (grass tile with a tiny blue-roofed city, a snowy mountain and pines, earth underside) on bright sky blue. Source: `mocks/art/appicon-1024.png`.
 - **Title and main menu:** the army lineup art (units from every era on a hex strip under a big sky), the wordmark on top, a big yellow Continue with the current game, then New game, Load game, Civilopedia, Settings.
 
+## Screens (chosen 2026-09-25)
+Mocks live in `mocks/`; the chosen direction is the one to build.
+- **Social policies:** B, one branch at a time as a vertical tree like the tech tree, branch rail at the bottom (`policies-religion.html`).
+- **Religion:** A's path (pantheon, prophet, found, enhance) as the main sheet, with B's map lens one tap away: follower rings on cities and spread lines (`policies-religion.html`, direction D).
+- **New game:** A, swipe through leaders on a big card, every setting is one chip with Unciv defaults, Start under the thumb (`setup-cs-victory.html`).
+- **City-state:** B, the race to Ally: each quest, gift or pledge shows where it moves you against rivals (`setup-cs-victory.html`).
+- **Victory:** A, four victory tracks with rivals as dots; the end is a portrait moment like a wonder (`setup-cs-victory.html`).
+- **Trade:** A, two stacked piles (you give on top, they give below) with one tray in thumb reach (`trade-notes-pedia.html`).
+- **Notifications:** A, a turn digest separate from the Next decision queue; tapping one flies the map there (`trade-notes-pedia.html`).
+- **Civilopedia:** A, your game first, ten shelves, search at the bottom, full-screen entries with tappable links (`trade-notes-pedia.html`).
+- **Tech:** Next up (current research, available picks, goals) plus the full tree in four lanes (`portrait-hud.html`).
+
 ## Interface
 - Portrait, one-handed. Everything used every turn lives in the bottom third; rare actions (menu) go at the top.
 - Navy translucent panels `rgba(16,31,47,.9)`, white round action discs, yellow `#ffc93c` for the primary action.
