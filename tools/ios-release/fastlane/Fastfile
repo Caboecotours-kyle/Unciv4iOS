@@ -53,7 +53,10 @@ lane :tester do |options|
   if Spaceship::ConnectAPI::BetaTester.all(filter: { email: email, betaGroups: group.id }).any?
     UI.message("#{email} is already in #{group.name}")
   else
-    Spaceship::ConnectAPI::BetaTester.create(email: email, beta_group_ids: [group.id])
+    Spaceship::ConnectAPI.test_flight_request_client.post("v1/betaTesters", {
+      data: { type: "betaTesters", attributes: { email: email },
+              relationships: { betaGroups: { data: [{ type: "betaGroups", id: group.id }] } } }
+    })
     UI.success("Added #{email} to #{group.name}")
   end
 end
