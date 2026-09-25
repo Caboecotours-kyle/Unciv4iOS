@@ -15,13 +15,16 @@ UUID="$(cat profile-uuid.txt)"
 PROPS="$(mktemp -t robovm).properties"
 sed "s/^app.build=.*/app.build=$(date +%y%m%d%H%M)/" robovm.properties > "$PROPS"
 cd "$ROOT"
-./gradlew --no-configuration-cache :ios:createIPA \
+# --no-daemon: codesign must run in this session, where the keychain was just unlocked; a daemon from
+# another ssh session fails with errSecInternalComponent
+./gradlew --no-daemon --no-configuration-cache :ios:createIPA \
   -PiosSkipSigning=false \
   -PiosSignIdentity="Apple Distribution: kyle popp (W843447LPP)" \
   -PiosProvisioningProfile="$UUID" \
   -PiosRoboVmProperties="$PROPS" \
   -Probovm.arch=arm64 -Probovm.archs=arm64
 
-IPA="$(ls -t "$ROOT"/ios/build/*/robovm/*.ipa "$ROOT"/ios/build/robovm/*.ipa 2>/dev/null | head -1)"
+IPA="$(find "$ROOT/ios/build" -name "*.ipa" -mmin -60 -print | head -1)"
+[ -n "$IPA" ] || { echo "no IPA produced" >&2; exit 1; }
 echo "IPA: $IPA"
 cd "$ROOT/tools/ios-release" && fastlane upload ipa:"$IPA"
