@@ -235,6 +235,28 @@ svg.st{width:18px;height:18px;flex:none}
 .qcard{position:absolute;left:10px;right:10px;bottom:176px;background:var(--panel);border-radius:28px;z-index:6;box-shadow:0 10px 30px rgba(0,0,0,.35);padding:14px;-webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px)}
 .qb small{font-size:12.5px;font-weight:700;color:var(--ink2)}
 .tmode{margin-top:4px}
+.eralbl{position:absolute;left:10px;height:32px;display:flex;align-items:center;gap:8px;padding:0 12px;border-radius:16px;background:#0f2030;font-size:15px;font-weight:900;color:var(--ink2);box-shadow:0 0 0 1px var(--line);z-index:1}
+.eralbl small{font-size:12.5px;color:var(--ink3);font-weight:800}
+.urow{display:flex;gap:4px;align-items:center;justify-content:center;height:18px;margin-top:-2px}
+.urow .ic{width:17px;height:17px;color:#9fb6cc}
+.urow b{font-size:11.5px;font-weight:900;color:var(--ink3)}
+.tn.lock .urow .ic{color:#5b7894}
+.ic.k-w{color:var(--yellow)!important}
+.ic.k-a{color:var(--cul)!important}
+.chip.k-w{background:rgba(255,201,60,.15);color:var(--yellow)}
+.chip.k-i .ic{color:var(--food)}
+.chip.k-r .ic{color:var(--prod)}
+.tinfo{max-height:210px;overflow:auto;display:flex;flex-direction:column;gap:12px;margin:0 -16px;padding:2px 16px;scrollbar-width:none}
+.tinfo::-webkit-scrollbar{display:none}
+.til{font-size:13px;font-weight:800;color:var(--ink3);margin-bottom:6px}
+.tiw{display:flex;flex-wrap:wrap;gap:6px}
+.tiw .chip{min-height:40px}
+.tchip{min-height:44px!important}
+.tchip.done .ic{color:var(--bab)}
+.tchip.lock{color:var(--ink2)}
+.abil{display:flex;gap:8px;align-items:flex-start;font-size:14.5px;font-weight:700;line-height:1.3;margin-bottom:4px}
+.abil .ic{width:18px;height:18px;color:var(--cul);margin-top:1px}
+.quote{font-size:13.5px;font-style:italic;font-weight:600;color:var(--ink3);line-height:1.35}
 .erabar{flex:none;display:flex;align-items:flex-start;gap:6px;padding:8px 0 36px 10px;background:#0f2030;border-top:1px solid var(--line);position:relative;z-index:3}
 .erabar .eras{padding:0 10px 0 0;border:0;background:none;flex:1;min-width:0}
 .erabar .zoom{position:relative;left:auto;flex:none;width:50px;height:50px;border-radius:14px;box-shadow:none;background:rgba(255,255,255,.08)}
@@ -502,7 +524,9 @@ function cityBuild(){
 const SCI=18;
 const DONE=new Set(['Agriculture','Pottery','Animal Husbandry','Archery','Mining','Sailing','Calendar','Bronze Working']);
 const NOW='Writing', NOW_LEFT=40;
-const TBY=Object.fromEntries(TECHS.map(t=>[t[0],{name:t[0],col:t[1],row:t[2],era:t[3].replace(' era',''),cost:t[4],pre:t[5],unl:t[6]}]));
+const TBY=Object.fromEntries(TECHS.map(t=>[t[0],{name:t[0],col:t[1],row:t[2],era:t[3].replace(' era',''),cost:t[4],pre:t[5],unl:t[6],abil:t[7],quote:t[8],next:[]}]));
+Object.values(TBY).forEach(t=>t.pre.forEach(p=>TBY[p].next.push(t.name)));
+const UNL_KIND={w:'Wonders',n:'National wonders',b:'Buildings',u:'Units',i:'Improvements',r:'Reveals'};
 const ERAS=[...new Set(TECHS.map(t=>t[3].replace(' era','')))];
 const state=n=>DONE.has(n)?'done':n===NOW?'now':TBY[n].pre.every(p=>DONE.has(p))?'av':'lock';
 const turnsFor=n=>Math.ceil((n===NOW?NOW_LEFT:TBY[n].cost)/SCI);
@@ -547,7 +571,7 @@ function techPick(){
 }
 
 /* B: Civ's tree re-laid into four lanes so it only scrolls vertically */
-const LX=[62,154,246,338], RH=112, BANDH=42;
+const LX=[62,154,246,338], RH=150, BANDH=42, NODE_BOTTOM=80;
 const TREE=(()=>{
   const pos={}, bands=[]; let y=0;
   for(const era of ERAS){
@@ -571,25 +595,44 @@ const TREE=(()=>{
   }
   return {pos,bands,H:y+30};
 })();
+const nodeBottom=n=>n.length>12?NODE_BOTTOM+22:NODE_BOTTOM;
+function unlockRow(t){
+  const items=t.unl.slice(0,t.abil.length?3:4), more=t.unl.length-items.length;
+  return `<div class="urow">${items.map(u=>`<i class="ic i-${slug('u_'+u[0])} k-${u[1]}"></i>`).join('')}${t.abil.length?`<i class="ic i-Star k-a"></i>`:''}${more>0?`<b>+${more}</b>`:''}</div>`;
+}
 function techTree(){
   const path=TSEL?pathTo(TSEL):[], onpath=new Set(path), {pos,bands,H}=TREE;
-  let links='';
+  // every line is solid; a dark casing separates crossings, state picks the color
+  const casing=[], lines=[], hotLines=[];
   for(const t of Object.values(TBY)) for(const p of t.pre){
-    const[x1,y1]=pos[p],[x2,y2]=pos[t.name]; const a=y1+34, b=y2-34, m=(a+b)/2;
-    const hot=onpath.has(t.name)&&(onpath.has(p)||DONE.has(p));
-    const col=hot?'#ffc93c':DONE.has(t.name)?'#2f7fe0':DONE.has(p)?'#6f95ba':'#28435d';
-    links+=`<path d="M${x1} ${a}C${x1} ${m} ${x2} ${m} ${x2} ${b}" stroke="${col}" stroke-width="${hot?5:DONE.has(t.name)?4:3}" fill="none" stroke-linecap="round"/>`;
+    const[x1,y1]=pos[p],[x2,y2]=pos[t.name]; const a=y1+nodeBottom(p), b=y2-36, m=(a+b)/2;
+    const d=`M${x1} ${a}C${x1} ${m} ${x2} ${m} ${x2} ${b}`;
+    const onSel=onpath.has(t.name)&&(onpath.has(p)||DONE.has(p)), out=TSEL&&p===TSEL;
+    const col=onSel?'#ffc93c':out?'#ffffff':DONE.has(t.name)?'#3f8ff0':DONE.has(p)?'#9cc0e2':'#56779a';
+    const w=onSel||out?4.5:3;
+    casing.push(`<path d="${d}" stroke="#122536" stroke-width="${w+5}" fill="none" stroke-linecap="round"/>`);
+    (onSel||out?hotLines:lines).push(`<path d="${d}" stroke="${col}" stroke-width="${w}" fill="none" stroke-linecap="round" ${out?'stroke-dasharray="7 6"':''}/>`);
   }
+  const links=casing.join('')+lines.join('')+hotLines.join('');
   const nodes=Object.values(TBY).map(t=>{const[x,y]=pos[t.name]; const s=state(t.name); const q=path.indexOf(t.name);
-    return `<button class="tn ${s} ${onpath.has(t.name)?'onpath':''} ${t.name===TSEL?'sel':''}" data-tech="${t.name}" style="left:${x}px;top:${y-33}px"><div class="d">${ic('t_'+t.name)}${q>=0?`<span class="q">${q+1}</span>`:''}${s!=='done'?`<span class="t">${turnsFor(t.name)}</span>`:''}</div><div class="nm">${t.name}</div></button>`}).join('');
+    return `<button class="tn ${s} ${onpath.has(t.name)?'onpath':''} ${t.name===TSEL?'sel':''}" data-tech="${t.name}" style="left:${x}px;top:${y-33}px"><div class="d">${ic('t_'+t.name)}${q>=0?`<span class="q">${q+1}</span>`:''}${s!=='done'?`<span class="t">${turnsFor(t.name)}</span>`:''}</div><div class="nm">${t.name}</div>${unlockRow(t)}</button>`}).join('');
   const bandHtml=bands.map((b,i)=>{const inEra=TECHS.filter(t=>t[3].replace(' era','')===b.era),got=inEra.filter(t=>DONE.has(t[0])).length;
-    return `<div class="band ${i%2?'odd':''}" data-era="${b.era}" style="position:absolute;left:0;right:0;top:${b.top}px;height:${b.h}px"><h4>${b.era}<small>${got} of ${inEra.length}</small></h4></div>`}).join('');
+    return `<div class="band ${i%2?'odd':''}" style="position:absolute;left:0;right:0;top:${b.top}px;height:${b.h}px"></div><h4 class="eralbl" style="top:${b.top+6}px">${b.era}<small>${got} of ${inEra.length}</small></h4>`}).join('');
   let card='';
   if(TSEL){ const t=TBY[TSEL], s=state(TSEL), total=pathTurns(TSEL);
-    card=`<div class="tdetail fade-in"><div class="tf1">${tdisc(TSEL,52)}<div style="min-width:0;flex:1"><div class="cname">${TSEL}</div><div class="rsub"><span>${st('sci')}${t.cost}</span><span>${t.era} era</span></div></div><button class="x" data-tclose>${ic('Close')}</button></div>
-      ${path.length>1?pathChips(path):''}${t.unl.length?`<div class="hscroll">${chips(t,5)}</div>`:''}
+    const groups=Object.entries(UNL_KIND).map(([k,l])=>[l,t.unl.filter(u=>u[1]===k)]).filter(g=>g[1].length);
+    const techChips=list=>list.map(n=>`<button class="chip tchip ${state(n)}" data-tech="${n}">${ic('t_'+n)}${n}</button>`).join('');
+    card=`<div class="tdetail fade-in"><div class="tf1">${tdisc(TSEL,52)}<div style="min-width:0;flex:1"><div class="cname">${TSEL}</div><div class="rsub"><span>${st('sci')}${t.cost}</span><span>${turnsFor(TSEL)} turns</span><span>${t.era} era</span></div></div><button class="x" data-tclose>${ic('Close')}</button></div>
+      <div class="tinfo">
+        ${groups.map(([l,us])=>`<div class="ti"><div class="til">${l}</div><div class="tiw">${us.map(u=>`<span class="chip k-${u[1]}">${ic('u_'+u[0])}${u[0]}</span>`).join('')}</div></div>`).join('')}
+        ${t.abil.length?`<div class="ti"><div class="til">Abilities</div>${t.abil.map(a=>`<div class="abil">${ic('Star')}${a}</div>`).join('')}</div>`:''}
+        ${t.pre.length?`<div class="ti"><div class="til">Requires</div><div class="tiw">${techChips(t.pre)}</div></div>`:''}
+        ${t.next.length?`<div class="ti"><div class="til">Leads to</div><div class="tiw">${techChips(t.next)}</div></div>`:''}
+        ${t.quote?`<div class="quote">${t.quote}</div>`:''}
+      </div>
+      ${path.length>1?pathChips(path):''}
       ${s==='done'?`<button class="ghost">Already researched</button>`:s==='now'?`<button class="ghost">Researching now, ${turnsFor(TSEL)} turns left</button>`:`<button class="big">${path.length>1?`Queue ${path.length} techs, ${total} turns`:`Research next, ${total} turns`}</button>`}</div>`; }
-  return `<div class="tt"><div class="ttscroll"><div class="canvas" style="height:${H}px;zoom:${ZOOM.tech.v}">${bandHtml}<svg class="links" width="393" height="${H}">${links}</svg>${nodes}</div></div></div>${card}
+  return `<div class="tt"><div class="ttscroll"><div class="canvas" style="height:${H}px;zoom:${ZOOM.tech.v}">${bands.map((b,i)=>`<div class="band ${i%2?'odd':''}" style="position:absolute;left:0;right:0;top:${b.top}px;height:${b.h}px"></div>`).join('')}<svg class="links" width="393" height="${H}">${links}</svg>${bandHtml.replace(/<div class="band[^>]*><\/div>/g,'')}${nodes}</div></div></div>${card}
   <div class="erabar">${zoomRail('tech','')}<div class="eras">${ERAS.map(e=>`<button data-era="${e}">${e==='Renaissance'?'Renaiss.':e==='Information'?'Info':e}</button>`).join('')}</div></div>`;
 }
 function techSheet(mode){

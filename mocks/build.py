@@ -9,7 +9,7 @@ DIRS = ["Images.ConstructionIcons/UnitActionIcons", "Images.ConstructionIcons/Un
 # names passed through variables rather than literal ic('...') calls
 EXTRA = ["Library", "Warrior", "Granary", "Shrine", "Walls", "Settler", "Bowman", "Temple", "Archer", "Water Mill",
          "Trireme", "Monument", "Swordsman", "Fortify", "Sleep", "Explore", "Skip", "ShowMore", "RangedStrength",
-         "Settings", "HexagonOutline", "Cities", "Resources", "CrosshairB", "ForwardArrow", "MenuIcon"]
+         "Settings", "HexagonOutline", "Cities", "Resources", "CrosshairB", "ForwardArrow", "MenuIcon", "Star"]
 
 src = pathlib.Path(sys.argv[1])
 html = src.read_text()
@@ -34,7 +34,7 @@ for n in sorted(names):
     else:
         missing.append(n)
 for u in unlocks:
-    p = next((ROOT / d / f"{u}.png" for d in ("Images.ConstructionIcons/BuildingIcons", "Images.ConstructionIcons/UnitIcons")
+    p = next((ROOT / d / f"{u}.png" for d in ("Images.ConstructionIcons/BuildingIcons", "Images.ConstructionIcons/UnitIcons", "Images.Icons/ImprovementIcons", "Images.Icons/ResourceIcons")
               if (ROOT / d / f"{u}.png").exists()), None)
     if p:
         icons["u_" + u] = uri(p)
