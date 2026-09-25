@@ -1,6 +1,7 @@
 package com.unciv.ui.components.tilegroups.layers
 
 import com.unciv.UncivGame
+import com.unciv.models.tilesets.TileSetCache
 import com.unciv.view.CivView
 import com.unciv.view.ForeignMapUnitView
 import com.unciv.ui.components.NonTransformGroup
@@ -80,6 +81,16 @@ class TileLayerUnitSprite(tileGroup: TileGroup, size: Float) : TileLayer(tileGro
 
         civilianSlot = updateSlot(civilianSlot, tileGroup.tileView.civilianUnit, isShown = isCivilianSlotShown)
         militarySlot = updateSlot(militarySlot, tileGroup.tileView.militaryUnit, isShown = isMilitarySlotShown)
+        spreadSharedTile()
+    }
+
+    /** Tall unit sprites hide each other on a shared tile, so a military and a civilian unit stand side by side. */
+    private fun spreadSharedTile() {
+        if (!TileSetCache.getCurrent().config.unitFlagsAboveSprites) return
+        val shared = civilianSlot != null && militarySlot != null
+        val baseX = tileGroup.hexagonImagePosition.first
+        militarySlot?.spriteGroup?.children?.forEach { it.x = baseX - if (shared) size * 0.2f else 0f }
+        civilianSlot?.spriteGroup?.children?.forEach { it.x = baseX + if (shared) size * 0.2f else 0f }
     }
 
     override fun determineVisibility() {

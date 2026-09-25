@@ -6,6 +6,7 @@ import com.unciv.UncivGame
 import com.unciv.view.CivView
 import com.unciv.view.ForeignMapUnitView
 import com.unciv.logic.map.mapunit.MapUnit
+import com.unciv.models.tilesets.TileSetCache
 import com.unciv.models.translations.tr
 import com.unciv.ui.components.extensions.toLabel
 import com.unciv.ui.components.tilegroups.TileGroup
@@ -24,7 +25,16 @@ class TileLayerUnitFlag(tileGroup: TileGroup, size: Float) : TileLayer(tileGroup
         militaryUnitIcon?.let { removeOwnedActor(it) }
     }
 
+    private val flagsAboveSprites
+        get() = TileSetCache.getCurrent().config.unitFlagsAboveSprites && UncivGame.Current.settings.showPixelUnits
+
     private fun setIconPosition(slot: Int, icon: UnitIconGroup) {
+        if (flagsAboveSprites) {
+            // Side by side over the top of the hex so the unit sprite below stays visible (military left, civilian right)
+            icon.x = tileX + (size - icon.width) / 2 + if (slot == 1) -12f else 12f
+            icon.y = tileY + size * 0.78f
+            return
+        }
         // Centre horizontally; offset vertically per slot (slot 0 = bottom, slot 1 = top)
         icon.x = tileX + (size - icon.width) / 2
         icon.y = tileY + (size - icon.height) / 2 + if (slot == 1) 20f else -20f
@@ -36,7 +46,7 @@ class TileLayerUnitFlag(tileGroup: TileGroup, size: Float) : TileLayer(tileGroup
 
         if (unit != null && isViewable) {
             val rawUnit = unit.getUnit()
-            newIcon = UnitIconGroup(unit, 30f)
+            newIcon = UnitIconGroup(unit, if (flagsAboveSprites) 22f else 30f)
             setIconPosition(slot, newIcon)
             addOwnedActor(newIcon)
 

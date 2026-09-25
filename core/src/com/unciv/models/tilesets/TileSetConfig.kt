@@ -11,6 +11,8 @@ class TileSetConfig {
     var fogOfWarColor: Color = ImageGetter.CHARCOAL
     /** What the world map shows beyond the drawn tiles. Null keeps the skin's screen background. */
     var mapBackgroundColor: Color? = null
+    /** Draw unit flags small and above the unit sprite (Civ 6 style) instead of over the tile centre. */
+    var unitFlagsAboveSprites = false
     /** Name of the tileset to use when this one is missing images. Null to disable. */
     var fallbackTileSet: String? = Constants.defaultFallbackTileset
     /** Scale factor for hex images, with hex center as origin. */
@@ -25,6 +27,7 @@ class TileSetConfig {
         toReturn.unexploredTileColor = unexploredTileColor
         toReturn.fogOfWarColor = fogOfWarColor
         toReturn.mapBackgroundColor = mapBackgroundColor
+        toReturn.unitFlagsAboveSprites = unitFlagsAboveSprites
         toReturn.fallbackTileSet = fallbackTileSet
         toReturn.tileScale = tileScale
         toReturn.tileScales = tileScales
@@ -38,6 +41,7 @@ class TileSetConfig {
         unexploredTileColor = other.unexploredTileColor
         fogOfWarColor = other.fogOfWarColor
         if (other.mapBackgroundColor != null) mapBackgroundColor = other.mapBackgroundColor
+        unitFlagsAboveSprites = other.unitFlagsAboveSprites
         fallbackTileSet = other.fallbackTileSet
         tileScale = other.tileScale
         for ((tileString, scale) in other.tileScales) {
