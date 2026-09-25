@@ -1,0 +1,20 @@
+[
+ {
+  "name": "k_embarkedunit-military",
+  "prompt": "Subject: a small wooden troop boat with a square sail and a few shields along the side, the boat a land unit rides at sea. Show it as a chunky toy boat facing right, floating with no water. Team color goes on the sail or canopy.",
+  "style": "Style: match the attached reference image exactly: a very simple chunky low-poly game unit figure in the style of The Battle of Polytopia, large flat facets, two tones per color (lit side and shadow side), light from the upper left, big simple heads and stocky toy proportions for people; vehicles, ships and aircraft are chunky toy models with the same faceting, no outlines, no text, no ground, no base, no shadow. The figure faces to the right in a three-quarter view, full body, centered, filling about 75 percent of the frame height. TEAM COLOR RULE: every piece of clothing that should show the army's color (tunic, cloak, plume, shield face, saddle blanket) must be pure bright green #00FF00 in its lit facets and darker green #00A000 in its shadow facets. Nothing else may be green. Other materials use: skin #F2C49B, wood #8A5A33, leather #6B4426, bronze #D8A534, iron #C3CAD4, cream #F4ECD9. Background: solid flat pure magenta #FF00FF filling the whole canvas edge to edge.",
+  "ref": "simple/u_Bowman.png"
+ },
+ {
+  "name": "k_embarkedunit-civilian",
+  "prompt": "Subject: a small wooden rowing boat with a cloth canopy, the boat a land unit rides at sea. Show it as a chunky toy boat facing right, floating with no water. Team color goes on the sail or canopy.",
+  "style": "Style: match the attached reference image exactly: a very simple chunky low-poly game unit figure in the style of The Battle of Polytopia, large flat facets, two tones per color (lit side and shadow side), light from the upper left, big simple heads and stocky toy proportions for people; vehicles, ships and aircraft are chunky toy models with the same faceting, no outlines, no text, no ground, no base, no shadow. The figure faces to the right in a three-quarter view, full body, centered, filling about 75 percent of the frame height. TEAM COLOR RULE: every piece of clothing that should show the army's color (tunic, cloak, plume, shield face, saddle blanket) must be pure bright green #00FF00 in its lit facets and darker green #00A000 in its shadow facets. Nothing else may be green. Other materials use: skin #F2C49B, wood #8A5A33, leather #6B4426, bronze #D8A534, iron #C3CAD4, cream #F4ECD9. Background: solid flat pure magenta #FF00FF filling the whole canvas edge to edge.",
+  "ref": "simple/u_Bowman.png"
+ },
+ {
+  "name": "k_embarkedunit-settler",
+  "prompt": "Subject: a small wooden boat loaded with bundles, a barrel and a rolled blanket, the boat a land unit rides at sea. Show it as a chunky toy boat facing right, floating with no water. Team color goes on the sail or canopy.",
+  "style": "Style: match the attached reference image exactly: a very simple chunky low-poly game unit figure in the style of The Battle of Polytopia, large flat facets, two tones per color (lit side and shadow side), light from the upper left, big simple heads and stocky toy proportions for people; vehicles, ships and aircraft are chunky toy models with the same faceting, no outlines, no text, no ground, no base, no shadow. The figure faces to the right in a three-quarter view, full body, centered, filling about 75 percent of the frame height. TEAM COLOR RULE: every piece of clothing that should show the army's color (tunic, cloak, plume, shield face, saddle blanket) must be pure bright green #00FF00 in its lit facets and darker green #00A000 in its shadow facets. Nothing else may be green. Other materials use: skin #F2C49B, wood #8A5A33, leather #6B4426, bronze #D8A534, iron #C3CAD4, cream #F4ECD9. Background: solid flat pure magenta #FF00FF filling the whole canvas edge to edge.",
+  "ref": "simple/u_Bowman.png"
+ }
+]

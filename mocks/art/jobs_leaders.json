@@ -1,0 +1,226 @@
+[
+ {
+  "name": "p_Wu",
+  "key": false,
+  "quality": "high",
+  "prompt": "Subject: Wu Zetian, leader of China, historically accurate appearance, clothing and headwear, calm confident expression.",
+  "style": "Style: a chunky low-poly faceted 3D bust portrait in the style of The Battle of Polytopia leaders, large flat facets with flat shading and 3 to 4 tones per color, light from the upper left, no text, no outlines. Historically grounded clothing and regalia. Facing three-quarters toward the viewer. Flat solid background color #097054 with a subtle lighter circle behind the head."
+ },
+ {
+  "name": "p_Ramesses",
+  "key": false,
+  "quality": "high",
+  "prompt": "Subject: Ramesses II, leader of Egypt, historically accurate appearance, clothing and headwear, calm confident expression.",
+  "style": "Style: a chunky low-poly faceted 3D bust portrait in the style of The Battle of Polytopia leaders, large flat facets with flat shading and 3 to 4 tones per color, light from the upper left, no text, no outlines. Historically grounded clothing and regalia. Facing three-quarters toward the viewer. Flat solid background color #FFFC03 with a subtle lighter circle behind the head."
+ },
+ {
+  "name": "p_Elizabeth",
+  "key": false,
+  "quality": "high",
+  "prompt": "Subject: Elizabeth, leader of England, historically accurate appearance, clothing and headwear, calm confident expression.",
+  "style": "Style: a chunky low-poly faceted 3D bust portrait in the style of The Battle of Polytopia leaders, large flat facets with flat shading and 3 to 4 tones per color, light from the upper left, no text, no outlines. Historically grounded clothing and regalia. Facing three-quarters toward the viewer. Flat solid background color #6D0200 with a subtle lighter circle behind the head."
+ },
+ {
+  "name": "p_Napoleon",
+  "key": false,
+  "quality": "high",
+  "prompt": "Subject: Napoleon, leader of France, historically accurate appearance, clothing and headwear, calm confident expression.",
+  "style": "Style: a chunky low-poly faceted 3D bust portrait in the style of The Battle of Polytopia leaders, large flat facets with flat shading and 3 to 4 tones per color, light from the upper left, no text, no outlines. Historically grounded clothing and regalia. Facing three-quarters toward the viewer. Flat solid background color #2662FF with a subtle lighter circle behind the head."
+ },
+ {
+  "name": "p_Catherine",
+  "key": false,
+  "quality": "high",
+  "prompt": "Subject: Catherine, leader of Russia, historically accurate appearance, clothing and headwear, calm confident expression.",
+  "style": "Style: a chunky low-poly faceted 3D bust portrait in the style of The Battle of Polytopia leaders, large flat facets with flat shading and 3 to 4 tones per color, light from the upper left, no text, no outlines. Historically grounded clothing and regalia. Facing three-quarters toward the viewer. Flat solid background color #EFB400 with a subtle lighter circle behind the head."
+ },
+ {
+  "name": "p_Augustus",
+  "key": false,
+  "quality": "high",
+  "prompt": "Subject: Augustus Caesar, leader of Rome, historically accurate appearance, clothing and headwear, calm confident expression.",
+  "style": "Style: a chunky low-poly faceted 3D bust portrait in the style of The Battle of Polytopia leaders, large flat facets with flat shading and 3 to 4 tones per color, light from the upper left, no text, no outlines. Historically grounded clothing and regalia. Facing three-quarters toward the viewer. Flat solid background color #460076 with a subtle lighter circle behind the head."
+ },
+ {
+  "name": "p_Harun",
+  "key": false,
+  "quality": "high",
+  "prompt": "Subject: Harun al-Rashid, leader of Arabia, historically accurate appearance, clothing and headwear, calm confident expression.",
+  "style": "Style: a chunky low-poly faceted 3D bust portrait in the style of The Battle of Polytopia leaders, large flat facets with flat shading and 3 to 4 tones per color, light from the upper left, no text, no outlines. Historically grounded clothing and regalia. Facing three-quarters toward the viewer. Flat solid background color #2B582E with a subtle lighter circle behind the head."
+ },
+ {
+  "name": "p_George",
+  "key": false,
+  "quality": "high",
+  "prompt": "Subject: George Washington, leader of America, historically accurate appearance, clothing and headwear, calm confident expression.",
+  "style": "Style: a chunky low-poly faceted 3D bust portrait in the style of The Battle of Polytopia leaders, large flat facets with flat shading and 3 to 4 tones per color, light from the upper left, no text, no outlines. Historically grounded clothing and regalia. Facing three-quarters toward the viewer. Flat solid background color #1C3377 with a subtle lighter circle behind the head."
+ },
+ {
+  "name": "p_Oda",
+  "key": false,
+  "quality": "high",
+  "prompt": "Subject: Oda Nobunaga, leader of Japan, historically accurate appearance, clothing and headwear, calm confident expression.",
+  "style": "Style: a chunky low-poly faceted 3D bust portrait in the style of The Battle of Polytopia leaders, large flat facets with flat shading and 3 to 4 tones per color, light from the upper left, no text, no outlines. Historically grounded clothing and regalia. Facing three-quarters toward the viewer. Flat solid background color #FFFFFF with a subtle lighter circle behind the head."
+ },
+ {
+  "name": "p_Gandhi",
+  "key": false,
+  "quality": "high",
+  "prompt": "Subject: Gandhi, leader of India, historically accurate appearance, clothing and headwear, calm confident expression.",
+  "style": "Style: a chunky low-poly faceted 3D bust portrait in the style of The Battle of Polytopia leaders, large flat facets with flat shading and 3 to 4 tones per color, light from the upper left, no text, no outlines. Historically grounded clothing and regalia. Facing three-quarters toward the viewer. Flat solid background color #0E7104 with a subtle lighter circle behind the head."
+ },
+ {
+  "name": "p_Otto",
+  "key": false,
+  "quality": "high",
+  "prompt": "Subject: Otto von Bismarck, leader of Germany, historically accurate appearance, clothing and headwear, calm confident expression.",
+  "style": "Style: a chunky low-poly faceted 3D bust portrait in the style of The Battle of Polytopia leaders, large flat facets with flat shading and 3 to 4 tones per color, light from the upper left, no text, no outlines. Historically grounded clothing and regalia. Facing three-quarters toward the viewer. Flat solid background color #B3B2B8 with a subtle lighter circle behind the head."
+ },
+ {
+  "name": "p_Suleiman",
+  "key": false,
+  "quality": "high",
+  "prompt": "Subject: Suleiman I, leader of The Ottomans, historically accurate appearance, clothing and headwear, calm confident expression.",
+  "style": "Style: a chunky low-poly faceted 3D bust portrait in the style of The Battle of Polytopia leaders, large flat facets with flat shading and 3 to 4 tones per color, light from the upper left, no text, no outlines. Historically grounded clothing and regalia. Facing three-quarters toward the viewer. Flat solid background color #F5F8B9 with a subtle lighter circle behind the head."
+ },
+ {
+  "name": "p_Sejong",
+  "key": false,
+  "quality": "high",
+  "prompt": "Subject: Sejong, leader of Korea, historically accurate appearance, clothing and headwear, calm confident expression.",
+  "style": "Style: a chunky low-poly faceted 3D bust portrait in the style of The Battle of Polytopia leaders, large flat facets with flat shading and 3 to 4 tones per color, light from the upper left, no text, no outlines. Historically grounded clothing and regalia. Facing three-quarters toward the viewer. Flat solid background color #1B2160 with a subtle lighter circle behind the head."
+ },
+ {
+  "name": "p_Hiawatha",
+  "key": false,
+  "quality": "high",
+  "prompt": "Subject: Hiawatha, leader of Iroquois, historically accurate appearance, clothing and headwear, calm confident expression.",
+  "style": "Style: a chunky low-poly faceted 3D bust portrait in the style of The Battle of Polytopia leaders, large flat facets with flat shading and 3 to 4 tones per color, light from the upper left, no text, no outlines. Historically grounded clothing and regalia. Facing three-quarters toward the viewer. Flat solid background color #364848 with a subtle lighter circle behind the head."
+ },
+ {
+  "name": "p_Darius",
+  "key": false,
+  "quality": "high",
+  "prompt": "Subject: Darius I, leader of Persia, historically accurate appearance, clothing and headwear, calm confident expression.",
+  "style": "Style: a chunky low-poly faceted 3D bust portrait in the style of The Battle of Polytopia leaders, large flat facets with flat shading and 3 to 4 tones per color, light from the upper left, no text, no outlines. Historically grounded clothing and regalia. Facing three-quarters toward the viewer. Flat solid background color #990503 with a subtle lighter circle behind the head."
+ },
+ {
+  "name": "p_Kamehameha",
+  "key": false,
+  "quality": "high",
+  "prompt": "Subject: Kamehameha I, leader of Polynesia, historically accurate appearance, clothing and headwear, calm confident expression.",
+  "style": "Style: a chunky low-poly faceted 3D bust portrait in the style of The Battle of Polytopia leaders, large flat facets with flat shading and 3 to 4 tones per color, light from the upper left, no text, no outlines. Historically grounded clothing and regalia. Facing three-quarters toward the viewer. Flat solid background color #D95900 with a subtle lighter circle behind the head."
+ },
+ {
+  "name": "p_Ramkhamhaeng",
+  "key": false,
+  "quality": "high",
+  "prompt": "Subject: Ramkhamhaeng, leader of Siam, historically accurate appearance, clothing and headwear, calm confident expression.",
+  "style": "Style: a chunky low-poly faceted 3D bust portrait in the style of The Battle of Polytopia leaders, large flat facets with flat shading and 3 to 4 tones per color, light from the upper left, no text, no outlines. Historically grounded clothing and regalia. Facing three-quarters toward the viewer. Flat solid background color #F5E637 with a subtle lighter circle behind the head."
+ },
+ {
+  "name": "p_Isabella",
+  "key": false,
+  "quality": "high",
+  "prompt": "Subject: Isabella, leader of Spain, historically accurate appearance, clothing and headwear, calm confident expression.",
+  "style": "Style: a chunky low-poly faceted 3D bust portrait in the style of The Battle of Polytopia leaders, large flat facets with flat shading and 3 to 4 tones per color, light from the upper left, no text, no outlines. Historically grounded clothing and regalia. Facing three-quarters toward the viewer. Flat solid background color #541A1A with a subtle lighter circle behind the head."
+ },
+ {
+  "name": "p_Askia",
+  "key": false,
+  "quality": "high",
+  "prompt": "Subject: Askia, leader of Songhai, historically accurate appearance, clothing and headwear, calm confident expression.",
+  "style": "Style: a chunky low-poly faceted 3D bust portrait in the style of The Battle of Polytopia leaders, large flat facets with flat shading and 3 to 4 tones per color, light from the upper left, no text, no outlines. Historically grounded clothing and regalia. Facing three-quarters toward the viewer. Flat solid background color #D69113 with a subtle lighter circle behind the head."
+ },
+ {
+  "name": "p_Genghis",
+  "key": false,
+  "quality": "high",
+  "prompt": "Subject: Genghis Khan, leader of Mongolia, historically accurate appearance, clothing and headwear, calm confident expression.",
+  "style": "Style: a chunky low-poly faceted 3D bust portrait in the style of The Battle of Polytopia leaders, large flat facets with flat shading and 3 to 4 tones per color, light from the upper left, no text, no outlines. Historically grounded clothing and regalia. Facing three-quarters toward the viewer. Flat solid background color #510009 with a subtle lighter circle behind the head."
+ },
+ {
+  "name": "p_Montezuma",
+  "key": false,
+  "quality": "high",
+  "prompt": "Subject: Montezuma I, leader of Aztecs, historically accurate appearance, clothing and headwear, calm confident expression.",
+  "style": "Style: a chunky low-poly faceted 3D bust portrait in the style of The Battle of Polytopia leaders, large flat facets with flat shading and 3 to 4 tones per color, light from the upper left, no text, no outlines. Historically grounded clothing and regalia. Facing three-quarters toward the viewer. Flat solid background color #8B2017 with a subtle lighter circle behind the head."
+ },
+ {
+  "name": "p_Pachacuti",
+  "key": false,
+  "quality": "high",
+  "prompt": "Subject: Pachacuti, leader of Inca, historically accurate appearance, clothing and headwear, calm confident expression.",
+  "style": "Style: a chunky low-poly faceted 3D bust portrait in the style of The Battle of Polytopia leaders, large flat facets with flat shading and 3 to 4 tones per color, light from the upper left, no text, no outlines. Historically grounded clothing and regalia. Facing three-quarters toward the viewer. Flat solid background color #FFB821 with a subtle lighter circle behind the head."
+ },
+ {
+  "name": "p_Harald",
+  "key": false,
+  "quality": "high",
+  "prompt": "Subject: Harald Bluetooth, leader of Denmark, historically accurate appearance, clothing and headwear, calm confident expression.",
+  "style": "Style: a chunky low-poly faceted 3D bust portrait in the style of The Battle of Polytopia leaders, large flat facets with flat shading and 3 to 4 tones per color, light from the upper left, no text, no outlines. Historically grounded clothing and regalia. Facing three-quarters toward the viewer. Flat solid background color #331900 with a subtle lighter circle behind the head."
+ },
+ {
+  "name": "p_Attila",
+  "key": false,
+  "quality": "high",
+  "prompt": "Subject: Attila the Hun, leader of The Huns, historically accurate appearance, clothing and headwear, calm confident expression.",
+  "style": "Style: a chunky low-poly faceted 3D bust portrait in the style of The Battle of Polytopia leaders, large flat facets with flat shading and 3 to 4 tones per color, light from the upper left, no text, no outlines. Historically grounded clothing and regalia. Facing three-quarters toward the viewer. Flat solid background color #B4B2A4 with a subtle lighter circle behind the head."
+ },
+ {
+  "name": "p_William",
+  "key": false,
+  "quality": "high",
+  "prompt": "Subject: William of Orange, leader of The Netherlands, historically accurate appearance, clothing and headwear, calm confident expression.",
+  "style": "Style: a chunky low-poly faceted 3D bust portrait in the style of The Battle of Polytopia leaders, large flat facets with flat shading and 3 to 4 tones per color, light from the upper left, no text, no outlines. Historically grounded clothing and regalia. Facing three-quarters toward the viewer. Flat solid background color #D87800 with a subtle lighter circle behind the head."
+ },
+ {
+  "name": "p_Gustavus",
+  "key": false,
+  "quality": "high",
+  "prompt": "Subject: Gustavus Adolphus, leader of Sweden, historically accurate appearance, clothing and headwear, calm confident expression.",
+  "style": "Style: a chunky low-poly faceted 3D bust portrait in the style of The Battle of Polytopia leaders, large flat facets with flat shading and 3 to 4 tones per color, light from the upper left, no text, no outlines. Historically grounded clothing and regalia. Facing three-quarters toward the viewer. Flat solid background color #0808A6 with a subtle lighter circle behind the head."
+ },
+ {
+  "name": "p_Maria",
+  "key": false,
+  "quality": "high",
+  "prompt": "Subject: Maria Theresa, leader of Austria, historically accurate appearance, clothing and headwear, calm confident expression.",
+  "style": "Style: a chunky low-poly faceted 3D bust portrait in the style of The Battle of Polytopia leaders, large flat facets with flat shading and 3 to 4 tones per color, light from the upper left, no text, no outlines. Historically grounded clothing and regalia. Facing three-quarters toward the viewer. Flat solid background color #EA0000 with a subtle lighter circle behind the head."
+ },
+ {
+  "name": "p_Dido",
+  "key": false,
+  "quality": "high",
+  "prompt": "Subject: Dido, leader of Carthage, historically accurate appearance, clothing and headwear, calm confident expression.",
+  "style": "Style: a chunky low-poly faceted 3D bust portrait in the style of The Battle of Polytopia leaders, large flat facets with flat shading and 3 to 4 tones per color, light from the upper left, no text, no outlines. Historically grounded clothing and regalia. Facing three-quarters toward the viewer. Flat solid background color #CDCDCD with a subtle lighter circle behind the head."
+ },
+ {
+  "name": "p_Theodora",
+  "key": false,
+  "quality": "high",
+  "prompt": "Subject: Theodora, leader of Byzantium, historically accurate appearance, clothing and headwear, calm confident expression.",
+  "style": "Style: a chunky low-poly faceted 3D bust portrait in the style of The Battle of Polytopia leaders, large flat facets with flat shading and 3 to 4 tones per color, light from the upper left, no text, no outlines. Historically grounded clothing and regalia. Facing three-quarters toward the viewer. Flat solid background color #72A2E9 with a subtle lighter circle behind the head."
+ },
+ {
+  "name": "p_Boudicca",
+  "key": false,
+  "quality": "high",
+  "prompt": "Subject: Boudicca, leader of Celts, historically accurate appearance, clothing and headwear, calm confident expression.",
+  "style": "Style: a chunky low-poly faceted 3D bust portrait in the style of The Battle of Polytopia leaders, large flat facets with flat shading and 3 to 4 tones per color, light from the upper left, no text, no outlines. Historically grounded clothing and regalia. Facing three-quarters toward the viewer. Flat solid background color #0C4B19 with a subtle lighter circle behind the head."
+ },
+ {
+  "name": "p_Haile",
+  "key": false,
+  "quality": "high",
+  "prompt": "Subject: Haile Selassie, leader of Ethiopia, historically accurate appearance, clothing and headwear, calm confident expression.",
+  "style": "Style: a chunky low-poly faceted 3D bust portrait in the style of The Battle of Polytopia leaders, large flat facets with flat shading and 3 to 4 tones per color, light from the upper left, no text, no outlines. Historically grounded clothing and regalia. Facing three-quarters toward the viewer. Flat solid background color #124216 with a subtle lighter circle behind the head."
+ },
+ {
+  "name": "p_Pacal",
+  "key": false,
+  "quality": "high",
+  "prompt": "Subject: Pacal, leader of The Maya, historically accurate appearance, clothing and headwear, calm confident expression.",
+  "style": "Style: a chunky low-poly faceted 3D bust portrait in the style of The Battle of Polytopia leaders, large flat facets with flat shading and 3 to 4 tones per color, light from the upper left, no text, no outlines. Historically grounded clothing and regalia. Facing three-quarters toward the viewer. Flat solid background color #C68D63 with a subtle lighter circle behind the head."
+ }
+]

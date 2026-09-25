@@ -1,0 +1,1011 @@
+<!doctype html>
+<!--
+THESIS: Social Policies and Religion for the portrait one-handed fork, 3 structural directions each.
+DATA: Gods & Kings ruleset (Policies.json, Beliefs.json, Religions.json), exported by policies-religion.post.py.
+STATE: Babylon, turn 58, Ancient era, culture 64/120 (+4), faith 23 (+2), Tradition open with Aristocracy and Oligarchy,
+pantheon Fertility Rites; Greece founded Christianity (Messenger of the Gods, Pilgrimage, Feed the World), holy city Athens.
+BUILD: python3 build.py policies-religion.src.html && python3 policies-religion.post.py
+-->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Unciv Portrait: policies and religion</title>
+<style>
+:root{
+  --navy:#132435; --navy2:#1c3249; --panel:rgba(16,31,47,.9); --line:rgba(255,255,255,.12);
+  --ink:#fff; --ink2:#b7cde0; --ink3:#7f9ab2;
+  --yellow:#ffc93c; --yellow-ink:#3a2a00;
+  --bab:#2f7fe0; --gre:#e0524a; --kab:#9a5bd6;
+  --food:#6fd05a; --prod:#ff9a3c; --gold:#ffc93c; --sci:#5cc8ff; --cul:#d38bff; --fai:#f3ecd2; --hap:#b8e35a;
+  --r:ui-rounded,"SF Pro Rounded","Nunito","Varela Round",system-ui,-apple-system,sans-serif;
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+html,body{height:100%;background:#0b1622;color:var(--ink);font-family:var(--r);-webkit-font-smoothing:antialiased}
+body{display:flex;flex-direction:column;align-items:center;overflow:hidden}
+button{font:inherit;color:inherit;background:none;border:0;cursor:pointer}
+
+/* canvas chrome */
+.chrome{width:100%;display:flex;flex-wrap:wrap;gap:8px 14px;justify-content:center;align-items:center;padding:10px 10px 8px;flex:none}
+.seg{display:flex;background:#16283a;border-radius:14px;padding:3px;max-width:100%;overflow-x:auto;scrollbar-width:none}
+.seg::-webkit-scrollbar{display:none}
+.seg button{min-height:40px;padding:8px 13px;border-radius:11px;font-weight:800;font-size:15px;color:var(--ink2);white-space:nowrap}
+.seg button[aria-pressed=true]{background:#fff;color:var(--navy)}
+.thesis{width:100%;text-align:center;font-size:13px;color:var(--ink2);font-weight:600;min-height:18px;padding:0 8px}
+.stagewrap{flex:1;width:100%;display:flex;align-items:flex-start;justify-content:center;min-height:0;overflow:hidden}
+.device{width:393px;height:852px;position:relative;transform-origin:top center;border-radius:54px;overflow:hidden;flex:none;
+  box-shadow:0 0 0 10px #05090e,0 0 0 11px #2a3b4d,0 30px 60px rgba(0,0,0,.5);background:#e4edf4}
+.device.bare{border-radius:0;box-shadow:none}
+
+/* phone content */
+.screen{position:absolute;inset:0;overflow:hidden}
+.map{position:absolute;inset:0;transform-origin:196px 470px;transition:transform .12s ease-out}
+.map svg{position:absolute;left:-260px;top:-320px;display:block}
+.sbar{position:absolute;top:0;left:0;right:0;height:50px;display:flex;justify-content:space-between;align-items:center;padding:6px 34px 0 42px;font-weight:700;font-size:16px;z-index:5}
+.sbar .bat{width:26px;height:12px;border:1.5px solid #fff;border-radius:4px;position:relative}
+.sbar .bat::after{content:"";position:absolute;inset:1.5px;right:5px;background:#fff;border-radius:1.5px}
+.scrim-t{position:absolute;top:0;left:0;right:0;height:130px;background:linear-gradient(rgba(10,22,34,.62),rgba(10,22,34,0));z-index:3;pointer-events:none}
+.scrim-b{position:absolute;bottom:0;left:0;right:0;height:250px;background:linear-gradient(to top,rgba(10,22,34,.66),rgba(10,22,34,0));z-index:3;pointer-events:none}
+
+/* icons */
+.ic{display:inline-block;width:22px;height:22px;background:currentColor;-webkit-mask-size:contain;mask-size:contain;-webkit-mask-repeat:no-repeat;mask-repeat:no-repeat;-webkit-mask-position:center;mask-position:center;flex:none}
+svg.st{width:18px;height:18px;flex:none}
+
+/* stat strip */
+.stats{position:absolute;top:54px;left:10px;right:10px;height:50px;background:var(--panel);border-radius:16px;display:flex;align-items:center;padding:0 5px 0 8px;z-index:4;box-shadow:0 4px 14px rgba(0,0,0,.22)}
+.stat{display:flex;align-items:center;gap:4px;font-weight:800;font-size:16.5px;padding:0 5px;height:44px;white-space:nowrap}
+.stat small{font-size:12.5px;font-weight:700;color:var(--ink2)}
+.stats .turn{margin-left:auto;height:40px;background:rgba(255,255,255,.1);border-radius:12px;padding:0 10px;font-size:15px;font-weight:900;display:flex;align-items:center;gap:6px}
+.stats .turn .ic{width:16px;height:16px;color:var(--ink2)}
+
+/* discs */
+.disc{width:66px;height:66px;border-radius:50%;background:#eef5fb;color:var(--navy);display:grid;place-items:center;box-shadow:0 5px 0 #b9cadb,0 9px 18px rgba(0,0,0,.25);position:relative;flex:none}
+.disc .ic{width:32px;height:32px}
+.disc.y{background:var(--yellow);color:var(--yellow-ink);box-shadow:0 5px 0 #c9951c,0 9px 18px rgba(0,0,0,.25)}
+.disc.navy{background:var(--navy2);color:#fff;box-shadow:0 5px 0 #0b1826,0 9px 18px rgba(0,0,0,.3)}
+.lbl{font-size:13.5px;font-weight:800;text-align:center;margin-top:9px;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.6);white-space:nowrap}
+.badge{position:absolute;top:-5px;right:-5px;min-width:24px;height:24px;border-radius:12px;background:var(--gre);color:#fff;font-size:13px;font-weight:900;display:grid;place-items:center;padding:0 6px;box-shadow:0 0 0 2.5px var(--navy)}
+.col{display:flex;flex-direction:column;align-items:center}
+
+/* zoom rail */
+.zoom{position:absolute;left:10px;z-index:5;width:56px;background:var(--panel);border-radius:28px;display:flex;flex-direction:column;align-items:center;padding:4px 0;box-shadow:0 6px 18px rgba(0,0,0,.3);touch-action:none;user-select:none;-webkit-user-select:none}
+.zb{width:48px;height:48px;border-radius:50%;font-size:28px;font-weight:900;line-height:1;display:grid;place-items:center;color:#fff}
+.zb:active{background:rgba(255,255,255,.12)}
+.ztrack{position:relative;width:48px;height:150px;cursor:grab}
+.ztrack::before{content:"";position:absolute;left:50%;top:10px;bottom:10px;width:6px;margin-left:-3px;border-radius:3px;background:rgba(255,255,255,.14)}
+.zfill{position:absolute;left:50%;bottom:10px;width:6px;margin-left:-3px;border-radius:3px;background:var(--sci)}
+.zknob{position:absolute;left:50%;width:36px;height:36px;margin:-18px 0 0 -18px;border-radius:50%;background:#fff;box-shadow:0 3px 0 #b9cadb,0 4px 10px rgba(0,0,0,.35)}
+.zval{font-size:12px;font-weight:900;color:var(--ink2);padding:2px 0 4px}
+.zrail{display:flex;flex-direction:column;align-items:center;animation:zin .22s cubic-bezier(.16,1,.3,1)}
+@keyframes zin{from{opacity:0;transform:scale(.7)}to{opacity:1;transform:none}}
+.ztoggle{width:56px;height:56px;border-radius:50%;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;color:#fff;font-size:11.5px;font-weight:900}
+.ztoggle .ic{width:22px;height:22px}
+.zoom:not(.open) .zrail,.zoom.open .ztoggle{display:none}
+.zoom:not(.open){padding:0}
+
+/* dock A */
+.dock{position:absolute;left:0;right:0;bottom:0;padding:0 14px 40px;display:flex;align-items:flex-end;gap:14px;z-index:4}
+.turnbtn{margin-left:auto;height:74px;padding:0 18px 0 24px;border-radius:37px;background:var(--yellow);color:var(--yellow-ink);display:flex;align-items:center;gap:10px;font-weight:900;font-size:20px;white-space:nowrap;box-shadow:0 5px 0 #c9951c,0 10px 20px rgba(0,0,0,.3);margin-bottom:24px}
+.turnbtn .n{background:var(--yellow-ink);color:var(--yellow);border-radius:12px;font-size:15px;padding:3px 9px}
+.notes{position:absolute;right:14px;display:flex;flex-direction:column;gap:12px;z-index:4}
+.note{position:relative;width:54px;height:54px;border-radius:50%;background:var(--panel);display:grid;place-items:center;box-shadow:0 4px 12px rgba(0,0,0,.25)}
+.note .ic{width:26px;height:26px}
+
+/* panels & sheets */
+.panel{position:absolute;left:0;right:0;bottom:0;background:var(--panel);border-radius:26px 26px 0 0;z-index:6;box-shadow:0 -8px 24px rgba(0,0,0,.25);-webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px)}
+.grab{width:44px;height:5px;border-radius:3px;background:rgba(255,255,255,.3);margin:8px auto 0;flex:none}
+.unithead{display:flex;align-items:center;gap:14px;padding:16px 18px 0}
+.uport{width:58px;height:58px;border-radius:50%;background:var(--bab);display:grid;place-items:center;box-shadow:inset 0 -4px 0 rgba(0,0,0,.2);flex:none}
+.uport .ic{width:34px;height:34px;color:#fff}
+.uname{font-size:21px;font-weight:900}
+.uline{display:flex;gap:12px;margin-top:4px;font-size:15px;font-weight:800;color:var(--ink2)}
+.uline span{display:flex;align-items:center;gap:4px}
+.hp{margin-left:auto;align-self:flex-start;font-size:14px;font-weight:900;background:rgba(111,208,90,.18);color:#9ff08a;border-radius:9px;padding:5px 9px}
+.actions{display:flex;justify-content:space-between;padding:18px 12px 40px}
+.act{display:flex;flex-direction:column;align-items:center;width:72px}
+.act .lbl{text-shadow:none;color:var(--ink2);font-weight:800}
+.act.primary .lbl{color:#fff}
+
+.sheet{position:absolute;left:0;right:0;bottom:0;background:#122536;border-radius:28px 28px 0 0;z-index:6;box-shadow:0 -10px 30px rgba(0,0,0,.35);display:flex;flex-direction:column;overflow:hidden}
+.sh-head{display:flex;align-items:center;gap:12px;padding:10px 16px 6px;flex:none}
+.pop{width:48px;height:48px;border-radius:50%;background:var(--bab);display:grid;place-items:center;font-weight:900;font-size:21px;box-shadow:inset 0 -3px 0 rgba(0,0,0,.2);flex:none}
+.sh-title{font-size:23px;font-weight:900;display:flex;align-items:center;gap:6px}
+.sh-sub{font-size:14px;font-weight:700;color:var(--ink2);margin-top:1px}
+.x{margin-left:auto;width:48px;height:48px;border-radius:50%;background:rgba(255,255,255,.09);display:grid;place-items:center;flex:none}
+.x .ic{width:18px;height:18px;color:var(--ink2)}
+.yields{display:flex;justify-content:space-between;padding:8px 16px 12px;flex:none}
+.y1{display:flex;flex-direction:column;align-items:center;gap:4px;font-weight:900;font-size:16px;min-width:48px;min-height:48px;justify-content:center}
+.y1 svg.st{width:22px;height:22px}
+.tabs{display:flex;padding:0 8px;border-bottom:1px solid var(--line);flex:none}
+.tabs button{flex:1;min-height:52px;font-weight:800;font-size:16px;color:var(--ink3);position:relative}
+.tabs button.on{color:#fff}
+.tabs button.on::after{content:"";position:absolute;left:18%;right:18%;bottom:-1px;height:3px;border-radius:2px;background:var(--yellow)}
+.scroll{flex:1;overflow:auto;padding:12px 14px 40px;scrollbar-width:none;min-height:0}
+.scroll::-webkit-scrollbar{display:none}
+.curbuild{background:var(--navy2);border-radius:18px;padding:14px;display:flex;gap:12px;align-items:center}
+.cicon{width:52px;height:52px;border-radius:15px;background:#2a4866;display:grid;place-items:center;flex:none}
+.cicon .ic{width:32px;height:32px;color:#fff}
+.cname{font-weight:900;font-size:18px}
+.bar{height:9px;border-radius:5px;background:rgba(255,255,255,.1);margin-top:8px;overflow:hidden}
+.bar i{display:block;height:100%;background:var(--prod);border-radius:5px}
+.buy{margin-left:auto;min-height:48px;background:var(--yellow);color:var(--yellow-ink);border-radius:14px;padding:0 12px;font-weight:900;font-size:16px;display:flex;align-items:center;gap:5px;box-shadow:0 3px 0 #c9951c;flex:none}
+.h3{font-size:14px;font-weight:800;color:var(--ink3);margin:18px 2px 6px}
+.row{display:flex;align-items:center;gap:12px;min-height:66px;padding:8px 4px;border-bottom:1px solid var(--line)}
+.row .cicon{width:46px;height:46px;border-radius:13px}
+.row .cicon .ic{width:28px;height:28px}
+.rname{font-weight:800;font-size:16.5px}
+.rsub{font-size:13.5px;font-weight:700;color:var(--ink2);display:flex;gap:8px;margin-top:3px;align-items:center;flex-wrap:wrap}
+.rsub span{display:flex;gap:3px;align-items:center}
+.rsub svg.st{width:15px;height:15px}
+.turns{margin-left:auto;font-weight:900;font-size:17px;display:flex;align-items:center;gap:4px;color:#fff;flex:none}
+.turns small{font-size:13px;color:var(--ink3);font-weight:700}
+.wonder .cicon{background:#5a3f13}
+.wonder .cicon .ic{color:var(--yellow)}
+.chip{display:flex;align-items:center;gap:6px;background:rgba(255,255,255,.08);border-radius:12px;padding:6px 10px 6px 7px;font-size:13.5px;font-weight:800;white-space:nowrap}
+.chip .ic{width:20px;height:20px}
+.chip.w{background:rgba(255,201,60,.15);color:var(--yellow)}
+.big{min-height:60px;border-radius:18px;background:var(--yellow);color:var(--yellow-ink);font-weight:900;font-size:18px;display:flex;align-items:center;justify-content:center;gap:8px;box-shadow:0 4px 0 #c9951c;width:100%}
+.ghost{min-height:54px;border-radius:16px;background:rgba(255,255,255,.08);color:#fff;font-weight:800;font-size:16px;display:flex;align-items:center;justify-content:center;gap:8px;width:100%}
+
+/* tech tree */
+.tt{position:relative;flex:1;min-height:0}
+.ttscroll{position:absolute;inset:0;overflow:auto;scrollbar-width:none;overscroll-behavior:contain}
+.ttscroll::-webkit-scrollbar{display:none}
+.canvas{position:relative;width:393px;margin:0 auto}
+.band{position:relative;border-top:1px solid rgba(255,255,255,.06)}
+.band.odd{background:rgba(255,255,255,.028)}
+.band h4{position:sticky;left:0;display:inline-flex;align-items:center;gap:8px;height:40px;padding:0 14px;font-size:15px;font-weight:900;color:var(--ink2);white-space:nowrap}
+.band h4 small{font-size:12.5px;color:var(--ink3);font-weight:800}
+.links{position:absolute;left:0;top:0;pointer-events:none}
+.tn{position:absolute;width:92px;margin-left:-46px;display:flex;flex-direction:column;align-items:center;gap:7px;text-align:center}
+.tn .d{width:66px;height:66px;border-radius:50%;display:grid;place-items:center;position:relative;transition:box-shadow .15s}
+.tn .d .ic{width:38px;height:38px}
+.tn .nm{font-size:13px;font-weight:800;line-height:1.15;max-width:92px;text-shadow:0 0 3px #122536,0 0 3px #122536,0 0 6px #122536}
+.tn.done .d{background:var(--bab);color:#fff;box-shadow:inset 0 -5px 0 rgba(0,0,0,.2)}
+.tn.done .nm{color:var(--ink2)}
+.tn.now .d{background:#fff;color:var(--navy);box-shadow:0 0 0 5px var(--yellow)}
+.tn.av .d{background:#eef5fb;color:var(--navy);box-shadow:inset 0 -5px 0 #b9cadb}
+.tn.lock .d{background:#1f3850;color:#6f8ba4}
+.tn.lock .nm{color:var(--ink3)}
+.tn.onpath .d{box-shadow:0 0 0 4px var(--yellow)}
+.tn.onpath .nm{color:#fff}
+.tn.sel .d{box-shadow:0 0 0 5px #fff,0 0 0 11px rgba(255,201,60,.55)}
+.tn .t{position:absolute;bottom:-5px;right:-8px;background:var(--navy);color:#fff;font-size:12px;font-weight:900;border-radius:9px;padding:2px 7px;box-shadow:0 0 0 2px #122536}
+.tn .q{position:absolute;top:-6px;left:-6px;width:26px;height:26px;border-radius:50%;background:var(--yellow);color:var(--yellow-ink);font-size:13.5px;font-weight:900;display:grid;place-items:center;box-shadow:0 0 0 2.5px #122536}
+.tfoot{flex:none;background:var(--navy2);border-radius:22px 22px 0 0;padding:12px 16px 14px;display:flex;flex-direction:column;gap:11px;box-shadow:0 -8px 24px rgba(0,0,0,.3);position:relative;z-index:2}
+.tf1{display:flex;align-items:center;gap:12px}
+.tf1 .d{width:54px;height:54px;border-radius:50%;display:grid;place-items:center;flex:none}
+.tf1 .d .ic{width:32px;height:32px}
+.hscroll{display:flex;gap:6px;overflow-x:auto;scrollbar-width:none;margin:0 -16px;padding:0 16px}
+.hscroll::-webkit-scrollbar{display:none}
+.pathline{display:flex;align-items:center;gap:6px;font-size:13.5px;font-weight:800;color:var(--ink2)}
+.pathline .pi{display:flex;align-items:center;gap:5px;color:#fff;white-space:nowrap}
+.pathline .pi i.n{width:22px;height:22px;border-radius:50%;background:var(--yellow);color:var(--yellow-ink);font-style:normal;font-size:12px;display:grid;place-items:center}
+.pathline .arrow{color:var(--ink3)}
+
+/* B: decision queue */
+.queue{position:absolute;left:10px;right:10px;bottom:30px;background:var(--panel);border-radius:28px;z-index:6;box-shadow:0 10px 30px rgba(0,0,0,.35);padding:14px;-webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px)}
+.qtop{display:flex;align-items:center;gap:8px;font-size:14px;font-weight:800;color:var(--ink2);padding:0 4px 10px}
+.dots{display:flex;gap:6px;margin-left:auto}
+.dots i{width:8px;height:8px;border-radius:50%;background:rgba(255,255,255,.2)}
+.dots i.on{background:var(--yellow);width:20px;border-radius:4px}
+.qhead{display:flex;align-items:center;gap:12px;padding:0 4px}
+.qbtns{display:grid;grid-template-columns:1fr 1fr 1fr;gap:9px;margin-top:14px}
+.qb{min-height:76px;border-radius:18px;background:rgba(255,255,255,.09);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;font-size:14.5px;font-weight:800}
+.qb .ic{width:28px;height:28px}
+.qb.p{grid-column:1/-1;flex-direction:row;min-height:64px;background:var(--yellow);color:var(--yellow-ink);font-size:19px;gap:10px;box-shadow:0 4px 0 #c9951c}
+.qb.alt{grid-column:1/-1;flex-direction:row;min-height:56px;font-size:16px}
+.qcorner{position:absolute;right:14px;z-index:5;display:flex;gap:12px}
+.odds{display:flex;gap:9px;margin-top:12px;padding:0 4px}
+.odds div{flex:1;background:rgba(255,255,255,.06);border-radius:14px;padding:9px 12px;font-size:13.5px;font-weight:700;color:var(--ink2)}
+.odds b{display:block;font-size:19px;color:#fff;font-weight:900}
+.odds .good b{color:#9ff08a}
+
+/* C: thumb arc */
+.arcwrap{position:absolute;right:0;bottom:0;width:393px;height:440px;z-index:5;pointer-events:none}
+.arcwrap>*{pointer-events:auto}
+.anchor{position:absolute;right:20px;bottom:40px;width:96px;height:96px;border-radius:50%;background:var(--yellow);color:var(--yellow-ink);display:flex;flex-direction:column;align-items:center;justify-content:center;font-weight:900;font-size:15px;box-shadow:0 5px 0 #c9951c,0 12px 24px rgba(0,0,0,.35);gap:2px}
+.anchor .ic{width:34px;height:34px}
+.arcbtn{position:absolute;transform:translate(-33px,-33px)}
+.arcbtn .lbl{margin:0;position:absolute;right:76px;top:50%;transform:translateY(-50%);background:var(--panel);padding:6px 11px;border-radius:11px;text-shadow:none;font-size:14.5px;line-height:1.2}
+.arcbtn.below .lbl{right:auto;left:50%;top:auto;bottom:-40px;transform:translateX(-50%)}
+.arcbtn .lbl b{display:block}
+.civdisc{position:absolute;left:18px;bottom:46px;z-index:5}
+.utag{position:absolute;left:10px;right:10px;top:112px;background:var(--panel);border-radius:18px;padding:10px 14px 10px 10px;display:flex;align-items:center;gap:12px;z-index:5;box-shadow:0 6px 18px rgba(0,0,0,.3)}
+.utag .uport{width:46px;height:46px}
+.utag .uport .ic{width:28px;height:28px}
+.utag .uname{font-size:18px}
+.utag .uline{font-size:14px;gap:10px;margin-top:1px}
+.pager{position:absolute;right:128px;bottom:66px;z-index:5;background:var(--panel);border-radius:26px;height:52px;display:flex;align-items:center;gap:8px;padding:0 16px 0 8px;font-weight:900;font-size:15px;box-shadow:0 6px 18px rgba(0,0,0,.3)}
+.pager .mini{width:38px;height:38px;border-radius:50%;background:var(--bab);display:grid;place-items:center}
+.pager .mini .ic{width:24px;height:24px;color:#fff}
+.btabs{display:flex;gap:6px;padding:8px 10px 36px;background:#0f2030;border-top:1px solid var(--line);flex:none}
+.btabs button{flex:1;min-height:60px;border-radius:16px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;font-size:13px;font-weight:800;color:var(--ink3)}
+.btabs button .ic{width:26px;height:26px}
+.btabs button.on{background:rgba(255,255,255,.1);color:#fff}
+
+.eras{display:flex;gap:6px;padding:8px 10px 36px;background:#0f2030;border-top:1px solid var(--line);overflow-x:auto;scrollbar-width:none;flex:none;position:relative;z-index:2}
+.eras::-webkit-scrollbar{display:none}
+.eras button{flex:none;min-width:86px;min-height:50px;padding:0 12px;border-radius:14px;font-size:14.5px;font-weight:800;color:var(--ink3);background:rgba(255,255,255,.05)}
+.eras button.on{background:#fff;color:var(--navy)}
+.qpeek{position:absolute;right:124px;bottom:66px;height:48px;padding:0 14px;border-radius:24px;background:var(--panel);display:flex;align-items:center;gap:10px;font-size:14.5px;font-weight:800;box-shadow:0 6px 18px rgba(0,0,0,.3)}
+.qpeek .dots{margin:0}
+.qmini{margin-left:auto;display:flex;flex-direction:column;align-items:flex-end;gap:6px;font-size:13px;font-weight:800;color:var(--ink2);flex:none}
+.qmini .dots{margin:0}
+.odd{color:#9ff08a;font-weight:900}
+.qb small{font-size:12.5px;font-weight:700;color:var(--ink2)}
+.tmode{margin-top:4px}
+.wscreen{position:absolute;inset:0;overflow:hidden;background:#f3c47a}
+.ws-bg{position:absolute;inset:0;background-size:cover;background-position:center 30%;animation:wsIn 2.6s cubic-bezier(.16,1,.3,1) both}
+@keyframes wsIn{from{transform:scale(1.22);filter:blur(8px) brightness(1.5)}to{transform:none;filter:none}}
+.ws-flash{position:absolute;inset:0;background:#fff8e1;animation:wsFlash 1.1s ease-out both;pointer-events:none}
+@keyframes wsFlash{from{opacity:.95}to{opacity:0}}
+.ws-spark i{position:absolute;width:12px;height:12px;background:#fff6c9;clip-path:polygon(50% 0,62% 38%,100% 50%,62% 62%,50% 100%,38% 62%,0 50%,38% 38%);animation:twk 2.6s ease-in-out infinite;opacity:0}
+@keyframes twk{0%,100%{opacity:0}45%{opacity:1}}
+.ws-card{position:absolute;left:12px;right:12px;bottom:30px;background:rgba(16,31,47,.9);-webkit-backdrop-filter:blur(12px);backdrop-filter:blur(12px);border-radius:28px;padding:20px 18px 16px;box-shadow:0 14px 40px rgba(0,0,0,.35);animation:wsCard .7s .9s cubic-bezier(.16,1,.3,1) both}
+@keyframes wsCard{from{transform:translateY(60px);opacity:0}to{transform:none;opacity:1}}
+.ws-title{font-size:34px;font-weight:900;letter-spacing:-.02em;color:#ffd97a;text-shadow:0 2px 0 #7a5410}
+.ws-sub{font-size:15px;font-weight:700;color:var(--ink2);margin-top:2px}
+.ws-fx{display:flex;gap:8px;margin-top:12px}
+.twinkle{transform-box:fill-box;transform-origin:center;animation:twk 2.2s ease-in-out infinite;opacity:0}
+.glow{animation:glw 2.4s ease-in-out infinite}
+@keyframes glw{0%,100%{opacity:.18}50%{opacity:.45}}
+.lab{position:absolute;inset:0;background:#122536;display:flex;flex-direction:column}
+.cmprow{display:flex;align-items:center;gap:14px;padding:6px 0}
+.cmplbl{width:70px;font-size:13.5px;font-weight:800;color:var(--ink2)}
+.cmprow img{object-fit:contain;filter:drop-shadow(0 2px 2px rgba(0,0,0,.3))}
+.miss{font-size:12px;color:var(--ink3)}
+.stage{background:#0f2030;border-radius:18px;overflow:hidden;padding:4px 0}
+.labbtns{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-top:10px}
+.roster{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+.rcell{background:#0f2030;border-radius:16px;padding:4px 2px 8px}
+.rcell.recolor{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;font-size:12.5px;font-weight:800;color:#fff;min-height:96px}
+.ic.art{background:none!important;-webkit-mask:none!important;mask:none!important;object-fit:contain;filter:drop-shadow(0 2px 2px rgba(0,0,0,.25))}
+.disc.leader,.lport,.lmini{background-size:cover;background-position:center 20%}
+.disc.leader{box-shadow:0 0 0 3px var(--bab),0 5px 0 3px #0b1826,0 9px 18px rgba(0,0,0,.3)}
+.leadcard{display:flex;gap:14px;align-items:center;background:var(--navy2);border-radius:20px;padding:12px}
+.lport{width:112px;height:112px;border-radius:18px;flex:none}
+.lmeta{min-width:0}
+.mood{color:var(--gold)}
+.lquote{margin-top:8px;font-size:14.5px;font-weight:700;line-height:1.35;color:#fff}
+.dgrid{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-top:12px}
+.dgrid .qb.war{background:rgba(224,82,74,.18);color:#ffb1aa}
+.lmini{width:46px;height:46px;border-radius:50%;flex:none}
+.eralbl{position:absolute;left:10px;height:32px;display:flex;align-items:center;gap:8px;padding:0 12px;border-radius:16px;background:#0f2030;font-size:15px;font-weight:900;color:var(--ink2);box-shadow:0 0 0 1px var(--line);z-index:1}
+.eralbl small{font-size:12.5px;color:var(--ink3);font-weight:800}
+.urow{display:flex;gap:4px;align-items:center;justify-content:center;height:18px;margin-top:-2px}
+.urow .ic{width:17px;height:17px;color:#9fb6cc}
+.urow b{font-size:11.5px;font-weight:900;color:var(--ink3)}
+.tn.lock .urow .ic{color:#5b7894}
+.ic.k-w{color:var(--yellow)!important}
+.ic.k-a{color:var(--cul)!important}
+.chip.k-w{background:rgba(255,201,60,.15);color:var(--yellow)}
+.chip.k-i .ic{color:var(--food)}
+.chip.k-r .ic{color:var(--prod)}
+.tinfo{max-height:210px;overflow:auto;display:flex;flex-direction:column;gap:12px;margin:0 -16px;padding:2px 16px;scrollbar-width:none}
+.tinfo::-webkit-scrollbar{display:none}
+.til{font-size:13px;font-weight:800;color:var(--ink3);margin-bottom:6px}
+.tiw{display:flex;flex-wrap:wrap;gap:6px}
+.tiw .chip{min-height:40px}
+.tchip{min-height:44px!important}
+.tchip.done .ic{color:var(--bab)}
+.tchip.lock{color:var(--ink2)}
+.abil{display:flex;gap:8px;align-items:flex-start;font-size:14.5px;font-weight:700;line-height:1.3;margin-bottom:4px}
+.abil .ic{width:18px;height:18px;color:var(--cul);margin-top:1px}
+.quote{font-size:13.5px;font-style:italic;font-weight:600;color:var(--ink3);line-height:1.35}
+.erabar{flex:none;display:flex;align-items:flex-start;gap:6px;padding:8px 0 36px 10px;background:#0f2030;border-top:1px solid var(--line);position:relative;z-index:3}
+.erabar .eras{padding:0 10px 0 0;border:0;background:none;flex:1;min-width:0}
+.erabar .zoom{position:relative;left:auto;flex:none;width:50px;height:50px;border-radius:14px;box-shadow:none;background:rgba(255,255,255,.08)}
+.erabar .ztoggle{width:50px;height:50px}
+.erabar .zoom.open .ztoggle{display:flex;background:#fff;color:var(--navy);border-radius:14px}
+.erabar .zrail{position:absolute;left:0;bottom:62px;width:56px;background:var(--panel);border-radius:28px;padding:4px 0;box-shadow:0 6px 18px rgba(0,0,0,.35)}
+.tpick{padding-bottom:16px}
+.nowcard{display:flex;align-items:center;gap:14px;background:var(--navy2);border-radius:20px;padding:14px}
+.nowcard .bar{margin-top:9px}
+.tcard,.grow{width:100%;display:flex;align-items:center;gap:12px;min-height:76px;padding:10px 12px;margin-bottom:8px;border-radius:18px;background:rgba(255,255,255,.05);text-align:left;box-shadow:inset 0 0 0 2px transparent;transition:box-shadow .15s,background .15s}
+.tcard.on,.grow.on{background:rgba(255,201,60,.1);box-shadow:inset 0 0 0 2.5px var(--yellow)}
+.grow{min-height:68px}
+.tc-mid{flex:1;min-width:0}
+.tcard .unl{display:flex;gap:10px;margin-top:5px;overflow:hidden}
+.mini{display:flex;align-items:center;gap:4px;font-size:13px;font-weight:700;color:var(--ink2);white-space:nowrap}
+.mini .ic{width:17px;height:17px}
+.mini.w{color:var(--yellow)}
+.gtabs{display:flex;gap:6px;margin-bottom:10px}
+.gtabs button{flex:1;min-height:48px;border-radius:14px;font-size:15px;font-weight:800;color:var(--ink3);background:rgba(255,255,255,.05)}
+.gtabs button.on{background:#fff;color:var(--navy)}
+.tbar{flex:none;padding:12px 14px 36px;background:#0f2030;border-top:1px solid var(--line);display:flex;flex-direction:column;gap:10px}
+.tbarhead{display:flex;align-items:center;gap:8px;font-size:15px;font-weight:800;color:var(--ink2)}
+.tbarhead b{color:#fff;font-size:17px;font-weight:900}
+.tbarhead span{margin-left:auto}
+.tdetail{flex:none;background:var(--navy2);border-radius:22px 22px 0 0;padding:12px 16px 12px;display:flex;flex-direction:column;gap:10px;box-shadow:0 -8px 24px rgba(0,0,0,.3);position:relative;z-index:2}
+.fade-in{animation:rise .38s cubic-bezier(.16,1,.3,1) both}
+@keyframes rise{from{transform:translateY(24px);opacity:0}to{transform:none;opacity:1}}
+@keyframes pulse{0%{transform:scale(.8);opacity:.9}100%{transform:scale(1.5);opacity:0}}
+.pulse{animation:pulse 1.6s cubic-bezier(.16,1,.3,1) infinite;transform-box:fill-box;transform-origin:center}
+@media (prefers-reduced-motion:reduce){.fade-in,.pulse{animation:none}.map{transition:none}}
+
+/* ---------- policies and religion ---------- */
+.chrome .seg button{padding:8px 12px}
+.bgmap{position:absolute;inset:0;background:#2f7ad6;overflow:hidden}
+.bgmap svg{position:absolute;left:0;top:0}
+.ic.i-dim{opacity:.5}
+.culcard{display:flex;align-items:center;gap:12px;background:var(--navy2);border-radius:18px;padding:10px 14px;flex:none;min-height:60px}
+.culcard .bar{margin-top:7px}
+.culcard .bar i{background:var(--cul)}
+.culcard.ready{box-shadow:inset 0 0 0 2.5px var(--yellow)}
+.culcard.ready .bar i{background:var(--yellow)}
+.cnum{font-weight:900;font-size:17px;display:flex;align-items:center;gap:6px}
+.cnum small{font-size:14px;color:var(--ink2);font-weight:800}
+.bar.cul i{background:var(--cul)}
+.bar.fai i{background:var(--fai)}
+
+/* A: branch deck */
+.bgrid{display:grid;grid-template-columns:repeat(6,1fr);gap:8px}
+.bcard{grid-column:span 2;position:relative;min-height:118px;border-radius:18px;background:rgba(255,255,255,.06);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;padding:10px 4px;text-align:center}
+.bcard.half{grid-column:span 3;flex-direction:row;justify-content:flex-start;gap:10px;min-height:76px;padding:10px 12px;text-align:left}
+.bcard.open{background:rgba(47,127,224,.16);box-shadow:inset 0 0 0 2px rgba(47,127,224,.55)}
+.bd{width:52px;height:52px;border-radius:50%;display:grid;place-items:center;flex:none}
+.bd .ic{width:30px;height:30px}
+.st-open .bd,.bd.open,.bd.done{background:var(--bab);color:#fff;box-shadow:inset 0 -4px 0 rgba(0,0,0,.2)}
+.st-avail .bd,.bd.av{background:#eef5fb;color:var(--navy);box-shadow:inset 0 -4px 0 #b9cadb}
+.st-era .bd,.st-blocked .bd,.bd.lock{background:#1f3850;color:#6f8ba4}
+.bname{font-weight:900;font-size:15.5px;line-height:1.15}
+.bstat{font-size:13px;font-weight:800;color:var(--ink3);display:flex;align-items:center;gap:4px;justify-content:center;margin-top:2px}
+.half .bstat{justify-content:flex-start}
+.bstat .ic{width:14px;height:14px}
+.st-avail .bstat{color:#fff}
+.st-blocked .bstat{color:#ff9d95}
+.pips{display:flex;gap:4px}
+.pips i{width:9px;height:9px;border-radius:50%;background:rgba(255,255,255,.16)}
+.pips i.on{background:#6fb2ff}
+.orbox{grid-column:1/-1;display:grid;grid-template-columns:repeat(6,1fr);gap:8px;padding:8px;border-radius:22px;box-shadow:inset 0 0 0 2px rgba(255,255,255,.1)}
+.back{width:48px;height:48px;border-radius:50%;background:rgba(255,255,255,.09);display:grid;place-items:center;flex:none}
+.back .ic{width:22px;height:22px;color:#fff}
+.opener{background:var(--navy2);border-radius:18px;padding:12px 14px}
+.prow{width:100%;text-align:left;display:flex;align-items:center;gap:12px;min-height:68px;padding:8px 10px;border-radius:16px;margin-bottom:4px;box-shadow:inset 0 0 0 2px transparent}
+.prow.on{background:rgba(255,201,60,.1);box-shadow:inset 0 0 0 2.5px var(--yellow)}
+.prow .bd{width:46px;height:46px}
+.prow .bd .ic{width:28px;height:28px}
+.prow .rsub{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tag{margin-left:auto;flex:none;font-size:13px;font-weight:900;border-radius:10px;padding:5px 9px;display:flex;align-items:center;gap:4px}
+.tag .ic{width:15px;height:15px}
+.tag.done{background:rgba(47,127,224,.22);color:#9fcaff}
+.tag.av{background:var(--yellow);color:var(--yellow-ink)}
+.tag.lock{color:var(--ink3)}
+.tag.gre{background:rgba(224,82,74,.2);color:#ffb1aa}
+.tag.bab{background:rgba(47,127,224,.22);color:#9fcaff}
+.fin{background:linear-gradient(135deg,rgba(255,201,60,.16),rgba(255,201,60,.05));border-radius:18px;padding:12px 14px;margin-top:8px}
+.fin .cname{color:var(--yellow);font-size:16.5px;display:flex;align-items:center;gap:8px}
+.fin .ic{width:20px;height:20px}
+.tray{flex:none;background:var(--navy2);border-radius:22px 22px 0 0;padding:14px 16px 36px;display:flex;flex-direction:column;gap:10px;box-shadow:0 -8px 24px rgba(0,0,0,.3);position:relative;z-index:2}
+.tray .tinfo{max-height:150px;gap:6px}
+.tdetail .tinfo{max-height:none;gap:6px}
+.tdetail .big,.tdetail .ghost{min-height:56px}
+.fx{display:flex;gap:8px;align-items:flex-start;font-size:14.5px;font-weight:700;line-height:1.3}
+.fx .ic{width:16px;height:16px;color:var(--cul);margin-top:2px}
+.fx.w .ic{color:var(--yellow)}
+.fx.warn{color:#ffb1aa}
+.fx.warn .ic{color:#ff9d95}
+.ghost.dim{color:var(--ink2)}
+.ghost .ic{width:18px;height:18px}
+.toast{display:flex;align-items:center;gap:10px;background:rgba(111,208,90,.16);color:#c7f5bb;border-radius:14px;padding:10px 12px;font-size:14.5px;font-weight:800}
+.toast .ic{width:20px;height:20px;color:#9ff08a}
+
+/* B: tree + branch rail */
+.ptree{position:relative;flex:1;min-height:0}
+.ptree .ttscroll{padding-bottom:10px}
+.tn.opn .d{width:64px;height:64px}
+.tn.opn .d .ic{width:38px;height:38px}
+.tn.opn .nm{font-size:15px;color:#fff}
+.tn .d .ic{width:34px;height:34px}
+.pfin{position:absolute;left:24px;right:24px;border-radius:18px;padding:12px 14px;background:rgba(255,201,60,.1);box-shadow:inset 0 0 0 2px rgba(255,201,60,.35);text-align:left;display:block;min-height:56px}
+.pfin.dim{background:rgba(255,255,255,.04);box-shadow:inset 0 0 0 2px rgba(255,255,255,.08)}
+.pfin .cname{font-size:16px;color:var(--yellow);display:flex;align-items:center;gap:8px}
+.pfin .ic{width:20px;height:20px}
+.brail{flex:none;display:flex;gap:6px;padding:8px 10px 36px;background:#0f2030;border-top:1px solid var(--line);overflow-x:auto;scrollbar-width:none;position:relative;z-index:3}
+.brail::-webkit-scrollbar{display:none}
+.brail button{flex:none;width:76px;min-height:70px;border-radius:16px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;font-size:13px;font-weight:800;color:var(--ink2);background:rgba(255,255,255,.05);position:relative}
+.brail button .ic{width:26px;height:26px}
+.brail button.on{background:#fff;color:var(--navy)}
+.brail .cnt{position:absolute;top:5px;right:6px;min-width:20px;height:20px;border-radius:10px;background:var(--bab);color:#fff;font-size:11.5px;font-weight:900;display:grid;place-items:center;padding:0 5px}
+.brail button .lk{position:absolute;top:7px;right:8px;width:14px;height:14px;color:var(--ink3)}
+.brail button.era,.brail button.blocked{color:var(--ink3)}
+.brail button.era .ic:first-child,.brail button.blocked .ic:first-child{opacity:.55}
+.bhead{display:flex;align-items:center;gap:10px;padding:10px 16px 8px;flex:none}
+.bhead .rsub{margin:0}
+
+/* C: next pick + accordion */
+.hero{display:flex;align-items:center;gap:16px;background:var(--navy2);border-radius:22px;padding:14px 16px}
+.ring{position:relative;flex:none;display:grid;place-items:center}
+.ring svg{position:absolute;inset:0;transform:rotate(-90deg)}
+.ring .in{position:relative;display:flex;flex-direction:column;align-items:center;font-weight:900;font-size:17px;line-height:1.1}
+.ring .in small{font-size:12.5px;color:var(--ink2)}
+.acc{border-radius:18px;background:rgba(255,255,255,.05);margin-bottom:8px;overflow:hidden}
+.acc>button{width:100%;display:flex;align-items:center;gap:12px;min-height:64px;padding:8px 12px;text-align:left}
+.acc>button .bd{width:44px;height:44px}
+.acc>button .bd .ic{width:26px;height:26px}
+.acc .chev{margin-left:auto;width:20px;height:20px;color:var(--ink3);transition:transform .2s}
+.acc.on .chev{transform:rotate(90deg)}
+.acc.on{background:rgba(255,255,255,.08)}
+.mgrid{position:relative;height:300px;margin:0 8px 8px}
+.mgrid .tn{width:84px;margin-left:-42px;gap:5px}
+.mgrid .tn .d{width:52px;height:52px}
+.mgrid .tn .d .ic{width:30px;height:30px}
+.mgrid .tn .nm{font-size:12.5px;text-shadow:none}
+.mgrid svg{position:absolute;left:0;top:0;pointer-events:none}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chips .chip{min-height:40px}
+.chips .chip .ic{color:#6fb2ff}
+
+/* religion */
+.fbar{display:flex;height:12px;border-radius:6px;overflow:hidden;background:rgba(255,255,255,.1);gap:2px}
+.fbar i{height:100%;display:block}
+.flegend{display:flex;flex-wrap:wrap;gap:4px 12px;margin-top:6px;font-size:13.5px;font-weight:800;color:var(--ink2)}
+.flegend span{display:flex;align-items:center;gap:5px}
+.flegend b{color:#fff}
+.dot{width:10px;height:10px;border-radius:50%;flex:none;display:inline-block}
+.step{position:relative;padding:0 0 22px 64px;min-height:78px}
+.step::before{content:"";position:absolute;left:25px;top:52px;bottom:0;width:4px;border-radius:2px;background:rgba(255,255,255,.1)}
+.step.done::before{background:var(--bab)}
+.step:last-child::before{display:none}
+.step>.bd{position:absolute;left:0;top:0}
+.step .cname{padding-top:2px}
+.step.lock .cname{color:var(--ink2)}
+.slots{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:10px}
+.slots.two{grid-template-columns:repeat(2,1fr)}
+.slot{min-height:92px;border-radius:16px;box-shadow:inset 0 0 0 2px rgba(255,255,255,.16);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;font-size:13.5px;font-weight:800;color:var(--ink2);padding:8px 4px;text-align:center;line-height:1.15}
+.slot .ic{width:26px;height:26px;color:var(--ink3)}
+.slot.fill{background:rgba(255,201,60,.12);color:#fff;box-shadow:inset 0 0 0 2.5px var(--yellow)}
+.slot.fill .ic{color:var(--yellow)}
+.slot.kept{background:rgba(47,127,224,.16);color:#fff;box-shadow:inset 0 0 0 2px rgba(47,127,224,.55)}
+.slot.kept .ic{color:#9fcaff}
+.slot.go{box-shadow:inset 0 0 0 2.5px #fff;color:#fff}
+.slot.go .ic{color:#fff}
+.slot small{font-size:12px;color:var(--ink3);font-weight:800}
+.picker{position:absolute;left:0;right:0;bottom:0;top:150px;background:#16304a;border-radius:26px 26px 0 0;z-index:9;display:flex;flex-direction:column;box-shadow:0 -12px 34px rgba(0,0,0,.45)}
+.scrimall{position:absolute;inset:0;background:rgba(6,14,22,.5);z-index:8}
+.belief{width:100%;display:flex;align-items:flex-start;gap:12px;min-height:72px;padding:12px;margin-bottom:8px;border-radius:18px;background:rgba(255,255,255,.05);text-align:left;box-shadow:inset 0 0 0 2px transparent}
+.belief .bd{width:44px;height:44px}
+.belief .bd .ic{width:26px;height:26px}
+.belief.on{background:rgba(255,201,60,.1);box-shadow:inset 0 0 0 2.5px var(--yellow)}
+.belief.taken{opacity:.55}
+.belief .fxs{font-size:14px;font-weight:700;color:var(--ink2);line-height:1.3;margin-top:3px}
+.symgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.sym{min-height:100px;border-radius:18px;background:rgba(255,255,255,.05);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;font-size:14px;font-weight:800;box-shadow:inset 0 0 0 2px transparent}
+.sym .ic{width:40px;height:40px}
+.sym.on{background:rgba(255,201,60,.1);box-shadow:inset 0 0 0 2.5px var(--yellow)}
+.sym.taken{opacity:.45}
+.relcard{background:var(--navy2);border-radius:20px;padding:14px;margin-bottom:10px}
+.relhead{display:flex;align-items:center;gap:12px}
+.relhead .bd{width:50px;height:50px}
+.lens{position:absolute;inset:0}
+.lens svg{position:absolute;left:0;top:0}
+.lmap{position:absolute;inset:0;touch-action:none}
+.lens{background:#0f2030;touch-action:none;cursor:grab;user-select:none;-webkit-user-select:none}
+.peek{display:flex;align-items:center;gap:12px;padding:10px 0 0;min-height:66px}
+.pk{flex:none;width:68px;min-height:56px;border-radius:16px;background:rgba(255,255,255,.09);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;font-size:13px;font-weight:800}
+.pk .ic{width:24px;height:24px}
+.legend{position:absolute;left:10px;top:112px;display:flex;flex-direction:column;align-items:flex-start;gap:6px;z-index:4}
+.legend .chip{background:var(--panel);min-height:36px;box-shadow:0 4px 12px rgba(0,0,0,.25)}
+.citybtn{position:absolute;width:64px;height:64px;margin:-32px 0 0 -32px;border-radius:50%;z-index:3}
+.lpanel{position:absolute;left:0;right:0;bottom:0;background:var(--panel);border-radius:26px 26px 0 0;z-index:6;box-shadow:0 -8px 24px rgba(0,0,0,.3);-webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px);padding:0 16px 36px}
+.prorow{display:flex;align-items:center;gap:12px;background:rgba(255,255,255,.06);border-radius:16px;padding:10px 12px;margin-top:12px}
+.prorow .bar{margin-top:6px}
+.lacts{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-top:12px}
+.lacts .qb{min-height:60px;flex-direction:row;gap:8px;font-size:15.5px}
+.lacts .qb .ic{width:24px;height:24px}
+.qb.dim{color:var(--ink2)}
+.bsheet{position:absolute;left:0;right:0;bottom:0;top:120px;z-index:9}
+.race{display:flex;gap:8px;margin-top:10px}
+.race>div{flex:1;min-height:84px;border-radius:16px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;font-size:13px;font-weight:800;color:var(--ink3);box-shadow:inset 0 0 0 2px rgba(255,255,255,.12);text-align:center}
+.race>div .ic{width:30px;height:30px}
+.race>div.gre{background:rgba(224,82,74,.16);box-shadow:inset 0 0 0 2px rgba(224,82,74,.5);color:#fff}
+.race>div.gre .ic{color:#ffb1aa}
+.race>div.bab{background:rgba(47,127,224,.18);box-shadow:inset 0 0 0 2px rgba(47,127,224,.6);color:#fff}
+.race>div.bab .ic{color:#9fcaff}
+.frow{display:flex;align-items:center;gap:12px;min-height:66px;padding:8px 4px;border-bottom:1px solid var(--line)}
+.frow .grow1{flex:1;min-width:0}
+.frow .pop{width:44px;height:44px;font-size:18px}
+.gtabs.four button{font-size:14px}
+.dbar{flex-direction:row;align-items:stretch}
+.dbar>:last-child{flex:1;min-width:0}
+.lensbtn{flex:none;width:76px;min-height:60px;border-radius:16px;background:#fff;color:var(--navy);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;font-size:13.5px;font-weight:900;box-shadow:0 4px 0 #b9cadb}
+.lensbtn .ic{width:26px;height:26px}
+.pbar{flex:none;padding:12px 14px 12px;background:#0f2030;border-top:1px solid var(--line);display:flex;flex-direction:column;gap:10px;position:relative;z-index:2}
+</style>
+</head>
+<body>
+<div class="chrome">
+  <div class="seg" id="scr"></div>
+  <div class="seg" id="dir"></div>
+  <div class="seg" id="sta"></div>
+  <div class="thesis" id="thesis"></div>
+</div>
+<div class="stagewrap" id="stagewrap"><div class="device" id="device"><div class="screen" id="screen"></div></div></div>
+
+<script>
+const ICON = /*ICONS*/{};
+const PICON = /*PICONS*/{};  // policy and religion icons, inlined by policies-religion.post.py
+Object.assign(ICON, PICON);
+const slug = s => s.replace(/[^a-z0-9]/gi,'');
+(()=>{const st=document.createElement('style');st.textContent=Object.entries(ICON).map(([k,v])=>`.i-${slug(k)}{-webkit-mask-image:url("${v}");mask-image:url("${v}")}`).join('');document.head.appendChild(st)})();
+const ART = /*ART*/{};
+const ic = (n,style='') => { const a=ART[n.replace(/^(t_|u_)/,'')]; return a?`<img class="ic art" src="${a}" style="${style}" alt="">`:`<i class="ic i-${slug(n)}" style="${style}"></i>`; };
+
+/* hand-drawn stat glyphs, copied from the approved mock */
+const STAT = {
+  gold:`<circle cx="8" cy="8" r="6.6" fill="var(--gold)"/><circle cx="8" cy="8" r="4.2" fill="none" stroke="#c9951c" stroke-width="1.6"/>`,
+  sci:`<path d="M6 1.6h4M6.6 1.8v4.4L2.6 13a1.2 1.2 0 0 0 1 1.8h8.8a1.2 1.2 0 0 0 1-1.8L9.4 6.2V1.8" fill="var(--sci)" stroke="var(--sci)" stroke-width="1.6" stroke-linejoin="round"/><path d="M4.6 11h6.8" stroke="#1d6a91" stroke-width="1.4"/>`,
+  cul:`<path d="M6 12.2V3.4l7-1.6v8.6" stroke="var(--cul)" stroke-width="1.8" fill="none" stroke-linejoin="round"/><ellipse cx="4.2" cy="12.4" rx="2.6" ry="2" fill="var(--cul)"/><ellipse cx="11.2" cy="10.6" rx="2.6" ry="2" fill="var(--cul)"/>`,
+  fai:`<circle cx="8" cy="8.6" r="3.4" fill="var(--fai)"/><ellipse cx="8" cy="3" rx="4.6" ry="1.6" fill="none" stroke="var(--fai)" stroke-width="1.5"/><path d="M3 15c.6-2.2 2.6-3.4 5-3.4s4.4 1.2 5 3.4" fill="var(--fai)"/>`,
+  hap:`<circle cx="8" cy="8" r="6.6" fill="var(--hap)"/><circle cx="5.8" cy="6.6" r="1" fill="#2f4a10"/><circle cx="10.2" cy="6.6" r="1" fill="#2f4a10"/><path d="M4.8 9.4c.8 1.7 1.9 2.4 3.2 2.4s2.4-.7 3.2-2.4" stroke="#2f4a10" stroke-width="1.4" fill="none" stroke-linecap="round"/>`,
+};
+const st = k => `<svg class="st" viewBox="0 0 16 16">${STAT[k]}</svg>`;
+
+/* ---------- ruleset data (Gods & Kings) ---------- */
+const POL = /*POLDATA*/[];
+const BEL = /*BELDATA*/{};
+const RELIGIONS = /*RELIGIONS*/[];
+const ERAS=['Ancient','Classical','Medieval','Renaissance','Industrial'];
+const ERA_NOW=0; // Ancient: researching Writing
+const BR=Object.fromEntries(POL.map(b=>[b.name,b]));
+const PBY={}; POL.forEach(b=>b.pol.forEach(p=>{p.branch=b.name; PBY[p.name]=p; p.next=b.pol.filter(q=>q.req.includes(p.name)).map(q=>q.name);}));
+
+/* ---------- policy state ---------- */
+const START=['Tradition','Aristocracy','Oligarchy'];
+let ADOPTED, CUL, NADOPT, JUST, READY=false;
+const CPT=4;
+// Current cost is the game state (120). Later costs follow Unciv's PolicyManager formula:
+// 25 + (n*3)^2.01, x1.1 for the second city, rounded down to 5.
+const COST=()=>NADOPT<=3?120:(c=>c-c%5)(Math.round((25+Math.pow(NADOPT*3,2.01))*1.1));
+function resetPolicies(){ADOPTED=new Set(START); NADOPT=3; CUL=READY?120:64; JUST=null;}
+const canAdopt=()=>CUL>=COST();
+const turnsLeft=()=>Math.ceil(Math.max(0,COST()-CUL)/CPT);
+const nDone=b=>b.pol.filter(p=>ADOPTED.has(p.name)).length;
+function bstate(b){
+  if(ADOPTED.has(b.name)) return nDone(b)===5?'done':'open';
+  if(b.excl.some(n=>ADOPTED.has(n))) return 'blocked';
+  if(ERAS.indexOf(b.era)>ERA_NOW) return 'era';
+  return 'avail';
+}
+function pstate(name){
+  if(ADOPTED.has(name)) return 'done';
+  if(BR[name]) return bstate(BR[name])==='avail'?'av':'lock';
+  return PBY[name].req.every(r=>ADOPTED.has(r))?'av':'lock';
+}
+function whyLocked(name){
+  const b=BR[name]||BR[PBY[name].branch], s=bstate(b);
+  if(s==='era') return `Unlocks in the ${b.era} era`;
+  if(s==='blocked') return `Blocked by ${b.excl.find(n=>ADOPTED.has(n))}`;
+  if(!ADOPTED.has(b.name)) return `Open ${b.name} first`;
+  return `Needs ${PBY[name].req.filter(r=>!ADOPTED.has(r)).join(' and ')}`;
+}
+const adoptable=()=>{const out=[]; POL.forEach(b=>{ if(pstate(b.name)==='av') out.push(b.name); b.pol.forEach(p=>{ if(pstate(p.name)==='av') out.push(p.name); }); }); return out;};
+const picon=n=>BR[n]?'br_'+n:'pol_'+n;
+const fxOf=n=>BR[n]?BR[n].fx:PBY[n].fx;
+function adoptBtn(n){
+  const s=pstate(n), open=!!BR[n];
+  if(s==='done') return `<button class="ghost dim">${ic('Checkmark')}Adopted</button>`;
+  if(s==='lock') return `<button class="ghost dim">${ic('LockSmall')}${whyLocked(n)}</button>`;
+  if(!canAdopt()) return `<button class="ghost">${st('cul')}Ready in ${turnsLeft()} turns</button>`;
+  return `<button class="big" data-adopt="${n}">${open?'Open':'Adopt'} ${n}</button>`;
+}
+function adopt(n){
+  if(pstate(n)!=='av'||!canAdopt()) return;
+  CUL-=COST(); NADOPT++; ADOPTED.add(n);
+  const b=BR[n]||BR[PBY[n].branch];
+  JUST={name:n, done:nDone(b)===5?b.name:null};
+}
+const toast=()=>JUST?`<div class="toast fade-in">${ic('Checkmark')}<span>${JUST.name} adopted${JUST.done?`, ${JUST.done} complete`:''}. Next policy ${COST()} culture.</span></div>`:'';
+
+/* ---------- religion state ---------- */
+const FAITH=23, FPT=2;
+const COL={pan:'#8fc3ff',chr:'#e0524a',own:'#2f7fe0',none:'rgba(255,255,255,.14)'};
+let RREADY=false, FOUNDED=false, PICKS, RPICK=null, PSEL=null, RCITY=null, BTYPE='Founder', RTAB='faith', RPAGE='faith';
+const TAKEN0={'Fertility Rites':'bab','Messenger of the Gods':'gre','Pilgrimage':'gre','Feed the World':'gre'};
+let TAKEN;
+function resetReligion(){PICKS={religion:null,Founder:null,Follower:null}; FOUNDED=false; RPICK=null; PSEL=null; TAKEN={...TAKEN0};}
+const prophetCost=()=>FOUNDED?300:200; // Unciv: 200 + 100*n(n+1)/2 at standard speed
+const faithNow=()=>RREADY?0:FAITH;
+const prophetTurns=()=>Math.ceil((prophetCost()-faithNow())/FPT);
+const ownName=()=>PICKS.religion||'Your religion';
+// followers per city (Unciv spreads naturally within 10 tiles; Athens reaches Akkad at 6, not Babylon at 13)
+function cities(){
+  return [
+    {name:'Babylon',civ:'bab',pop:7,cap:true,c:4,r:17,f:FOUNDED?{own:7}:{pan:7}},
+    {name:'Akkad',civ:'bab',pop:4,c:5,r:10,f:{pan:3,chr:1}},
+    {name:'Athens',civ:'gre',pop:6,cap:true,holy:true,c:5,r:4,f:{chr:6}},
+    {name:'Sidon',civ:'kab',pop:3,cs:true,c:5,r:23,f:{}},
+  ];
+}
+const relName=k=>({pan:'Fertility Rites',chr:'Christianity',own:ownName(),none:'No religion'})[k];
+function fbar(c){const keys=Object.keys(c.f), rest=c.pop-keys.reduce((a,k)=>a+c.f[k],0);
+  return `<div class="fbar">${keys.map(k=>`<i style="flex:${c.f[k]};background:${COL[k]}"></i>`).join('')}${rest>0?`<i style="flex:${rest};background:${COL.none}"></i>`:''}</div>`;}
+function flegend(c){const keys=Object.keys(c.f), rest=c.pop-keys.reduce((a,k)=>a+c.f[k],0);
+  return `<div class="flegend">${keys.map(k=>`<span><i class="dot" style="background:${COL[k]}"></i><b>${c.f[k]}</b>${relName(k)}</span>`).join('')}${rest>0?`<span><i class="dot" style="background:${COL.none}"></i><b>${rest}</b>No religion</span>`:''}</div>`;}
+
+/* ---------- map background (flat direction-A slabs, code-drawn) ---------- */
+const GRID=[
+ 'FFFFFFFFF','FF~~~FFFF','F~~~~-tFF','~~~~-gtsF','~~~-ggpfF','~~~-gpphm','~~--ggpmm','~~-ggfgph',
+ '~--gffggp','~-gggpgpd','~-gpgggdo','~~-gphgdd','~~-ggmmpd','~--gghmpp','~-ggfgppg','~-gffgngg',
+ '--ggpgggf','-ggpggfff','-gpgggfhf','-ggghggfF','--wgplgfF','~-gjjgpgF','~~-gggpFF','~~--gpgFF',
+ '~~~-ggFFF','~~~--gFFF','~~~~-FFFF','~~~~FFFFF','~~~FFFFFF','FFFFFFFFF','FFFFFFFFF'];
+const TERR={'~':['#2f7ad6','#2a6fc6'],'-':['#3fb5e3','#37a8d7'],l:['#46b9e6','#3eaedb'],g:['#88cd50','#5f9a36'],f:['#7cc449','#5a9232'],
+  j:['#6cbd45','#4e8d31'],h:['#88cd50','#5f9a36'],m:['#a3acb6','#737c87'],p:['#e3ca52','#b39532'],d:['#eba45b','#b8763a'],
+  o:['#eba45b','#b8763a'],t:['#bdb993','#8d8a67'],s:['#f3f7fa','#b9c7d3'],w:['#86c170','#5e8f4c'],n:['#e3ca52','#b39532'],F:['#f5f9fc','#d5e2ec']};
+const CIVC={bab:'#2f7fe0',gre:'#e0524a',kab:'#9a5bd6'};
+const toCube=(c,r)=>[c-(r-(r&1))/2, r];
+const hexDist=(a,b)=>{const[q1,r1]=toCube(...a),[q2,r2]=toCube(...b);const dq=q1-q2,dr=r1-r2;return Math.max(Math.abs(dq),Math.abs(dr),Math.abs(dq+dr))};
+function hexMap(k=1,y0=0,over='',o={}){ // o.xc: column centred on screen; o.box: [x,y,w,h] svg viewport; o.mute: dim terrain for a lens
+  const R=31*k, SQ=.6, W=Math.sqrt(3)*R, DY=1.5*R*SQ, x0=o.xc!=null?196-W*o.xc:(393-8.5*W)/2+W/2;
+  const P=(c,r)=>[x0+W*(c+(r&1?.5:0)), y0+DY*r];
+  const cn=(x,y)=>[...Array(6)].map((_,i)=>{const a=(60*i-90)*Math.PI/180;return [x+R*Math.cos(a), y+R*Math.sin(a)*SQ]});
+  const pts=a=>a.map(p=>p[0].toFixed(1)+','+p[1].toFixed(1)).join(' ');
+  const own=(c,r)=>{for(const t of cities()){if(hexDist([c,r],[t.c,t.r])<=(t.cs?1:t.cap?2:1))return t.civ}return null};
+  let s='';
+  for(let r=0;r<GRID.length;r++) for(let c=0;c<9;c++){
+    const t=GRID[r][c], [x,y]=P(c,r), cs=cn(x,y), [top,side]=TERR[t], wat='~-l'.includes(t), dz=wat?2*k:0;
+    const sh=cs.map(p=>[p[0],p[1]+dz]);
+    s+=`<polygon points="${pts([sh[1],sh[2],sh[3],sh[4],[sh[4][0],sh[4][1]+4*k],[sh[3][0],sh[3][1]+4*k],[sh[2][0],sh[2][1]+4*k],[sh[1][0],sh[1][1]+4*k]])}" fill="${side}"/>`;
+    s+=`<polygon points="${pts(sh)}" fill="${top}" stroke="rgba(0,0,0,.07)" stroke-width="1"/>`;
+    const o=t!=='F'&&own(c,r); if(o) s+=`<polygon points="${pts(sh)}" fill="${CIVC[o]}" opacity=".13"/>`;
+  }
+  const [bx,by,bw,bh]=o.box||[0,0,393,852];
+  if(o.mute) s=`<g style="filter:saturate(.45)">${s}</g><rect x="${bx}" y="${by}" width="${bw}" height="${bh}" fill="#0f2030" opacity=".3"/>`;
+  return {svg:`<svg width="${bw}" height="${bh}" viewBox="${bx} ${by} ${bw} ${bh}" style="left:${bx}px;top:${by}px">${s}${over}</svg>`, P, k};
+}
+const bgMap=()=>`<div class="bgmap">${hexMap().svg}</div>`;
+
+/* ---------- shared UI ---------- */
+const sbar=`<div class="scrim-t"></div><div class="sbar"><span>9:41</span><span class="bat"></span></div>`;
+const stats=()=>`<div class="stats">
+  <div class="stat">${st('gold')}142<small>+9</small></div>
+  <div class="stat">${st('sci')}+18</div>
+  <div class="stat">${st('cul')}${CUL}<small>/${COST()}</small></div>
+  <div class="stat">${st('hap')}7</div>
+  <div class="stat">${st('fai')}${faithNow()}</div>
+  <button class="turn">T58${ic('MenuIcon')}</button></div>`;
+const head=(title,right='')=>`<div class="sh-head"><div class="sh-title">${title}</div>${right}<button class="x">${ic('Close')}</button></div>`;
+function ring(pct,size,col,inner,w=9){const r=(size-w)/2,C=2*Math.PI*r;
+  return `<div class="ring" style="width:${size}px;height:${size}px"><svg width="${size}" height="${size}"><circle cx="${size/2}" cy="${size/2}" r="${r}" stroke="rgba(255,255,255,.1)" stroke-width="${w}" fill="none"/><circle cx="${size/2}" cy="${size/2}" r="${r}" stroke="${col}" stroke-width="${w}" fill="none" stroke-linecap="round" stroke-dasharray="${(C*Math.min(pct,1)).toFixed(1)} ${C.toFixed(1)}" ${pct>0?'':'opacity="0"'}/></svg><div class="in">${inner}</div></div>`;}
+function culCard(){
+  const pct=Math.min(1,CUL/COST());
+  return `<div class="culcard ${canAdopt()?'ready':''}">${st('cul').replace('class="st"','class="st" style="width:30px;height:30px"')}<div style="flex:1;min-width:0"><div class="cnum">${CUL}<small>/ ${COST()}</small></div><div class="bar"><i style="width:${pct*100}%"></i></div></div><div class="turns">${canAdopt()?'<span style="color:var(--yellow)">Ready</span>':`${turnsLeft()}<small>turns</small>`}</div></div>`;
+}
+function fxList(n,withMeta=true,fin=true){
+  const b=BR[n], p=PBY[n]; let h=fxOf(n).map(f=>`<div class="fx">${ic('Star')}<span>${f}</span></div>`).join('');
+  if(!withMeta) return h;
+  if(b&&b.excl.length) h+=`<div class="fx warn">${ic('LockSmall')}<span>Can't be combined with ${b.excl.join(' or ')}</span></div>`;
+  if(b&&fin) h+=`<div class="fx w">${ic('Star')}<span>Complete all 5: ${b.fin.fx[0]}</span></div>`;
+  if(p&&p.req[0]!==p.branch) h+=`<div class="fx">${ic('LockSmall')}<span>Requires ${p.req.join(' and ')}</span></div>`;
+  if(p&&p.next.length) h+=`<div class="fx">${ic('ForwardArrow')}<span>Leads to ${p.next.join(', ')}</span></div>`;
+  return h;
+}
+const disc=(icon,cls)=>`<div class="bd ${cls}">${ic(icon)}</div>`;
+const bdisc=(n,cls='')=>disc(picon(n),cls||pstate(n));
+function detailTray(n,closeAttr,cls='tray'){
+  const b=BR[n], br=b||BR[PBY[n].branch];
+  return `<div class="${cls} fade-in"><div class="tf1">${bdisc(n)}<div style="flex:1;min-width:0"><div class="cname">${n}</div><div class="rsub"><span>${b?`${b.era} era branch`:br.name}</span></div></div>${closeAttr?`<button class="x" ${closeAttr}>${ic('Close')}</button>`:''}</div>
+    <div class="tinfo">${fxList(n,true,cls!=='tdetail')}</div>${toast()}${adoptBtn(n)}</div>`;
+}
+
+/* ================= POLICIES A: branch deck ================= */
+let AOPEN=null, ASEL=null;
+function bcard(n,half){
+  const b=BR[n], s=bstate(b), d=nDone(b);
+  const stat= s==='open'||s==='done'?`<div class="pips">${[0,1,2,3,4].map(i=>`<i class="${i<d?'on':''}"></i>`).join('')}</div>`
+    : s==='avail'?`<div class="bstat">Open for ${COST()}</div>`
+    : s==='era'?`<div class="bstat">${ic('LockSmall')}${b.era}</div>`:`<div class="bstat">${ic('LockSmall')}Blocked</div>`;
+  return `<button class="bcard st-${s} ${half?'half':''} ${s==='open'?'open':''}" data-abr="${n}"><div class="bd">${ic('br_'+n)}</div><div><div class="bname">${n}</div>${stat}</div></button>`;
+}
+function polA(){
+  if(!AOPEN){
+    const grp=(t,ns,half)=>`<div class="h3">${t}</div><div class="bgrid">${ns.map(n=>bcard(n,half)).join('')}</div>`;
+    return `<div class="sheet fade-in" style="top:56px"><div class="grab"></div>${head('Social Policies')}
+      <div class="scroll" style="padding-top:4px">${culCard()}
+        ${grp('Ancient era',['Tradition','Liberty','Honor'])}
+        ${grp('Medieval era',['Patronage','Commerce'],1)}
+        ${grp('Piety or Rationalism',['Piety','Rationalism'],1)}
+        ${grp('Freedom, Autocracy or Order',['Freedom','Autocracy','Order'])}
+      </div></div>`;
+  }
+  const b=BR[AOPEN], s=bstate(b), rows=[...b.pol].sort((x,y)=>x.row-y.row||x.col-y.col);
+  const sel=ASEL||AOPEN;
+  const prow=p=>{const ps=pstate(p.name);
+    const tag=ps==='done'?`<span class="tag done">${ic('Checkmark')}</span>`:ps==='av'?(canAdopt()?`<span class="tag av">Adopt</span>`:`<span class="tag lock" style="color:#fff">Available</span>`):`<span class="tag lock">${ic('LockSmall')}</span>`;
+    return `<button class="prow ${sel===p.name?'on':''}" data-asel="${p.name}">${bdisc(p.name)}<div style="min-width:0;flex:1"><div class="rname">${p.name}</div><div class="rsub">${p.req[0]!==b.name?`After ${p.req.join(' and ')}: `:''}${p.fx[0]}</div></div>${tag}</button>`;};
+  return `<div class="sheet fade-in" style="top:56px"><div class="grab"></div>
+    <div class="sh-head"><button class="back" data-aback>${ic('BackArrow')}</button><div class="bd ${s==='open'||s==='done'?'open':s==='avail'?'av':'lock'}" style="width:46px;height:46px">${ic('br_'+AOPEN,'width:28px;height:28px')}</div><div style="min-width:0"><div class="sh-title">${AOPEN}</div></div><div class="turns" style="margin-left:auto">${nDone(b)}<small>of 5</small></div></div>
+    <div class="scroll" style="padding-top:6px">
+      <button class="prow ${sel===AOPEN?'on':''}" data-asel="${AOPEN}" style="background:var(--navy2)">${bdisc(AOPEN)}<div style="min-width:0;flex:1"><div class="rname">Opener</div><div class="rsub">${b.fx[0]}</div></div>${ADOPTED.has(AOPEN)?`<span class="tag done">${ic('Checkmark')}</span>`:''}</button>
+      <div class="h3">Policies</div>${rows.map(prow).join('')}
+      <div class="fin"><div class="cname">${ic('Star')}${AOPEN} complete</div><div class="rsub" style="display:block;margin-top:4px">${b.fin.fx.join('. ')}</div></div>
+    </div>${detailTray(sel)}</div>`;
+}
+
+/* ================= POLICIES B: one branch tree + rail ================= */
+let BSEL='Tradition', BPOL='Legalism';
+const LANE=c=>46+(c-1)*75, ROWY=r=>r?72+r*124:46;
+function polB(){
+  const b=BR[BSEL], maxRow=Math.max(...b.pol.map(p=>p.row)), H=ROWY(maxRow)+190;
+  const nodes=[{name:BSEL,x:196,y:ROWY(0),opn:1},...b.pol.map(p=>({name:p.name,x:LANE(p.col),y:ROWY(p.row)}))];
+  const pos=Object.fromEntries(nodes.map(n=>[n.name,n]));
+  let casing='',lines='';
+  b.pol.forEach(p=>p.req.forEach(r=>{const a=pos[r],z=pos[p.name]; const y1=a.y+(a.opn?86:70), y2=z.y-34, m=(y1+y2)/2;
+    const d=`M${a.x} ${y1}C${a.x} ${m} ${z.x} ${m} ${z.x} ${y2}`; const on=ADOPTED.has(p.name), from=ADOPTED.has(r);
+    casing+=`<path d="${d}" stroke="#122536" stroke-width="8" fill="none"/>`;
+    lines+=`<path d="${d}" stroke="${on?'#3f8ff0':from?'#9cc0e2':'#56779a'}" stroke-width="3" fill="none" stroke-linecap="round"/>`;}));
+  const node=n=>{const s=pstate(n.name);return `<button class="tn ${s==='done'?'done':s==='av'?'av':'lock'} ${n.opn?'opn':''} ${BPOL===n.name?'sel':''}" data-bpol="${n.name}" style="left:${n.x}px;top:${n.y-(n.opn?32:33)}px"><div class="d">${ic(picon(n.name))}</div><div class="nm">${n.name}</div></button>`;};
+  const fin=`<div class="pfin ${nDone(b)===5?'':'dim'}" style="top:${ROWY(maxRow)+84}px"><div class="cname">${ic('Star')}Complete all 5</div><div class="rsub" style="display:block;margin-top:3px">${b.fin.fx[0]}</div></div>`;
+  const rail=POL.map(x=>{const s=bstate(x), d=nDone(x);
+    return `<button class="${BSEL===x.name?'on':''} ${s}" data-bsel="${x.name}">${ic('br_'+x.name)}${x.name}${s==='open'||s==='done'?`<span class="cnt">${d}</span>`:s==='era'||s==='blocked'?ic('LockSmall').replace('class="ic','class="ic lk'):''}</button>`;}).join('');
+  const bs=bstate(b);
+  const status=bs==='era'?`${b.era} era`:bs==='blocked'?`Blocked by ${b.excl.find(n=>ADOPTED.has(n))}`:bs==='avail'?'Not opened':`${nDone(b)} of 5`;
+  return `<div class="sheet fade-in" style="top:56px"><div class="grab"></div>${head('Social Policies')}
+    <div style="padding:0 14px 8px;flex:none">${culCard()}</div>
+    <div class="ptree"><div class="ttscroll"><div class="canvas" style="height:${H}px"><svg class="links" width="393" height="${H}">${casing}${lines}</svg>${nodes.map(node).join('')}<div class="bstat" style="position:absolute;left:0;right:0;top:${ROWY(0)+62}px">${bs==='era'||bs==='blocked'?ic('LockSmall'):''}${status}</div>${fin}</div></div></div>
+    ${BPOL?detailTray(BPOL,'data-bclose','tdetail'):''}
+    <div class="brail">${rail}</div></div>`;
+}
+
+/* ================= POLICIES C: next pick first ================= */
+let CSEL='Legalism', CMODE='next', CACC='Tradition';
+function polC(){
+  const tabs=`<div class="tabs tmode"><button data-cmode="next" class="${CMODE==='next'?'on':''}">Next pick</button><button data-cmode="all" class="${CMODE==='all'?'on':''}">All branches</button></div>`;
+  let body;
+  if(CMODE==='next'){
+    const opts=adoptable();
+    const card=n=>{const b=BR[n], p=PBY[n];
+      const sub=b?`<span class="mini">Opens a branch</span>`:`<span class="mini">${ic('br_'+p.branch)}${p.branch}</span>`;
+      const unl=b?b.pol.filter(q=>q.req[0]===n).map(q=>q.name):p.next;
+      return `<button class="tcard ${CSEL===n?'on':''}" data-csel="${n}" style="align-items:flex-start">${bdisc(n)}<div class="tc-mid"><div class="rname">${n}</div><div class="unl" style="margin:3px 0 4px">${sub}</div>${fxOf(n).map(f=>`<div class="rsub" style="margin-top:2px">${f}</div>`).join('')}${unl.length?`<div class="rsub" style="margin-top:6px;color:#fff">${ic('ForwardArrow','width:15px;height:15px')}Unlocks ${unl.join(', ')}</div>`:''}</div></button>`;};
+    const mine=[...ADOPTED];
+    body=`<div class="scroll tpick">
+      <div class="hero">${ring(CUL/COST(),92,canAdopt()?'var(--yellow)':'var(--cul)',`${CUL}<small>/ ${COST()}</small>`)}<div style="min-width:0"><div class="cname" style="font-size:20px">${canAdopt()?'Choose a policy':`Next policy in ${turnsLeft()} turns`}</div><div class="rsub"><span>${st('cul')}+${CPT} per turn</span></div></div></div>
+      ${JUST?`<div style="margin-top:10px">${toast()}</div>`:''}
+      <div class="h3">You can adopt</div>${opts.map(card).join('')}
+      <div class="h3">Adopted</div><div class="chips">${mine.map(n=>`<span class="chip">${ic(picon(n))}${n}</span>`).join('')}</div>
+    </div>`;
+  } else {
+    const acc=b=>{const s=bstate(b), on=CACC===b.name, d=nDone(b);
+      const stat=s==='open'||s==='done'?`<div class="pips" style="margin-top:5px">${[0,1,2,3,4].map(i=>`<i class="${i<d?'on':''}"></i>`).join('')}</div>`:`<div class="rsub">${s==='avail'?'Available':s==='era'?`${b.era} era`:'Blocked'}${b.excl.length?`<span>Not with ${b.excl.join(' or ')}</span>`:''}</div>`;
+      let grid='';
+      if(on){ const X=c=>174+(c-3)*66, Y=r=>36+(r-1)*112, gh=Y(Math.max(...b.pol.map(p=>p.row)))+76; let lines='';
+        b.pol.forEach(p=>p.req.forEach(r=>{const a=PBY[r]; if(!a) return; const y1=Y(a.row)+54, y2=Y(p.row)-28, m=(y1+y2)/2; lines+=`<path d="M${X(a.col)} ${y1}C${X(a.col)} ${m} ${X(p.col)} ${m} ${X(p.col)} ${y2}" stroke="${ADOPTED.has(p.name)?'#3f8ff0':'#56779a'}" stroke-width="3" fill="none"/>`;}));
+        grid=`<div class="mgrid" style="height:${gh}px"><svg width="349" height="${gh}">${lines}</svg>${b.pol.map(p=>{const s=pstate(p.name);return `<button class="tn ${s==='done'?'done':s==='av'?'av':'lock'} ${CSEL===p.name?'sel':''}" data-csel="${p.name}" style="left:${X(p.col)}px;top:${Y(p.row)-26}px"><div class="d">${ic('pol_'+p.name)}</div><div class="nm">${p.name}</div></button>`}).join('')}</div>`; }
+      return `<div class="acc ${on?'on':''}"><button data-cacc="${b.name}">${bdisc(b.name,s==='open'||s==='done'?'open':s==='avail'?'av':'lock')}<div style="min-width:0"><div class="rname">${b.name}</div>${stat}</div>${ic('ArrowRight').replace('class="ic','class="ic chev')}</button>${grid}</div>`;};
+    body=`<div class="scroll tpick">${POL.map(acc).join('')}</div>`;
+  }
+  const n=CSEL, bar=n?`<div class="tbarhead">${ic(picon(n),'width:22px;height:22px;color:#fff')}<b>${n}</b><span>${BR[n]?'Branch opener':PBY[n].branch}</span></div>${adoptBtn(n)}`:`<button class="ghost">${st('cul')}Tap a policy</button>`;
+  return `<div class="sheet fade-in" style="top:56px"><div class="grab"></div>${head('Social Policies')}${tabs}${body}<div class="tbar">${bar}</div></div>`;
+}
+
+/* ================= religion shared: belief picker ================= */
+const typeIcon={Pantheon:'rel_Pantheon',Founder:'rel_Founder',Follower:'rel_Follower',Enhancer:'rel_Enhancer',religion:'rel_Religion'};
+const canPickNow=t=>RREADY&&!FOUNDED&&['religion','Founder','Follower'].includes(t);
+const heldBy=n=>TAKEN[n]?(TAKEN[n]==='gre'?'Greece':'Yours'):null;
+function beliefCard(b,type,sel,attr){
+  const h=heldBy(b.name);
+  return `<button class="belief ${sel?'on':''} ${h==='Greece'?'taken':''}" ${attr}="${b.name}">${disc(typeIcon[type],h==='Yours'?'open':h?'lock':'av')}<div style="flex:1;min-width:0"><div class="rname">${b.name}</div><div class="fxs">${b.fx.join('. ')}</div></div>${h?`<span class="tag ${h==='Greece'?'gre':'bab'}">${h}</span>`:''}</button>`;
+}
+function symbolGrid(attr,sel){
+  return `<div class="symgrid">${RELIGIONS.map(r=>{const t=r==='Christianity'; return `<button class="sym ${sel===r?'on':''} ${t?'taken':''}" ${t?'':`${attr}="${r}"`}>${ic('rel_'+r)}${r}${t?'<span class="tag gre" style="margin:0">Greece</span>':''}</button>`}).join('')}</div>`;
+}
+function picker(){
+  if(!RPICK) return '';
+  const enh=RPICK.endsWith('2'), t=RPICK.replace('2',''), can=!enh&&canPickNow(t);
+  const list=t==='religion'?symbolGrid('data-psel',PSEL):[...BEL[t]].sort((a,b)=>!!TAKEN[a.name]-!!TAKEN[b.name]).map(b=>beliefCard(b,t,PSEL===b.name,'data-psel')).join('');
+  const title=t==='religion'?'Religion':`${t} belief`;
+  const selTaken=PSEL&&TAKEN[PSEL];
+  const bar=!can?`<button class="ghost dim">${ic('LockSmall')}${t==='Enhancer'||enh?'Pick when you enhance your religion':FOUNDED?'Already chosen':'Pick when a Great Prophet is born'}</button>`
+    :PSEL&&!selTaken?`<button class="big" data-pchoose>Choose ${PSEL}</button>`:`<button class="ghost dim">Tap ${t==='religion'?'a religion':'a belief'}</button>`;
+  return `<div class="scrimall" data-pclose></div><div class="picker fade-in"><div class="grab"></div>${head(title)}<div class="scroll" style="padding-top:6px">${list}</div><div class="tbar">${bar}</div></div>`;
+}
+function foundBtn(){
+  const n=['religion','Founder','Follower'].filter(k=>!PICKS[k]).length;
+  if(FOUNDED) return `<div class="toast">${ic('Checkmark')}<span>${ownName()} founded in Babylon</span></div>`;
+  if(!RREADY) return `<button class="ghost">${ic('Great Prophet')}Great Prophet in ${prophetTurns()} turns</button>`;
+  return n?`<button class="ghost dim">Pick ${n} more to found</button>`:`<button class="big" data-found>Found ${PICKS.religion}</button>`;
+}
+function slot(kind,label,locked){ // kind: religion | Founder | Follower | Follower2 (enhancing) | Enhancer
+  const v=PICKS[kind]||null, cls=v?'fill':locked?'':RREADY&&!FOUNDED?'go':'';
+  const icon=kind==='religion'&&v?'rel_'+v:typeIcon[kind.replace('2','')];
+  return `<button class="slot ${cls}" data-rpick="${kind}">${ic(icon)}${v||label}${v?`<small>${label}</small>`:''}</button>`;
+}
+function worldList(){
+  const cs=cities();
+  return `<div class="relcard"><div class="relhead"><div class="bd" style="background:${COL.chr};color:#fff">${ic('rel_Christianity')}</div><div style="flex:1;min-width:0"><div class="cname">Christianity</div><div class="rsub"><span>Greece</span><span>Holy city Athens</span></div></div><div class="lmini" style="background-image:url(${ART.p_Alexander})"></div></div>
+    <div class="chips" style="margin-top:10px">${['Messenger of the Gods','Pilgrimage','Feed the World'].map(n=>`<span class="chip">${ic(typeIcon[n==='Pilgrimage'?'Founder':n==='Feed the World'?'Follower':'Pantheon'])}${n}</span>`).join('')}</div></div>
+    <div class="relcard"><div class="relhead"><div class="bd" style="background:${FOUNDED?COL.own:COL.pan};color:${FOUNDED?'#fff':'var(--navy)'}">${ic(FOUNDED?'rel_'+PICKS.religion:'rel_Pantheon')}</div><div style="flex:1;min-width:0"><div class="cname">${FOUNDED?ownName():'Fertility Rites'}</div><div class="rsub"><span>Babylon, ${FOUNDED?'religion':'pantheon'}</span></div></div><div class="lmini" style="background-image:url(${ART.p_Nebuchadnezzar})"></div></div></div>
+    <div class="h3">Cities</div>${cs.map(c=>`<div class="frow"><div class="pop" style="background:${CIVC[c.civ]}">${c.pop}</div><div class="grow1"><div class="rname">${c.name}${c.holy?' '+ic('rel_Holy','width:16px;height:16px;color:var(--yellow)'):''}</div>${fbar(c)}${flegend(c)}</div></div>`).join('')}`;
+}
+
+/* ================= RELIGION A: one vertical path ================= */
+function relA(){
+  const tabs=`<div class="tabs tmode"><button data-rtab="faith" class="${RTAB==='faith'?'on':''}">Your faith</button><button data-rtab="world" class="${RTAB==='world'?'on':''}">World</button></div>`;
+  let body;
+  if(RTAB==='world') body=`<div class="scroll">${worldList()}</div>`;
+  else {
+    const pct=faithNow()/200;
+    body=`<div class="scroll" style="padding-top:16px">
+      <div class="step done">${disc('rel_Pantheon','done')}<div class="cname">Pantheon</div><div class="rsub"><span>Fertility Rites</span><span>+10% growth</span></div></div>
+      <div class="step ${RREADY?'done':''}">${disc('Great Prophet',RREADY?'done':'av')}<div class="cname">Great Prophet</div>
+        ${RREADY?`<div class="rsub"><span>Born in Babylon</span></div>`:`<div class="rsub"><span>${st('fai')}${FAITH} / 200</span><span>+${FPT} per turn</span><span>${prophetTurns()} turns</span></div><div class="bar fai"><i style="width:${pct*100}%"></i></div>`}</div>
+      <div class="step ${FOUNDED?'done':RREADY?'':'lock'}">${disc('rel_Religion',FOUNDED?'done':RREADY?'av':'lock')}<div class="cname">Found a religion</div><div class="rsub"><span>${FOUNDED?'Holy city Babylon':'2 of 3 still open'}</span></div>
+        <div class="slots">${slot('religion','Religion')}${slot('Founder','Founder')}${slot('Follower','Follower')}</div></div>
+      <div class="step lock">${disc('rel_Enhancer','lock')}<div class="cname">Enhance</div><div class="rsub"><span>Second Great Prophet, ${st('fai')}300</span></div>
+        <div class="slots two">${slot('Follower2','Follower',1)}${slot('Enhancer','Enhancer',1)}</div></div>
+    </div>`;
+  }
+  return `<div class="sheet fade-in" style="top:56px"><div class="grab"></div>${head('Religion',`<div class="stat" style="margin-left:auto">${st('fai')}${faithNow()}<small>+${FPT}</small></div>`)}${tabs}${body}<div class="tbar">${foundBtn()}</div></div>${picker()}`;
+}
+
+/* ================= RELIGION B: map lens ================= */
+let BSHEET=null, LPAN={x:0,y:0}, LPOS={};
+const clampPan=(x,y,low=-345)=>({x:Math.max(-120,Math.min(195,x)),y:Math.max(low,Math.min(20,y))}); // low: city focus may scroll further, the card covers the edge
+function relB(o={}){  // o.d: Direction D (Path button replaces Beliefs; a tapped city shows its card even with a prophet waiting)
+  const m=hexMap(1.4,-6,'',{xc:4.75,box:[-230,-70,853,1700],mute:1}), cs=cities();
+  LPOS=Object.fromEntries(cs.map(c=>[c.name,m.P(c.c,c.r)]));
+  let over='';
+  const ath=cs.find(c=>c.name==='Athens'), akk=cs.find(c=>c.name==='Akkad');
+  const [ax,ay]=m.P(ath.c,ath.r),[kx,ky]=m.P(akk.c,akk.r);
+  over+=`<path d="M${ax} ${ay+30}L${kx} ${ky-32}" stroke="${COL.chr}" stroke-width="4" stroke-dasharray="2 9" stroke-linecap="round" fill="none"/><polygon points="${kx-7},${ky-40} ${kx+7},${ky-40} ${kx},${ky-31}" fill="${COL.chr}"/>`;
+  for(const c of cs){ const [x,y]=m.P(c.c,c.r), R=24, C=2*Math.PI*R; let off=0;
+    const segs=[...Object.entries(c.f),['none',c.pop-Object.values(c.f).reduce((a,b)=>a+b,0)]].filter(s=>s[1]>0);
+    const sel=RCITY===c.name;
+    over+=`<circle cx="${x}" cy="${y}" r="${R+8}" fill="${sel?'rgba(255,255,255,.95)':'rgba(16,31,47,.55)'}"/>`;
+    for(const [k,v] of segs){ const len=C*v/c.pop; over+=`<circle cx="${x}" cy="${y}" r="${R}" fill="none" stroke="${k==='none'?'#5d7690':COL[k]}" stroke-width="9" stroke-dasharray="${Math.max(0,len-2).toFixed(1)} ${C.toFixed(1)}" stroke-dashoffset="${(-off).toFixed(1)}" transform="rotate(-90 ${x} ${y})"/>`; off+=len; }
+    over+=`<circle cx="${x}" cy="${y}" r="15" fill="${CIVC[c.civ]}"/><text x="${x}" y="${y+5.5}" text-anchor="middle" font-size="15" font-weight="900" fill="#fff">${c.pop}</text>`;
+    const w=c.name.length*8.6+22; over+=`<rect x="${x-w/2}" y="${y+36}" width="${w}" height="24" rx="12" fill="${sel?'#fff':'rgba(16,31,47,.9)'}"/><text x="${x}" y="${y+52.5}" text-anchor="middle" font-size="14" font-weight="900" fill="${sel?'#132435':'#fff'}">${c.name}</text>`;
+    if(c.holy) over+=`<circle cx="${x+22}" cy="${y-22}" r="10" fill="var(--yellow)"/><path d="M${x+22} ${y-28}v12M${x+17} ${y-24}h10" stroke="#3a2a00" stroke-width="2.4"/>`;
+  }
+  const bab=cs[0], [bx,by]=m.P(bab.c,bab.r);
+  if(RREADY&&!FOUNDED) over+=`<circle cx="${bx-26}" cy="${by-26}" r="17" fill="#fff" stroke="#ffc93c" stroke-width="4"/>`;
+  const btns=cs.map(c=>{const [x,y]=m.P(c.c,c.r);return `<button class="citybtn" data-rcity="${c.name}" style="left:${x}px;top:${y}px" aria-label="${c.name}"></button>`}).join('');
+  const prophetIcon=RREADY&&!FOUNDED?`<div style="position:absolute;left:${bx-26-12}px;top:${by-26-12}px;z-index:3;color:var(--navy);pointer-events:none">${ic('Great Prophet','width:24px;height:24px')}</div>`:'';
+  const legend=`<div class="legend">${[['pan'],['chr']].concat(FOUNDED?[['own']]:[]).map(([k])=>`<span class="chip"><i class="dot" style="background:${COL[k]}"></i>${relName(k)}</span>`).join('')}</div>`;
+  const c=cs.find(c=>c.name===RCITY);
+  const side=o.d?`<button class="pk" data-lens="0">${ic('rel_Religion')}Path</button>`:`<button class="pk" data-bsheet="beliefs">${ic('rel_Beliefs')}Beliefs</button>`;
+  const note=!c?'':c.name==='Akkad'?'Christianity spreads here from Athens, 6 tiles away':c.name==='Babylon'?'13 tiles from Athens, out of its 10 tile reach':c.holy?'Holy city of Christianity':'City-state, no religion yet';
+  let panel;
+  const pathBtn=`<button class="qb" data-lens="0">${ic('rel_Religion')}Path</button>`, foundQb=`<button class="qb p" data-bsheet="found" style="grid-column:auto;min-height:60px;font-size:17px">${ic('rel_Religion')}Found religion</button>`;
+  if(!c) panel=`<div class="grab"></div><div class="peek">${RREADY&&!FOUNDED?`<div class="bd" style="width:48px;height:48px;background:#fff;color:var(--navy)">${ic('Great Prophet')}</div>${foundQb.replace('grid-column:auto;','flex:1;')}`
+      :FOUNDED?`${ic('rel_'+PICKS.religion,'width:30px;height:30px')}<div style="flex:1;min-width:0"><div class="rname">${ownName()} founded</div><div class="rsub"><span>Enhance at ${st('fai')}300</span></div></div>`
+      :`${ic('Great Prophet','width:30px;height:30px')}<div style="flex:1;min-width:0"><div class="rname">Great Prophet</div><div class="bar fai"><i style="width:${FAITH/2}%"></i></div></div><div class="turns">${prophetTurns()}<small>turns</small></div>`}${side}</div>`;
+  else panel=`<div class="grab"></div><div class="relhead" style="padding-top:12px"><div class="pop" style="background:${CIVC[c.civ]}">${c.pop}</div><div style="flex:1;min-width:0"><div class="uname">${c.name}</div><div class="rsub">${note}</div></div><button class="x" data-rclose>${ic('Close')}</button></div>
+      <div style="margin-top:10px">${fbar(c)}${flegend(c)}</div>
+      <div class="prorow">${ic(FOUNDED?'rel_'+PICKS.religion:'Great Prophet','width:30px;height:30px')}<div style="flex:1;min-width:0">${RREADY&&!FOUNDED?`<div class="rname">Great Prophet in Babylon</div><div class="rsub"><span>Ready to found</span></div>`:FOUNDED?`<div class="rname">${ownName()} founded</div><div class="rsub"><span>Enhance at ${st('fai')}300</span></div>`:`<div class="rname">Great Prophet</div><div class="bar fai"><i style="width:${FAITH/2}%"></i></div>`}</div>${FOUNDED||RREADY?'':`<div class="turns">${prophetTurns()}<small>turns</small></div>`}</div>
+      <div class="lacts">${o.d?pathBtn+(RREADY&&!FOUNDED?foundQb:`<button class="qb" data-bsheet="world">${ic('Cities')}All cities</button>`):`<button class="qb" data-bsheet="beliefs">${ic('rel_Beliefs')}Beliefs</button><button class="qb" data-bsheet="world">${ic('Cities')}All cities</button>`}</div>`;
+  let sheet='';
+  if(BSHEET==='found') sheet=`<div class="scrimall" data-bsclose></div><div class="sheet fade-in" style="top:150px;z-index:9"><div class="grab"></div>${head('Found a religion')}<div class="scroll" style="padding-top:4px">
+      <div class="h3" style="margin-top:4px">Religion</div>${symbolGrid('data-bsym',PICKS.religion)}
+      ${['Founder','Follower'].map(t=>`<div class="h3">${t} belief</div>${BEL[t].filter(b=>!TAKEN[b.name]).map(b=>beliefCard(b,t,PICKS[t]===b.name,'data-b'+t.toLowerCase())).join('')}`).join('')}
+      <div class="h3">Pantheon, kept</div>${beliefCard(BEL.Pantheon.find(b=>b.name==='Fertility Rites'),'Pantheon',false,'data-none')}
+    </div><div class="tbar">${foundBtn()}</div></div>`;
+  if(BSHEET==='beliefs'||BSHEET==='world') sheet=`<div class="scrimall" data-bsclose></div><div class="sheet fade-in" style="top:150px;z-index:9"><div class="grab"></div>${head(BSHEET==='world'?'Cities':'Beliefs')}${BSHEET==='beliefs'?`<div style="padding:0 14px"><div class="gtabs four">${['Pantheon','Founder','Follower','Enhancer'].map(t=>`<button data-btype="${t}" class="${BTYPE===t?'on':''}">${t}</button>`).join('')}</div></div><div class="scroll" style="padding-top:2px">${[...BEL[BTYPE]].sort((a,b)=>!TAKEN[b.name]-!TAKEN[a.name]).map(b=>beliefCard(b,BTYPE,false,'data-none')).join('')}</div>`:`<div class="scroll">${worldList()}</div>`}</div>`;
+  return `<div class="lens"><div class="lmap" style="transform:translate(${LPAN.x}px,${LPAN.y}px)">${m.svg.replace('</svg>',over+'</svg>')}${btns}${prophetIcon}</div></div>${sbar}${stats()}${legend}<div class="lpanel fade-in">${panel}</div>${sheet}`;
+}
+
+/* ================= RELIGION D: A's path, B's lens one tap away ================= */
+let LENS=false;
+function relD(){
+  if(LENS) return relB({d:true});
+  return bgMap()+sbar+relA().replace('<div class="tbar">',`<div class="tbar dbar"><button class="lensbtn" data-lens="1">${ic('HexagonOutline')}Map</button>`);
+}
+
+/* ================= RELIGION C: bottom tabs ================= */
+function relC(){
+  let body;
+  if(RPAGE==='faith'){
+    const pct=faithNow()/prophetCost();
+    const slots=[['gre','rel_Christianity','Christianity'],FOUNDED?['bab','rel_'+PICKS.religion,PICKS.religion]:['','rel_Religion','Open'],['','rel_Religion','Open']];
+    body=`<div class="scroll" style="padding-top:14px">
+      <div class="hero" style="flex-direction:column;gap:10px;padding:18px 16px">${ring(RREADY&&!FOUNDED?1:pct,150,RREADY&&!FOUNDED?'var(--yellow)':'var(--fai)',`${ic('Great Prophet','width:40px;height:40px')}<span style="margin-top:4px">${RREADY&&!FOUNDED?'Ready':`${faithNow()} / ${prophetCost()}`}</span>`,12)}
+        <div class="cname" style="font-size:20px;text-align:center">${FOUNDED?`${ownName()} founded`:RREADY?'Great Prophet born in Babylon':`Great Prophet in ${prophetTurns()} turns`}</div>
+        <div class="rsub" style="justify-content:center"><span>${st('fai')}+${FPT} per turn</span>${FOUNDED?`<span>Next prophet enhances it</span>`:''}</div>
+        ${RREADY&&!FOUNDED?`<button class="big" data-rpage="beliefs" data-pickmode="1">Found a religion</button>`:''}</div>
+      <div class="h3">Religions founded, 1 of 3</div><div class="race">${slots.map(([c,i,l])=>`<div class="${c}">${ic(i)}${l}</div>`).join('')}</div>
+      <div class="h3">Your pantheon</div>${beliefCard(BEL.Pantheon.find(b=>b.name==='Fertility Rites'),'Pantheon',false,'data-none')}
+    </div>`;
+  } else if(RPAGE==='beliefs'){
+    body=`<div style="padding:12px 14px 0;flex:none"><div class="gtabs four">${(RREADY&&!FOUNDED?['Founder','Follower','Pantheon','Enhancer']:['Pantheon','Founder','Follower','Enhancer']).map(t=>`<button data-btype="${t}" class="${BTYPE===t?'on':''}">${t}${RREADY&&!FOUNDED&&PICKS[t]&&(t!=='Founder'||PICKS.religion)?ic('Checkmark','width:15px;height:15px;margin-left:3px;vertical-align:-2px'):''}</button>`).join('')}</div></div>
+      <div class="scroll" style="padding-top:2px">${BTYPE==='Founder'&&RREADY&&!FOUNDED?`<div class="h3" style="margin-top:0">Religion</div>${symbolGrid('data-csym',PICKS.religion)}<div class="h3">Founder belief</div>`:''}
+      ${[...BEL[BTYPE]].sort((a,b)=>!!TAKEN[a.name]-!!TAKEN[b.name]).map(b=>beliefCard(b,BTYPE,PICKS[BTYPE]===b.name&&BTYPE!=='Pantheon','data-cbel')).join('')}</div>
+      ${RREADY&&!FOUNDED?`<div class="pbar">${foundBtn()}</div>`:''}`;
+  } else body=`<div class="scroll">${worldList()}</div>`;
+  const tabs=[['faith','rel_Religion','Faith'],['beliefs','rel_Beliefs','Beliefs'],['world','Cities','World']];
+  return `<div class="sheet fade-in" style="top:56px"><div class="grab"></div>${head('Religion',`<div class="stat" style="margin-left:auto">${st('fai')}${faithNow()}<small>+${FPT}</small></div>`)}
+    ${body}<div class="btabs">${tabs.map(([k,i,l])=>`<button data-rpage="${k}" class="${RPAGE===k?'on':''}">${ic(i)}${l}</button>`).join('')}</div></div>`;
+}
+
+/* ---------- canvas ---------- */
+const THESIS={
+  'Policies A':'Branch deck: all ten branches as cards, grouped by era and by either-or rule. Tap a branch to drill in; adopt from the tray under your thumb.',
+  'Policies B':'One branch at a time as a vertical tree, like the tech tree. Switch branches on the rail at the bottom; tap a node to adopt.',
+  'Policies C':'Decision first: only what you can adopt now, with what each pick unlocks. Every branch sits one tab away.',
+  'Religion A':'The road to a religion as one vertical path: pantheon, Great Prophet, found, enhance. Tap a slot to see its beliefs.',
+  'Religion B':'Religion as a map lens: rings show who follows what in each city. The Great Prophet founds from where it stands.',
+  'Religion D':'The path to a religion, with the religion lens one tap away.',
+  'Religion C':'Three tabs under the thumb: faith toward the next prophet, every belief and who holds it, and the cities.',
+};
+let SCREEN=localStorage.getItem('pr_s')||'Policies', DIR=localStorage.getItem('pr_d')||'A';
+if(!['Policies','Religion'].includes(SCREEN)) SCREEN='Policies'; if(!'ABCD'.includes(DIR)||(SCREEN==='Policies'&&DIR==='D')) DIR='A';
+resetPolicies(); resetReligion();
+function screenFor(){
+  if(SCREEN==='Policies') return bgMap()+sbar+({A:polA,B:polB,C:polC})[DIR]();
+  if(DIR==='B') return relB();
+  if(DIR==='D') return relD();
+  return bgMap()+sbar+({A:relA,C:relC})[DIR]();
+}
+function draw(keep){
+  const sc=document.querySelector('#screen .scroll,#screen .ttscroll'), y=keep&&sc?sc.scrollTop:0;
+  const scr=document.getElementById('screen'); scr.innerHTML=screenFor(); scr.scrollTop=0; scr.scrollLeft=0;
+  const seg=(id,opts,cur,attr)=>document.getElementById(id).innerHTML=opts.map(([v,l])=>`<button aria-pressed="${v===cur}" ${attr}="${v}">${l}</button>`).join('');
+  seg('scr',[['Policies','Policies'],['Religion','Religion']],SCREEN,'data-screen');
+  seg('dir',[['A','A'],['B','B'],['C','C']].concat(SCREEN==='Religion'?[['D','D']]:[]),DIR,'data-dir');
+  const ready=SCREEN==='Policies'?READY:RREADY;
+  seg('sta',[['0','Turn 58'],['1',SCREEN==='Policies'?'Policy ready':'Prophet born']],ready?'1':'0','data-sta');
+  document.getElementById('thesis').textContent=THESIS[SCREEN+' '+DIR];
+  localStorage.setItem('pr_s',SCREEN); localStorage.setItem('pr_d',DIR);
+  if(keep){const n=document.querySelector('#screen .scroll,#screen .ttscroll'); if(n) n.scrollTop=y;}
+  fit();
+}
+function fit(){
+  const d=document.getElementById('device'), wrap=document.getElementById('stagewrap');
+  const narrow=innerWidth<520; d.classList.toggle('bare',narrow);
+  const pad=narrow?0:28; const sc=Math.min((wrap.clientWidth-pad)/393,(wrap.clientHeight-pad)/852,1.25);
+  d.style.transform=`scale(${sc})`; d.style.marginTop=narrow?'0':'12px';
+}
+let drag=null, dragged=false;
+document.addEventListener('pointerdown',e=>{ if(!e.target.closest('.lens')) return; drag={x:e.clientX,y:e.clientY,p:{...LPAN},s:document.getElementById('device').getBoundingClientRect().width/393}; dragged=false; });
+document.addEventListener('pointermove',e=>{ if(!drag) return; const dx=(e.clientX-drag.x)/drag.s, dy=(e.clientY-drag.y)/drag.s;
+  if(!dragged&&Math.hypot(dx,dy)<8) return; dragged=true; LPAN=clampPan(drag.p.x+dx,drag.p.y+dy);
+  document.querySelector('.lmap').style.transform=`translate(${LPAN.x}px,${LPAN.y}px)`; });
+document.addEventListener('pointerup',()=>{drag=null});
+document.addEventListener('click',e=>{
+  if(dragged){dragged=false; if(e.target.closest('.lens')) return;}
+  const q=s=>e.target.closest(s), g=(s,k)=>{const el=q(s);return el&&el.dataset[k]};
+  let v;
+  if(v=g('[data-screen]','screen')){SCREEN=v;RPICK=null;BSHEET=null;if(SCREEN==='Policies'&&DIR==='D')DIR='A';return draw()}
+  if(v=g('[data-dir]','dir')){DIR=v;RPICK=null;BSHEET=null;LENS=false;RCITY=null;LPAN={x:0,y:0};return draw()}
+  if(v=g('[data-lens]','lens')){LENS=v==='1';RCITY=null;LPAN={x:0,y:0};BSHEET=null;RPICK=null;return draw()}
+  if(v=g('[data-sta]','sta')){ if(SCREEN==='Policies'){READY=v==='1';resetPolicies();} else {RREADY=v==='1';resetReligion();BSHEET=null;RCITY=null;LPAN={x:0,y:0};BTYPE='Founder';} return draw()}
+  if(v=g('[data-adopt]','adopt')){adopt(v);return draw(true)}
+  // policies A
+  if(v=g('[data-abr]','abr')){AOPEN=v;ASEL=adoptable().find(n=>n===v||(PBY[n]&&PBY[n].branch===v))||v;JUST=null;return draw()}
+  if(q('[data-aback]')){AOPEN=null;ASEL=null;JUST=null;return draw()}
+  if(v=g('[data-asel]','asel')){ASEL=v;JUST=null;return draw(true)}
+  // policies B
+  if(v=g('[data-bsel]','bsel')){BSEL=v;BPOL=adoptable().find(n=>n===v||(PBY[n]&&PBY[n].branch===v))||null;JUST=null;return draw()}
+  if(v=g('[data-bpol]','bpol')){BPOL=v;JUST=null;return draw(true)}
+  if(q('[data-bclose]')){BPOL=null;JUST=null;return draw(true)}
+  // policies C
+  if(v=g('[data-cmode]','cmode')){CMODE=v;return draw()}
+  if(v=g('[data-cacc]','cacc')){CACC=CACC===v?null:v;return draw(true)}
+  if(v=g('[data-csel]','csel')){CSEL=v;JUST=null;return draw(true)}
+  // religion shared
+  if(v=g('[data-rtab]','rtab')){RTAB=v;return draw()}
+  if(v=g('[data-rpick]','rpick')){RPICK=v;PSEL=v==='Pantheon'?'Fertility Rites':PICKS[v]||null;return draw()}
+  if(q('[data-pclose]')||(RPICK&&q('.picker .x'))){RPICK=null;return draw(true)}
+  if(v=g('[data-psel]','psel')){PSEL=v;return draw(true)}
+  if(q('[data-pchoose]')){PICKS[RPICK]=PSEL;RPICK=null;return draw(true)}
+  if(q('[data-found]')){FOUNDED=true;['Founder','Follower'].forEach(k=>TAKEN[PICKS[k]]='bab');BSHEET=null;return draw()}
+  // religion B
+  if(v=g('[data-rcity]','rcity')){RCITY=v;const [x,y]=LPOS[v];LPAN=clampPan(196-x,300-y,-640);return draw()}
+  if(q('[data-rclose]')||(RCITY&&q('.lens'))){RCITY=null;LPAN={x:0,y:0};return draw()}
+  if(v=g('[data-bsheet]','bsheet')){BSHEET=v;return draw()}
+  if(q('[data-bsclose]')||(BSHEET&&q('.sheet .x'))){BSHEET=null;return draw()}
+  if(v=g('[data-bsym]','bsym')){PICKS.religion=v;return draw(true)}
+  if(v=g('[data-bfounder]','bfounder')){PICKS.Founder=v;return draw(true)}
+  if(v=g('[data-bfollower]','bfollower')){PICKS.Follower=v;return draw(true)}
+  // religion C
+  if(v=g('[data-btype]','btype')){BTYPE=v;return draw()}
+  if(v=g('[data-rpage]','rpage')){RPAGE=v;if(q('[data-pickmode]'))BTYPE='Founder';return draw()}
+  if(v=g('[data-csym]','csym')){PICKS.religion=v;return draw(true)}
+  if(v=g('[data-cbel]','cbel')){ if(canPickNow(BTYPE)&&!TAKEN[v]){PICKS[BTYPE]=PICKS[BTYPE]===v?null:v; if(BTYPE==='Founder'&&PICKS.Founder&&PICKS.religion&&!PICKS.Follower){BTYPE='Follower';return draw()}} return draw(true)}
+});
+addEventListener('resize',fit);
+draw();
+</script>
+</body>
+</html>
