@@ -235,6 +235,14 @@ svg.st{width:18px;height:18px;flex:none}
 .odd{color:#9ff08a;font-weight:900}
 .qb small{font-size:12.5px;font-weight:700;color:var(--ink2)}
 .tmode{margin-top:4px}
+.menuscr{position:absolute;inset:0;overflow:hidden}
+.mbg{position:absolute;inset:0;background-size:cover;background-position:center;animation:wsIn 2.2s cubic-bezier(.16,1,.3,1) both}
+.mword{position:absolute;top:120px;left:0;right:0;text-align:center;font-size:62px;font-weight:900;letter-spacing:-.02em;color:#fff;text-shadow:0 4px 0 #1c3249,0 10px 24px rgba(0,0,0,.35);animation:wsCard .7s .3s cubic-bezier(.16,1,.3,1) both}
+.mmenu{position:absolute;left:18px;right:18px;bottom:44px;display:flex;flex-direction:column;gap:10px;animation:wsCard .7s .6s cubic-bezier(.16,1,.3,1) both}
+.mcont{min-height:72px;border-radius:20px;background:var(--yellow);color:var(--yellow-ink);display:flex;align-items:center;justify-content:space-between;padding:0 20px;font-size:21px;font-weight:900;text-align:left;box-shadow:0 5px 0 #c9951c,0 12px 24px rgba(0,0,0,.3)}
+.mcont small{display:block;font-size:14px;font-weight:800;opacity:.72}
+.mrow{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.mb{min-height:56px;border-radius:16px;background:var(--panel);color:#fff;font-size:16px;font-weight:800;-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px)}
 .wscreen{position:absolute;inset:0;overflow:hidden;background:#f3c47a}
 .ws-bg{position:absolute;inset:0;background-size:cover;background-position:center 30%;animation:wsIn 2.6s cubic-bezier(.16,1,.3,1) both}
 @keyframes wsIn{from{transform:scale(1.22);filter:blur(8px) brightness(1.5)}to{transform:none;filter:none}}
@@ -435,6 +443,14 @@ function tileStuff(x,y,key,wat){
 function res(x,y,n){return `<g><circle cx="${x+15}" cy="${y+5}" r="8.5" fill="#fff" stroke="rgba(0,0,0,.15)"/><image href="${ICON['r_'+n]||''}" x="${x+8.5}" y="${y-1.5}" width="13" height="13" style="filter:brightness(.25)"/></g>`}
 function house(x,y,col,dark,h=8){return `<polygon points="${x-5},${y} ${x+3},${y} ${x+3},${y-h} ${x-5},${y-h}" fill="#f4ecd9"/><polygon points="${x+3},${y} ${x+7},${y-3} ${x+7},${y-h-3} ${x+3},${y-h}" fill="#cfc2a4"/><polygon points="${x-6},${y-h} ${x-1},${y-h-6} ${x+4},${y-h}" fill="${col}"/><polygon points="${x-1},${y-h-6} ${x+8},${y-h-3.5} ${x+4},${y-h}" fill="${dark}"/>`}
 function city(k,x,y){
+  // Cities are era sprites with roofs in the owner's color; a wonder stands at the front right of the tile.
+  const spr=SPR['c_'+(k.era||'Ancient')+'_medium'];
+  if(spr){ const lm=k.wonder&&ART['wl_'+k.wonder], cw=lm?54:64, ch=cw*spr.h/spr.w, cx=lm?x-8:x;
+    let s=k.fresh&&lm?`<ellipse cx="${x+12}" cy="${y+2}" rx="24" ry="${24*SQ}" fill="#ffc93c" opacity=".35" class="glow"/>`:'';
+    s+=`<image href="${spr[k.civ]}" x="${(cx-cw/2).toFixed(1)}" y="${(y+8-ch).toFixed(1)}" width="${cw}" height="${ch.toFixed(1)}"/>`;
+    if(lm){ s+=`<image href="${lm}" x="${x-6}" y="${y-28}" width="40" height="40"/>`;
+      if(k.fresh) s+=[[x-2,y-28,.9],[x+32,y-20,.8],[x+22,y-36,.65],[x+34,y+2,.7]].map(([sx,sy,sc],i)=>`<path d="M${sx} ${sy-6*sc}l${1.6*sc} ${4.4*sc} ${4.4*sc} ${1.6*sc}-${4.4*sc} ${1.6*sc}-${1.6*sc} ${4.4*sc}-${1.6*sc}-${4.4*sc}-${4.4*sc}-${1.6*sc} ${4.4*sc}-${1.6*sc}z" fill="#fff6c9" class="twinkle" style="animation-delay:${i*.45}s"/>`).join(''); }
+    return s; }
   const [c,d]=CIVC[k.civ]; const cs=corners(x,y,.78);
   let s=`<polygon points="${pts(cs)}" fill="#e7dcc0"/><polygon points="${pts([cs[2],cs[3],[cs[3][0],cs[3][1]+4],[cs[2][0],cs[2][1]+4]])}" fill="#b9a67c"/><polygon points="${pts([cs[3],cs[4],[cs[4][0],cs[4][1]+4],[cs[3][0],cs[3][1]+4]])}" fill="#cdbb90"/>`;
   const lm=k.wonder&&ART['wl_'+k.wonder], hx=lm?x-12:x;
@@ -874,13 +890,14 @@ function initTree(){
 }
 
 /* ---------- the direction: thumb arc + decision queue ---------- */
-const S=['Map','Unit','City','Tech','Tree','Diplomacy','Wonder','Art lab'];
+const S=['Menu','Map','Unit','City','Tech','Tree','Diplomacy','Wonder','Art lab'];
 const THESIS={
   Map:'Everything radiates from the yellow corner button. It steps through this turn\'s decisions; the count shows what is left.',
   Unit:'A unit decision: actions fan out along the thumb arc. Shoot shows the combat preview right on the button.',
   City:'Full city detail. When a city needs a new build, the Next button opens this sheet on the Build tab. Tabs sit at the bottom for one thumb.',
   Tech:'Next up: what you are researching, what you can pick now, and goals by what you want. Tap a card or goal.',
   Tree:'Civ 5\'s real tree, re-laid into four lanes so it only scrolls up and down. Tap a tech for its path.',
+  Menu:'Title and main menu, direction A: the army lineup, with Continue as the big button in thumb reach.',
   Wonder:'Wonder completed: the scene settles in, then a card in thumb reach with what it does. On the map, the wonder stands on its city tile with a gold badge on the banner.',
   'Art lab':'Generated low-poly unit sprites, recolored per civ in code. Tap Move, Shoot, Hoplite hits, or switch civ color.',
   Diplomacy:'Art test: GPT-generated leader portraits and icons in place. The Civ button is your leader.',
@@ -906,6 +923,9 @@ function screenFor(s){
    <div class="btabs">${[['Settings','Build',1],['Library','Buildings'],['HexagonOutline','Tiles'],['Worker','Citizens'],['Resources','Buy']].map(([i,l,on])=>`<button class="${on?'on':''}">${ic(i)}${l}</button>`).join('')}</div></div>`;
   if(s==='Tech'||s==='Tree') return mapLayer()+sbar+techSheet(s);
   if(s==='Art lab') return artLab();
+  if(s==='Menu') return `<div class="menuscr"><div class="mbg" style="background-image:url(${ART.tt_A})"></div>${sbar}<div class="mword">Unciv</div>
+    <div class="mmenu"><button class="mcont" data-s="Map"><span>Continue<small>Babylon, turn 58</small></span>${ic('ForwardArrow','width:26px;height:26px')}</button>
+    <div class="mrow"><button class="mb" data-s="Map">New game</button><button class="mb">Load game</button><button class="mb">Civilopedia</button><button class="mb">Settings</button></div></div></div>`;
   if(s==='Wonder') return `<div class="wscreen"><div class="ws-bg" style="background-image:url(${ART.ws_Stonehenge})"></div><div class="ws-flash"></div>
     <div class="ws-spark">${[...Array(16)].map((_,i)=>`<i style="left:${(i*37+11)%96}%;top:${(i*53)%58+8}%;animation-delay:${((i*.37)%2.6).toFixed(2)}s;transform:scale(${.6+(i%3)*.25})"></i>`).join('')}</div>
     ${sbar}
