@@ -480,6 +480,11 @@ svg.st{width:18px;height:18px;flex:none}
 .relhead .bd{width:50px;height:50px}
 .lens{position:absolute;inset:0}
 .lens svg{position:absolute;left:0;top:0}
+.lmap{position:absolute;inset:0;touch-action:none}
+.lens{background:#0f2030;touch-action:none;cursor:grab;user-select:none;-webkit-user-select:none}
+.peek{display:flex;align-items:center;gap:12px;padding:10px 0 0;min-height:66px}
+.pk{flex:none;width:68px;min-height:56px;border-radius:16px;background:rgba(255,255,255,.09);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;font-size:13px;font-weight:800}
+.pk .ic{width:24px;height:24px}
 .legend{position:absolute;left:10px;top:112px;display:flex;flex-direction:column;align-items:flex-start;gap:6px;z-index:4}
 .legend .chip{background:var(--panel);min-height:36px;box-shadow:0 4px 12px rgba(0,0,0,.25)}
 .citybtn{position:absolute;width:64px;height:64px;margin:-32px 0 0 -32px;border-radius:50%;z-index:3}
@@ -502,6 +507,10 @@ svg.st{width:18px;height:18px;flex:none}
 .frow .grow1{flex:1;min-width:0}
 .frow .pop{width:44px;height:44px;font-size:18px}
 .gtabs.four button{font-size:14px}
+.dbar{flex-direction:row;align-items:stretch}
+.dbar>:last-child{flex:1;min-width:0}
+.lensbtn{flex:none;width:76px;min-height:60px;border-radius:16px;background:#fff;color:var(--navy);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;font-size:13.5px;font-weight:900;box-shadow:0 4px 0 #b9cadb}
+.lensbtn .ic{width:26px;height:26px}
 .pbar{flex:none;padding:12px 14px 12px;background:#0f2030;border-top:1px solid var(--line);display:flex;flex-direction:column;gap:10px;position:relative;z-index:2}
 </style>
 </head>
@@ -592,7 +601,7 @@ const toast=()=>JUST?`<div class="toast fade-in">${ic('Checkmark')}<span>${JUST.
 /* ---------- religion state ---------- */
 const FAITH=23, FPT=2;
 const COL={pan:'#8fc3ff',chr:'#e0524a',own:'#2f7fe0',none:'rgba(255,255,255,.14)'};
-let RREADY=false, FOUNDED=false, PICKS, RPICK=null, PSEL=null, RCITY='Akkad', BTYPE='Founder', RTAB='faith', RPAGE='faith';
+let RREADY=false, FOUNDED=false, PICKS, RPICK=null, PSEL=null, RCITY=null, BTYPE='Founder', RTAB='faith', RPAGE='faith';
 const TAKEN0={'Fertility Rites':'bab','Messenger of the Gods':'gre','Pilgrimage':'gre','Feed the World':'gre'};
 let TAKEN;
 function resetReligion(){PICKS={religion:null,Founder:null,Follower:null}; FOUNDED=false; RPICK=null; PSEL=null; TAKEN={...TAKEN0};}
@@ -627,8 +636,8 @@ const TERR={'~':['#2f7ad6','#2a6fc6'],'-':['#3fb5e3','#37a8d7'],l:['#46b9e6','#3
 const CIVC={bab:'#2f7fe0',gre:'#e0524a',kab:'#9a5bd6'};
 const toCube=(c,r)=>[c-(r-(r&1))/2, r];
 const hexDist=(a,b)=>{const[q1,r1]=toCube(...a),[q2,r2]=toCube(...b);const dq=q1-q2,dr=r1-r2;return Math.max(Math.abs(dq),Math.abs(dr),Math.abs(dq+dr))};
-function hexMap(k=1,y0=0,over=''){
-  const R=31*k, SQ=.6, W=Math.sqrt(3)*R, DY=1.5*R*SQ, x0=(393-8.5*W)/2+W/2;
+function hexMap(k=1,y0=0,over='',o={}){ // o.xc: column centred on screen; o.box: [x,y,w,h] svg viewport; o.mute: dim terrain for a lens
+  const R=31*k, SQ=.6, W=Math.sqrt(3)*R, DY=1.5*R*SQ, x0=o.xc!=null?196-W*o.xc:(393-8.5*W)/2+W/2;
   const P=(c,r)=>[x0+W*(c+(r&1?.5:0)), y0+DY*r];
   const cn=(x,y)=>[...Array(6)].map((_,i)=>{const a=(60*i-90)*Math.PI/180;return [x+R*Math.cos(a), y+R*Math.sin(a)*SQ]});
   const pts=a=>a.map(p=>p[0].toFixed(1)+','+p[1].toFixed(1)).join(' ');
@@ -641,7 +650,9 @@ function hexMap(k=1,y0=0,over=''){
     s+=`<polygon points="${pts(sh)}" fill="${top}" stroke="rgba(0,0,0,.07)" stroke-width="1"/>`;
     const o=t!=='F'&&own(c,r); if(o) s+=`<polygon points="${pts(sh)}" fill="${CIVC[o]}" opacity=".13"/>`;
   }
-  return {svg:`<svg width="393" height="852" viewBox="0 0 393 852">${s}${over}</svg>`, P, k};
+  const [bx,by,bw,bh]=o.box||[0,0,393,852];
+  if(o.mute) s=`<g style="filter:saturate(.45)">${s}</g><rect x="${bx}" y="${by}" width="${bw}" height="${bh}" fill="#0f2030" opacity=".3"/>`;
+  return {svg:`<svg width="${bw}" height="${bh}" viewBox="${bx} ${by} ${bw} ${bh}" style="left:${bx}px;top:${by}px">${s}${over}</svg>`, P, k};
 }
 const bgMap=()=>`<div class="bgmap">${hexMap().svg}</div>`;
 
@@ -830,9 +841,11 @@ function relA(){
 }
 
 /* ================= RELIGION B: map lens ================= */
-let BSHEET=null;
-function relB(){
-  const m=hexMap(.83,62), cs=cities();
+let BSHEET=null, LPAN={x:0,y:0}, LPOS={};
+const clampPan=(x,y,low=-345)=>({x:Math.max(-120,Math.min(195,x)),y:Math.max(low,Math.min(20,y))}); // low: city focus may scroll further, the card covers the edge
+function relB(o={}){  // o.d: Direction D (Path button replaces Beliefs; a tapped city shows its card even with a prophet waiting)
+  const m=hexMap(1.4,-6,'',{xc:4.75,box:[-230,-70,853,1700],mute:1}), cs=cities();
+  LPOS=Object.fromEntries(cs.map(c=>[c.name,m.P(c.c,c.r)]));
   let over='';
   const ath=cs.find(c=>c.name==='Athens'), akk=cs.find(c=>c.name==='Akkad');
   const [ax,ay]=m.P(ath.c,ath.r),[kx,ky]=m.P(akk.c,akk.r);
@@ -852,14 +865,17 @@ function relB(){
   const prophetIcon=RREADY&&!FOUNDED?`<div style="position:absolute;left:${bx-26-12}px;top:${by-26-12}px;z-index:3;color:var(--navy);pointer-events:none">${ic('Great Prophet','width:24px;height:24px')}</div>`:'';
   const legend=`<div class="legend">${[['pan'],['chr']].concat(FOUNDED?[['own']]:[]).map(([k])=>`<span class="chip"><i class="dot" style="background:${COL[k]}"></i>${relName(k)}</span>`).join('')}</div>`;
   const c=cs.find(c=>c.name===RCITY);
-  const note=c.name==='Akkad'?'Christianity spreads here from Athens, 6 tiles away':c.name==='Babylon'?'13 tiles from Athens, out of its 10 tile reach':c.holy?'Holy city of Christianity':'City-state, no religion yet';
+  const side=o.d?`<button class="pk" data-lens="0">${ic('rel_Religion')}Path</button>`:`<button class="pk" data-bsheet="beliefs">${ic('rel_Beliefs')}Beliefs</button>`;
+  const note=!c?'':c.name==='Akkad'?'Christianity spreads here from Athens, 6 tiles away':c.name==='Babylon'?'13 tiles from Athens, out of its 10 tile reach':c.holy?'Holy city of Christianity':'City-state, no religion yet';
   let panel;
-  if(RREADY&&!FOUNDED) panel=`<div class="grab"></div><div class="unithead" style="padding:14px 2px 0"><div class="uport" style="background:#fff">${ic('Great Prophet','color:var(--navy)')}</div><div><div class="uname">Great Prophet</div><div class="uline"><span>In Babylon</span><span>${st('fai')}Next one 300</span></div></div></div>
-      <div class="lacts"><button class="qb" data-bsheet="beliefs">${ic('rel_Beliefs')}Beliefs</button><button class="qb p" data-bsheet="found" style="grid-column:auto;min-height:60px;font-size:17px">${ic('rel_Religion')}Found religion</button></div>`;
-  else panel=`<div class="grab"></div><div class="relhead" style="padding-top:12px"><div class="pop" style="background:${CIVC[c.civ]}">${c.pop}</div><div style="flex:1;min-width:0"><div class="uname">${c.name}</div><div class="rsub">${note}</div></div></div>
+  const pathBtn=`<button class="qb" data-lens="0">${ic('rel_Religion')}Path</button>`, foundQb=`<button class="qb p" data-bsheet="found" style="grid-column:auto;min-height:60px;font-size:17px">${ic('rel_Religion')}Found religion</button>`;
+  if(!c) panel=`<div class="grab"></div><div class="peek">${RREADY&&!FOUNDED?`<div class="bd" style="width:48px;height:48px;background:#fff;color:var(--navy)">${ic('Great Prophet')}</div>${foundQb.replace('grid-column:auto;','flex:1;')}`
+      :FOUNDED?`${ic('rel_'+PICKS.religion,'width:30px;height:30px')}<div style="flex:1;min-width:0"><div class="rname">${ownName()} founded</div><div class="rsub"><span>Enhance at ${st('fai')}300</span></div></div>`
+      :`${ic('Great Prophet','width:30px;height:30px')}<div style="flex:1;min-width:0"><div class="rname">Great Prophet</div><div class="bar fai"><i style="width:${FAITH/2}%"></i></div></div><div class="turns">${prophetTurns()}<small>turns</small></div>`}${side}</div>`;
+  else panel=`<div class="grab"></div><div class="relhead" style="padding-top:12px"><div class="pop" style="background:${CIVC[c.civ]}">${c.pop}</div><div style="flex:1;min-width:0"><div class="uname">${c.name}</div><div class="rsub">${note}</div></div><button class="x" data-rclose>${ic('Close')}</button></div>
       <div style="margin-top:10px">${fbar(c)}${flegend(c)}</div>
-      <div class="prorow">${ic(FOUNDED?'rel_'+PICKS.religion:'Great Prophet','width:30px;height:30px')}<div style="flex:1;min-width:0">${FOUNDED?`<div class="rname">${ownName()} founded</div><div class="rsub"><span>Enhance at ${st('fai')}300</span></div>`:`<div class="rname">Great Prophet</div><div class="bar fai"><i style="width:${FAITH/2}%"></i></div>`}</div>${FOUNDED?'':`<div class="turns">${prophetTurns()}<small>turns</small></div>`}</div>
-      <div class="lacts"><button class="qb" data-bsheet="beliefs">${ic('rel_Beliefs')}Beliefs</button><button class="qb" data-bsheet="world">${ic('Cities')}All cities</button></div>`;
+      <div class="prorow">${ic(FOUNDED?'rel_'+PICKS.religion:'Great Prophet','width:30px;height:30px')}<div style="flex:1;min-width:0">${RREADY&&!FOUNDED?`<div class="rname">Great Prophet in Babylon</div><div class="rsub"><span>Ready to found</span></div>`:FOUNDED?`<div class="rname">${ownName()} founded</div><div class="rsub"><span>Enhance at ${st('fai')}300</span></div>`:`<div class="rname">Great Prophet</div><div class="bar fai"><i style="width:${FAITH/2}%"></i></div>`}</div>${FOUNDED||RREADY?'':`<div class="turns">${prophetTurns()}<small>turns</small></div>`}</div>
+      <div class="lacts">${o.d?pathBtn+(RREADY&&!FOUNDED?foundQb:`<button class="qb" data-bsheet="world">${ic('Cities')}All cities</button>`):`<button class="qb" data-bsheet="beliefs">${ic('rel_Beliefs')}Beliefs</button><button class="qb" data-bsheet="world">${ic('Cities')}All cities</button>`}</div>`;
   let sheet='';
   if(BSHEET==='found') sheet=`<div class="scrimall" data-bsclose></div><div class="sheet fade-in" style="top:150px;z-index:9"><div class="grab"></div>${head('Found a religion')}<div class="scroll" style="padding-top:4px">
       <div class="h3" style="margin-top:4px">Religion</div>${symbolGrid('data-bsym',PICKS.religion)}
@@ -867,7 +883,14 @@ function relB(){
       <div class="h3">Pantheon, kept</div>${beliefCard(BEL.Pantheon.find(b=>b.name==='Fertility Rites'),'Pantheon',false,'data-none')}
     </div><div class="tbar">${foundBtn()}</div></div>`;
   if(BSHEET==='beliefs'||BSHEET==='world') sheet=`<div class="scrimall" data-bsclose></div><div class="sheet fade-in" style="top:150px;z-index:9"><div class="grab"></div>${head(BSHEET==='world'?'Cities':'Beliefs')}${BSHEET==='beliefs'?`<div style="padding:0 14px"><div class="gtabs four">${['Pantheon','Founder','Follower','Enhancer'].map(t=>`<button data-btype="${t}" class="${BTYPE===t?'on':''}">${t}</button>`).join('')}</div></div><div class="scroll" style="padding-top:2px">${[...BEL[BTYPE]].sort((a,b)=>!TAKEN[b.name]-!TAKEN[a.name]).map(b=>beliefCard(b,BTYPE,false,'data-none')).join('')}</div>`:`<div class="scroll">${worldList()}</div>`}</div>`;
-  return `<div class="lens">${m.svg.replace('</svg>',over+'</svg>')}${btns}${prophetIcon}</div>${sbar}${stats()}${legend}<div class="lpanel fade-in">${panel}</div>${sheet}`;
+  return `<div class="lens"><div class="lmap" style="transform:translate(${LPAN.x}px,${LPAN.y}px)">${m.svg.replace('</svg>',over+'</svg>')}${btns}${prophetIcon}</div></div>${sbar}${stats()}${legend}<div class="lpanel fade-in">${panel}</div>${sheet}`;
+}
+
+/* ================= RELIGION D: A's path, B's lens one tap away ================= */
+let LENS=false;
+function relD(){
+  if(LENS) return relB({d:true});
+  return bgMap()+sbar+relA().replace('<div class="tbar">',`<div class="tbar dbar"><button class="lensbtn" data-lens="1">${ic('HexagonOutline')}Map</button>`);
 }
 
 /* ================= RELIGION C: bottom tabs ================= */
@@ -902,22 +925,24 @@ const THESIS={
   'Policies C':'Decision first: only what you can adopt now, with what each pick unlocks. Every branch sits one tab away.',
   'Religion A':'The road to a religion as one vertical path: pantheon, Great Prophet, found, enhance. Tap a slot to see its beliefs.',
   'Religion B':'Religion as a map lens: rings show who follows what in each city. The Great Prophet founds from where it stands.',
+  'Religion D':'The path to a religion, with the religion lens one tap away.',
   'Religion C':'Three tabs under the thumb: faith toward the next prophet, every belief and who holds it, and the cities.',
 };
 let SCREEN=localStorage.getItem('pr_s')||'Policies', DIR=localStorage.getItem('pr_d')||'A';
-if(!['Policies','Religion'].includes(SCREEN)) SCREEN='Policies'; if(!'ABC'.includes(DIR)) DIR='A';
+if(!['Policies','Religion'].includes(SCREEN)) SCREEN='Policies'; if(!'ABCD'.includes(DIR)||(SCREEN==='Policies'&&DIR==='D')) DIR='A';
 resetPolicies(); resetReligion();
 function screenFor(){
   if(SCREEN==='Policies') return bgMap()+sbar+({A:polA,B:polB,C:polC})[DIR]();
   if(DIR==='B') return relB();
+  if(DIR==='D') return relD();
   return bgMap()+sbar+({A:relA,C:relC})[DIR]();
 }
 function draw(keep){
   const sc=document.querySelector('#screen .scroll,#screen .ttscroll'), y=keep&&sc?sc.scrollTop:0;
-  document.getElementById('screen').innerHTML=screenFor();
+  const scr=document.getElementById('screen'); scr.innerHTML=screenFor(); scr.scrollTop=0; scr.scrollLeft=0;
   const seg=(id,opts,cur,attr)=>document.getElementById(id).innerHTML=opts.map(([v,l])=>`<button aria-pressed="${v===cur}" ${attr}="${v}">${l}</button>`).join('');
   seg('scr',[['Policies','Policies'],['Religion','Religion']],SCREEN,'data-screen');
-  seg('dir',[['A','A'],['B','B'],['C','C']],DIR,'data-dir');
+  seg('dir',[['A','A'],['B','B'],['C','C']].concat(SCREEN==='Religion'?[['D','D']]:[]),DIR,'data-dir');
   const ready=SCREEN==='Policies'?READY:RREADY;
   seg('sta',[['0','Turn 58'],['1',SCREEN==='Policies'?'Policy ready':'Prophet born']],ready?'1':'0','data-sta');
   document.getElementById('thesis').textContent=THESIS[SCREEN+' '+DIR];
@@ -931,12 +956,20 @@ function fit(){
   const pad=narrow?0:28; const sc=Math.min((wrap.clientWidth-pad)/393,(wrap.clientHeight-pad)/852,1.25);
   d.style.transform=`scale(${sc})`; d.style.marginTop=narrow?'0':'12px';
 }
+let drag=null, dragged=false;
+document.addEventListener('pointerdown',e=>{ if(!e.target.closest('.lens')) return; drag={x:e.clientX,y:e.clientY,p:{...LPAN},s:document.getElementById('device').getBoundingClientRect().width/393}; dragged=false; });
+document.addEventListener('pointermove',e=>{ if(!drag) return; const dx=(e.clientX-drag.x)/drag.s, dy=(e.clientY-drag.y)/drag.s;
+  if(!dragged&&Math.hypot(dx,dy)<8) return; dragged=true; LPAN=clampPan(drag.p.x+dx,drag.p.y+dy);
+  document.querySelector('.lmap').style.transform=`translate(${LPAN.x}px,${LPAN.y}px)`; });
+document.addEventListener('pointerup',()=>{drag=null});
 document.addEventListener('click',e=>{
+  if(dragged){dragged=false; if(e.target.closest('.lens')) return;}
   const q=s=>e.target.closest(s), g=(s,k)=>{const el=q(s);return el&&el.dataset[k]};
   let v;
-  if(v=g('[data-screen]','screen')){SCREEN=v;RPICK=null;BSHEET=null;return draw()}
-  if(v=g('[data-dir]','dir')){DIR=v;RPICK=null;BSHEET=null;return draw()}
-  if(v=g('[data-sta]','sta')){ if(SCREEN==='Policies'){READY=v==='1';resetPolicies();} else {RREADY=v==='1';resetReligion();BSHEET=null;BTYPE='Founder';} return draw()}
+  if(v=g('[data-screen]','screen')){SCREEN=v;RPICK=null;BSHEET=null;if(SCREEN==='Policies'&&DIR==='D')DIR='A';return draw()}
+  if(v=g('[data-dir]','dir')){DIR=v;RPICK=null;BSHEET=null;LENS=false;RCITY=null;LPAN={x:0,y:0};return draw()}
+  if(v=g('[data-lens]','lens')){LENS=v==='1';RCITY=null;LPAN={x:0,y:0};BSHEET=null;RPICK=null;return draw()}
+  if(v=g('[data-sta]','sta')){ if(SCREEN==='Policies'){READY=v==='1';resetPolicies();} else {RREADY=v==='1';resetReligion();BSHEET=null;RCITY=null;LPAN={x:0,y:0};BTYPE='Founder';} return draw()}
   if(v=g('[data-adopt]','adopt')){adopt(v);return draw(true)}
   // policies A
   if(v=g('[data-abr]','abr')){AOPEN=v;ASEL=adoptable().find(n=>n===v||(PBY[n]&&PBY[n].branch===v))||v;JUST=null;return draw()}
@@ -958,7 +991,8 @@ document.addEventListener('click',e=>{
   if(q('[data-pchoose]')){PICKS[RPICK]=PSEL;RPICK=null;return draw(true)}
   if(q('[data-found]')){FOUNDED=true;['Founder','Follower'].forEach(k=>TAKEN[PICKS[k]]='bab');BSHEET=null;return draw()}
   // religion B
-  if(v=g('[data-rcity]','rcity')){RCITY=v;return draw()}
+  if(v=g('[data-rcity]','rcity')){RCITY=v;const [x,y]=LPOS[v];LPAN=clampPan(196-x,300-y,-640);return draw()}
+  if(q('[data-rclose]')||(RCITY&&q('.lens'))){RCITY=null;LPAN={x:0,y:0};return draw()}
   if(v=g('[data-bsheet]','bsheet')){BSHEET=v;return draw()}
   if(q('[data-bsclose]')||(BSHEET&&q('.sheet .x'))){BSHEET=null;return draw()}
   if(v=g('[data-bsym]','bsym')){PICKS.religion=v;return draw(true)}
