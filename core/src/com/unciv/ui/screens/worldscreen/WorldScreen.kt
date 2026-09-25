@@ -1,5 +1,6 @@
 package com.unciv.ui.screens.worldscreen
 
+import com.badlogic.gdx.graphics.Color
 import com.badlogic.gdx.Application
 import com.badlogic.gdx.Gdx
 import com.badlogic.gdx.Input
@@ -25,6 +26,7 @@ import com.unciv.logic.multiplayer.storage.MultiplayerAuthException
 import com.unciv.logic.multiplayer.storage.MultiplayerFileNotFoundException
 import com.unciv.logic.multiplayer.storage.MultiplayerServer
 import com.unciv.logic.trade.TradeEvaluation
+import com.unciv.models.tilesets.TileSetCache
 import com.unciv.models.TutorialTrigger
 import com.unciv.models.metadata.GameSetupInfo
 import com.unciv.models.ruleset.Event
@@ -1064,6 +1066,9 @@ class WorldScreen(
             startNewScreenJob(gameInfo, autoPlay, true) // start over
         }
     }
+
+    /** Beyond the drawn tiles the map shows the tileset's background (clouds for Polytopia), not the menu color. */
+    override val backgroundColor: Color get() = TileSetCache.getCurrent().config.mapBackgroundColor ?: clearColor
 
     override fun render(delta: Float) {
         //  This is so that updates happen in the MAIN THREAD, where there is a GL Context,

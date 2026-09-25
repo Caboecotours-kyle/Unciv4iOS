@@ -176,6 +176,7 @@ def main():
         "fallbackTileSet": "FantasyHex",
         "unexploredTileColor": {"r": 0.93, "g": 0.95, "b": 0.97, "a": 1},
         "fogOfWarColor": {"r": 0.55, "g": 0.62, "b": 0.72, "a": 1},
+        "mapBackgroundColor": {"r": 0.93, "g": 0.95, "b": 0.97, "a": 1},
     }
     (ROOT / "android/assets/jsons/TileSets/Polytopia.json").write_text(json.dumps(config, indent=4) + "\n")
     print(f"exported {n} images to {OUT.relative_to(ROOT)}")

@@ -90,13 +90,17 @@ abstract class BaseScreen(private val useFullScreenLayout: Boolean = false) : Sc
 
     override fun show() {}
 
+    /** Color behind the stage; screens that draw the world map may show the tileset's map background instead. */
+    protected open val backgroundColor: Color get() = clearColor
+
     override fun render(delta: Float) {
         if (recreateAfterPopup && activePopup == null && this is RecreateOnResize) {
             recreateAfterPopup = false
             game.replaceCurrentScreen { recreate() }
             return
         }
-        Gdx.gl.glClearColor(clearColor.r, clearColor.g, clearColor.b, clearColor.a)
+        val background = backgroundColor
+        Gdx.gl.glClearColor(background.r, background.g, background.b, background.a)
         Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT)
 
         stage.act()
