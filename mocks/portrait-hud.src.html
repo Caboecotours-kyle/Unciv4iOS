@@ -1,0 +1,528 @@
+<!doctype html>
+<!--
+THESIS: Civ 5 depth played one-handed in portrait. The map owns the screen; every per-turn action lives in the bottom third.
+OWN-WORLD: Polytopia grammar: faceted low-poly hex slabs with dirt sides, cloud fog, chunky tribe-colored figures, navy translucent panels, round white action discs, yellow primary, bold rounded type.
+STORY: Kyle sees his empire, taps a unit or city, acts with his thumb, ends the turn. Depth (city, tech) rises as sheets over the map.
+FIRST VIEWPORT: stat strip under the Dynamic Island, full-bleed map, thumb dock at the bottom with the yellow turn button bottom-right.
+FORM: three structural directions for the same world: A Canon dock, B Decision queue, C Thumb arc.
+-->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Unciv Portrait: HUD directions</title>
+<style>
+:root{
+  --navy:#132435; --navy2:#1c3249; --panel:rgba(16,31,47,.9); --line:rgba(255,255,255,.12);
+  --ink:#fff; --ink2:#b7cde0; --ink3:#7f9ab2;
+  --yellow:#ffc93c; --yellow-ink:#3a2a00;
+  --bab:#2f7fe0; --bab-l:#8fc3ff; --gre:#e0524a; --kab:#9a5bd6;
+  --food:#6fd05a; --prod:#ff9a3c; --gold:#ffc93c; --sci:#5cc8ff; --cul:#d38bff; --fai:#f3ecd2; --hap:#b8e35a;
+  --r:ui-rounded,"SF Pro Rounded","Nunito","Varela Round",system-ui,-apple-system,sans-serif;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;background:#0b1622;color:var(--ink);font-family:var(--r);-webkit-font-smoothing:antialiased}
+body{display:flex;flex-direction:column;align-items:center;overflow:hidden}
+button{font:inherit;color:inherit;background:none;border:0;cursor:pointer}
+
+/* canvas chrome */
+.chrome{width:100%;display:flex;flex-wrap:wrap;gap:8px 18px;justify-content:center;align-items:center;padding:10px 12px 8px;flex:none}
+.seg{display:flex;background:#16283a;border-radius:12px;padding:3px}
+.seg button{padding:7px 12px;border-radius:9px;font-weight:700;font-size:14px;color:var(--ink2);white-space:nowrap}
+.seg button[aria-pressed=true]{background:#fff;color:var(--navy)}
+.thesis{width:100%;text-align:center;font-size:13px;color:var(--ink2);font-weight:600;min-height:18px}
+.stagewrap{flex:1;width:100%;display:flex;align-items:flex-start;justify-content:center;min-height:0}
+.device{width:393px;height:852px;position:relative;transform-origin:top center;border-radius:54px;overflow:hidden;
+  box-shadow:0 0 0 10px #05090e,0 0 0 11px #2a3b4d,0 30px 60px rgba(0,0,0,.5);background:#2f8fd6}
+.device.bare{border-radius:0;box-shadow:none}
+
+/* phone content */
+.screen{position:absolute;inset:0;overflow:hidden}
+.map{position:absolute;inset:0}
+.map svg{display:block}
+.sbar{position:absolute;top:0;left:0;right:0;height:50px;display:flex;justify-content:space-between;align-items:center;padding:6px 34px 0 42px;font-weight:700;font-size:16px;z-index:5;text-shadow:0 1px 2px rgba(0,0,0,.35)}
+.sbar .bat{width:26px;height:12px;border:1.5px solid #fff;border-radius:4px;position:relative}
+.sbar .bat::after{content:"";position:absolute;inset:1.5px;right:5px;background:#fff;border-radius:1.5px}
+
+/* icons */
+.ic{display:inline-block;width:20px;height:20px;background:currentColor;-webkit-mask-size:contain;mask-size:contain;-webkit-mask-repeat:no-repeat;mask-repeat:no-repeat;-webkit-mask-position:center;mask-position:center;flex:none}
+svg.st{width:16px;height:16px;flex:none}
+
+/* stat strip */
+.stats{position:absolute;top:54px;left:12px;right:12px;height:40px;background:var(--panel);border-radius:14px;display:flex;align-items:center;padding:0 6px 0 10px;gap:2px;z-index:4;box-shadow:0 4px 14px rgba(0,0,0,.22)}
+.stat{display:flex;align-items:center;gap:4px;font-weight:800;font-size:15px;padding:0 5px;height:100%;white-space:nowrap}
+.stat small{font-size:12px;font-weight:700;color:var(--ink2)}
+.stats .turn{margin-left:auto;background:rgba(255,255,255,.1);border-radius:9px;padding:4px 9px;font-size:14px;font-weight:800}
+
+/* discs */
+.disc{width:56px;height:56px;border-radius:50%;background:#eef5fb;color:var(--navy);display:grid;place-items:center;box-shadow:0 4px 0 #b9cadb,0 8px 16px rgba(0,0,0,.25);position:relative}
+.disc .ic{width:28px;height:28px}
+.disc.y{background:var(--yellow);color:var(--yellow-ink);box-shadow:0 4px 0 #c9951c,0 8px 16px rgba(0,0,0,.25)}
+.disc.navy{background:var(--navy2);color:#fff;box-shadow:0 4px 0 #0b1826,0 8px 16px rgba(0,0,0,.3)}
+.lbl{font-size:12px;font-weight:800;text-align:center;margin-top:8px;color:#fff;text-shadow:0 1px 2px rgba(0,0,0,.5);white-space:nowrap}
+.badge{position:absolute;top:-4px;right:-4px;min-width:22px;height:22px;border-radius:11px;background:var(--gre);color:#fff;font-size:12px;font-weight:800;display:grid;place-items:center;padding:0 6px;box-shadow:0 0 0 2px var(--navy)}
+
+/* dock A */
+.dock{position:absolute;left:0;right:0;bottom:0;padding:0 16px 40px;display:flex;align-items:flex-end;gap:10px;z-index:4}
+.dock .col{display:flex;flex-direction:column;align-items:center}
+.turnbtn{margin-left:auto;height:64px;padding:0 16px 0 20px;border-radius:32px;background:var(--yellow);color:var(--yellow-ink);display:flex;align-items:center;gap:10px;font-weight:900;font-size:18px;white-space:nowrap;box-shadow:0 5px 0 #c9951c,0 10px 20px rgba(0,0,0,.3);margin-bottom:22px}
+.turnbtn .ic{width:26px;height:26px}
+.turnbtn .n{background:var(--yellow-ink);color:var(--yellow);border-radius:10px;font-size:13px;padding:2px 7px}
+.notes{position:absolute;right:16px;bottom:150px;display:flex;flex-direction:column;gap:10px;z-index:4}
+.note{position:relative;width:44px;height:44px;border-radius:50%;background:var(--panel);display:grid;place-items:center;box-shadow:0 4px 12px rgba(0,0,0,.25)}
+.note .ic{width:22px;height:22px}
+
+/* panels & sheets */
+.panel{position:absolute;left:0;right:0;bottom:0;background:var(--panel);border-radius:24px 24px 0 0;z-index:6;box-shadow:0 -8px 24px rgba(0,0,0,.25);-webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px)}
+.grab{width:40px;height:5px;border-radius:3px;background:rgba(255,255,255,.3);margin:8px auto 0}
+.unithead{display:flex;align-items:center;gap:12px;padding:14px 18px 0}
+.uport{width:52px;height:52px;border-radius:50%;background:var(--bab);display:grid;place-items:center;box-shadow:inset 0 -4px 0 rgba(0,0,0,.2)}
+.uport .ic{width:32px;height:32px;color:#fff}
+.uname{font-size:20px;font-weight:900}
+.uline{display:flex;gap:12px;margin-top:3px;font-size:14px;font-weight:700;color:var(--ink2)}
+.uline span{display:flex;align-items:center;gap:4px}
+.hp{margin-left:auto;align-self:flex-start;font-size:13px;font-weight:800;background:rgba(111,208,90,.18);color:#9ff08a;border-radius:8px;padding:4px 8px}
+.actions{display:flex;justify-content:space-between;padding:18px 18px 42px}
+.act{display:flex;flex-direction:column;align-items:center;width:62px}
+.act .disc{width:54px;height:54px}
+.act .lbl{text-shadow:none;color:var(--ink2);font-weight:700}
+.act.primary .disc{background:var(--yellow);color:var(--yellow-ink);box-shadow:0 4px 0 #c9951c,0 8px 16px rgba(0,0,0,.25)}
+.act.primary .lbl{color:#fff}
+
+.sheet{position:absolute;left:0;right:0;bottom:0;background:#122536;border-radius:26px 26px 0 0;z-index:6;box-shadow:0 -10px 30px rgba(0,0,0,.35);display:flex;flex-direction:column}
+.sh-head{display:flex;align-items:center;gap:12px;padding:12px 18px 6px}
+.pop{width:42px;height:42px;border-radius:50%;background:var(--bab);display:grid;place-items:center;font-weight:900;font-size:19px;box-shadow:inset 0 -3px 0 rgba(0,0,0,.2)}
+.sh-title{font-size:22px;font-weight:900;display:flex;align-items:center;gap:6px}
+.sh-sub{font-size:13px;font-weight:700;color:var(--ink2);margin-top:1px}
+.x{margin-left:auto;width:36px;height:36px;border-radius:50%;background:rgba(255,255,255,.08);display:grid;place-items:center}
+.x .ic{width:16px;height:16px;color:var(--ink2)}
+.yields{display:flex;justify-content:space-between;padding:8px 18px 12px}
+.y1{display:flex;flex-direction:column;align-items:center;gap:3px;font-weight:800;font-size:15px;min-width:44px}
+.y1 svg.st{width:20px;height:20px}
+.tabs{display:flex;gap:22px;padding:0 18px;border-bottom:1px solid var(--line)}
+.tabs button{padding:10px 0 11px;font-weight:800;font-size:15px;color:var(--ink3);position:relative}
+.tabs button.on{color:#fff}
+.tabs button.on::after{content:"";position:absolute;left:0;right:0;bottom:-1px;height:3px;border-radius:2px;background:var(--yellow)}
+.scroll{flex:1;overflow:auto;padding:12px 16px 40px;scrollbar-width:none}
+.scroll::-webkit-scrollbar{display:none}
+.cur{background:var(--navy2);border-radius:16px;padding:14px;display:flex;gap:12px;align-items:center}
+.cicon{width:48px;height:48px;border-radius:14px;background:#2a4866;display:grid;place-items:center;flex:none}
+.cicon .ic{width:30px;height:30px;color:#fff}
+.cname{font-weight:900;font-size:17px}
+.bar{height:8px;border-radius:4px;background:rgba(255,255,255,.1);margin-top:8px;overflow:hidden}
+.bar i{display:block;height:100%;background:var(--prod);border-radius:4px}
+.buy{margin-left:auto;background:var(--yellow);color:var(--yellow-ink);border-radius:12px;padding:8px 10px;font-weight:900;font-size:14px;display:flex;align-items:center;gap:4px;box-shadow:0 3px 0 #c9951c;flex:none}
+.h3{font-size:13px;font-weight:800;color:var(--ink3);margin:18px 2px 8px}
+.row{display:flex;align-items:center;gap:12px;padding:9px 4px;border-bottom:1px solid var(--line)}
+.row .cicon{width:40px;height:40px;border-radius:12px}
+.row .cicon .ic{width:24px;height:24px}
+.rname{font-weight:800;font-size:15px}
+.rsub{font-size:12px;font-weight:700;color:var(--ink2);display:flex;gap:8px;margin-top:2px;align-items:center}
+.rsub span{display:flex;gap:3px;align-items:center}
+.rsub svg.st{width:13px;height:13px}
+.turns{margin-left:auto;font-weight:900;font-size:15px;display:flex;align-items:center;gap:4px;color:#fff}
+.turns small{font-size:12px;color:var(--ink3);font-weight:700}
+.wonder .cicon{background:#5a3f13}
+.wonder .cicon .ic{color:var(--yellow)}
+
+/* tech nodes */
+.era{margin:14px 0 4px;font-size:13px;font-weight:900;color:var(--ink3)}
+.tier{display:grid;grid-template-columns:repeat(4,1fr);gap:14px 6px;padding:8px 0 14px;position:relative}
+.tn{display:flex;flex-direction:column;align-items:center;gap:6px;text-align:center}
+.tn .d{width:54px;height:54px;border-radius:50%;display:grid;place-items:center;position:relative}
+.tn .d .ic{width:32px;height:32px}
+.tn .nm{font-size:11.5px;font-weight:800;line-height:1.15;max-width:78px}
+.tn.done .d{background:var(--bab);color:#fff;box-shadow:inset 0 -4px 0 rgba(0,0,0,.2)}
+.tn.done .nm{color:var(--ink2)}
+.tn.now .d{background:#fff;color:var(--navy);box-shadow:0 0 0 4px var(--yellow)}
+.tn.av .d{background:#eef5fb;color:var(--navy);box-shadow:inset 0 -4px 0 #b9cadb}
+.tn.lock .d{background:#1f3850;color:#57718a}
+.tn.lock .nm{color:var(--ink3)}
+.tn.sel .d{box-shadow:0 0 0 4px #fff,0 0 0 8px rgba(255,255,255,.18)}
+.tn.path .d{box-shadow:0 0 0 3px var(--yellow)}
+.tn .t{position:absolute;bottom:-6px;right:-6px;background:var(--yellow);color:var(--yellow-ink);font-size:11px;font-weight:900;border-radius:8px;padding:1px 6px}
+.techfoot{background:var(--navy2);border-radius:20px 20px 0 0;padding:14px 18px 40px;display:flex;flex-direction:column;gap:10px}
+.tf1{display:flex;align-items:center;gap:12px}
+.unl{display:flex;gap:6px;flex-wrap:wrap}
+.chip{display:flex;align-items:center;gap:5px;background:rgba(255,255,255,.08);border-radius:10px;padding:5px 8px 5px 6px;font-size:12.5px;font-weight:800}
+.chip .ic{width:16px;height:16px}
+.big{height:54px;border-radius:16px;background:var(--yellow);color:var(--yellow-ink);font-weight:900;font-size:17px;display:flex;align-items:center;justify-content:center;gap:8px;box-shadow:0 4px 0 #c9951c}
+.ghost{height:48px;border-radius:14px;background:rgba(255,255,255,.08);color:#fff;font-weight:800;font-size:15px;display:flex;align-items:center;justify-content:center;gap:8px}
+
+/* B: decision queue */
+.queue{position:absolute;left:10px;right:10px;bottom:32px;background:var(--panel);border-radius:26px;z-index:6;box-shadow:0 10px 30px rgba(0,0,0,.35);padding:14px 14px 14px;-webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px)}
+.qtop{display:flex;align-items:center;gap:8px;font-size:12.5px;font-weight:800;color:var(--ink2);padding:0 4px 10px}
+.dots{display:flex;gap:5px;margin-left:auto}
+.dots i{width:7px;height:7px;border-radius:50%;background:rgba(255,255,255,.2)}
+.dots i.on{background:var(--yellow);width:18px;border-radius:4px}
+.qhead{display:flex;align-items:center;gap:12px;padding:0 4px}
+.qbtns{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-top:14px}
+.qb{height:62px;border-radius:16px;background:rgba(255,255,255,.08);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;font-size:12.5px;font-weight:800}
+.qb .ic{width:24px;height:24px}
+.qb.p{grid-column:1/-1;flex-direction:row;height:58px;background:var(--yellow);color:var(--yellow-ink);font-size:17px;gap:10px;box-shadow:0 4px 0 #c9951c}
+.qb.p small{font-size:13px;font-weight:800;opacity:.75}
+.qcorner{position:absolute;left:18px;z-index:5;display:flex;gap:10px}
+.odds{display:flex;gap:8px;margin-top:10px;padding:0 4px}
+.odds div{flex:1;background:rgba(255,255,255,.06);border-radius:12px;padding:8px 10px;font-size:12px;font-weight:700;color:var(--ink2)}
+.odds b{display:block;font-size:17px;color:#fff;font-weight:900}
+.odds .good b{color:#9ff08a}
+
+/* C: thumb arc */
+.arcwrap{position:absolute;right:0;bottom:0;width:393px;height:400px;z-index:5;pointer-events:none}
+.arcwrap>*{pointer-events:auto}
+.anchor{position:absolute;right:22px;bottom:42px;width:84px;height:84px;border-radius:50%;background:var(--yellow);color:var(--yellow-ink);display:flex;flex-direction:column;align-items:center;justify-content:center;font-weight:900;font-size:13px;box-shadow:0 5px 0 #c9951c,0 12px 24px rgba(0,0,0,.35);gap:2px}
+.anchor .ic{width:30px;height:30px}
+.arcbtn{position:absolute;display:flex;flex-direction:row-reverse;align-items:center;gap:8px;transform:translate(-28px,-28px)}
+.arcbtn .lbl{margin:0;position:absolute;right:64px;top:50%;transform:translateY(-50%);background:var(--panel);padding:4px 9px;border-radius:9px;text-shadow:none}
+.arcbtn .disc{width:56px;height:56px}
+.civdisc{position:absolute;left:22px;bottom:50px;z-index:5;display:flex;flex-direction:column;align-items:center}
+.utag{position:absolute;left:12px;top:104px;background:var(--panel);border-radius:18px;padding:10px 14px 10px 10px;display:flex;align-items:center;gap:10px;z-index:5;box-shadow:0 6px 18px rgba(0,0,0,.3)}
+.utag .uport{width:40px;height:40px}
+.utag .uport .ic{width:24px;height:24px}
+.utag .uname{font-size:16px}
+.utag .uline{font-size:12.5px;gap:8px;margin-top:1px}
+.pager{position:absolute;right:118px;bottom:64px;z-index:5;background:var(--panel);border-radius:20px;height:40px;display:flex;align-items:center;gap:8px;padding:0 14px 0 8px;font-weight:800;font-size:14px;box-shadow:0 6px 18px rgba(0,0,0,.3)}
+.pager .mini{width:28px;height:28px;border-radius:50%;background:var(--bab);display:grid;place-items:center}
+.pager .mini .ic{width:18px;height:18px;color:#fff}
+.btabs{display:flex;gap:6px;padding:10px 12px 38px;background:#0f2030;border-top:1px solid var(--line)}
+.btabs button{flex:1;height:52px;border-radius:14px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;font-size:11.5px;font-weight:800;color:var(--ink3)}
+.btabs button .ic{width:22px;height:22px}
+.btabs button.on{background:rgba(255,255,255,.1);color:#fff}
+.eras{display:flex;gap:6px;padding:10px 12px 38px;background:#0f2030;border-top:1px solid var(--line)}
+.eras button{flex:1;height:48px;border-radius:14px;font-size:13.5px;font-weight:800;color:var(--ink3);background:rgba(255,255,255,.04)}
+.eras button.on{background:#fff;color:var(--navy)}
+.vt{position:relative;padding-left:4px}
+.vrow{display:flex;align-items:center;gap:14px;padding:8px 0;position:relative}
+.vrow .tn .d{width:50px;height:50px}
+.vrow::before{content:"";position:absolute;left:25px;top:-8px;bottom:50%;width:3px;background:#2a4866;z-index:0}
+.vrow:first-child::before{display:none}
+.vrow .tn{z-index:1}
+.vrow.done::before,.vrow.now::before{background:var(--bab)}
+.vinfo{flex:1;min-width:0}
+.vinfo .rname{display:flex;align-items:center;gap:8px}
+.vinfo .unl{margin-top:6px}
+
+.scrim-t{position:absolute;top:0;left:0;right:0;height:120px;background:linear-gradient(rgba(10,22,34,.6),rgba(10,22,34,0));z-index:3;pointer-events:none}
+.scrim-b{position:absolute;bottom:0;left:0;right:0;height:230px;background:linear-gradient(to top,rgba(10,22,34,.62),rgba(10,22,34,0));z-index:3;pointer-events:none}
+.fade-in{animation:rise .38s cubic-bezier(.16,1,.3,1) both}
+@keyframes rise{from{transform:translateY(24px);opacity:0}to{transform:none;opacity:1}}
+@keyframes pulse{0%{transform:scale(.8);opacity:.9}100%{transform:scale(1.5);opacity:0}}
+.pulse{animation:pulse 1.6s cubic-bezier(.16,1,.3,1) infinite;transform-box:fill-box;transform-origin:center}
+@media (prefers-reduced-motion:reduce){.fade-in,.pulse{animation:none}}
+</style>
+</head>
+<body>
+<div class="chrome">
+  <div class="seg" id="vseg"></div>
+  <div class="seg" id="sseg"></div>
+  <div class="thesis" id="thesis"></div>
+</div>
+<div class="stagewrap" id="stagewrap"><div class="device" id="device"><div class="screen" id="screen"></div></div></div>
+
+<script>
+const ICON = /*ICONS*/{};
+
+/* ---------- icons ---------- */
+const slug = s => s.replace(/[^a-z0-9]/gi,'');
+(()=>{const st=document.createElement('style');st.textContent=Object.entries(ICON).map(([k,v])=>`.i-${slug(k)}{-webkit-mask-image:url("${v}");mask-image:url("${v}")}`).join('');document.head.appendChild(st)})();
+const ic = (n,style='') => `<i class="ic i-${slug(n)}" style="${style}"></i>`;
+
+/* hand-drawn stat glyphs (flat, Polytopia-weight) */
+const STAT = {
+  food:`<path d="M8 3.2c.6-1.4 2-2.2 3.4-2.1-.2 1.5-1.3 2.7-3 3.1" fill="#3f9a36"/><circle cx="8" cy="9.5" r="5.8" fill="var(--food)"/><path d="M4.6 8.3a3.6 3.6 0 0 1 2.6-2.4" stroke="#fff" stroke-width="1.4" stroke-linecap="round" fill="none" opacity=".7"/>`,
+  prod:`<rect x="2" y="7" width="10" height="3.4" rx="1" fill="#b86a22" transform="rotate(-40 7 8.7)"/><path d="M9 2.2l4.6 4.6-2.6 2.6L6.4 4.8z" fill="var(--prod)"/>`,
+  gold:`<circle cx="8" cy="8" r="6.6" fill="var(--gold)"/><circle cx="8" cy="8" r="4.2" fill="none" stroke="#c9951c" stroke-width="1.6"/>`,
+  sci:`<path d="M6 1.6h4M6.6 1.8v4.4L2.6 13a1.2 1.2 0 0 0 1 1.8h8.8a1.2 1.2 0 0 0 1-1.8L9.4 6.2V1.8" fill="var(--sci)" stroke="var(--sci)" stroke-width="1.6" stroke-linejoin="round"/><path d="M4.6 11h6.8" stroke="#1d6a91" stroke-width="1.4"/>`,
+  cul:`<path d="M6 12.2V3.4l7-1.6v8.6" stroke="var(--cul)" stroke-width="1.8" fill="none" stroke-linejoin="round"/><ellipse cx="4.2" cy="12.4" rx="2.6" ry="2" fill="var(--cul)"/><ellipse cx="11.2" cy="10.6" rx="2.6" ry="2" fill="var(--cul)"/>`,
+  fai:`<circle cx="8" cy="8.6" r="3.4" fill="var(--fai)"/><ellipse cx="8" cy="3" rx="4.6" ry="1.6" fill="none" stroke="var(--fai)" stroke-width="1.5"/><path d="M3 15c.6-2.2 2.6-3.4 5-3.4s4.4 1.2 5 3.4" fill="var(--fai)"/>`,
+  hap:`<circle cx="8" cy="8" r="6.6" fill="var(--hap)"/><circle cx="5.8" cy="6.6" r="1" fill="#2f4a10"/><circle cx="10.2" cy="6.6" r="1" fill="#2f4a10"/><path d="M4.8 9.4c.8 1.7 1.9 2.4 3.2 2.4s2.4-.7 3.2-2.4" stroke="#2f4a10" stroke-width="1.4" fill="none" stroke-linecap="round"/>`,
+  str:`<path d="M3 13L12 4M10 3.4l2.6 2.6M4.6 10.4l1.8 1.8" stroke="#dfe8f1" stroke-width="2" stroke-linecap="round"/>`,
+  rng:`<path d="M4 2.6c5 1 8.4 4.4 9.4 9.4" stroke="#dfe8f1" stroke-width="1.8" fill="none"/><path d="M2.6 13.4L11 5" stroke="#dfe8f1" stroke-width="1.6"/><path d="M11 5l-.2 2.6M11 5l-2.6.2" stroke="#dfe8f1" stroke-width="1.6" stroke-linecap="round"/>`,
+  mov:`<path d="M3 8h8M8 4l4 4-4 4" stroke="#dfe8f1" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/>`,
+};
+const st = k => `<svg class="st" viewBox="0 0 16 16">${STAT[k]}</svg>`;
+
+/* ---------- map ---------- */
+const R=31, SQ=.6, W=Math.sqrt(3)*R, DY=1.5*R*SQ, T=7;
+const GRID=[
+ 'FFFFFFFFF','FF~~~FFFF','F~~~~-gFF','~~~~-gffF','~~~-ggpfF','~~~-gpphm','~~--ggpmm','~~-ggfgph',
+ '~--gffggp','~-gggpgpd','~-gpgggdd','~~-gphgdd','~~-ggmmpd','~--gghmpp','~-ggfgppg','~-gffggpg',
+ '--ggpgggf','-ggpggfff','-gpgggfhf','-ggghggfF','--ggpggfF','~-gffgpgF','~~-gggpFF','~~--gpgFF',
+ '~~~-ggFFF','~~~--gFFF','~~~~-FFFF','~~~~FFFFF','~~~FFFFFF','FFFFFFFFF','FFFFFFFFF'];
+const X0=-W*0.35, Y0=-8;
+const cen=(c,r)=>[X0+W*(c+(r&1?.5:0)), Y0+DY*r];
+const toCube=(c,r)=>[c-(r-(r&1))/2, r];
+const fromCube=(q,r)=>[q+(r-(r&1))/2, r];
+const hexDist=(a,b)=>{const[q1,r1]=toCube(...a),[q2,r2]=toCube(...b);const dq=q1-q2,dr=r1-r2;return Math.max(Math.abs(dq),Math.abs(dr),Math.abs(dq+dr))};
+const DIRS=[[1,-1],[1,0],[0,1],[-1,1],[-1,0],[0,-1]]; // edge i neighbours (NE,E,SE,SW,W,NW)
+const nb=(c,r,i)=>{const[q,rr]=toCube(c,r);return fromCube(q+DIRS[i][0],rr+DIRS[i][1])};
+const T_=(c,r)=> (GRID[r]||'')[c]||'F';
+let seed=7; const rnd=()=>{seed=(seed*16807)%2147483647;return seed/2147483647};
+const hsl=(h,s,l)=>`hsl(${h} ${s}% ${Math.max(0,Math.min(100,l)).toFixed(1)}%)`;
+const BASE={ '~':[205,62,50], '-':[190,62,62], g:[96,52,53], f:[104,48,44], h:[92,46,50], m:[96,40,50], p:[68,50,57], d:[44,60,69] };
+
+const CITIES=[
+ {c:4,r:17,name:'Babylon',civ:'bab',pop:7,cap:true,build:'Library',t:4},
+ {c:5,r:10,name:'Akkad',civ:'bab',pop:4,build:'Monument',t:1},
+ {c:5,r:4,name:'Athens',civ:'gre',pop:6,cap:true},
+ {c:5,r:23,name:'Kabul',civ:'kab',pop:3,cs:true},
+];
+const UNITS=[
+ {c:4,r:13,k:'bow',civ:'bab',id:'bow'},
+ {c:3,r:8,k:'war',civ:'bab'},
+ {c:3,r:15,k:'wrk',civ:'bab'},
+ {c:3,r:20,k:'set',civ:'bab'},
+ {c:3,r:11,k:'hop',civ:'gre',hp:.7},
+ {c:1,r:12,k:'tri',civ:'bab'},
+];
+const RES={'5,16':'Wheat','6,14':'Horses','0,19':'Fish','7,12':'Iron','7,10':'Gems','2,8':'Fish','6,21':'Cattle'};
+const FARMS=['3,16','3,18','5,18','4,11'], MINES=['7,18'];
+const CIVC={bab:['#2f7fe0','#1c56a6','#8fc3ff'],gre:['#e0524a','#a8322c','#ffb1aa'],kab:['#9a5bd6','#6c3aa3','#d8b8ff']};
+
+function owner(c,r){
+  for(const k of CITIES){const d=hexDist([c,r],[k.c,k.r]); if(d<= (k.cs?1:k.cap&&k.civ==='bab'?2:k.civ==='gre'?2:1)) return k.civ;}
+  return null;
+}
+const corners=(x,y,s=1)=>[...Array(6)].map((_,i)=>{const a=(60*i-90)*Math.PI/180;return [x+R*s*Math.cos(a), y+R*s*Math.sin(a)*SQ]});
+const pts=a=>a.map(p=>p[0].toFixed(1)+','+p[1].toFixed(1)).join(' ');
+
+function tree(x,y,s=1){
+  const h=15*s,w=7*s;
+  return `<rect x="${x-1.2*s}" y="${y-3*s}" width="${2.4*s}" height="${4*s}" fill="#6b4a2b"/>
+  <polygon points="${x},${y-h} ${x-w},${y-3*s} ${x},${y-3*s}" fill="#4fae4c"/><polygon points="${x},${y-h} ${x+w},${y-3*s} ${x},${y-3*s}" fill="#2f8038"/>
+  <polygon points="${x},${y-h-6*s} ${x-w*.7},${y-h+3*s} ${x},${y-h+3*s}" fill="#62c05a"/><polygon points="${x},${y-h-6*s} ${x+w*.7},${y-h+3*s} ${x},${y-h+3*s}" fill="#3a9142"/>`;
+}
+function mountain(x,y){
+  return `<polygon points="${x-6},${y-30} ${x-24},${y+4} ${x+14},${y+4}" fill="#c3cad4"/><polygon points="${x-6},${y-30} ${x+14},${y+4} ${x+4},${y+4}" fill="#8b95a4"/>
+  <polygon points="${x-6},${y-30} ${x-13},${y-17} ${x-8},${y-19} ${x-5},${y-15} ${x+1},${y-18}" fill="#fff"/>
+  <polygon points="${x+12},${y-16} ${x+2},${y+5} ${x+24},${y+5}" fill="#a9b2bf"/><polygon points="${x+12},${y-16} ${x+24},${y+5} ${x+17},${y+5}" fill="#7d8797"/>`;
+}
+function hill(x,y){return `<polygon points="${x-18},${y+3} ${x-6},${y-10} ${x+6},${y-8} ${x+18},${y+3}" fill="#86c957"/><polygon points="${x+6},${y-8} ${x+18},${y+3} ${x+2},${y+3}" fill="#5f9d3c"/>`}
+function farm(x,y){const c=corners(x,y,.62);let s=`<polygon points="${pts(c)}" fill="#e9d56c"/>`;for(let i=-2;i<=2;i++)s+=`<line x1="${x-13+i*6}" y1="${y+6}" x2="${x-5+i*6}" y2="${y-7}" stroke="#c9ae3e" stroke-width="2"/>`;return s}
+function mine(x,y){return `<path d="M${x-7},${y+2} a7,6 0 0 1 14,0 z" fill="#4c4a47"/><rect x="${x-9}" y="${y+1}" width="18" height="2.5" fill="#8a6a44"/>`}
+function res(x,y,n){return `<g><circle cx="${x+15}" cy="${y+5}" r="8.5" fill="#fff" stroke="rgba(0,0,0,.15)"/><image href="${ICON['r_'+n]||''}" x="${x+8.5}" y="${y-1.5}" width="13" height="13" style="filter:brightness(.25)"/></g>`}
+function house(x,y,col,dark,h=8){return `<polygon points="${x-5},${y} ${x+3},${y} ${x+3},${y-h} ${x-5},${y-h}" fill="#f4ecd9"/><polygon points="${x+3},${y} ${x+7},${y-3} ${x+7},${y-h-3} ${x+3},${y-h}" fill="#cfc2a4"/><polygon points="${x-6},${y-h} ${x-1},${y-h-6} ${x+4},${y-h}" fill="${col}"/><polygon points="${x-1},${y-h-6} ${x+8},${y-h-3.5} ${x+4},${y-h}" fill="${dark}"/>`}
+function city(k,x,y){
+  const [c,d]=CIVC[k.civ]; const cs=corners(x,y,.78);
+  let s=`<polygon points="${pts(cs)}" fill="#e7dcc0"/><polygon points="${pts([cs[2],cs[3],[cs[3][0],cs[3][1]+4],[cs[2][0],cs[2][1]+4]])}" fill="#b9a67c"/><polygon points="${pts([cs[3],cs[4],[cs[4][0],cs[4][1]+4],[cs[3][0],cs[3][1]+4]])}" fill="#cdbb90"/>`;
+  s+=house(x-12,y-1,c,d)+house(x+8,y-2,c,d)+house(x-3,y+6,c,d,7);
+  if(k.cap) s+=`<rect x="${x-4}" y="${y-22}" width="8" height="20" fill="#f4ecd9"/><rect x="${x+4}" y="${y-19}" width="3" height="17" fill="#cfc2a4"/><polygon points="${x-5.5},${y-22} ${x},${y-31} ${x+7},${y-19}" fill="${c}"/>`;
+  else s+=house(x+1,y-8,c,d,10);
+  return s;
+}
+function banner(k,x,y){
+  const [c,d]=CIVC[k.civ]; const w=k.name.length*7.6+(k.build?52:30)+(k.cap?13:0); const bx=x-w/2, by=y+13;
+  let s=`<g><rect x="${bx}" y="${by+2}" width="${w}" height="22" rx="11" fill="rgba(0,0,0,.25)"/><rect x="${bx}" y="${by}" width="${w}" height="22" rx="11" fill="${c}"/>
+  <circle cx="${bx+11}" cy="${by+11}" r="9" fill="${d}"/><text x="${bx+11}" y="${by+15.2}" text-anchor="middle" font-size="12" font-weight="900" fill="#fff">${k.pop}</text>
+  <text x="${bx+(k.cap?38:25)}" y="${by+15.4}" font-size="12.5" font-weight="900" fill="#fff">${k.name}</text>`;
+  if(k.cap) s+=`<path d="M${bx+30} ${by+5}l1.6 3.4 3.6.4-2.7 2.4.8 3.6-3.3-1.9-3.3 1.9.8-3.6-2.7-2.4 3.6-.4z" fill="var(--yellow)"/>`;
+  if(k.build) s+=`<rect x="${bx+w-30}" y="${by+3}" width="27" height="16" rx="8" fill="rgba(0,0,0,.25)"/><text x="${bx+w-16.5}" y="${by+15}" text-anchor="middle" font-size="11" font-weight="900" fill="#fff">${k.t}</text>`;
+  return s+'</g>';
+}
+function unit(u,x,y,sel){
+  const [c,d,l]=CIVC[u.civ]; let s='';
+  if(sel) s+=`<ellipse cx="${x}" cy="${y+3}" rx="17" ry="${17*SQ}" fill="none" stroke="#fff" stroke-width="3" class="pulse"/><ellipse cx="${x}" cy="${y+3}" rx="15" ry="${15*SQ}" fill="none" stroke="#fff" stroke-width="3"/>`;
+  s+=`<ellipse cx="${x}" cy="${y+3}" rx="12" ry="${12*SQ}" fill="${c}" opacity=".95"/><ellipse cx="${x}" cy="${y+3}" rx="12" ry="${12*SQ}" fill="none" stroke="${d}" stroke-width="1.5"/>`;
+  if(u.k==='tri'){
+    s+=`<path d="M${x-14} ${y-2}h28l-5 6h-18z" fill="#8a5a33"/><path d="M${x+1} ${y-2}h13l-5 6h-8z" fill="#6b4426"/><rect x="${x-1}" y="${y-24}" width="2" height="22" fill="#6b4426"/><polygon points="${x+1},${y-23} ${x+12},${y-8} ${x+1},${y-6}" fill="${l}"/><polygon points="${x-1},${y-21} ${x-11},${y-7} ${x-1},${y-6}" fill="#fff"/>`;
+  } else {
+    const by=y-2;
+    s+=`<polygon points="${x-7},${by} ${x-5},${by-13} ${x+5},${by-13} ${x+7},${by}" fill="${c}"/><polygon points="${x},${by} ${x},${by-13} ${x+5},${by-13} ${x+7},${by}" fill="${d}"/>
+    <rect x="${x-4.5}" y="${by-22}" width="9" height="9" rx="2" fill="#f2c49b"/><rect x="${x}" y="${by-22}" width="4.5" height="9" rx="1.5" fill="#dca57a"/>`;
+    const hat={bow:`<polygon points="${x-5.5},${by-20} ${x},${by-26} ${x+5.5},${by-20}" fill="${d}"/>`,war:`<rect x="${x-5.5}" y="${by-24}" width="11" height="4" rx="1.5" fill="#8a5a33"/>`,hop:`<path d="M${x-5.5} ${by-18}v-5a5.5 5 0 0 1 11 0v5z" fill="#d8a534"/><rect x="${x-1}" y="${by-31}" width="2" height="6" fill="#c0392b"/>`,set:`<rect x="${x-6}" y="${by-24}" width="12" height="3" rx="1.5" fill="#caa56a"/>`,wrk:`<rect x="${x-6}" y="${by-24}" width="12" height="3" rx="1.5" fill="#e3b93f"/>`}[u.k]||'';
+    const prop={bow:`<path d="M${x+9} ${by-22}q7 9 0 18" stroke="#7a4e2a" stroke-width="2.2" fill="none"/><line x1="${x+9}" y1="${by-22}" x2="${x+9}" y2="${by-4}" stroke="#fff" stroke-width=".8"/>`,
+      war:`<rect x="${x+7}" y="${by-18}" width="3" height="13" rx="1.5" fill="#7a4e2a" transform="rotate(20 ${x+8} ${by-10})"/>`,
+      hop:`<rect x="${x+8}" y="${by-30}" width="1.8" height="28" fill="#7a4e2a"/><circle cx="${x-8}" cy="${by-8}" r="6.5" fill="#d8a534" stroke="#a87a1c" stroke-width="1.5"/>`,
+      set:`<circle cx="${x-8}" cy="${by-10}" r="5.5" fill="#caa56a"/><path d="M${x-8} ${by-15}v-3" stroke="#8a6a44" stroke-width="1.6"/>`,
+      wrk:`<rect x="${x+8}" y="${by-22}" width="1.8" height="18" fill="#7a4e2a"/><rect x="${x+5}" y="${by-23}" width="8" height="3" rx="1" fill="#9aa3ad"/>`}[u.k]||'';
+    s+=hat+prop;
+  }
+  if(u.hp) s+=`<rect x="${x-12}" y="${y-38}" width="24" height="5" rx="2.5" fill="rgba(0,0,0,.45)"/><rect x="${x-11}" y="${y-37}" width="${22*u.hp}" height="3" rx="1.5" fill="#ffd23f"/>`;
+  return s;
+}
+function cloud(x,y){
+  seed=Math.floor(x*13+y*7)+1;
+  const b=[[-16,4,13],[0,-3,16],[17,3,13],[-4,8,14],[10,9,12]];
+  let s=''; for(const[dx,dy,rr]of b) s+=`<circle cx="${x+dx}" cy="${y+dy+5}" r="${rr}" fill="#cfdde9"/>`;
+  for(const[dx,dy,rr]of b) s+=`<circle cx="${x+dx+(rnd()-.5)*3}" cy="${y+dy}" r="${rr}" fill="#f5f9fc"/>`;
+  return s;
+}
+function renderMap(o={}){
+  seed=11;
+  const W_=393,H_=852;
+  let water='', land='', feat='', top='', fog='';
+  const sel=o.sel==='bow'?UNITS[0]:null;
+  const reach=new Set(), attack=new Set();
+  if(sel){ for(let r=0;r<GRID.length;r++)for(let c=0;c<9;c++){const d=hexDist([c,r],[sel.c,sel.r]);const t=T_(c,r);if(d>0&&d<=2&&!'~-FmF'.includes(t)&&!UNITS.some(u=>u.c==c&&u.r==r)&&!CITIES.some(k=>k.c==c&&k.r==r))reach.add(c+','+r)} attack.add('3,11'); }
+  for(let r=0;r<GRID.length;r++){
+    let rowTop='',rowFeat='',rowFog='';
+    for(let c=-1;c<10;c++){
+      const t=T_(c,r); const[x,y]=cen(c,r); if(x<-W||x>W_+W||y<-40||y>H_+40)continue;
+      if(t==='F'){ const[b0,b1,b2]=BASE.g; rowTop+=`<polygon points="${pts(corners(x,y))}" fill="${hsl(210,25,82)}"/>`; rowFog+=cloud(x,y-4); continue; }
+      const[h,s0,l0]=BASE[t]; const wat=t==='~'||t==='-';
+      const yy=wat?y+T:y; const cs=corners(x,yy);
+      const cx=x+(rnd()-.5)*4, cy=yy-2+(rnd()-.5)*2;
+      let poly='';
+      for(let i=0;i<6;i++){const a=((60*i-60)-(-135))*Math.PI/180;const sh=Math.cos(a)*(wat?3:5)+(rnd()-.5)*2.4;poly+=`<polygon points="${pts([[cx,cy],cs[i],cs[(i+1)%6]])}" fill="${hsl(h,s0,l0+sh)}" stroke="${hsl(h,s0,l0+sh)}" stroke-width=".6"/>`}
+      if(wat){ water+=poly; if(t==='~'&&rnd()<.35) water+=`<path d="M${x-8} ${yy+2}q4 -3 8 0t8 0" stroke="rgba(255,255,255,.55)" stroke-width="1.6" fill="none" stroke-linecap="round"/>`; continue; }
+      let sides=`<polygon points="${pts([cs[2],cs[3],[cs[3][0],cs[3][1]+T],[cs[2][0],cs[2][1]+T]])}" fill="#7d5d3b"/><polygon points="${pts([cs[3],cs[4],[cs[4][0],cs[4][1]+T],[cs[3][0],cs[3][1]+T]])}" fill="#9a7550"/>`;
+      rowTop+=sides+poly;
+      const own=owner(c,r);
+      if(own){ const[cc,dd]=CIVC[own]; rowTop+=`<polygon points="${pts(cs)}" fill="${cc}" opacity=".12"/>`;
+        for(let i=0;i<6;i++){const[nc,nr]=nb(c,r,i); if(owner(nc,nr)!==own){const ci=corners(x,y,.93);rowTop+=`<line x1="${ci[i][0]}" y1="${ci[i][1]}" x2="${ci[(i+1)%6][0]}" y2="${ci[(i+1)%6][1]}" stroke="${cc}" stroke-width="3.2" stroke-linecap="round"/>`}}}
+      if(reach.has(c+','+r)) rowTop+=`<polygon points="${pts(corners(x,y,.9))}" fill="rgba(255,255,255,.32)" stroke="#fff" stroke-width="2" stroke-dasharray="4 3"/>`;
+      const key=c+','+r;
+      if(FARMS.includes(key)) rowFeat+=farm(x,y);
+      if(t==='f') rowFeat+=tree(x-9,y+2,.9)+tree(x+8,y,.95)+tree(x,y+8,1);
+      if(t==='h') rowFeat+=hill(x,y+2);
+      if(t==='m') rowFeat+=mountain(x,y);
+      if(MINES.includes(key)) rowFeat+=mine(x+4,y+1);
+      const k=CITIES.find(k=>k.c==c&&k.r==r); if(k){ rowFeat+=city(k,x,y); top+=banner(k,x,y); }
+      if(RES[key]) rowFeat+=res(x,y,RES[key]);
+      if(attack.has(key)) top+=`<ellipse cx="${x}" cy="${y+3}" rx="20" ry="${20*SQ}" fill="none" stroke="#ff4d4d" stroke-width="3.5"/><path d="M${x+14} ${y-30}l6 6m0-6l-6 6" stroke="#ff4d4d" stroke-width="3" stroke-linecap="round"/>`;
+    }
+    for(let c=-1;c<10;c++){const u=UNITS.find(u=>u.c==c&&u.r==r); if(u){const[x,y]=cen(c,r); rowFeat+=unit(u,x,u.k==='tri'?y+T:y, sel&&u===sel);}}
+    land+=rowTop+rowFeat+rowFog;
+  }
+  if(o.focusCity){ top+=''; }
+  return `<svg width="393" height="852" viewBox="0 0 393 852" font-family="ui-rounded,system-ui,sans-serif"><rect width="393" height="852" fill="${hsl(205,62,48)}"/>${water}${land}${top}</svg>`;
+}
+
+/* ---------- shared UI pieces ---------- */
+const sbar=`<div class="scrim-t"></div><div class="sbar"><span>9:41</span><span class="bat"></span></div>`;
+const stats=(compact)=>`<div class="stats">
+  <div class="stat">${st('gold')}142<small>+9</small></div>
+  <div class="stat">${st('sci')}+18</div>
+  <div class="stat">${st('cul')}64<small>/120</small></div>
+  <div class="stat">${st('hap')}7</div>
+  <div class="stat">${st('fai')}23</div>
+  <div class="turn">T58</div></div>`;
+const mapLayer=(o)=>`<div class="map" style="${o&&o.shift?`transform:translateY(${o.shift}px)`:''}">${renderMap(o)}</div>`;
+
+const CITY_ROWS=[
+  ['Granary','Granary',[['food','+2']],5],['Shrine','Shrine',[['fai','+1']],3],['Walls of Babylon','Walls',[['str','+6']],6],
+  ['Settler','Settler',[],9,'unit'],['Bowman','Bowman',[['rng','9']],3,'unit'],['The Great Library','Library',[['sci','+3']],18,'wonder'],
+];
+function cityContent(){
+  return `<div class="sh-head"><div class="pop">7</div><div><div class="sh-title">Babylon ${ic('Capital','width:18px;height:18px;color:var(--yellow)')}</div><div class="sh-sub">Grows in 3 turns</div></div><button class="x">${ic('Close')}</button></div>
+  <div class="yields">${[['food','+4'],['prod','12'],['gold','9'],['sci','11'],['cul','4'],['fai','2']].map(([k,v])=>`<div class="y1">${st(k)}${v}</div>`).join('')}</div>`;
+}
+function cityBuild(){
+  return `<div class="cur">${`<div class="cicon">${ic('Library')}</div>`}<div style="flex:1;min-width:0"><div class="cname">Library</div><div class="rsub"><span>${st('sci')}+1 per 2 pop</span><span>4 turns</span></div><div class="bar"><i style="width:48%"></i></div></div><button class="buy">${st('gold')}146</button></div>
+  <div class="h3">Up next</div>
+  <div class="row"><div class="cicon">${ic('Warrior')}</div><div><div class="rname">Warrior</div><div class="rsub"><span>${st('str')}8</span></div></div><div class="turns">3<small>turns</small></div></div>
+  <div class="h3">Can build</div>
+  ${CITY_ROWS.map(([n,i,y,t,k])=>`<div class="row ${k==='wonder'?'wonder':''}"><div class="cicon">${ic(i)}</div><div><div class="rname">${n}</div><div class="rsub">${y.map(([a,b])=>`<span>${st(a)}${b}</span>`).join('')}${k==='wonder'?'<span>World wonder</span>':''}</div></div><div class="turns">${t}<small>turns</small></div></div>`).join('')}`;
+}
+
+const TECH=[
+ {era:'Ancient',tiers:[[['Agriculture','done']],[['Pottery','done'],['Animal Husbandry','done'],['Archery','done'],['Mining','done']],[['Sailing','done'],['Calendar','done'],['Writing','now',3],['Trapping','av'],['The Wheel','av'],['Masonry','av'],['Bronze Working','done']]]},
+ {era:'Classical',tiers:[[['Optics','av'],['Horseback Riding','lock'],['Mathematics','lock'],['Construction','lock']],[['Philosophy','lock sel'],['Drama and Poetry','lock'],['Currency','lock'],['Engineering','lock'],['Iron Working','av']]]},
+ {era:'Medieval',tiers:[[['Theology','lock'],['Civil Service','lock'],['Guilds','lock'],['Metal Casting','lock']]]},
+];
+const PATH=['Writing','Calendar'];
+const tnode=(n,s,t)=>`<div class="tn ${s} ${PATH.includes(n)&&!s.includes('now')?'path':''}"><div class="d">${ic('t_'+n)}${t?`<span class="t">${t}</span>`:''}</div><div class="nm">${n}</div></div>`;
+function techGrid(){
+  return TECH.map(e=>`<div class="era">${e.era}</div>`+e.tiers.map(t=>`<div class="tier">${t.map(([n,s,x])=>tnode(n,s,x)).join('')}</div>`).join('')).join('');
+}
+const techFoot=`<div class="techfoot"><div class="tf1"><div class="tn lock sel" style="flex:none"><div class="d" style="width:46px;height:46px">${ic('t_Philosophy','width:28px;height:28px')}</div></div><div><div class="cname">Philosophy</div><div class="rsub"><span>${st('sci')}175</span><span>Needs Writing</span><span>13 turns total</span></div></div></div>
+  <div class="unl"><span class="chip">${ic('Temple')}Temple</span><span class="chip">${ic('Library')}National College</span><span class="chip">${ic('Shrine')}The Oracle</span></div>
+  <button class="big">Research after Writing</button></div>`;
+
+/* ---------- variants ---------- */
+const V={
+ A:{name:'A  Canon dock', thesis:'Polytopia\'s own structure: stats on top, map full-bleed, three discs and a big turn button in the thumb zone.'},
+ B:{name:'B  Decision queue', thesis:'The turn is a queue of decisions. One card at the bottom walks you through them; the map follows.'},
+ C:{name:'C  Thumb arc', thesis:'Everything radiates from one yellow button in the bottom-right corner. Actions fan out along the thumb\'s natural arc.'},
+};
+const S=['Map','Unit','City','Tech'];
+
+function A(s){
+  if(s==='Map') return mapLayer()+sbar+stats()+
+   `<div class="notes"><div class="note" style="color:var(--gre)">${ic('Shield')}</div><div class="note" style="color:var(--food)">${ic('Cities')}<span class="badge">3</span></div></div>
+    <div class="scrim-b"></div><div class="dock"><div class="col"><div class="disc">${ic('t_Writing')}</div><div class="lbl">Writing 3</div></div><div class="col"><div class="disc">${ic('Policies')}<span class="badge" style="background:var(--cul)">!</span></div><div class="lbl">Civ</div></div><div class="col"><div class="disc">${ic('MenuIcon')}</div><div class="lbl">Menu</div></div>
+    <button class="turnbtn">Next unit<span class="n">2</span></button></div>`;
+  if(s==='Unit') return mapLayer({sel:'bow'})+sbar+stats()+
+   `<div class="panel fade-in"><div class="unithead"><div class="uport">${ic('Bowman')}</div><div><div class="uname">Bowman</div><div class="uline"><span>${st('str')}7</span><span>${st('rng')}9 · 2</span><span>${st('mov')}2/2</span></div></div><div class="hp">100 HP</div></div>
+    <div class="actions">${[['Fortify','Fortify'],['Sleep','Sleep'],['Explore','Explore'],['Skip','Skip'],['ShowMore','More']].map(([i,l])=>`<div class="act"><div class="disc">${ic(i)}</div><div class="lbl">${l}</div></div>`).join('')}</div></div>`;
+  if(s==='City') return mapLayer({shift:-120})+sbar+
+   `<div class="sheet fade-in" style="top:250px"><div class="grab"></div>${cityContent()}<div class="tabs"><button class="on">Build</button><button>Buildings</button><button>Tiles</button><button>Citizens</button></div><div class="scroll">${cityBuild()}</div></div>`;
+  if(s==='Tech') return mapLayer()+sbar+
+   `<div class="sheet fade-in" style="top:60px"><div class="grab"></div><div class="sh-head"><div class="sh-title">Technology</div><div class="chip" style="margin-left:8px">${st('sci')}+18</div><button class="x">${ic('Close')}</button></div><div class="scroll" style="padding-bottom:12px">${techGrid()}</div>${techFoot}</div>`;
+}
+function B(s){
+  const corner=`<div class="qcorner" style="bottom:${s==='Unit'?322:274}px"><div class="col" style="display:flex;flex-direction:column;align-items:center"><div class="disc navy" style="width:48px;height:48px">${ic('Policies','width:24px;height:24px')}</div><div class="lbl">Civ</div></div><div class="col" style="display:flex;flex-direction:column;align-items:center"><div class="disc navy" style="width:48px;height:48px">${ic('t_Writing','width:26px;height:26px')}</div><div class="lbl">Writing 3</div></div></div>`;
+  if(s==='Map') return mapLayer()+sbar+stats()+corner+
+   `<div class="queue fade-in"><div class="qtop">Akkad finished Monument<div class="dots"><i class="on"></i><i></i><i></i><i></i></div></div>
+    <div class="qhead"><div class="pop" style="width:44px;height:44px">4</div><div><div class="uname">What should Akkad build?</div><div class="rsub"><span>${st('prod')}6 per turn</span></div></div></div>
+    <div class="qbtns"><div class="qb">${ic('Library')}Library 13</div><div class="qb">${ic('Warrior')}Warrior 7</div><div class="qb">${ic('Shrine')}Shrine 7</div><button class="qb p" style="background:rgba(255,255,255,.12);color:#fff;box-shadow:none">All options</button></div></div>`;
+  if(s==='Unit') return mapLayer({sel:'bow'})+sbar+stats()+corner+
+   `<div class="queue fade-in"><div class="qtop">Bowman needs orders<div class="dots"><i></i><i class="on"></i><i></i><i></i></div></div>
+    <div class="qhead"><div class="uport">${ic('Bowman')}</div><div><div class="uname">Bowman</div><div class="uline"><span>${st('str')}7</span><span>${st('rng')}9 · 2</span><span>${st('mov')}2/2</span></div></div><div class="hp">100 HP</div></div>
+    <div class="odds"><div class="good">Greek Hoplite takes<b>-26 HP</b></div><div>Your Bowman takes<b>0 HP</b></div></div>
+    <div class="qbtns"><button class="qb p">${ic('RangedStrength')}Shoot Hoplite</button><div class="qb">${ic('Fortify')}Fortify</div><div class="qb">${ic('Sleep')}Sleep</div><div class="qb">${ic('Skip')}Skip</div></div></div>`;
+  if(s==='City') return mapLayer({shift:-120})+sbar+
+   `<div class="sheet fade-in" style="top:250px"><div class="grab"></div><div class="sh-head"><div class="pop">4</div><div><div class="sh-title">Akkad builds next</div><div class="sh-sub">${'6 production per turn'}</div></div><button class="x">${ic('Close')}</button></div>
+   <div class="scroll"><div class="h3" style="margin-top:4px">Suggested</div>
+   ${[['Library','Library',[['sci','+1 per 2 pop']],13],['Shrine','Shrine',[['fai','+1']],7],['Warrior','Warrior',[['str','8']],7]].map(([n,i,y,t])=>`<div class="row"><div class="cicon">${ic(i)}</div><div><div class="rname">${n}</div><div class="rsub">${y.map(([a,b])=>`<span>${st(a)}${b}</span>`).join('')}</div></div><div class="turns">${t}<small>turns</small></div></div>`).join('')}
+   <div class="h3">Everything else</div>${CITY_ROWS.slice(0,4).map(([n,i,y,t])=>`<div class="row"><div class="cicon">${ic(i)}</div><div><div class="rname">${n}</div><div class="rsub">${y.map(([a,b])=>`<span>${st(a)}${b}</span>`).join('')}</div></div><div class="turns">${t*2}<small>turns</small></div></div>`).join('')}
+   <div style="height:12px"></div><button class="ghost" style="width:100%">Open Akkad</button></div></div>`;
+  if(s==='Tech'){
+    const rows=[['Writing','now','4',['Library','The Great Library']],['The Wheel','av','5',['Chariot Archer','Water Mill']],['Masonry','av','5',['Walls','The Pyramids']],['Trapping','av','5',['Circus']],['Optics','av','8',['Lighthouse']],['Iron Working','av','9',['Swordsman']]];
+    return mapLayer()+sbar+
+   `<div class="sheet fade-in" style="top:150px"><div class="grab"></div><div class="sh-head"><div><div class="sh-title">Pick research</div><div class="sh-sub">${'+18 science per turn'}</div></div><button class="x">${ic('Close')}</button></div>
+   <div class="scroll">${rows.map(([n,s2,t,u])=>`<div class="row" style="padding:10px 4px"><div class="tn ${s2}"><div class="d" style="width:46px;height:46px">${ic('t_'+n,'width:28px;height:28px')}</div></div><div style="min-width:0"><div class="rname">${n}</div><div class="unl" style="margin-top:5px">${u.map(x=>`<span class="chip">${ic(x==='The Great Library'?'Library':x==='The Pyramids'?'Monument':x==='Chariot Archer'?'Archer':x==='Water Mill'?'Water Mill':x==='Lighthouse'?'Trireme':x==='Circus'?'Monument':x)}${x}</span>`).join('')}</div></div><div class="turns">${t}<small>turns</small></div></div>`).join('')}
+   <div style="height:12px"></div><button class="ghost" style="width:100%">${ic('t_Philosophy','width:18px;height:18px')}Open full tree</button></div></div>`;
+  }
+}
+function C(s){
+  const civ=`<div class="civdisc"><div class="disc navy" style="width:60px;height:60px">${ic('Policies')}<span class="badge" style="background:var(--cul)">!</span></div><div class="lbl">Civ</div></div>`;
+  if(s==='Map') return mapLayer()+sbar+stats()+'<div class="scrim-b"></div>'+civ+
+   `<div class="pager"><div class="mini">${ic('Bowman')}</div>2 waiting</div>
+    <div class="arcwrap"><div class="anchor">${ic('ForwardArrow')}Next</div></div>
+    <div class="notes" style="bottom:170px"><div class="note" style="color:var(--gre)">${ic('Shield')}</div><div class="note" style="color:var(--food)">${ic('Cities')}<span class="badge">3</span></div></div>`;
+  if(s==='Unit'){
+    const ax=393-22-42, ay=852-42-42, rad=178; const acts=[['RangedStrength','Shoot',1],['Fortify','Fortify'],['Sleep','Sleep'],['ShowMore','More']];
+    const btns=acts.map(([i,l,p],k)=>{const a=(186+k*26)*Math.PI/180;const x=ax+rad*Math.cos(a), y=ay+rad*Math.sin(a);return `<div class="arcbtn" style="left:${x}px;top:${y-(852-400)}px"><div class="disc ${p?'y':''}">${ic(i)}</div><div class="lbl">${l}</div></div>`}).join('');
+    return mapLayer({sel:'bow'})+`<div style="position:absolute;inset:0;background:linear-gradient(to top,rgba(10,20,32,.55),rgba(10,20,32,0) 45%);z-index:4"></div>`+sbar+stats()+
+    `<div class="utag fade-in"><div class="uport">${ic('Bowman')}</div><div><div class="uname">Bowman</div><div class="uline"><span>${st('str')}7</span><span>${st('rng')}9</span><span>${st('mov')}2/2</span><span>100 HP</span></div></div></div>
+    <div class="arcwrap fade-in">${btns}<div class="anchor">${ic('Skip')}Skip</div></div>`;
+  }
+  if(s==='City') return mapLayer({shift:-120})+sbar+
+   `<div class="sheet fade-in" style="top:250px"><div class="grab"></div>${cityContent()}<div class="scroll" style="border-top:1px solid var(--line)">${cityBuild()}</div>
+   <div class="btabs">${[['Settings','Build',1],['Library','Buildings'],['HexagonOutline','Tiles'],['Worker','Citizens'],['Resources','Buy']].map(([i,l,on])=>`<button class="${on?'on':''}">${ic(i)}${l}</button>`).join('')}</div></div>`;
+  if(s==='Tech'){
+    const list=[['Optics','av','8',['Lighthouse']],['Horseback Riding','lock','',['Horseman']],['Mathematics','lock','',['Catapult']],['Construction','lock','',['Colosseum']],['Philosophy','lock sel','13',['Temple','The Oracle']],['Drama and Poetry','lock','',['Amphitheater']],['Currency','lock','',['Market']],['Iron Working','av','9',['Swordsman']]];
+    return mapLayer()+sbar+
+   `<div class="sheet fade-in" style="top:60px"><div class="grab"></div><div class="sh-head"><div><div class="sh-title">Classical era</div><div class="sh-sub">Researching Writing, 3 turns</div></div><button class="x">${ic('Close')}</button></div>
+   <div class="scroll"><div class="vt">${list.map(([n,s2,t,u])=>`<div class="vrow ${s2.split(' ')[0]}"><div class="tn ${s2}"><div class="d">${ic('t_'+n,'width:28px;height:28px')}</div></div><div class="vinfo"><div class="rname">${n}</div><div class="rsub"><span>${u.join(', ')}</span></div></div>${t?`<div class="turns">${t}<small>turns</small></div>`:''}</div>`).join('')}</div></div>
+   <div class="eras">${['Ancient','Classical','Medieval','Renaiss.'].map((e,i)=>`<button class="${i==1?'on':''}">${e}</button>`).join('')}</div></div>`;
+  }
+}
+const RENDER={A,B,C};
+
+/* ---------- canvas ---------- */
+let cv=localStorage.getItem('pv')||'A', cs=localStorage.getItem('ps')||'Map';
+if(!V[cv])cv='A'; if(!S.includes(cs))cs='Map';
+function draw(){
+  document.getElementById('screen').innerHTML=RENDER[cv](cs);
+  document.getElementById('vseg').innerHTML=Object.entries(V).map(([k,v])=>`<button aria-pressed="${k===cv}" data-v="${k}">${v.name}</button>`).join('');
+  document.getElementById('sseg').innerHTML=S.map(s=>`<button aria-pressed="${s===cs}" data-s="${s}">${s}</button>`).join('');
+  document.getElementById('thesis').textContent=V[cv].thesis;
+  localStorage.setItem('pv',cv);localStorage.setItem('ps',cs);
+  fit();
+}
+function fit(){
+  const d=document.getElementById('device'), wrap=document.getElementById('stagewrap');
+  const narrow=innerWidth<520; d.classList.toggle('bare',narrow);
+  const pad=narrow?0:24; const sc=Math.min((wrap.clientWidth-pad)/393,(wrap.clientHeight-pad)/852,1.25);
+  d.style.transform=`scale(${sc})`; d.style.marginTop=narrow?'0':'10px';
+  wrap.style.height='';
+}
+document.addEventListener('click',e=>{const b=e.target.closest('button[data-v],button[data-s]');if(!b)return;if(b.dataset.v)cv=b.dataset.v;if(b.dataset.s)cs=b.dataset.s;draw()});
+document.addEventListener('keydown',e=>{if(e.key>='1'&&e.key<='3'){cv='ABC'[e.key-1];draw()}const i=S.indexOf(cs);if(e.key==='ArrowRight'){cs=S[(i+1)%4];draw()}if(e.key==='ArrowLeft'){cs=S[(i+3)%4];draw()}});
+addEventListener('resize',fit);
+draw();
+</script>
+</body>
+</html>
