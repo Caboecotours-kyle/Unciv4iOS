@@ -3,217 +3,240 @@
 THESIS: Civ 5 depth played one-handed in portrait. The map owns the screen; every per-turn action lives in the bottom third.
 OWN-WORLD: Polytopia grammar: faceted low-poly hex slabs with dirt sides, cloud fog, chunky tribe-colored figures, navy translucent panels, round white action discs, yellow primary, bold rounded type.
 STORY: Kyle sees his empire, taps a unit or city, acts with his thumb, ends the turn. Depth (city, tech) rises as sheets over the map.
-FIRST VIEWPORT: stat strip under the Dynamic Island, full-bleed map, thumb dock at the bottom with the yellow turn button bottom-right.
-FORM: three structural directions for the same world: A Canon dock, B Decision queue, C Thumb arc.
+FIRST VIEWPORT: stat strip under the Dynamic Island, full-bleed map, zoom rail on the left edge, Civ and Tech discs bottom-left, yellow decision button bottom-right.
+FORM: chosen direction C Thumb arc, with B's decision queue folded into the corner button and quick-pick cards. Tech tree: Civ 5's real branching tree, eras top to bottom, era tabs in thumb reach.
 -->
 <html lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>Unciv Portrait: HUD directions</title>
+<title>Unciv Portrait: thumb arc</title>
 <style>
 :root{
   --navy:#132435; --navy2:#1c3249; --panel:rgba(16,31,47,.9); --line:rgba(255,255,255,.12);
   --ink:#fff; --ink2:#b7cde0; --ink3:#7f9ab2;
   --yellow:#ffc93c; --yellow-ink:#3a2a00;
-  --bab:#2f7fe0; --bab-l:#8fc3ff; --gre:#e0524a; --kab:#9a5bd6;
+  --bab:#2f7fe0; --gre:#e0524a; --kab:#9a5bd6;
   --food:#6fd05a; --prod:#ff9a3c; --gold:#ffc93c; --sci:#5cc8ff; --cul:#d38bff; --fai:#f3ecd2; --hap:#b8e35a;
   --r:ui-rounded,"SF Pro Rounded","Nunito","Varela Round",system-ui,-apple-system,sans-serif;
 }
-*{box-sizing:border-box;margin:0;padding:0}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 html,body{height:100%;background:#0b1622;color:var(--ink);font-family:var(--r);-webkit-font-smoothing:antialiased}
 body{display:flex;flex-direction:column;align-items:center;overflow:hidden}
 button{font:inherit;color:inherit;background:none;border:0;cursor:pointer}
 
 /* canvas chrome */
-.chrome{width:100%;display:flex;flex-wrap:wrap;gap:8px 18px;justify-content:center;align-items:center;padding:10px 12px 8px;flex:none}
-.seg{display:flex;background:#16283a;border-radius:12px;padding:3px}
-.seg button{padding:7px 12px;border-radius:9px;font-weight:700;font-size:14px;color:var(--ink2);white-space:nowrap}
+.chrome{width:100%;display:flex;flex-wrap:wrap;gap:8px 14px;justify-content:center;align-items:center;padding:10px 10px 8px;flex:none}
+.seg{display:flex;background:#16283a;border-radius:14px;padding:3px}
+.seg button{min-height:40px;padding:8px 13px;border-radius:11px;font-weight:800;font-size:15px;color:var(--ink2);white-space:nowrap}
 .seg button[aria-pressed=true]{background:#fff;color:var(--navy)}
-.thesis{width:100%;text-align:center;font-size:13px;color:var(--ink2);font-weight:600;min-height:18px}
-.stagewrap{flex:1;width:100%;display:flex;align-items:flex-start;justify-content:center;min-height:0}
-.device{width:393px;height:852px;position:relative;transform-origin:top center;border-radius:54px;overflow:hidden;
-  box-shadow:0 0 0 10px #05090e,0 0 0 11px #2a3b4d,0 30px 60px rgba(0,0,0,.5);background:#2f8fd6}
+.thesis{width:100%;text-align:center;font-size:13px;color:var(--ink2);font-weight:600;min-height:18px;padding:0 8px}
+.stagewrap{flex:1;width:100%;display:flex;align-items:flex-start;justify-content:center;min-height:0;overflow:hidden}
+.device{width:393px;height:852px;position:relative;transform-origin:top center;border-radius:54px;overflow:hidden;flex:none;
+  box-shadow:0 0 0 10px #05090e,0 0 0 11px #2a3b4d,0 30px 60px rgba(0,0,0,.5);background:#e4edf4}
 .device.bare{border-radius:0;box-shadow:none}
 
 /* phone content */
 .screen{position:absolute;inset:0;overflow:hidden}
-.map{position:absolute;inset:0}
-.map svg{display:block}
-.sbar{position:absolute;top:0;left:0;right:0;height:50px;display:flex;justify-content:space-between;align-items:center;padding:6px 34px 0 42px;font-weight:700;font-size:16px;z-index:5;text-shadow:0 1px 2px rgba(0,0,0,.35)}
+.map{position:absolute;inset:0;transform-origin:196px 470px;transition:transform .12s ease-out}
+.map svg{position:absolute;left:-260px;top:-320px;display:block}
+.sbar{position:absolute;top:0;left:0;right:0;height:50px;display:flex;justify-content:space-between;align-items:center;padding:6px 34px 0 42px;font-weight:700;font-size:16px;z-index:5}
 .sbar .bat{width:26px;height:12px;border:1.5px solid #fff;border-radius:4px;position:relative}
 .sbar .bat::after{content:"";position:absolute;inset:1.5px;right:5px;background:#fff;border-radius:1.5px}
+.scrim-t{position:absolute;top:0;left:0;right:0;height:130px;background:linear-gradient(rgba(10,22,34,.62),rgba(10,22,34,0));z-index:3;pointer-events:none}
+.scrim-b{position:absolute;bottom:0;left:0;right:0;height:250px;background:linear-gradient(to top,rgba(10,22,34,.66),rgba(10,22,34,0));z-index:3;pointer-events:none}
 
 /* icons */
-.ic{display:inline-block;width:20px;height:20px;background:currentColor;-webkit-mask-size:contain;mask-size:contain;-webkit-mask-repeat:no-repeat;mask-repeat:no-repeat;-webkit-mask-position:center;mask-position:center;flex:none}
-svg.st{width:16px;height:16px;flex:none}
+.ic{display:inline-block;width:22px;height:22px;background:currentColor;-webkit-mask-size:contain;mask-size:contain;-webkit-mask-repeat:no-repeat;mask-repeat:no-repeat;-webkit-mask-position:center;mask-position:center;flex:none}
+svg.st{width:18px;height:18px;flex:none}
 
 /* stat strip */
-.stats{position:absolute;top:54px;left:12px;right:12px;height:40px;background:var(--panel);border-radius:14px;display:flex;align-items:center;padding:0 6px 0 10px;gap:2px;z-index:4;box-shadow:0 4px 14px rgba(0,0,0,.22)}
-.stat{display:flex;align-items:center;gap:4px;font-weight:800;font-size:15px;padding:0 5px;height:100%;white-space:nowrap}
-.stat small{font-size:12px;font-weight:700;color:var(--ink2)}
-.stats .turn{margin-left:auto;background:rgba(255,255,255,.1);border-radius:9px;padding:4px 9px;font-size:14px;font-weight:800}
+.stats{position:absolute;top:54px;left:10px;right:10px;height:50px;background:var(--panel);border-radius:16px;display:flex;align-items:center;padding:0 5px 0 8px;z-index:4;box-shadow:0 4px 14px rgba(0,0,0,.22)}
+.stat{display:flex;align-items:center;gap:4px;font-weight:800;font-size:16.5px;padding:0 5px;height:44px;white-space:nowrap}
+.stat small{font-size:12.5px;font-weight:700;color:var(--ink2)}
+.stats .turn{margin-left:auto;height:40px;background:rgba(255,255,255,.1);border-radius:12px;padding:0 10px;font-size:15px;font-weight:900;display:flex;align-items:center;gap:6px}
+.stats .turn .ic{width:16px;height:16px;color:var(--ink2)}
 
 /* discs */
-.disc{width:56px;height:56px;border-radius:50%;background:#eef5fb;color:var(--navy);display:grid;place-items:center;box-shadow:0 4px 0 #b9cadb,0 8px 16px rgba(0,0,0,.25);position:relative}
-.disc .ic{width:28px;height:28px}
-.disc.y{background:var(--yellow);color:var(--yellow-ink);box-shadow:0 4px 0 #c9951c,0 8px 16px rgba(0,0,0,.25)}
-.disc.navy{background:var(--navy2);color:#fff;box-shadow:0 4px 0 #0b1826,0 8px 16px rgba(0,0,0,.3)}
-.lbl{font-size:12px;font-weight:800;text-align:center;margin-top:8px;color:#fff;text-shadow:0 1px 2px rgba(0,0,0,.5);white-space:nowrap}
-.badge{position:absolute;top:-4px;right:-4px;min-width:22px;height:22px;border-radius:11px;background:var(--gre);color:#fff;font-size:12px;font-weight:800;display:grid;place-items:center;padding:0 6px;box-shadow:0 0 0 2px var(--navy)}
+.disc{width:66px;height:66px;border-radius:50%;background:#eef5fb;color:var(--navy);display:grid;place-items:center;box-shadow:0 5px 0 #b9cadb,0 9px 18px rgba(0,0,0,.25);position:relative;flex:none}
+.disc .ic{width:32px;height:32px}
+.disc.y{background:var(--yellow);color:var(--yellow-ink);box-shadow:0 5px 0 #c9951c,0 9px 18px rgba(0,0,0,.25)}
+.disc.navy{background:var(--navy2);color:#fff;box-shadow:0 5px 0 #0b1826,0 9px 18px rgba(0,0,0,.3)}
+.lbl{font-size:13.5px;font-weight:800;text-align:center;margin-top:9px;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.6);white-space:nowrap}
+.badge{position:absolute;top:-5px;right:-5px;min-width:24px;height:24px;border-radius:12px;background:var(--gre);color:#fff;font-size:13px;font-weight:900;display:grid;place-items:center;padding:0 6px;box-shadow:0 0 0 2.5px var(--navy)}
+.col{display:flex;flex-direction:column;align-items:center}
+
+/* zoom rail */
+.zoom{position:absolute;left:10px;z-index:5;width:56px;background:var(--panel);border-radius:28px;display:flex;flex-direction:column;align-items:center;padding:4px 0;box-shadow:0 6px 18px rgba(0,0,0,.3);touch-action:none;user-select:none;-webkit-user-select:none}
+.zb{width:48px;height:48px;border-radius:50%;font-size:28px;font-weight:900;line-height:1;display:grid;place-items:center;color:#fff}
+.zb:active{background:rgba(255,255,255,.12)}
+.ztrack{position:relative;width:48px;height:150px;cursor:grab}
+.ztrack::before{content:"";position:absolute;left:50%;top:10px;bottom:10px;width:6px;margin-left:-3px;border-radius:3px;background:rgba(255,255,255,.14)}
+.zfill{position:absolute;left:50%;bottom:10px;width:6px;margin-left:-3px;border-radius:3px;background:var(--sci)}
+.zknob{position:absolute;left:50%;width:36px;height:36px;margin:-18px 0 0 -18px;border-radius:50%;background:#fff;box-shadow:0 3px 0 #b9cadb,0 4px 10px rgba(0,0,0,.35)}
+.zval{font-size:12px;font-weight:900;color:var(--ink2);padding:2px 0 4px}
 
 /* dock A */
-.dock{position:absolute;left:0;right:0;bottom:0;padding:0 16px 40px;display:flex;align-items:flex-end;gap:10px;z-index:4}
-.dock .col{display:flex;flex-direction:column;align-items:center}
-.turnbtn{margin-left:auto;height:64px;padding:0 16px 0 20px;border-radius:32px;background:var(--yellow);color:var(--yellow-ink);display:flex;align-items:center;gap:10px;font-weight:900;font-size:18px;white-space:nowrap;box-shadow:0 5px 0 #c9951c,0 10px 20px rgba(0,0,0,.3);margin-bottom:22px}
-.turnbtn .ic{width:26px;height:26px}
-.turnbtn .n{background:var(--yellow-ink);color:var(--yellow);border-radius:10px;font-size:13px;padding:2px 7px}
-.notes{position:absolute;right:16px;bottom:150px;display:flex;flex-direction:column;gap:10px;z-index:4}
-.note{position:relative;width:44px;height:44px;border-radius:50%;background:var(--panel);display:grid;place-items:center;box-shadow:0 4px 12px rgba(0,0,0,.25)}
-.note .ic{width:22px;height:22px}
+.dock{position:absolute;left:0;right:0;bottom:0;padding:0 14px 40px;display:flex;align-items:flex-end;gap:14px;z-index:4}
+.turnbtn{margin-left:auto;height:74px;padding:0 18px 0 24px;border-radius:37px;background:var(--yellow);color:var(--yellow-ink);display:flex;align-items:center;gap:10px;font-weight:900;font-size:20px;white-space:nowrap;box-shadow:0 5px 0 #c9951c,0 10px 20px rgba(0,0,0,.3);margin-bottom:24px}
+.turnbtn .n{background:var(--yellow-ink);color:var(--yellow);border-radius:12px;font-size:15px;padding:3px 9px}
+.notes{position:absolute;right:14px;display:flex;flex-direction:column;gap:12px;z-index:4}
+.note{position:relative;width:54px;height:54px;border-radius:50%;background:var(--panel);display:grid;place-items:center;box-shadow:0 4px 12px rgba(0,0,0,.25)}
+.note .ic{width:26px;height:26px}
 
 /* panels & sheets */
-.panel{position:absolute;left:0;right:0;bottom:0;background:var(--panel);border-radius:24px 24px 0 0;z-index:6;box-shadow:0 -8px 24px rgba(0,0,0,.25);-webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px)}
-.grab{width:40px;height:5px;border-radius:3px;background:rgba(255,255,255,.3);margin:8px auto 0}
-.unithead{display:flex;align-items:center;gap:12px;padding:14px 18px 0}
-.uport{width:52px;height:52px;border-radius:50%;background:var(--bab);display:grid;place-items:center;box-shadow:inset 0 -4px 0 rgba(0,0,0,.2)}
-.uport .ic{width:32px;height:32px;color:#fff}
-.uname{font-size:20px;font-weight:900}
-.uline{display:flex;gap:12px;margin-top:3px;font-size:14px;font-weight:700;color:var(--ink2)}
+.panel{position:absolute;left:0;right:0;bottom:0;background:var(--panel);border-radius:26px 26px 0 0;z-index:6;box-shadow:0 -8px 24px rgba(0,0,0,.25);-webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px)}
+.grab{width:44px;height:5px;border-radius:3px;background:rgba(255,255,255,.3);margin:8px auto 0;flex:none}
+.unithead{display:flex;align-items:center;gap:14px;padding:16px 18px 0}
+.uport{width:58px;height:58px;border-radius:50%;background:var(--bab);display:grid;place-items:center;box-shadow:inset 0 -4px 0 rgba(0,0,0,.2);flex:none}
+.uport .ic{width:34px;height:34px;color:#fff}
+.uname{font-size:21px;font-weight:900}
+.uline{display:flex;gap:12px;margin-top:4px;font-size:15px;font-weight:800;color:var(--ink2)}
 .uline span{display:flex;align-items:center;gap:4px}
-.hp{margin-left:auto;align-self:flex-start;font-size:13px;font-weight:800;background:rgba(111,208,90,.18);color:#9ff08a;border-radius:8px;padding:4px 8px}
-.actions{display:flex;justify-content:space-between;padding:18px 18px 42px}
-.act{display:flex;flex-direction:column;align-items:center;width:62px}
-.act .disc{width:54px;height:54px}
-.act .lbl{text-shadow:none;color:var(--ink2);font-weight:700}
-.act.primary .disc{background:var(--yellow);color:var(--yellow-ink);box-shadow:0 4px 0 #c9951c,0 8px 16px rgba(0,0,0,.25)}
+.hp{margin-left:auto;align-self:flex-start;font-size:14px;font-weight:900;background:rgba(111,208,90,.18);color:#9ff08a;border-radius:9px;padding:5px 9px}
+.actions{display:flex;justify-content:space-between;padding:18px 12px 40px}
+.act{display:flex;flex-direction:column;align-items:center;width:72px}
+.act .lbl{text-shadow:none;color:var(--ink2);font-weight:800}
 .act.primary .lbl{color:#fff}
 
-.sheet{position:absolute;left:0;right:0;bottom:0;background:#122536;border-radius:26px 26px 0 0;z-index:6;box-shadow:0 -10px 30px rgba(0,0,0,.35);display:flex;flex-direction:column}
-.sh-head{display:flex;align-items:center;gap:12px;padding:12px 18px 6px}
-.pop{width:42px;height:42px;border-radius:50%;background:var(--bab);display:grid;place-items:center;font-weight:900;font-size:19px;box-shadow:inset 0 -3px 0 rgba(0,0,0,.2)}
-.sh-title{font-size:22px;font-weight:900;display:flex;align-items:center;gap:6px}
-.sh-sub{font-size:13px;font-weight:700;color:var(--ink2);margin-top:1px}
-.x{margin-left:auto;width:36px;height:36px;border-radius:50%;background:rgba(255,255,255,.08);display:grid;place-items:center}
-.x .ic{width:16px;height:16px;color:var(--ink2)}
-.yields{display:flex;justify-content:space-between;padding:8px 18px 12px}
-.y1{display:flex;flex-direction:column;align-items:center;gap:3px;font-weight:800;font-size:15px;min-width:44px}
-.y1 svg.st{width:20px;height:20px}
-.tabs{display:flex;gap:22px;padding:0 18px;border-bottom:1px solid var(--line)}
-.tabs button{padding:10px 0 11px;font-weight:800;font-size:15px;color:var(--ink3);position:relative}
+.sheet{position:absolute;left:0;right:0;bottom:0;background:#122536;border-radius:28px 28px 0 0;z-index:6;box-shadow:0 -10px 30px rgba(0,0,0,.35);display:flex;flex-direction:column;overflow:hidden}
+.sh-head{display:flex;align-items:center;gap:12px;padding:10px 16px 6px;flex:none}
+.pop{width:48px;height:48px;border-radius:50%;background:var(--bab);display:grid;place-items:center;font-weight:900;font-size:21px;box-shadow:inset 0 -3px 0 rgba(0,0,0,.2);flex:none}
+.sh-title{font-size:23px;font-weight:900;display:flex;align-items:center;gap:6px}
+.sh-sub{font-size:14px;font-weight:700;color:var(--ink2);margin-top:1px}
+.x{margin-left:auto;width:48px;height:48px;border-radius:50%;background:rgba(255,255,255,.09);display:grid;place-items:center;flex:none}
+.x .ic{width:18px;height:18px;color:var(--ink2)}
+.yields{display:flex;justify-content:space-between;padding:8px 16px 12px;flex:none}
+.y1{display:flex;flex-direction:column;align-items:center;gap:4px;font-weight:900;font-size:16px;min-width:48px;min-height:48px;justify-content:center}
+.y1 svg.st{width:22px;height:22px}
+.tabs{display:flex;padding:0 8px;border-bottom:1px solid var(--line);flex:none}
+.tabs button{flex:1;min-height:52px;font-weight:800;font-size:16px;color:var(--ink3);position:relative}
 .tabs button.on{color:#fff}
-.tabs button.on::after{content:"";position:absolute;left:0;right:0;bottom:-1px;height:3px;border-radius:2px;background:var(--yellow)}
-.scroll{flex:1;overflow:auto;padding:12px 16px 40px;scrollbar-width:none}
+.tabs button.on::after{content:"";position:absolute;left:18%;right:18%;bottom:-1px;height:3px;border-radius:2px;background:var(--yellow)}
+.scroll{flex:1;overflow:auto;padding:12px 14px 40px;scrollbar-width:none;min-height:0}
 .scroll::-webkit-scrollbar{display:none}
-.cur{background:var(--navy2);border-radius:16px;padding:14px;display:flex;gap:12px;align-items:center}
-.cicon{width:48px;height:48px;border-radius:14px;background:#2a4866;display:grid;place-items:center;flex:none}
-.cicon .ic{width:30px;height:30px;color:#fff}
-.cname{font-weight:900;font-size:17px}
-.bar{height:8px;border-radius:4px;background:rgba(255,255,255,.1);margin-top:8px;overflow:hidden}
-.bar i{display:block;height:100%;background:var(--prod);border-radius:4px}
-.buy{margin-left:auto;background:var(--yellow);color:var(--yellow-ink);border-radius:12px;padding:8px 10px;font-weight:900;font-size:14px;display:flex;align-items:center;gap:4px;box-shadow:0 3px 0 #c9951c;flex:none}
-.h3{font-size:13px;font-weight:800;color:var(--ink3);margin:18px 2px 8px}
-.row{display:flex;align-items:center;gap:12px;padding:9px 4px;border-bottom:1px solid var(--line)}
-.row .cicon{width:40px;height:40px;border-radius:12px}
-.row .cicon .ic{width:24px;height:24px}
-.rname{font-weight:800;font-size:15px}
-.rsub{font-size:12px;font-weight:700;color:var(--ink2);display:flex;gap:8px;margin-top:2px;align-items:center}
+.curbuild{background:var(--navy2);border-radius:18px;padding:14px;display:flex;gap:12px;align-items:center}
+.cicon{width:52px;height:52px;border-radius:15px;background:#2a4866;display:grid;place-items:center;flex:none}
+.cicon .ic{width:32px;height:32px;color:#fff}
+.cname{font-weight:900;font-size:18px}
+.bar{height:9px;border-radius:5px;background:rgba(255,255,255,.1);margin-top:8px;overflow:hidden}
+.bar i{display:block;height:100%;background:var(--prod);border-radius:5px}
+.buy{margin-left:auto;min-height:48px;background:var(--yellow);color:var(--yellow-ink);border-radius:14px;padding:0 12px;font-weight:900;font-size:16px;display:flex;align-items:center;gap:5px;box-shadow:0 3px 0 #c9951c;flex:none}
+.h3{font-size:14px;font-weight:800;color:var(--ink3);margin:18px 2px 6px}
+.row{display:flex;align-items:center;gap:12px;min-height:66px;padding:8px 4px;border-bottom:1px solid var(--line)}
+.row .cicon{width:46px;height:46px;border-radius:13px}
+.row .cicon .ic{width:28px;height:28px}
+.rname{font-weight:800;font-size:16.5px}
+.rsub{font-size:13.5px;font-weight:700;color:var(--ink2);display:flex;gap:8px;margin-top:3px;align-items:center;flex-wrap:wrap}
 .rsub span{display:flex;gap:3px;align-items:center}
-.rsub svg.st{width:13px;height:13px}
-.turns{margin-left:auto;font-weight:900;font-size:15px;display:flex;align-items:center;gap:4px;color:#fff}
-.turns small{font-size:12px;color:var(--ink3);font-weight:700}
+.rsub svg.st{width:15px;height:15px}
+.turns{margin-left:auto;font-weight:900;font-size:17px;display:flex;align-items:center;gap:4px;color:#fff;flex:none}
+.turns small{font-size:13px;color:var(--ink3);font-weight:700}
 .wonder .cicon{background:#5a3f13}
 .wonder .cicon .ic{color:var(--yellow)}
+.chip{display:flex;align-items:center;gap:6px;background:rgba(255,255,255,.08);border-radius:12px;padding:6px 10px 6px 7px;font-size:13.5px;font-weight:800;white-space:nowrap}
+.chip .ic{width:20px;height:20px}
+.chip.w{background:rgba(255,201,60,.15);color:var(--yellow)}
+.big{min-height:60px;border-radius:18px;background:var(--yellow);color:var(--yellow-ink);font-weight:900;font-size:18px;display:flex;align-items:center;justify-content:center;gap:8px;box-shadow:0 4px 0 #c9951c;width:100%}
+.ghost{min-height:54px;border-radius:16px;background:rgba(255,255,255,.08);color:#fff;font-weight:800;font-size:16px;display:flex;align-items:center;justify-content:center;gap:8px;width:100%}
 
-/* tech nodes */
-.era{margin:14px 0 4px;font-size:13px;font-weight:900;color:var(--ink3)}
-.tier{display:grid;grid-template-columns:repeat(4,1fr);gap:14px 6px;padding:8px 0 14px;position:relative}
-.tn{display:flex;flex-direction:column;align-items:center;gap:6px;text-align:center}
-.tn .d{width:54px;height:54px;border-radius:50%;display:grid;place-items:center;position:relative}
-.tn .d .ic{width:32px;height:32px}
-.tn .nm{font-size:11.5px;font-weight:800;line-height:1.15;max-width:78px}
-.tn.done .d{background:var(--bab);color:#fff;box-shadow:inset 0 -4px 0 rgba(0,0,0,.2)}
+/* tech tree */
+.tt{position:relative;flex:1;min-height:0}
+.ttscroll{position:absolute;inset:0;overflow:auto;scrollbar-width:none;overscroll-behavior:contain}
+.ttscroll::-webkit-scrollbar{display:none}
+.canvas{position:relative}
+.band{position:relative;border-top:1px solid rgba(255,255,255,.06)}
+.band.odd{background:rgba(255,255,255,.028)}
+.band h4{position:sticky;left:0;display:inline-flex;align-items:center;gap:8px;height:40px;padding:0 14px 0 76px;font-size:15px;font-weight:900;color:var(--ink2);white-space:nowrap}
+.band h4 small{font-size:12.5px;color:var(--ink3);font-weight:800}
+.links{position:absolute;left:0;top:0;pointer-events:none}
+.tn{position:absolute;width:92px;margin-left:-46px;display:flex;flex-direction:column;align-items:center;gap:7px;text-align:center}
+.tn .d{width:66px;height:66px;border-radius:50%;display:grid;place-items:center;position:relative;transition:box-shadow .15s}
+.tn .d .ic{width:38px;height:38px}
+.tn .nm{font-size:13px;font-weight:800;line-height:1.15;max-width:92px}
+.tn.done .d{background:var(--bab);color:#fff;box-shadow:inset 0 -5px 0 rgba(0,0,0,.2)}
 .tn.done .nm{color:var(--ink2)}
-.tn.now .d{background:#fff;color:var(--navy);box-shadow:0 0 0 4px var(--yellow)}
-.tn.av .d{background:#eef5fb;color:var(--navy);box-shadow:inset 0 -4px 0 #b9cadb}
-.tn.lock .d{background:#1f3850;color:#57718a}
+.tn.now .d{background:#fff;color:var(--navy);box-shadow:0 0 0 5px var(--yellow)}
+.tn.av .d{background:#eef5fb;color:var(--navy);box-shadow:inset 0 -5px 0 #b9cadb}
+.tn.lock .d{background:#1f3850;color:#6f8ba4}
 .tn.lock .nm{color:var(--ink3)}
-.tn.sel .d{box-shadow:0 0 0 4px #fff,0 0 0 8px rgba(255,255,255,.18)}
-.tn.path .d{box-shadow:0 0 0 3px var(--yellow)}
-.tn .t{position:absolute;bottom:-6px;right:-6px;background:var(--yellow);color:var(--yellow-ink);font-size:11px;font-weight:900;border-radius:8px;padding:1px 6px}
-.techfoot{background:var(--navy2);border-radius:20px 20px 0 0;padding:14px 18px 40px;display:flex;flex-direction:column;gap:10px}
+.tn.onpath .d{box-shadow:0 0 0 4px var(--yellow)}
+.tn.onpath .nm{color:#fff}
+.tn.sel .d{box-shadow:0 0 0 5px #fff,0 0 0 11px rgba(255,201,60,.55)}
+.tn .t{position:absolute;bottom:-5px;right:-8px;background:var(--navy);color:#fff;font-size:12px;font-weight:900;border-radius:9px;padding:2px 7px;box-shadow:0 0 0 2px #122536}
+.tn .q{position:absolute;top:-6px;left:-6px;width:26px;height:26px;border-radius:50%;background:var(--yellow);color:var(--yellow-ink);font-size:13.5px;font-weight:900;display:grid;place-items:center;box-shadow:0 0 0 2.5px #122536}
+.tfoot{flex:none;background:var(--navy2);border-radius:22px 22px 0 0;padding:12px 16px 14px;display:flex;flex-direction:column;gap:11px;box-shadow:0 -8px 24px rgba(0,0,0,.3);position:relative;z-index:2}
 .tf1{display:flex;align-items:center;gap:12px}
-.unl{display:flex;gap:6px;flex-wrap:wrap}
-.chip{display:flex;align-items:center;gap:5px;background:rgba(255,255,255,.08);border-radius:10px;padding:5px 8px 5px 6px;font-size:12.5px;font-weight:800}
-.chip .ic{width:16px;height:16px}
-.big{height:54px;border-radius:16px;background:var(--yellow);color:var(--yellow-ink);font-weight:900;font-size:17px;display:flex;align-items:center;justify-content:center;gap:8px;box-shadow:0 4px 0 #c9951c}
-.ghost{height:48px;border-radius:14px;background:rgba(255,255,255,.08);color:#fff;font-weight:800;font-size:15px;display:flex;align-items:center;justify-content:center;gap:8px}
+.tf1 .d{width:54px;height:54px;border-radius:50%;display:grid;place-items:center;flex:none}
+.tf1 .d .ic{width:32px;height:32px}
+.hscroll{display:flex;gap:6px;overflow-x:auto;scrollbar-width:none;margin:0 -16px;padding:0 16px}
+.hscroll::-webkit-scrollbar{display:none}
+.pathline{display:flex;align-items:center;gap:6px;font-size:13.5px;font-weight:800;color:var(--ink2)}
+.pathline .pi{display:flex;align-items:center;gap:5px;color:#fff;white-space:nowrap}
+.pathline .pi i.n{width:22px;height:22px;border-radius:50%;background:var(--yellow);color:var(--yellow-ink);font-style:normal;font-size:12px;display:grid;place-items:center}
+.pathline .arrow{color:var(--ink3)}
 
 /* B: decision queue */
-.queue{position:absolute;left:10px;right:10px;bottom:32px;background:var(--panel);border-radius:26px;z-index:6;box-shadow:0 10px 30px rgba(0,0,0,.35);padding:14px 14px 14px;-webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px)}
-.qtop{display:flex;align-items:center;gap:8px;font-size:12.5px;font-weight:800;color:var(--ink2);padding:0 4px 10px}
-.dots{display:flex;gap:5px;margin-left:auto}
-.dots i{width:7px;height:7px;border-radius:50%;background:rgba(255,255,255,.2)}
-.dots i.on{background:var(--yellow);width:18px;border-radius:4px}
+.queue{position:absolute;left:10px;right:10px;bottom:30px;background:var(--panel);border-radius:28px;z-index:6;box-shadow:0 10px 30px rgba(0,0,0,.35);padding:14px;-webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px)}
+.qtop{display:flex;align-items:center;gap:8px;font-size:14px;font-weight:800;color:var(--ink2);padding:0 4px 10px}
+.dots{display:flex;gap:6px;margin-left:auto}
+.dots i{width:8px;height:8px;border-radius:50%;background:rgba(255,255,255,.2)}
+.dots i.on{background:var(--yellow);width:20px;border-radius:4px}
 .qhead{display:flex;align-items:center;gap:12px;padding:0 4px}
-.qbtns{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-top:14px}
-.qb{height:62px;border-radius:16px;background:rgba(255,255,255,.08);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;font-size:12.5px;font-weight:800}
-.qb .ic{width:24px;height:24px}
-.qb.p{grid-column:1/-1;flex-direction:row;height:58px;background:var(--yellow);color:var(--yellow-ink);font-size:17px;gap:10px;box-shadow:0 4px 0 #c9951c}
-.qb.p small{font-size:13px;font-weight:800;opacity:.75}
-.qcorner{position:absolute;left:18px;z-index:5;display:flex;gap:10px}
-.odds{display:flex;gap:8px;margin-top:10px;padding:0 4px}
-.odds div{flex:1;background:rgba(255,255,255,.06);border-radius:12px;padding:8px 10px;font-size:12px;font-weight:700;color:var(--ink2)}
-.odds b{display:block;font-size:17px;color:#fff;font-weight:900}
+.qbtns{display:grid;grid-template-columns:1fr 1fr 1fr;gap:9px;margin-top:14px}
+.qb{min-height:76px;border-radius:18px;background:rgba(255,255,255,.09);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;font-size:14.5px;font-weight:800}
+.qb .ic{width:28px;height:28px}
+.qb.p{grid-column:1/-1;flex-direction:row;min-height:64px;background:var(--yellow);color:var(--yellow-ink);font-size:19px;gap:10px;box-shadow:0 4px 0 #c9951c}
+.qb.alt{grid-column:1/-1;flex-direction:row;min-height:56px;font-size:16px}
+.qcorner{position:absolute;right:14px;z-index:5;display:flex;gap:12px}
+.odds{display:flex;gap:9px;margin-top:12px;padding:0 4px}
+.odds div{flex:1;background:rgba(255,255,255,.06);border-radius:14px;padding:9px 12px;font-size:13.5px;font-weight:700;color:var(--ink2)}
+.odds b{display:block;font-size:19px;color:#fff;font-weight:900}
 .odds .good b{color:#9ff08a}
 
 /* C: thumb arc */
-.arcwrap{position:absolute;right:0;bottom:0;width:393px;height:400px;z-index:5;pointer-events:none}
+.arcwrap{position:absolute;right:0;bottom:0;width:393px;height:440px;z-index:5;pointer-events:none}
 .arcwrap>*{pointer-events:auto}
-.anchor{position:absolute;right:22px;bottom:42px;width:84px;height:84px;border-radius:50%;background:var(--yellow);color:var(--yellow-ink);display:flex;flex-direction:column;align-items:center;justify-content:center;font-weight:900;font-size:13px;box-shadow:0 5px 0 #c9951c,0 12px 24px rgba(0,0,0,.35);gap:2px}
-.anchor .ic{width:30px;height:30px}
-.arcbtn{position:absolute;display:flex;flex-direction:row-reverse;align-items:center;gap:8px;transform:translate(-28px,-28px)}
-.arcbtn .lbl{margin:0;position:absolute;right:64px;top:50%;transform:translateY(-50%);background:var(--panel);padding:4px 9px;border-radius:9px;text-shadow:none}
-.arcbtn .disc{width:56px;height:56px}
-.civdisc{position:absolute;left:22px;bottom:50px;z-index:5;display:flex;flex-direction:column;align-items:center}
-.utag{position:absolute;left:12px;top:104px;background:var(--panel);border-radius:18px;padding:10px 14px 10px 10px;display:flex;align-items:center;gap:10px;z-index:5;box-shadow:0 6px 18px rgba(0,0,0,.3)}
-.utag .uport{width:40px;height:40px}
-.utag .uport .ic{width:24px;height:24px}
-.utag .uname{font-size:16px}
-.utag .uline{font-size:12.5px;gap:8px;margin-top:1px}
-.pager{position:absolute;right:118px;bottom:64px;z-index:5;background:var(--panel);border-radius:20px;height:40px;display:flex;align-items:center;gap:8px;padding:0 14px 0 8px;font-weight:800;font-size:14px;box-shadow:0 6px 18px rgba(0,0,0,.3)}
-.pager .mini{width:28px;height:28px;border-radius:50%;background:var(--bab);display:grid;place-items:center}
-.pager .mini .ic{width:18px;height:18px;color:#fff}
-.btabs{display:flex;gap:6px;padding:10px 12px 38px;background:#0f2030;border-top:1px solid var(--line)}
-.btabs button{flex:1;height:52px;border-radius:14px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;font-size:11.5px;font-weight:800;color:var(--ink3)}
-.btabs button .ic{width:22px;height:22px}
+.anchor{position:absolute;right:20px;bottom:40px;width:96px;height:96px;border-radius:50%;background:var(--yellow);color:var(--yellow-ink);display:flex;flex-direction:column;align-items:center;justify-content:center;font-weight:900;font-size:15px;box-shadow:0 5px 0 #c9951c,0 12px 24px rgba(0,0,0,.35);gap:2px}
+.anchor .ic{width:34px;height:34px}
+.arcbtn{position:absolute;transform:translate(-33px,-33px)}
+.arcbtn .lbl{margin:0;position:absolute;right:76px;top:50%;transform:translateY(-50%);background:var(--panel);padding:6px 11px;border-radius:11px;text-shadow:none;font-size:14.5px;line-height:1.2}
+.arcbtn.below .lbl{right:auto;left:50%;top:auto;bottom:-40px;transform:translateX(-50%)}
+.arcbtn .lbl b{display:block}
+.civdisc{position:absolute;left:18px;bottom:46px;z-index:5}
+.utag{position:absolute;left:10px;right:10px;top:112px;background:var(--panel);border-radius:18px;padding:10px 14px 10px 10px;display:flex;align-items:center;gap:12px;z-index:5;box-shadow:0 6px 18px rgba(0,0,0,.3)}
+.utag .uport{width:46px;height:46px}
+.utag .uport .ic{width:28px;height:28px}
+.utag .uname{font-size:18px}
+.utag .uline{font-size:14px;gap:10px;margin-top:1px}
+.pager{position:absolute;right:128px;bottom:66px;z-index:5;background:var(--panel);border-radius:26px;height:52px;display:flex;align-items:center;gap:8px;padding:0 16px 0 8px;font-weight:900;font-size:15px;box-shadow:0 6px 18px rgba(0,0,0,.3)}
+.pager .mini{width:38px;height:38px;border-radius:50%;background:var(--bab);display:grid;place-items:center}
+.pager .mini .ic{width:24px;height:24px;color:#fff}
+.btabs{display:flex;gap:6px;padding:8px 10px 36px;background:#0f2030;border-top:1px solid var(--line);flex:none}
+.btabs button{flex:1;min-height:60px;border-radius:16px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;font-size:13px;font-weight:800;color:var(--ink3)}
+.btabs button .ic{width:26px;height:26px}
 .btabs button.on{background:rgba(255,255,255,.1);color:#fff}
-.eras{display:flex;gap:6px;padding:10px 12px 38px;background:#0f2030;border-top:1px solid var(--line)}
-.eras button{flex:1;height:48px;border-radius:14px;font-size:13.5px;font-weight:800;color:var(--ink3);background:rgba(255,255,255,.04)}
-.eras button.on{background:#fff;color:var(--navy)}
-.vt{position:relative;padding-left:4px}
-.vrow{display:flex;align-items:center;gap:14px;padding:8px 0;position:relative}
-.vrow .tn .d{width:50px;height:50px}
-.vrow::before{content:"";position:absolute;left:25px;top:-8px;bottom:50%;width:3px;background:#2a4866;z-index:0}
-.vrow:first-child::before{display:none}
-.vrow .tn{z-index:1}
-.vrow.done::before,.vrow.now::before{background:var(--bab)}
-.vinfo{flex:1;min-width:0}
-.vinfo .rname{display:flex;align-items:center;gap:8px}
-.vinfo .unl{margin-top:6px}
 
-.scrim-t{position:absolute;top:0;left:0;right:0;height:120px;background:linear-gradient(rgba(10,22,34,.6),rgba(10,22,34,0));z-index:3;pointer-events:none}
-.scrim-b{position:absolute;bottom:0;left:0;right:0;height:230px;background:linear-gradient(to top,rgba(10,22,34,.62),rgba(10,22,34,0));z-index:3;pointer-events:none}
+.eras{display:flex;gap:6px;padding:8px 10px 36px;background:#0f2030;border-top:1px solid var(--line);overflow-x:auto;scrollbar-width:none;flex:none;position:relative;z-index:2}
+.eras::-webkit-scrollbar{display:none}
+.eras button{flex:none;min-width:86px;min-height:50px;padding:0 12px;border-radius:14px;font-size:14.5px;font-weight:800;color:var(--ink3);background:rgba(255,255,255,.05)}
+.eras button.on{background:#fff;color:var(--navy)}
+.qpeek{position:absolute;right:124px;bottom:66px;height:48px;padding:0 14px;border-radius:24px;background:var(--panel);display:flex;align-items:center;gap:10px;font-size:14.5px;font-weight:800;box-shadow:0 6px 18px rgba(0,0,0,.3)}
+.qpeek .dots{margin:0}
+.qmini{margin-left:auto;display:flex;flex-direction:column;align-items:flex-end;gap:6px;font-size:13px;font-weight:800;color:var(--ink2);flex:none}
+.qmini .dots{margin:0}
+.odd{color:#9ff08a;font-weight:900}
+.qcard{position:absolute;left:10px;right:10px;bottom:176px;background:var(--panel);border-radius:28px;z-index:6;box-shadow:0 10px 30px rgba(0,0,0,.35);padding:14px;-webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px)}
+.qb small{font-size:12.5px;font-weight:700;color:var(--ink2)}
 .fade-in{animation:rise .38s cubic-bezier(.16,1,.3,1) both}
 @keyframes rise{from{transform:translateY(24px);opacity:0}to{transform:none;opacity:1}}
 @keyframes pulse{0%{transform:scale(.8);opacity:.9}100%{transform:scale(1.5);opacity:0}}
 .pulse{animation:pulse 1.6s cubic-bezier(.16,1,.3,1) infinite;transform-box:fill-box;transform-origin:center}
-@media (prefers-reduced-motion:reduce){.fade-in,.pulse{animation:none}}
+@media (prefers-reduced-motion:reduce){.fade-in,.pulse{animation:none}.map{transition:none}}
 </style>
 </head>
 <body>
 <div class="chrome">
-  <div class="seg" id="vseg"></div>
   <div class="seg" id="sseg"></div>
   <div class="thesis" id="thesis"></div>
 </div>
@@ -221,6 +244,7 @@ svg.st{width:16px;height:16px;flex:none}
 
 <script>
 const ICON = /*ICONS*/{};
+const TECHS = /*TECHS*/[];
 
 /* ---------- icons ---------- */
 const slug = s => s.replace(/[^a-z0-9]/gi,'');
@@ -254,9 +278,9 @@ const cen=(c,r)=>[X0+W*(c+(r&1?.5:0)), Y0+DY*r];
 const toCube=(c,r)=>[c-(r-(r&1))/2, r];
 const fromCube=(q,r)=>[q+(r-(r&1))/2, r];
 const hexDist=(a,b)=>{const[q1,r1]=toCube(...a),[q2,r2]=toCube(...b);const dq=q1-q2,dr=r1-r2;return Math.max(Math.abs(dq),Math.abs(dr),Math.abs(dq+dr))};
-const DIRS=[[1,-1],[1,0],[0,1],[-1,1],[-1,0],[0,-1]]; // edge i neighbours (NE,E,SE,SW,W,NW)
+const DIRS=[[1,-1],[1,0],[0,1],[-1,1],[-1,0],[0,-1]];
 const nb=(c,r,i)=>{const[q,rr]=toCube(c,r);return fromCube(q+DIRS[i][0],rr+DIRS[i][1])};
-const T_=(c,r)=> (GRID[r]||'')[c]||'F';
+const T_=(c,r)=> (r>=0&&c>=0&&GRID[r]&&GRID[r][c])||'F';
 let seed=7; const rnd=()=>{seed=(seed*16807)%2147483647;return seed/2147483647};
 const hsl=(h,s,l)=>`hsl(${h} ${s}% ${Math.max(0,Math.min(100,l)).toFixed(1)}%)`;
 const BASE={ '~':[205,62,50], '-':[190,62,62], g:[96,52,53], f:[104,48,44], h:[92,46,50], m:[96,40,50], p:[68,50,57], d:[44,60,69] };
@@ -280,7 +304,7 @@ const FARMS=['3,16','3,18','5,18','4,11'], MINES=['7,18'];
 const CIVC={bab:['#2f7fe0','#1c56a6','#8fc3ff'],gre:['#e0524a','#a8322c','#ffb1aa'],kab:['#9a5bd6','#6c3aa3','#d8b8ff']};
 
 function owner(c,r){
-  for(const k of CITIES){const d=hexDist([c,r],[k.c,k.r]); if(d<= (k.cs?1:k.cap&&k.civ==='bab'?2:k.civ==='gre'?2:1)) return k.civ;}
+  for(const k of CITIES){const d=hexDist([c,r],[k.c,k.r]); if(d<=(k.cs?1:k.cap?2:1)) return k.civ;}
   return null;
 }
 const corners=(x,y,s=1)=>[...Array(6)].map((_,i)=>{const a=(60*i-90)*Math.PI/180;return [x+R*s*Math.cos(a), y+R*s*Math.sin(a)*SQ]});
@@ -340,38 +364,35 @@ function unit(u,x,y,sel){
   if(u.hp) s+=`<rect x="${x-12}" y="${y-38}" width="24" height="5" rx="2.5" fill="rgba(0,0,0,.45)"/><rect x="${x-11}" y="${y-37}" width="${22*u.hp}" height="3" rx="1.5" fill="#ffd23f"/>`;
   return s;
 }
-function cloud(x,y){
-  seed=Math.floor(x*13+y*7)+1;
-  const b=[[-16,4,13],[0,-3,16],[17,3,13],[-4,8,14],[10,9,12]];
-  let s=''; for(const[dx,dy,rr]of b) s+=`<circle cx="${x+dx}" cy="${y+dy+5}" r="${rr}" fill="#cfdde9"/>`;
-  for(const[dx,dy,rr]of b) s+=`<circle cx="${x+dx+(rnd()-.5)*3}" cy="${y+dy}" r="${rr}" fill="#f5f9fc"/>`;
-  return s;
-}
+const CLOUD_DEFS=(()=>{const b=[[-16,4,13],[0,-3,16],[17,3,13],[-4,8,14],[10,9,12]];
+  const one=(id,m)=>`<symbol id="${id}" overflow="visible">${b.map(([x,y,r])=>`<circle cx="${x*m}" cy="${y+5}" r="${r}" fill="#cfdde9"/>`).join('')}${b.map(([x,y,r])=>`<circle cx="${x*m}" cy="${y}" r="${r}" fill="#f5f9fc"/>`).join('')}</symbol>`;
+  return one('cl1',1)+one('cl2',-1)})();
+
+let MAPCACHE={};
 function renderMap(o={}){
+  const key=o.sel||'none'; if(MAPCACHE[key]) return MAPCACHE[key];
   seed=11;
-  const W_=393,H_=852;
-  let water='', land='', feat='', top='', fog='';
+  let water='', land='', top='';
   const sel=o.sel==='bow'?UNITS[0]:null;
   const reach=new Set(), attack=new Set();
-  if(sel){ for(let r=0;r<GRID.length;r++)for(let c=0;c<9;c++){const d=hexDist([c,r],[sel.c,sel.r]);const t=T_(c,r);if(d>0&&d<=2&&!'~-FmF'.includes(t)&&!UNITS.some(u=>u.c==c&&u.r==r)&&!CITIES.some(k=>k.c==c&&k.r==r))reach.add(c+','+r)} attack.add('3,11'); }
-  for(let r=0;r<GRID.length;r++){
+  if(sel){ for(let r=0;r<GRID.length;r++)for(let c=0;c<9;c++){const d=hexDist([c,r],[sel.c,sel.r]);const t=T_(c,r);if(d>0&&d<=2&&!'~-Fm'.includes(t)&&!UNITS.some(u=>u.c==c&&u.r==r)&&!CITIES.some(k=>k.c==c&&k.r==r))reach.add(c+','+r)} attack.add('3,11'); }
+  for(let r=-16;r<=48;r++){
     let rowTop='',rowFeat='',rowFog='';
-    for(let c=-1;c<10;c++){
-      const t=T_(c,r); const[x,y]=cen(c,r); if(x<-W||x>W_+W||y<-40||y>H_+40)continue;
-      if(t==='F'){ const[b0,b1,b2]=BASE.g; rowTop+=`<polygon points="${pts(corners(x,y))}" fill="${hsl(210,25,82)}"/>`; rowFog+=cloud(x,y-4); continue; }
+    for(let c=-6;c<=14;c++){
+      const t=T_(c,r); const[x,y]=cen(c,r);
+      if(t==='F'){ rowFog+=`<use href="#cl${(c+r)&1?1:2}" x="${x.toFixed(1)}" y="${(y-4).toFixed(1)}"/>`; continue; }
       const[h,s0,l0]=BASE[t]; const wat=t==='~'||t==='-';
       const yy=wat?y+T:y; const cs=corners(x,yy);
       const cx=x+(rnd()-.5)*4, cy=yy-2+(rnd()-.5)*2;
       let poly='';
-      for(let i=0;i<6;i++){const a=((60*i-60)-(-135))*Math.PI/180;const sh=Math.cos(a)*(wat?3:5)+(rnd()-.5)*2.4;poly+=`<polygon points="${pts([[cx,cy],cs[i],cs[(i+1)%6]])}" fill="${hsl(h,s0,l0+sh)}" stroke="${hsl(h,s0,l0+sh)}" stroke-width=".6"/>`}
+      for(let i=0;i<6;i++){const a=((60*i-60)+135)*Math.PI/180;const sh=Math.cos(a)*(wat?3:5)+(rnd()-.5)*2.4;const col=hsl(h,s0,l0+sh);poly+=`<polygon points="${pts([[cx,cy],cs[i],cs[(i+1)%6]])}" fill="${col}" stroke="${col}" stroke-width=".6"/>`}
       if(wat){ water+=poly; if(t==='~'&&rnd()<.35) water+=`<path d="M${x-8} ${yy+2}q4 -3 8 0t8 0" stroke="rgba(255,255,255,.55)" stroke-width="1.6" fill="none" stroke-linecap="round"/>`; continue; }
-      let sides=`<polygon points="${pts([cs[2],cs[3],[cs[3][0],cs[3][1]+T],[cs[2][0],cs[2][1]+T]])}" fill="#7d5d3b"/><polygon points="${pts([cs[3],cs[4],[cs[4][0],cs[4][1]+T],[cs[3][0],cs[3][1]+T]])}" fill="#9a7550"/>`;
-      rowTop+=sides+poly;
+      rowTop+=`<polygon points="${pts([cs[2],cs[3],[cs[3][0],cs[3][1]+T],[cs[2][0],cs[2][1]+T]])}" fill="#7d5d3b"/><polygon points="${pts([cs[3],cs[4],[cs[4][0],cs[4][1]+T],[cs[3][0],cs[3][1]+T]])}" fill="#9a7550"/>`+poly;
       const own=owner(c,r);
-      if(own){ const[cc,dd]=CIVC[own]; rowTop+=`<polygon points="${pts(cs)}" fill="${cc}" opacity=".12"/>`;
+      if(own){ const[cc]=CIVC[own]; rowTop+=`<polygon points="${pts(cs)}" fill="${cc}" opacity=".12"/>`;
         for(let i=0;i<6;i++){const[nc,nr]=nb(c,r,i); if(owner(nc,nr)!==own){const ci=corners(x,y,.93);rowTop+=`<line x1="${ci[i][0]}" y1="${ci[i][1]}" x2="${ci[(i+1)%6][0]}" y2="${ci[(i+1)%6][1]}" stroke="${cc}" stroke-width="3.2" stroke-linecap="round"/>`}}}
-      if(reach.has(c+','+r)) rowTop+=`<polygon points="${pts(corners(x,y,.9))}" fill="rgba(255,255,255,.32)" stroke="#fff" stroke-width="2" stroke-dasharray="4 3"/>`;
       const key=c+','+r;
+      if(reach.has(key)) rowTop+=`<polygon points="${pts(corners(x,y,.9))}" fill="rgba(255,255,255,.32)" stroke="#fff" stroke-width="2" stroke-dasharray="4 3"/>`;
       if(FARMS.includes(key)) rowFeat+=farm(x,y);
       if(t==='f') rowFeat+=tree(x-9,y+2,.9)+tree(x+8,y,.95)+tree(x,y+8,1);
       if(t==='h') rowFeat+=hill(x,y+2);
@@ -381,146 +402,188 @@ function renderMap(o={}){
       if(RES[key]) rowFeat+=res(x,y,RES[key]);
       if(attack.has(key)) top+=`<ellipse cx="${x}" cy="${y+3}" rx="20" ry="${20*SQ}" fill="none" stroke="#ff4d4d" stroke-width="3.5"/><path d="M${x+14} ${y-30}l6 6m0-6l-6 6" stroke="#ff4d4d" stroke-width="3" stroke-linecap="round"/>`;
     }
-    for(let c=-1;c<10;c++){const u=UNITS.find(u=>u.c==c&&u.r==r); if(u){const[x,y]=cen(c,r); rowFeat+=unit(u,x,u.k==='tri'?y+T:y, sel&&u===sel);}}
+    for(const u of UNITS) if(u.r===r){const[x,y]=cen(u.c,r); rowFeat+=unit(u,x,u.k==='tri'?y+T:y, sel&&u===sel);}
     land+=rowTop+rowFeat+rowFog;
   }
-  if(o.focusCity){ top+=''; }
-  return `<svg width="393" height="852" viewBox="0 0 393 852" font-family="ui-rounded,system-ui,sans-serif"><rect width="393" height="852" fill="${hsl(205,62,48)}"/>${water}${land}${top}</svg>`;
+  return MAPCACHE[key]=`<svg width="913" height="1492" viewBox="-260 -320 913 1492" font-family="ui-rounded,system-ui,sans-serif"><defs>${CLOUD_DEFS}</defs><rect x="-260" y="-320" width="913" height="1492" fill="#e4edf4"/>${water}${land}${top}</svg>`;
+}
+
+/* ---------- zoom rail ---------- */
+const ZOOM={map:{v:1,min:.65,max:1.6},tech:{v:.7,min:.4,max:1.1}};
+const zoomRail=(key,style)=>`<div class="zoom" data-zoom="${key}" style="${style}"><button class="zb" data-zstep="1">+</button><div class="ztrack"><div class="zfill"></div><div class="zknob"></div></div><button class="zb" data-zstep="-1">&minus;</button><div class="zval"></div></div>`;
+function applyZoom(key){
+  const z=ZOOM[key], t=(z.v-z.min)/(z.max-z.min);
+  document.querySelectorAll(`.zoom[data-zoom="${key}"]`).forEach(el=>{
+    el.querySelector('.zknob').style.top=(10+(1-t)*130)+'px';
+    el.querySelector('.zfill').style.height=(t*130)+'px';
+    el.querySelector('.zval').textContent=Math.round(z.v*100)+'%';
+  });
+  if(key==='map') document.querySelectorAll('.map').forEach(m=>m.style.transform=`scale(${z.v})`);
+  if(key==='tech'){const sc=document.querySelector('.ttscroll'),cv=document.querySelector('.canvas');if(cv){
+    const old=parseFloat(cv.style.zoom||1), cx=(sc.scrollLeft+sc.clientWidth/2)/old, cy=(sc.scrollTop+sc.clientHeight/2)/old;
+    cv.style.zoom=z.v; sc.scrollLeft=cx*z.v-sc.clientWidth/2; sc.scrollTop=cy*z.v-sc.clientHeight/2;}}
+}
+function setZoom(key,v){const z=ZOOM[key]; z.v=Math.max(z.min,Math.min(z.max,Math.round(v*100)/100)); applyZoom(key);}
+let drag=null;
+document.addEventListener('pointerdown',e=>{
+  const tr=e.target.closest('.ztrack'); if(!tr) return;
+  drag={key:tr.closest('.zoom').dataset.zoom,tr}; tr.setPointerCapture(e.pointerId); moveZoom(e); e.preventDefault();
+});
+document.addEventListener('pointermove',e=>{if(drag)moveZoom(e)});
+document.addEventListener('pointerup',()=>drag=null);
+function moveZoom(e){
+  const b=drag.tr.getBoundingClientRect(), z=ZOOM[drag.key];
+  const t=1-Math.max(0,Math.min(1,(e.clientY-b.top-10*b.height/150)/(b.height*130/150)));
+  setZoom(drag.key,z.min+t*(z.max-z.min));
 }
 
 /* ---------- shared UI pieces ---------- */
 const sbar=`<div class="scrim-t"></div><div class="sbar"><span>9:41</span><span class="bat"></span></div>`;
-const stats=(compact)=>`<div class="stats">
+const stats=()=>`<div class="stats">
   <div class="stat">${st('gold')}142<small>+9</small></div>
   <div class="stat">${st('sci')}+18</div>
   <div class="stat">${st('cul')}64<small>/120</small></div>
   <div class="stat">${st('hap')}7</div>
   <div class="stat">${st('fai')}23</div>
-  <div class="turn">T58</div></div>`;
-const mapLayer=(o)=>`<div class="map" style="${o&&o.shift?`transform:translateY(${o.shift}px)`:''}">${renderMap(o)}</div>`;
+  <button class="turn">T58${ic('MenuIcon')}</button></div>`;
+const mapLayer=(o={})=>`<div class="map" style="transform:scale(${ZOOM.map.v})${o.shift?`;top:${o.shift}px`:''}">${renderMap(o)}</div>`;
 
 const CITY_ROWS=[
   ['Granary','Granary',[['food','+2']],5],['Shrine','Shrine',[['fai','+1']],3],['Walls of Babylon','Walls',[['str','+6']],6],
   ['Settler','Settler',[],9,'unit'],['Bowman','Bowman',[['rng','9']],3,'unit'],['The Great Library','Library',[['sci','+3']],18,'wonder'],
 ];
-function cityContent(){
-  return `<div class="sh-head"><div class="pop">7</div><div><div class="sh-title">Babylon ${ic('Capital','width:18px;height:18px;color:var(--yellow)')}</div><div class="sh-sub">Grows in 3 turns</div></div><button class="x">${ic('Close')}</button></div>
+const cityRow=([n,i,y,t,k])=>`<div class="row ${k==='wonder'?'wonder':''}"><div class="cicon">${ic(i)}</div><div><div class="rname">${n}</div><div class="rsub">${y.map(([a,b])=>`<span>${st(a)}${b}</span>`).join('')}${k==='wonder'?'<span>World wonder</span>':''}</div></div><div class="turns">${t}<small>turns</small></div></div>`;
+function cityHead(){
+  return `<div class="sh-head"><div class="pop">7</div><div><div class="sh-title">Babylon ${ic('Capital','width:20px;height:20px;color:var(--yellow)')}</div><div class="sh-sub">Grows in 3 turns</div></div><button class="x">${ic('Close')}</button></div>
   <div class="yields">${[['food','+4'],['prod','12'],['gold','9'],['sci','11'],['cul','4'],['fai','2']].map(([k,v])=>`<div class="y1">${st(k)}${v}</div>`).join('')}</div>`;
 }
 function cityBuild(){
-  return `<div class="cur">${`<div class="cicon">${ic('Library')}</div>`}<div style="flex:1;min-width:0"><div class="cname">Library</div><div class="rsub"><span>${st('sci')}+1 per 2 pop</span><span>4 turns</span></div><div class="bar"><i style="width:48%"></i></div></div><button class="buy">${st('gold')}146</button></div>
-  <div class="h3">Up next</div>
-  <div class="row"><div class="cicon">${ic('Warrior')}</div><div><div class="rname">Warrior</div><div class="rsub"><span>${st('str')}8</span></div></div><div class="turns">3<small>turns</small></div></div>
-  <div class="h3">Can build</div>
-  ${CITY_ROWS.map(([n,i,y,t,k])=>`<div class="row ${k==='wonder'?'wonder':''}"><div class="cicon">${ic(i)}</div><div><div class="rname">${n}</div><div class="rsub">${y.map(([a,b])=>`<span>${st(a)}${b}</span>`).join('')}${k==='wonder'?'<span>World wonder</span>':''}</div></div><div class="turns">${t}<small>turns</small></div></div>`).join('')}`;
+  return `<div class="curbuild"><div class="cicon">${ic('Library')}</div><div style="flex:1;min-width:0"><div class="cname">Library</div><div class="rsub"><span>${st('sci')}+1 per 2 pop</span><span>4 turns</span></div><div class="bar"><i style="width:48%"></i></div></div><button class="buy">${st('gold')}146</button></div>
+  <div class="h3">Up next</div>${cityRow(['Warrior','Warrior',[['str','8']],3])}
+  <div class="h3">Can build</div>${CITY_ROWS.map(cityRow).join('')}`;
 }
 
-const TECH=[
- {era:'Ancient',tiers:[[['Agriculture','done']],[['Pottery','done'],['Animal Husbandry','done'],['Archery','done'],['Mining','done']],[['Sailing','done'],['Calendar','done'],['Writing','now',3],['Trapping','av'],['The Wheel','av'],['Masonry','av'],['Bronze Working','done']]]},
- {era:'Classical',tiers:[[['Optics','av'],['Horseback Riding','lock'],['Mathematics','lock'],['Construction','lock']],[['Philosophy','lock sel'],['Drama and Poetry','lock'],['Currency','lock'],['Engineering','lock'],['Iron Working','av']]]},
- {era:'Medieval',tiers:[[['Theology','lock'],['Civil Service','lock'],['Guilds','lock'],['Metal Casting','lock']]]},
-];
-const PATH=['Writing','Calendar'];
-const tnode=(n,s,t)=>`<div class="tn ${s} ${PATH.includes(n)&&!s.includes('now')?'path':''}"><div class="d">${ic('t_'+n)}${t?`<span class="t">${t}</span>`:''}</div><div class="nm">${n}</div></div>`;
-function techGrid(){
-  return TECH.map(e=>`<div class="era">${e.era}</div>`+e.tiers.map(t=>`<div class="tier">${t.map(([n,s,x])=>tnode(n,s,x)).join('')}</div>`).join('')).join('');
+/* ---------- tech tree: Civ 5's real tree, eras top to bottom ---------- */
+const SCI=18;
+const DONE=new Set(['Agriculture','Pottery','Animal Husbandry','Archery','Mining','Sailing','Calendar','Bronze Working']);
+const NOW='Writing', NOW_LEFT=50;
+let SEL='Philosophy';
+const TBY=Object.fromEntries(TECHS.map(t=>[t[0],{name:t[0],col:t[1],row:t[2],era:t[3].replace(' era',''),cost:t[4],pre:t[5],unl:t[6]}]));
+const state=n=>DONE.has(n)?'done':n===NOW?'now':TBY[n].pre.every(p=>DONE.has(p))?'av':'lock';
+const turnsFor=n=>Math.ceil((n===NOW?NOW_LEFT:TBY[n].cost)/SCI);
+function pathTo(n){ // unresearched prerequisites in research order, current research first
+  const out=[], seen=new Set();
+  (function walk(x){ if(seen.has(x)||DONE.has(x)) return; seen.add(x); TBY[x].pre.forEach(walk); out.push(x); })(n);
+  return out.sort((a,b)=>(a===NOW?-1:b===NOW?1:TBY[a].col-TBY[b].col));
 }
-const techFoot=`<div class="techfoot"><div class="tf1"><div class="tn lock sel" style="flex:none"><div class="d" style="width:46px;height:46px">${ic('t_Philosophy','width:28px;height:28px')}</div></div><div><div class="cname">Philosophy</div><div class="rsub"><span>${st('sci')}175</span><span>Needs Writing</span><span>13 turns total</span></div></div></div>
-  <div class="unl"><span class="chip">${ic('Temple')}Temple</span><span class="chip">${ic('Library')}National College</span><span class="chip">${ic('Shrine')}The Oracle</span></div>
-  <button class="big">Research after Writing</button></div>`;
+const LW=100, TH=124, PADX=70, BANDH=40;
+function techTree(){
+  const path=pathTo(SEL), onpath=new Set(path);
+  const eras=[...new Set(TECHS.map(t=>t[3].replace(' era','')))];
+  const colsByEra=eras.map(e=>[...new Set(TECHS.filter(t=>t[3].replace(' era','')===e).map(t=>t[1]))]);
+  const colY={}; let y=0, bands='';
+  eras.forEach((e,i)=>{ const cols=colsByEra[i]; const h=BANDH+cols.length*TH;
+    cols.forEach((c,j)=>colY[c]=y+BANDH+j*TH+48);
+    const inEra=TECHS.filter(t=>t[3].replace(' era','')===e), got=inEra.filter(t=>DONE.has(t[0])).length;
+    bands+=`<div class="band ${i%2?'odd':''}" data-era="${e}" style="height:${h}px"><h4>${e}<small>${got} of ${inEra.length} researched</small></h4></div>`; y+=h; });
+  const Wd=PADX+10*LW+20, Ht=y+40;
+  const pos=n=>[PADX+(TBY[n].row-1)*LW+LW/2, colY[TBY[n].col]];
+  let links='';
+  for(const t of Object.values(TBY)) for(const p of t.pre){
+    const[x1,y1]=pos(p),[x2,y2]=pos(t.name); const a=y1+36, b=y2-36, m=(a+b)/2;
+    const hot=onpath.has(t.name)&&(onpath.has(p)||DONE.has(p));
+    const col=hot?'#ffc93c':DONE.has(t.name)?'#2f7fe0':DONE.has(p)?'#6f95ba':'#274360';
+    links+=`<path d="M${x1} ${a}C${x1} ${m} ${x2} ${m} ${x2} ${b}" stroke="${col}" stroke-width="${hot?5:DONE.has(t.name)?4:3}" fill="none" stroke-linecap="round"/>`;
+  }
+  const nodes=Object.values(TBY).map(t=>{const[x,yy]=pos(t.name); const s=state(t.name); const q=path.indexOf(t.name);
+    return `<button class="tn ${s} ${onpath.has(t.name)?'onpath':''} ${t.name===SEL?'sel':''}" data-tech="${t.name}" style="left:${x}px;top:${yy-33}px"><div class="d">${ic('t_'+t.name)}${q>=0?`<span class="q">${q+1}</span>`:''}${s!=='done'?`<span class="t">${turnsFor(t.name)}</span>`:''}</div><div class="nm">${t.name}</div></button>`}).join('');
+  return `<div class="tt"><div class="ttscroll"><div class="canvas" style="width:${Wd}px;height:${Ht}px;zoom:${ZOOM.tech.v}">${bands}<svg class="links" width="${Wd}" height="${Ht}">${links}</svg>${nodes}</div></div>${zoomRail('tech','top:12px;transform:scale(.86);transform-origin:top left')}</div>`;
+}
+function techFoot(){
+  const t=TBY[SEL], s=state(SEL), path=pathTo(SEL), total=path.reduce((a,n)=>a+turnsFor(n),0);
+  const kindIcon=u=>u[1]==='w'?'w':'';
+  const btn= s==='done'?`<button class="ghost">Already researched</button>`: s==='now'?`<button class="ghost">Researching now, ${turnsFor(SEL)} turns left</button>`:
+    `<button class="big">${path.length>1?`Research path: ${path.length} techs, ${total} turns`:`Research ${SEL}, ${total} turns`}</button>`;
+  return `<div class="tfoot">
+    <div class="tf1"><div class="tn ${s}" style="position:static;width:auto;margin:0"><div class="d" style="width:54px;height:54px">${ic('t_'+SEL,'width:32px;height:32px')}</div></div>
+      <div style="min-width:0"><div class="cname">${SEL}</div><div class="rsub"><span>${st('sci')}${t.cost}</span><span>${t.era} era</span>${s!=='done'?`<span>${turnsFor(SEL)} turns alone</span>`:''}</div></div></div>
+    ${path.length>1?`<div class="pathline hscroll">${path.map((n,i)=>`${i?'<span class="arrow">&rarr;</span>':''}<span class="pi"><i class="n">${i+1}</i>${n}</span>`).join('')}</div>`:''}
+    ${t.unl.length?`<div class="hscroll">${t.unl.map(u=>`<span class="chip ${kindIcon(u)}">${ic('u_'+u[0])}${u[0]}</span>`).join('')}</div>`:''}
+    ${btn}</div>`;
+}
+function techSheet(top){
+  const eras=[...new Set(TECHS.map(t=>t[3].replace(' era','')))];
+  return `<div class="sheet fade-in" style="top:${top}px"><div class="grab"></div><div class="sh-head"><div><div class="sh-title">Technology</div><div class="sh-sub">Researching ${NOW}, ${turnsFor(NOW)} turns &middot; +${SCI} science</div></div><button class="x">${ic('Close')}</button></div>${techTree()}${techFoot()}
+  <div class="eras">${eras.map(e=>`<button data-era="${e}" class="${e==='Ancient'?'on':''}">${e==='Renaissance'?'Renaiss.':e==='Information'?'Info':e}</button>`).join('')}</div></div>`;
+}
+function initTech(){
+  const sc=document.querySelector('.ttscroll'); if(!sc) return;
+  if(window._ttScroll){sc.scrollLeft=_ttScroll[0];sc.scrollTop=_ttScroll[1];}
+  else { sc.scrollLeft=(PADX+(TBY[NOW].row-1)*LW+LW/2)*ZOOM.tech.v-sc.clientWidth/2+40; sc.scrollTop=0; }
+  const tabs=[...document.querySelectorAll('.eras button')], bands=[...document.querySelectorAll('.band')];
+  const sync=()=>{const z=ZOOM.tech.v, y=sc.scrollTop/z+40; let i=0; bands.forEach((b,j)=>{if(b.offsetTop<=y)i=j}); tabs.forEach((t,j)=>t.classList.toggle('on',j===i)); const on=tabs[i]; if(on) on.scrollIntoView({block:'nearest',inline:'nearest'});};
+  sc.addEventListener('scroll',sync,{passive:true}); sync();
+}
 
-/* ---------- variants ---------- */
-const V={
- A:{name:'A  Canon dock', thesis:'Polytopia\'s own structure: stats on top, map full-bleed, three discs and a big turn button in the thumb zone.'},
- B:{name:'B  Decision queue', thesis:'The turn is a queue of decisions. One card at the bottom walks you through them; the map follows.'},
- C:{name:'C  Thumb arc', thesis:'Everything radiates from one yellow button in the bottom-right corner. Actions fan out along the thumb\'s natural arc.'},
+/* ---------- the direction: thumb arc + decision queue ---------- */
+const S=['Map','Unit','Build','City','Tech'];
+const THESIS={
+  Map:'Everything radiates from the yellow corner button. It steps through this turn\'s decisions; the count shows what is left.',
+  Unit:'A unit decision: actions fan out along the thumb arc. Shoot shows the combat preview right on the button.',
+  Build:'A repeat decision from the queue: three likely picks in thumb reach, one tap each. The map stays visible.',
+  City:'Full city detail when you want it. Tabs sit at the bottom so one thumb covers the whole sheet.',
+  Tech:'Civ 5\'s real tree flowing top to bottom by era. Tap any tech to see the path to it. Era tabs at the bottom jump between eras.',
 };
-const S=['Map','Unit','City','Tech'];
+const notes=(bottom)=>`<div class="notes" style="bottom:${bottom}px"><button class="note" style="color:var(--gre)">${ic('Shield')}</button><button class="note" style="color:var(--food)">${ic('Cities')}<span class="badge">3</span></button></div>`;
+const civDisc=`<button class="civdisc col"><div class="disc navy" style="width:70px;height:70px">${ic('Policies')}<span class="badge" style="background:var(--cul)">!</span></div><div class="lbl">Civ</div></button>`;
+const techDisc=(b)=>`<button class="col" style="position:absolute;left:104px;bottom:${b}px;z-index:5"><div class="disc navy" style="width:58px;height:58px">${ic('t_Writing','width:30px;height:30px')}</div><div class="lbl">Writing 3</div></button>`;
+const anchor=(label,icon,left)=>`<button class="anchor">${ic(icon)}${label}${left?`<span class="badge" style="background:var(--navy);box-shadow:0 0 0 2.5px var(--yellow)">${left}</span>`:''}</button>`;
+const qdots=(i,n=4)=>`<div class="dots">${[...Array(n)].map((_,j)=>`<i class="${j===i?'on':''}"></i>`).join('')}</div>`;
 
-function A(s){
-  if(s==='Map') return mapLayer()+sbar+stats()+
-   `<div class="notes"><div class="note" style="color:var(--gre)">${ic('Shield')}</div><div class="note" style="color:var(--food)">${ic('Cities')}<span class="badge">3</span></div></div>
-    <div class="scrim-b"></div><div class="dock"><div class="col"><div class="disc">${ic('t_Writing')}</div><div class="lbl">Writing 3</div></div><div class="col"><div class="disc">${ic('Policies')}<span class="badge" style="background:var(--cul)">!</span></div><div class="lbl">Civ</div></div><div class="col"><div class="disc">${ic('MenuIcon')}</div><div class="lbl">Menu</div></div>
-    <button class="turnbtn">Next unit<span class="n">2</span></button></div>`;
-  if(s==='Unit') return mapLayer({sel:'bow'})+sbar+stats()+
-   `<div class="panel fade-in"><div class="unithead"><div class="uport">${ic('Bowman')}</div><div><div class="uname">Bowman</div><div class="uline"><span>${st('str')}7</span><span>${st('rng')}9 · 2</span><span>${st('mov')}2/2</span></div></div><div class="hp">100 HP</div></div>
-    <div class="actions">${[['Fortify','Fortify'],['Sleep','Sleep'],['Explore','Explore'],['Skip','Skip'],['ShowMore','More']].map(([i,l])=>`<div class="act"><div class="disc">${ic(i)}</div><div class="lbl">${l}</div></div>`).join('')}</div></div>`;
-  if(s==='City') return mapLayer({shift:-120})+sbar+
-   `<div class="sheet fade-in" style="top:250px"><div class="grab"></div>${cityContent()}<div class="tabs"><button class="on">Build</button><button>Buildings</button><button>Tiles</button><button>Citizens</button></div><div class="scroll">${cityBuild()}</div></div>`;
-  if(s==='Tech') return mapLayer()+sbar+
-   `<div class="sheet fade-in" style="top:60px"><div class="grab"></div><div class="sh-head"><div class="sh-title">Technology</div><div class="chip" style="margin-left:8px">${st('sci')}+18</div><button class="x">${ic('Close')}</button></div><div class="scroll" style="padding-bottom:12px">${techGrid()}</div>${techFoot}</div>`;
-}
-function B(s){
-  const corner=`<div class="qcorner" style="bottom:${s==='Unit'?322:274}px"><div class="col" style="display:flex;flex-direction:column;align-items:center"><div class="disc navy" style="width:48px;height:48px">${ic('Policies','width:24px;height:24px')}</div><div class="lbl">Civ</div></div><div class="col" style="display:flex;flex-direction:column;align-items:center"><div class="disc navy" style="width:48px;height:48px">${ic('t_Writing','width:26px;height:26px')}</div><div class="lbl">Writing 3</div></div></div>`;
-  if(s==='Map') return mapLayer()+sbar+stats()+corner+
-   `<div class="queue fade-in"><div class="qtop">Akkad finished Monument<div class="dots"><i class="on"></i><i></i><i></i><i></i></div></div>
-    <div class="qhead"><div class="pop" style="width:44px;height:44px">4</div><div><div class="uname">What should Akkad build?</div><div class="rsub"><span>${st('prod')}6 per turn</span></div></div></div>
-    <div class="qbtns"><div class="qb">${ic('Library')}Library 13</div><div class="qb">${ic('Warrior')}Warrior 7</div><div class="qb">${ic('Shrine')}Shrine 7</div><button class="qb p" style="background:rgba(255,255,255,.12);color:#fff;box-shadow:none">All options</button></div></div>`;
-  if(s==='Unit') return mapLayer({sel:'bow'})+sbar+stats()+corner+
-   `<div class="queue fade-in"><div class="qtop">Bowman needs orders<div class="dots"><i></i><i class="on"></i><i></i><i></i></div></div>
-    <div class="qhead"><div class="uport">${ic('Bowman')}</div><div><div class="uname">Bowman</div><div class="uline"><span>${st('str')}7</span><span>${st('rng')}9 · 2</span><span>${st('mov')}2/2</span></div></div><div class="hp">100 HP</div></div>
-    <div class="odds"><div class="good">Greek Hoplite takes<b>-26 HP</b></div><div>Your Bowman takes<b>0 HP</b></div></div>
-    <div class="qbtns"><button class="qb p">${ic('RangedStrength')}Shoot Hoplite</button><div class="qb">${ic('Fortify')}Fortify</div><div class="qb">${ic('Sleep')}Sleep</div><div class="qb">${ic('Skip')}Skip</div></div></div>`;
-  if(s==='City') return mapLayer({shift:-120})+sbar+
-   `<div class="sheet fade-in" style="top:250px"><div class="grab"></div><div class="sh-head"><div class="pop">4</div><div><div class="sh-title">Akkad builds next</div><div class="sh-sub">${'6 production per turn'}</div></div><button class="x">${ic('Close')}</button></div>
-   <div class="scroll"><div class="h3" style="margin-top:4px">Suggested</div>
-   ${[['Library','Library',[['sci','+1 per 2 pop']],13],['Shrine','Shrine',[['fai','+1']],7],['Warrior','Warrior',[['str','8']],7]].map(([n,i,y,t])=>`<div class="row"><div class="cicon">${ic(i)}</div><div><div class="rname">${n}</div><div class="rsub">${y.map(([a,b])=>`<span>${st(a)}${b}</span>`).join('')}</div></div><div class="turns">${t}<small>turns</small></div></div>`).join('')}
-   <div class="h3">Everything else</div>${CITY_ROWS.slice(0,4).map(([n,i,y,t])=>`<div class="row"><div class="cicon">${ic(i)}</div><div><div class="rname">${n}</div><div class="rsub">${y.map(([a,b])=>`<span>${st(a)}${b}</span>`).join('')}</div></div><div class="turns">${t*2}<small>turns</small></div></div>`).join('')}
-   <div style="height:12px"></div><button class="ghost" style="width:100%">Open Akkad</button></div></div>`;
-  if(s==='Tech'){
-    const rows=[['Writing','now','4',['Library','The Great Library']],['The Wheel','av','5',['Chariot Archer','Water Mill']],['Masonry','av','5',['Walls','The Pyramids']],['Trapping','av','5',['Circus']],['Optics','av','8',['Lighthouse']],['Iron Working','av','9',['Swordsman']]];
-    return mapLayer()+sbar+
-   `<div class="sheet fade-in" style="top:150px"><div class="grab"></div><div class="sh-head"><div><div class="sh-title">Pick research</div><div class="sh-sub">${'+18 science per turn'}</div></div><button class="x">${ic('Close')}</button></div>
-   <div class="scroll">${rows.map(([n,s2,t,u])=>`<div class="row" style="padding:10px 4px"><div class="tn ${s2}"><div class="d" style="width:46px;height:46px">${ic('t_'+n,'width:28px;height:28px')}</div></div><div style="min-width:0"><div class="rname">${n}</div><div class="unl" style="margin-top:5px">${u.map(x=>`<span class="chip">${ic(x==='The Great Library'?'Library':x==='The Pyramids'?'Monument':x==='Chariot Archer'?'Archer':x==='Water Mill'?'Water Mill':x==='Lighthouse'?'Trireme':x==='Circus'?'Monument':x)}${x}</span>`).join('')}</div></div><div class="turns">${t}<small>turns</small></div></div>`).join('')}
-   <div style="height:12px"></div><button class="ghost" style="width:100%">${ic('t_Philosophy','width:18px;height:18px')}Open full tree</button></div></div>`;
-  }
-}
-function C(s){
-  const civ=`<div class="civdisc"><div class="disc navy" style="width:60px;height:60px">${ic('Policies')}<span class="badge" style="background:var(--cul)">!</span></div><div class="lbl">Civ</div></div>`;
-  if(s==='Map') return mapLayer()+sbar+stats()+'<div class="scrim-b"></div>'+civ+
-   `<div class="pager"><div class="mini">${ic('Bowman')}</div>2 waiting</div>
-    <div class="arcwrap"><div class="anchor">${ic('ForwardArrow')}Next</div></div>
-    <div class="notes" style="bottom:170px"><div class="note" style="color:var(--gre)">${ic('Shield')}</div><div class="note" style="color:var(--food)">${ic('Cities')}<span class="badge">3</span></div></div>`;
+function screenFor(s){
+  if(s==='Map') return mapLayer()+sbar+stats()+zoomRail('map','bottom:250px')+'<div class="scrim-b"></div>'+civDisc+techDisc(52)+notes(180)+
+   `<div class="arcwrap">${anchor('Next','ForwardArrow',4)}</div>`;
   if(s==='Unit'){
-    const ax=393-22-42, ay=852-42-42, rad=178; const acts=[['RangedStrength','Shoot',1],['Fortify','Fortify'],['Sleep','Sleep'],['ShowMore','More']];
-    const btns=acts.map(([i,l,p],k)=>{const a=(186+k*26)*Math.PI/180;const x=ax+rad*Math.cos(a), y=ay+rad*Math.sin(a);return `<div class="arcbtn" style="left:${x}px;top:${y-(852-400)}px"><div class="disc ${p?'y':''}">${ic(i)}</div><div class="lbl">${l}</div></div>`}).join('');
-    return mapLayer({sel:'bow'})+`<div style="position:absolute;inset:0;background:linear-gradient(to top,rgba(10,20,32,.55),rgba(10,20,32,0) 45%);z-index:4"></div>`+sbar+stats()+
-    `<div class="utag fade-in"><div class="uport">${ic('Bowman')}</div><div><div class="uname">Bowman</div><div class="uline"><span>${st('str')}7</span><span>${st('rng')}9</span><span>${st('mov')}2/2</span><span>100 HP</span></div></div></div>
-    <div class="arcwrap fade-in">${btns}<div class="anchor">${ic('Skip')}Skip</div></div>`;
+    const ax=393-20-48, ay=852-40-48, rad=182; const acts=[['CrosshairB','Shoot',1,'-26 HP'],['Fortify','Fortify'],['Sleep','Sleep'],['ShowMore','More']];
+    const btns=acts.map(([i,l,p,o],k)=>{const a=(200+k*26)*Math.PI/180;const x=ax+rad*Math.cos(a), y=ay+rad*Math.sin(a);return `<button class="arcbtn ${k>1?'below':''}" style="left:${x}px;top:${y-(852-440)}px"><div class="disc ${p?'y':''}">${ic(i)}</div><div class="lbl">${l}${o?`<b class="odd">${o}</b>`:''}</div></button>`}).join('');
+    return mapLayer({sel:'bow'})+'<div class="scrim-b" style="height:420px"></div>'+sbar+stats()+zoomRail('map','top:196px')+
+    `<div class="utag fade-in"><div class="uport">${ic('Bowman')}</div><div style="min-width:0"><div class="uname">Bowman</div><div class="uline"><span>${st('str')}7</span><span>${st('rng')}9</span><span>${st('mov')}2/2</span><span>100 HP</span></div></div><div class="qmini">2 of 4${qdots(1)}</div></div>
+    <div class="arcwrap fade-in">${btns}${anchor('Skip','Skip')}</div>`;
   }
+  if(s==='Build') return mapLayer()+sbar+stats()+'<div class="scrim-b"></div>'+
+   `<div class="qcard fade-in"><div class="qtop">Akkad finished Monument${qdots(2)}</div>
+    <div class="qhead"><div class="pop">4</div><div><div class="uname">What should Akkad build?</div><div class="rsub"><span>${st('prod')}6 per turn</span></div></div></div>
+    <div class="qbtns"><button class="qb">${ic('Library')}Library<small>13 turns</small></button><button class="qb">${ic('Warrior')}Warrior<small>7 turns</small></button><button class="qb">${ic('Shrine')}Shrine<small>7 turns</small></button></div></div>
+    ${civDisc}<button class="allopt col" style="position:absolute;left:104px;bottom:52px;z-index:5"><div class="disc navy" style="width:58px;height:58px">${ic('ShowMore','width:28px;height:28px')}</div><div class="lbl">All options</div></button>
+    <div class="arcwrap">${anchor('Skip','Skip')}</div>`;
   if(s==='City') return mapLayer({shift:-120})+sbar+
-   `<div class="sheet fade-in" style="top:250px"><div class="grab"></div>${cityContent()}<div class="scroll" style="border-top:1px solid var(--line)">${cityBuild()}</div>
+   `<div class="sheet fade-in" style="top:250px"><div class="grab"></div>${cityHead()}<div class="scroll" style="border-top:1px solid var(--line)">${cityBuild()}</div>
    <div class="btabs">${[['Settings','Build',1],['Library','Buildings'],['HexagonOutline','Tiles'],['Worker','Citizens'],['Resources','Buy']].map(([i,l,on])=>`<button class="${on?'on':''}">${ic(i)}${l}</button>`).join('')}</div></div>`;
-  if(s==='Tech'){
-    const list=[['Optics','av','8',['Lighthouse']],['Horseback Riding','lock','',['Horseman']],['Mathematics','lock','',['Catapult']],['Construction','lock','',['Colosseum']],['Philosophy','lock sel','13',['Temple','The Oracle']],['Drama and Poetry','lock','',['Amphitheater']],['Currency','lock','',['Market']],['Iron Working','av','9',['Swordsman']]];
-    return mapLayer()+sbar+
-   `<div class="sheet fade-in" style="top:60px"><div class="grab"></div><div class="sh-head"><div><div class="sh-title">Classical era</div><div class="sh-sub">Researching Writing, 3 turns</div></div><button class="x">${ic('Close')}</button></div>
-   <div class="scroll"><div class="vt">${list.map(([n,s2,t,u])=>`<div class="vrow ${s2.split(' ')[0]}"><div class="tn ${s2}"><div class="d">${ic('t_'+n,'width:28px;height:28px')}</div></div><div class="vinfo"><div class="rname">${n}</div><div class="rsub"><span>${u.join(', ')}</span></div></div>${t?`<div class="turns">${t}<small>turns</small></div>`:''}</div>`).join('')}</div></div>
-   <div class="eras">${['Ancient','Classical','Medieval','Renaiss.'].map((e,i)=>`<button class="${i==1?'on':''}">${e}</button>`).join('')}</div></div>`;
-  }
+  if(s==='Tech') return mapLayer()+sbar+techSheet(56);
 }
-const RENDER={A,B,C};
 
 /* ---------- canvas ---------- */
-let cv=localStorage.getItem('pv')||'A', cs=localStorage.getItem('ps')||'Map';
-if(!V[cv])cv='A'; if(!S.includes(cs))cs='Map';
-function draw(){
-  document.getElementById('screen').innerHTML=RENDER[cv](cs);
-  document.getElementById('vseg').innerHTML=Object.entries(V).map(([k,v])=>`<button aria-pressed="${k===cv}" data-v="${k}">${v.name}</button>`).join('');
+let cs=localStorage.getItem('ps2')||'Map'; if(!S.includes(cs))cs='Map';
+function draw(keepTech){
+  const sc=document.querySelector('.ttscroll'); window._ttScroll=keepTech&&sc?[sc.scrollLeft,sc.scrollTop]:null;
+  document.getElementById('screen').innerHTML=screenFor(cs);
   document.getElementById('sseg').innerHTML=S.map(s=>`<button aria-pressed="${s===cs}" data-s="${s}">${s}</button>`).join('');
-  document.getElementById('thesis').textContent=V[cv].thesis;
-  localStorage.setItem('pv',cv);localStorage.setItem('ps',cs);
-  fit();
+  document.getElementById('thesis').textContent=THESIS[cs];
+  localStorage.setItem('ps2',cs);
+  fit(); applyZoom('map'); applyZoom('tech'); initTech();
 }
 function fit(){
   const d=document.getElementById('device'), wrap=document.getElementById('stagewrap');
   const narrow=innerWidth<520; d.classList.toggle('bare',narrow);
-  const pad=narrow?0:24; const sc=Math.min((wrap.clientWidth-pad)/393,(wrap.clientHeight-pad)/852,1.25);
-  d.style.transform=`scale(${sc})`; d.style.marginTop=narrow?'0':'10px';
-  wrap.style.height='';
+  const pad=narrow?0:28; const sc=Math.min((wrap.clientWidth-pad)/393,(wrap.clientHeight-pad)/852,1.25);
+  d.style.transform=`scale(${sc})`; d.style.marginTop=narrow?'0':'12px';
 }
-document.addEventListener('click',e=>{const b=e.target.closest('button[data-v],button[data-s]');if(!b)return;if(b.dataset.v)cv=b.dataset.v;if(b.dataset.s)cs=b.dataset.s;draw()});
-document.addEventListener('keydown',e=>{if(e.key>='1'&&e.key<='3'){cv='ABC'[e.key-1];draw()}const i=S.indexOf(cs);if(e.key==='ArrowRight'){cs=S[(i+1)%4];draw()}if(e.key==='ArrowLeft'){cs=S[(i+3)%4];draw()}});
+document.addEventListener('click',e=>{
+  const z=e.target.closest('[data-zstep]'); if(z){const k=z.closest('.zoom').dataset.zoom;setZoom(k,ZOOM[k].v+z.dataset.zstep*.15);return}
+  const t=e.target.closest('[data-tech]'); if(t){SEL=t.dataset.tech;draw(true);return}
+  const er=e.target.closest('[data-era]'); if(er){const b=[...document.querySelectorAll('.band')].find(b=>b.dataset.era===er.dataset.era);const sc=document.querySelector('.ttscroll');sc.scrollTo({top:b.offsetTop*ZOOM.tech.v,behavior:'smooth'});return}
+  const b=e.target.closest('button[data-s]');if(!b)return;cs=b.dataset.s;draw()});
+document.addEventListener('keydown',e=>{const i=S.indexOf(cs);if(e.key==='ArrowRight'){cs=S[(i+1)%S.length];draw()}if(e.key==='ArrowLeft'){cs=S[(i+S.length-1)%S.length];draw()}});
 addEventListener('resize',fit);
 draw();
 </script>
