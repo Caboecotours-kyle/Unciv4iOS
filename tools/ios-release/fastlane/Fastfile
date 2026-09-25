@@ -43,7 +43,7 @@ lane :tester do |options|
   group = app.get_beta_groups.find { |g| g.name == "Internal" }
   unless group
     # fastlane's create_beta_group sends publicLinkLimitEnabled, which Apple rejects for internal groups
-    Spaceship::ConnectAPI.test_flight_request_client.post("betaGroups", {
+    Spaceship::ConnectAPI.test_flight_request_client.post("v1/betaGroups", {
       data: { type: "betaGroups", attributes: { name: "Internal", isInternalGroup: true, hasAccessToAllBuilds: true },
               relationships: { app: { data: { type: "apps", id: app.id } } } }
     })
