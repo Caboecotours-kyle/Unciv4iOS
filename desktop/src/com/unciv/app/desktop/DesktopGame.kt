@@ -8,7 +8,7 @@ import java.lang.management.ManagementFactory
 
 
 
-class DesktopGame(config: Lwjgl3ApplicationConfiguration, override var customDataDirectory: String?) : UncivGame() {
+open class DesktopGame(config: Lwjgl3ApplicationConfiguration, override var customDataDirectory: String?) : UncivGame() {
 
     private var discordUpdater = DiscordUpdater()
     private val windowListener = UncivWindowListener()
