@@ -64,6 +64,11 @@ for f in sorted((src.parent / "art" / "simple").glob("*.png")):
 if "Walls" in art:
     art["Walls of Babylon"] = art["Walls"]
 
+# big pictures (scenes, portraits, unit and city sprites) only ship when the mock names them; small tile props always ship
+used = lambda k: not k.startswith(("ws_", "nws_", "p_", "tt_")) or k in html
+art = {k: v for k, v in art.items() if used(k)}
+units = {k: v for k, v in units.items() if (not k.startswith("k_") or k in html or k[2:] in html.lower()) and (not k.startswith("c_") or k.split("_")[1] in html)}
+
 out = src.with_name(src.name.replace(".src", ""))
 out.write_text(html.replace("/*ICONS*/{}", json.dumps(icons)).replace("/*TECHS*/[]", json.dumps(techs)).replace("/*ART*/{}", json.dumps(art)).replace("/*ART_SIMPLE*/{}", json.dumps(simple)).replace("/*UNITART*/{}", json.dumps(units)))
 print(f"{out}: {len(icons)} icons, {out.stat().st_size // 1024} KB; missing: {missing}")

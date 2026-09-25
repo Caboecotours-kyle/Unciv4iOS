@@ -12,7 +12,13 @@ Polytopia's grammar: flat, crisp, toy-like low-poly. Bold color blocks read firs
 - **Hex shapes are always code-drawn** so they tile exactly. Everything standing on a tile is a sprite.
 - **Sprites on tiles:** terrain features (with 2 to 3 variants per common feature, picked per tile), resources, improvements, natural wonders, wonder landmarks, units. All share one style: simple chunky low-poly, two tones per color, no faces or fine ornament, no outlines, reads at 24px.
 - **Cities (chosen 2026-09-25):** one sprite per era; the look changes with the owner's era (mud brick, stone, brick and smokestacks, towers), not with population. Roofs and flags are key green and take the owner's color. A wonder stands at the front right of its city tile. Population lives on the city banner.
-- **Zoom (chosen 2026-09-25):** default is about 5 hexes across the screen (Polytopia scale; Civ 6 on iPhone was criticized for units too small to tap). Drag pans, pinch zooms from 0.5x to 2.2x. Past 0.8x the map turns strategic by itself, replacing Civ's separate Strategic View button: decorations and sprites hide, units become civ-colored chips with their silhouette, resources become pins, borders thicken. City banners and labels hold one screen size at every zoom.
+- **Zoom (chosen 2026-09-25):** default is 1.6x, about 4.5 hexes across the screen, so tile rows are 45pt apart (Polytopia scale; Civ 6 on iPhone was criticized for units too small to tap). Drag pans, pinch zooms from 0.5x to 2.2x. Past 0.8x the map turns strategic by itself, replacing Civ's separate Strategic View button: decorations and sprites hide, units become civ-colored chips with their silhouette, resources become pins, borders thicken. City banners and labels hold one screen size at every zoom.
+- **Touch (Apple HIG, 44pt minimum):**
+  1. At the default zoom every tile's row spacing is at least 44pt (hex 86pt wide, rows 45pt apart).
+  2. Taps hit the ground hex, never a sprite; tall sprites (mountains, units, wonders) cannot steal taps from the tile above.
+  3. One tile, several things: the first tap picks your unit, then the city, then the tile; tapping the same tile again cycles (civilian unit, city, tile info). Long-press shows tile details.
+  4. Below the 44pt zoom, taps select the nearest unit or city chip within a 44pt radius (chips have 44pt hit areas regardless of their drawn size). A move order given zoomed out auto-zooms to the target first.
+  5. Drag from a unit to a destination moves it, with the path previewed, as an alternative to tap-to-move.
 - **Fog:** unexplored tiles are covered by white clouds.
 - **Borders:** civ-colored line inset on the owner's edge, 12% civ tint on owned tiles.
 
