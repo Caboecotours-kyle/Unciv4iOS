@@ -232,7 +232,6 @@ svg.st{width:18px;height:18px;flex:none}
 .qmini{margin-left:auto;display:flex;flex-direction:column;align-items:flex-end;gap:6px;font-size:13px;font-weight:800;color:var(--ink2);flex:none}
 .qmini .dots{margin:0}
 .odd{color:#9ff08a;font-weight:900}
-.qcard{position:absolute;left:10px;right:10px;bottom:176px;background:var(--panel);border-radius:28px;z-index:6;box-shadow:0 10px 30px rgba(0,0,0,.35);padding:14px;-webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px)}
 .qb small{font-size:12.5px;font-weight:700;color:var(--ink2)}
 .tmode{margin-top:4px}
 .eralbl{position:absolute;left:10px;height:32px;display:flex;align-items:center;gap:8px;padding:0 12px;border-radius:16px;background:#0f2030;font-size:15px;font-weight:900;color:var(--ink2);box-shadow:0 0 0 1px var(--line);z-index:1}
@@ -647,12 +646,11 @@ function initTree(){
 }
 
 /* ---------- the direction: thumb arc + decision queue ---------- */
-const S=['Map','Unit','Build','City','Tech','Tree'];
+const S=['Map','Unit','City','Tech','Tree'];
 const THESIS={
   Map:'Everything radiates from the yellow corner button. It steps through this turn\'s decisions; the count shows what is left.',
   Unit:'A unit decision: actions fan out along the thumb arc. Shoot shows the combat preview right on the button.',
-  Build:'A repeat decision from the queue: three likely picks in thumb reach, one tap each. The map stays visible.',
-  City:'Full city detail when you want it. Tabs sit at the bottom so one thumb covers the whole sheet.',
+  City:'Full city detail. When a city needs a new build, the Next button opens this sheet on the Build tab. Tabs sit at the bottom for one thumb.',
   Tech:'Next up: what you are researching, what you can pick now, and goals by what you want. Tap a card or goal.',
   Tree:'Civ 5\'s real tree, re-laid into four lanes so it only scrolls up and down. Tap a tech for its path.',
 };
@@ -672,12 +670,6 @@ function screenFor(s){
     `<div class="utag fade-in"><div class="uport">${ic('Bowman')}</div><div style="min-width:0"><div class="uname">Bowman</div><div class="uline"><span>${st('str')}7</span><span>${st('rng')}9</span><span>${st('mov')}2/2</span><span>100 HP</span></div></div><div class="qmini">2 of 4${qdots(1)}</div></div>
     <div class="arcwrap fade-in">${btns}${anchor('Skip','Skip')}</div>`;
   }
-  if(s==='Build') return mapLayer()+sbar+stats()+'<div class="scrim-b"></div>'+
-   `<div class="qcard fade-in"><div class="qtop">Akkad finished Monument${qdots(2)}</div>
-    <div class="qhead"><div class="pop">4</div><div><div class="uname">What should Akkad build?</div><div class="rsub"><span>${st('prod')}6 per turn</span></div></div></div>
-    <div class="qbtns"><button class="qb">${ic('Library')}Library<small>13 turns</small></button><button class="qb">${ic('Warrior')}Warrior<small>7 turns</small></button><button class="qb">${ic('Shrine')}Shrine<small>7 turns</small></button></div></div>
-    ${civDisc}<button class="allopt col" style="position:absolute;left:104px;bottom:52px;z-index:5"><div class="disc navy" style="width:58px;height:58px">${ic('ShowMore','width:28px;height:28px')}</div><div class="lbl">All options</div></button>
-    <div class="arcwrap">${anchor('Skip','Skip')}</div>`;
   if(s==='City') return mapLayer({shift:-120})+sbar+
    `<div class="sheet fade-in" style="top:250px"><div class="grab"></div>${cityHead()}<div class="scroll" style="border-top:1px solid var(--line)">${cityBuild()}</div>
    <div class="btabs">${[['Settings','Build',1],['Library','Buildings'],['HexagonOutline','Tiles'],['Worker','Citizens'],['Resources','Buy']].map(([i,l,on])=>`<button class="${on?'on':''}">${ic(i)}${l}</button>`).join('')}</div></div>`;
