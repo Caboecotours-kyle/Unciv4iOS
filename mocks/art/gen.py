@@ -42,7 +42,7 @@ def generate(job):
                         "-trim", "+repage", "-gravity", "center", "-background", "none",
                         "-extent", "%[fx:max(w,h)*1.08]x%[fx:max(w,h)*1.08]", "-resize", "256x256", str(final)], check=True)
     else:
-        subprocess.run(["magick", str(raw), "-resize", "512x512", str(final)], check=True)
+        subprocess.run(["magick", str(raw), "-resize", job.get("out_size", "512x512"), str(final)], check=True)
     return job["name"]
 
 

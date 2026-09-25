@@ -235,6 +235,21 @@ svg.st{width:18px;height:18px;flex:none}
 .odd{color:#9ff08a;font-weight:900}
 .qb small{font-size:12.5px;font-weight:700;color:var(--ink2)}
 .tmode{margin-top:4px}
+.wscreen{position:absolute;inset:0;overflow:hidden;background:#f3c47a}
+.ws-bg{position:absolute;inset:0;background-size:cover;background-position:center 30%;animation:wsIn 2.6s cubic-bezier(.16,1,.3,1) both}
+@keyframes wsIn{from{transform:scale(1.22);filter:blur(8px) brightness(1.5)}to{transform:none;filter:none}}
+.ws-flash{position:absolute;inset:0;background:#fff8e1;animation:wsFlash 1.1s ease-out both;pointer-events:none}
+@keyframes wsFlash{from{opacity:.95}to{opacity:0}}
+.ws-spark i{position:absolute;width:12px;height:12px;background:#fff6c9;clip-path:polygon(50% 0,62% 38%,100% 50%,62% 62%,50% 100%,38% 62%,0 50%,38% 38%);animation:twk 2.6s ease-in-out infinite;opacity:0}
+@keyframes twk{0%,100%{opacity:0}45%{opacity:1}}
+.ws-card{position:absolute;left:12px;right:12px;bottom:30px;background:rgba(16,31,47,.9);-webkit-backdrop-filter:blur(12px);backdrop-filter:blur(12px);border-radius:28px;padding:20px 18px 16px;box-shadow:0 14px 40px rgba(0,0,0,.35);animation:wsCard .7s .9s cubic-bezier(.16,1,.3,1) both}
+@keyframes wsCard{from{transform:translateY(60px);opacity:0}to{transform:none;opacity:1}}
+.ws-title{font-size:34px;font-weight:900;letter-spacing:-.02em;color:#ffd97a;text-shadow:0 2px 0 #7a5410}
+.ws-sub{font-size:15px;font-weight:700;color:var(--ink2);margin-top:2px}
+.ws-fx{display:flex;gap:8px;margin-top:12px}
+.twinkle{transform-box:fill-box;transform-origin:center;animation:twk 2.2s ease-in-out infinite;opacity:0}
+.glow{animation:glw 2.4s ease-in-out infinite}
+@keyframes glw{0%,100%{opacity:.18}50%{opacity:.45}}
 .lab{position:absolute;inset:0;background:#122536;display:flex;flex-direction:column}
 .cmprow{display:flex;align-items:center;gap:14px;padding:6px 0}
 .cmplbl{width:70px;font-size:13.5px;font-weight:800;color:var(--ink2)}
@@ -363,8 +378,8 @@ const hsl=(h,s,l)=>`hsl(${h} ${s}% ${Math.max(0,Math.min(100,l)).toFixed(1)}%)`;
 const BASE={ '~':[205,62,50], '-':[190,62,62], l:[195,60,58], g:[96,52,53], f:[104,48,44], h:[92,46,50], m:[96,40,50], p:[68,50,57], d:[44,60,69], o:[44,60,69], t:[75,16,63], s:[205,30,92], j:[118,52,40], w:[140,28,47], n:[60,48,60] };
 
 const CITIES=[
- {c:4,r:17,name:'Babylon',civ:'bab',pop:7,cap:true,build:'Library',t:4},
- {c:5,r:10,name:'Akkad',civ:'bab',pop:4,build:'Monument',t:1},
+ {c:4,r:17,name:'Babylon',civ:'bab',pop:7,cap:true,build:'Library',t:4,wonder:'Stonehenge',fresh:true},
+ {c:5,r:10,name:'Akkad',civ:'bab',pop:4,build:'Monument',t:1,wonder:'Temple of Artemis'},
  {c:5,r:4,name:'Athens',civ:'gre',pop:6,cap:true},
  {c:5,r:23,name:'Kabul',civ:'kab',pop:3,cs:true},
 ];
@@ -406,17 +421,25 @@ function house(x,y,col,dark,h=8){return `<polygon points="${x-5},${y} ${x+3},${y
 function city(k,x,y){
   const [c,d]=CIVC[k.civ]; const cs=corners(x,y,.78);
   let s=`<polygon points="${pts(cs)}" fill="#e7dcc0"/><polygon points="${pts([cs[2],cs[3],[cs[3][0],cs[3][1]+4],[cs[2][0],cs[2][1]+4]])}" fill="#b9a67c"/><polygon points="${pts([cs[3],cs[4],[cs[4][0],cs[4][1]+4],[cs[3][0],cs[3][1]+4]])}" fill="#cdbb90"/>`;
-  s+=house(x-12,y-1,c,d)+house(x+8,y-2,c,d)+house(x-3,y+6,c,d,7);
-  if(k.cap) s+=`<rect x="${x-4}" y="${y-22}" width="8" height="20" fill="#f4ecd9"/><rect x="${x+4}" y="${y-19}" width="3" height="17" fill="#cfc2a4"/><polygon points="${x-5.5},${y-22} ${x},${y-31} ${x+7},${y-19}" fill="${c}"/>`;
-  else s+=house(x+1,y-8,c,d,10);
+  const lm=k.wonder&&ART['wl_'+k.wonder], hx=lm?x-12:x;
+  if(lm) s+=house(hx-9,y-6,c,d)+house(hx+1,y-9,c,d,9);
+  else s+=house(x-12,y-1,c,d)+house(x+8,y-2,c,d)+house(x-3,y+6,c,d,7);
+  if(k.cap) s+=`<rect x="${hx-4}" y="${y-24}" width="8" height="20" fill="#f4ecd9"/><rect x="${hx+4}" y="${y-21}" width="3" height="17" fill="#cfc2a4"/><polygon points="${hx-5.5},${y-24} ${hx},${y-33} ${hx+7},${y-21}" fill="${c}"/>`;
+  else if(!lm) s+=house(x+1,y-8,c,d,10);
+  if(lm){
+    if(k.fresh) s+=`<ellipse cx="${x+8}" cy="${y+2}" rx="30" ry="${30*SQ}" fill="#ffc93c" opacity=".35" class="glow"/>`;
+    s+=`<image href="${lm}" x="${x-19}" y="${y-44}" width="54" height="54"/>`;
+    if(k.fresh) s+=[[x-14,y-40,1],[x+30,y-30,.8],[x+14,y-50,.65],[x+34,y-4,.7]].map(([sx,sy,sc],i)=>`<path d="M${sx} ${sy-6*sc}l${1.6*sc} ${4.4*sc} ${4.4*sc} ${1.6*sc}-${4.4*sc} ${1.6*sc}-${1.6*sc} ${4.4*sc}-${1.6*sc}-${4.4*sc}-${4.4*sc}-${1.6*sc} ${4.4*sc}-${1.6*sc}z" fill="#fff6c9" class="twinkle" style="animation-delay:${i*.45}s"/>`).join('');
+  }
   return s;
 }
 function banner(k,x,y){
-  const [c,d]=CIVC[k.civ]; const w=k.name.length*7.6+(k.build?52:30)+(k.cap?13:0); const bx=x-w/2, by=y+13;
+  const [c,d]=CIVC[k.civ]; const w=k.name.length*7.6+(k.build?52:30)+(k.cap?13:0)+(k.wonder?30:0); const bx=x-w/2, by=y+13;
   let s=`<g><rect x="${bx}" y="${by+2}" width="${w}" height="22" rx="11" fill="rgba(0,0,0,.25)"/><rect x="${bx}" y="${by}" width="${w}" height="22" rx="11" fill="${c}"/>
   <circle cx="${bx+11}" cy="${by+11}" r="9" fill="${d}"/><text x="${bx+11}" y="${by+15.2}" text-anchor="middle" font-size="12" font-weight="900" fill="#fff">${k.pop}</text>
   <text x="${bx+(k.cap?38:25)}" y="${by+15.4}" font-size="12.5" font-weight="900" fill="#fff">${k.name}</text>`;
   if(k.cap) s+=`<path d="M${bx+30} ${by+5}l1.6 3.4 3.6.4-2.7 2.4.8 3.6-3.3-1.9-3.3 1.9.8-3.6-2.7-2.4 3.6-.4z" fill="var(--yellow)"/>`;
+  if(k.wonder){ const wx=bx+w-(k.build?55:24); s+=`<rect x="${wx}" y="${by+3}" width="19" height="16" rx="8" fill="#ffc93c"/><path d="M${wx+5} ${by+7}h9M${wx+6} ${by+8}v7M${wx+9.5} ${by+8}v7M${wx+13} ${by+8}v7M${wx+5} ${by+15.5}h9" stroke="#5a3f13" stroke-width="1.6"/>`; }
   if(k.build) s+=`<rect x="${bx+w-30}" y="${by+3}" width="27" height="16" rx="8" fill="rgba(0,0,0,.25)"/><text x="${bx+w-16.5}" y="${by+15}" text-anchor="middle" font-size="11" font-weight="900" fill="#fff">${k.t}</text>`;
   return s+'</g>';
 }
@@ -822,13 +845,14 @@ function initTree(){
 }
 
 /* ---------- the direction: thumb arc + decision queue ---------- */
-const S=['Map','Unit','City','Tech','Tree','Diplomacy','Art lab'];
+const S=['Map','Unit','City','Tech','Tree','Diplomacy','Wonder','Art lab'];
 const THESIS={
   Map:'Everything radiates from the yellow corner button. It steps through this turn\'s decisions; the count shows what is left.',
   Unit:'A unit decision: actions fan out along the thumb arc. Shoot shows the combat preview right on the button.',
   City:'Full city detail. When a city needs a new build, the Next button opens this sheet on the Build tab. Tabs sit at the bottom for one thumb.',
   Tech:'Next up: what you are researching, what you can pick now, and goals by what you want. Tap a card or goal.',
   Tree:'Civ 5\'s real tree, re-laid into four lanes so it only scrolls up and down. Tap a tech for its path.',
+  Wonder:'Wonder completed: the scene settles in, then a card in thumb reach with what it does. On the map, the wonder stands on its city tile with a gold badge on the banner.',
   'Art lab':'Generated low-poly unit sprites, recolored per civ in code. Tap Move, Shoot, Hoplite hits, or switch civ color.',
   Diplomacy:'Art test: GPT-generated leader portraits and icons in place. The Civ button is your leader.',
 };
@@ -853,6 +877,13 @@ function screenFor(s){
    <div class="btabs">${[['Settings','Build',1],['Library','Buildings'],['HexagonOutline','Tiles'],['Worker','Citizens'],['Resources','Buy']].map(([i,l,on])=>`<button class="${on?'on':''}">${ic(i)}${l}</button>`).join('')}</div></div>`;
   if(s==='Tech'||s==='Tree') return mapLayer()+sbar+techSheet(s);
   if(s==='Art lab') return artLab();
+  if(s==='Wonder') return `<div class="wscreen"><div class="ws-bg" style="background-image:url(${ART.ws_Stonehenge})"></div><div class="ws-flash"></div>
+    <div class="ws-spark">${[...Array(16)].map((_,i)=>`<i style="left:${(i*37+11)%96}%;top:${(i*53)%58+8}%;animation-delay:${((i*.37)%2.6).toFixed(2)}s;transform:scale(${.6+(i%3)*.25})"></i>`).join('')}</div>
+    ${sbar}
+    <div class="ws-card"><div class="ws-title">Stonehenge</div><div class="ws-sub">Built in Babylon on turn 58</div>
+      <div class="ws-fx"><span class="chip">${st('fai')}+5 Faith</span><span class="chip">World wonder</span></div>
+      <div class="quote" style="margin-top:12px">'Time crumbles things; everything grows old and is forgotten under the power of time.' - Aristotle</div>
+      <button class="big" style="margin-top:16px" data-s="Map">Continue</button><button class="ghost" style="margin-top:8px" data-s="City">View Babylon</button></div></div>`;
   if(s==='Diplomacy') return mapLayer()+sbar+`<div class="sheet fade-in" style="top:120px"><div class="grab"></div>
    <div class="sh-head"><div><div class="sh-title">Diplomacy</div><div class="sh-sub">2 civilizations and 1 city-state met</div></div><button class="x">${ic('Close')}</button></div>
    <div class="scroll">

@@ -52,8 +52,9 @@ for f in sorted((src.parent / "art").glob("k_*.png")):
 for f in sorted((src.parent / "art").glob("*.png")):
     if f.stem.startswith("k_"):
         continue
-    key = f.stem if f.stem.startswith("p_") else f.stem[2:]
-    size = "320x320" if f.stem.startswith("p_") else "128x128"
+    whole = f.stem.startswith(("p_", "wl_", "ws_"))
+    key = f.stem if whole else f.stem[2:]
+    size = {"p_": "320x320", "ws": "720x1080", "wl": "160x160"}.get(f.stem[:2], "128x128")
     webp = subprocess.run(["magick", str(f), "-resize", size, "-quality", "88", "webp:-"], capture_output=True, check=True).stdout
     art[key] = "data:image/webp;base64," + base64.b64encode(webp).decode()
 simple = {}
