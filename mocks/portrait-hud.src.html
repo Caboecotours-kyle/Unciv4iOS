@@ -359,7 +359,7 @@ const STAT = {
 const st = k => `<svg class="st" viewBox="0 0 16 16">${STAT[k]}</svg>`;
 
 /* ---------- map ---------- */
-const R=31, SQ=.6, W=Math.sqrt(3)*R, DY=1.5*R*SQ, T=7;
+const R=31, SQ=.6, W=Math.sqrt(3)*R, DY=1.5*R*SQ, T=7, SIDE=4, WOFF=3;
 const GRID=[
  'FFFFFFFFF','FF~~~FFFF','F~~~~-tFF','~~~~-gtsF','~~~-ggpfF','~~~-gpphm','~~--ggpmm','~~-ggfgph',
  '~--gffggp','~-gggpgpd','~-gpgggdo','~~-gphgdd','~~-ggmmpd','~--gghmpp','~-ggfgppg','~-gffgngg',
@@ -375,6 +375,12 @@ const nb=(c,r,i)=>{const[q,rr]=toCube(c,r);return fromCube(q+DIRS[i][0],rr+DIRS[
 const T_=(c,r)=> (r>=0&&c>=0&&GRID[r]&&GRID[r][c])||'F';
 let seed=7; const rnd=()=>{seed=(seed*16807)%2147483647;return seed/2147483647};
 const hsl=(h,s,l)=>`hsl(${h} ${s}% ${Math.max(0,Math.min(100,l)).toFixed(1)}%)`;
+// Direction A palette: [lit facets, shaded facets, slab side]
+const TERR={'~':['#2f7ad6','#2a6fc6'],'-':['#3fb5e3','#37a8d7'],l:['#46b9e6','#3eaedb'],g:['#88cd50','#7dc248','#5f9a36'],f:['#7cc449','#72b842','#5a9232'],
+  j:['#6cbd45','#62b13e','#4e8d31'],h:['#88cd50','#7dc248','#5f9a36'],m:['#a3acb6','#959ea9','#737c87'],p:['#e3ca52','#d9be47','#b39532'],d:['#eba45b','#e0974d','#b8763a'],
+  o:['#eba45b','#e0974d','#b8763a'],t:['#bdb993','#b1ad87','#8d8a67'],s:['#f3f7fa','#e5edf3','#b9c7d3'],w:['#86c170','#7bb566','#5e8f4c'],n:['#e3ca52','#d9be47','#b39532']};
+const WATER=new Set(['~','-','l']);
+const hsh=(c,r)=>(((c+40)*73856093)^((r+40)*19349663))>>>0;
 const BASE={ '~':[205,62,50], '-':[190,62,62], l:[195,60,58], g:[96,52,53], f:[104,48,44], h:[92,46,50], m:[96,40,50], p:[68,50,57], d:[44,60,69], o:[44,60,69], t:[75,16,63], s:[205,30,92], j:[118,52,40], w:[140,28,47], n:[60,48,60] };
 
 const CITIES=[
@@ -422,7 +428,7 @@ function prop(x,y,key,size){ const a=ART[key]; return a?`<image href="${a}" x="$
 function tileStuff(x,y,key,wat){
   const imp=IMPS[key], r=RES[key]; let s='';
   if(imp&&ART['i_'+imp]) s+=prop(x+(r?-6:0),y+(r?2:6),'i_'+imp,imp==='Farm'?38:34);
-  if(r&&ART['r_'+r]){ const rx=imp?x+10:x, ry=(imp?y+10:y+6)+(wat?T:0); s+=prop(rx,ry,'r_'+r,imp?22:28);
+  if(r&&ART['r_'+r]){ const rx=imp?x+10:x, ry=(imp?y+10:y+6)+(wat?WOFF:0); s+=prop(rx,ry,'r_'+r,imp?22:28);
     if(AMOUNT[key]) s+=`<circle cx="${rx+11}" cy="${ry-3}" r="7" fill="#132435" stroke="#fff" stroke-width="1.5"/><text x="${rx+11}" y="${ry+1}" text-anchor="middle" font-size="9.5" font-weight="900" fill="#fff">${AMOUNT[key]}</text>`; }
   return s;
 }
@@ -508,27 +514,40 @@ function renderMap(o={}){
     for(let c=-6;c<=14;c++){
       const t=T_(c,r); const[x,y]=cen(c,r);
       if(t==='F'){ rowFog+=`<use href="#cl${(c+r)&1?1:2}" x="${x.toFixed(1)}" y="${(y-4).toFixed(1)}"/>`; continue; }
-      const[h,s0,l0]=BASE[t]; const wat=t==='~'||t==='-'||t==='l';
-      const yy=wat?y+T:y; const cs=corners(x,yy);
-      const cx=x+(rnd()-.5)*4, cy=yy-2+(rnd()-.5)*2;
-      let poly='';
-      for(let i=0;i<6;i++){const a=((60*i-60)+135)*Math.PI/180;const sh=Math.cos(a)*(wat?3:5)+(rnd()-.5)*2.4;const col=hsl(h,s0,l0+sh);poly+=`<polygon points="${pts([[cx,cy],cs[i],cs[(i+1)%6]])}" fill="${col}" stroke="${col}" stroke-width=".6"/>`}
-      if(wat){ water+=poly; if(t==='~'&&rnd()<.35) water+=`<path d="M${x-8} ${yy+2}q4 -3 8 0t8 0" stroke="rgba(255,255,255,.55)" stroke-width="1.6" fill="none" stroke-linecap="round"/>`; if(RES[c+','+r]||IMPS[c+','+r]) rowFeat+=tileStuff(x,y,c+','+r,true); continue; }
-      rowTop+=`<polygon points="${pts([cs[2],cs[3],[cs[3][0],cs[3][1]+T],[cs[2][0],cs[2][1]+T]])}" fill="#7d5d3b"/><polygon points="${pts([cs[3],cs[4],[cs[4][0],cs[4][1]+T],[cs[3][0],cs[3][1]+T]])}" fill="#9a7550"/>`+poly;
+      const wat=t==='~'||t==='-'||t==='l', key=c+','+r, hs=hsh(c,r), busy=RES[key]||IMPS[key]||CITIES.some(k=>k.c==c&&k.r==r);
+      const [top1,top2,side]=TERR[t]; const yy=wat?y+WOFF:y; const cs=corners(x,yy);
+      // two clean tones: facets facing the light (upper left) take the lighter color
+      let poly=''; for(let i=0;i<6;i++) poly+=`<polygon points="${pts([[x,yy],cs[i],cs[(i+1)%6]])}" fill="${i>=4||i===0?top1:top2}" stroke="${i>=4||i===0?top1:top2}" stroke-width=".7"/>`;
+      poly+=`<polygon points="${pts(cs)}" fill="none" stroke="rgba(20,40,20,.10)" stroke-width="1"/>`;
+      if(wat){
+        water+=poly;
+        for(let i=0;i<6;i++){ const[nc,nr]=nb(c,r,i); if(!WATER.has(T_(nc,nr))&&T_(nc,nr)!=='F'){ const a=cs[i],b=cs[(i+1)%6],ci=corners(x,yy,.86); water+=`<polygon points="${pts([a,b,ci[(i+1)%6],ci[i]])}" fill="#8fdcf2" opacity=".55"/><line x1="${a[0]}" y1="${a[1]}" x2="${b[0]}" y2="${b[1]}" stroke="#fff" stroke-width="2" opacity=".7" stroke-linecap="round"/>`; } }
+        if(t==='~'&&hs%5===0) water+=`<path d="M${x-8} ${yy+2}q4 -3 8 0t8 0" stroke="rgba(255,255,255,.5)" stroke-width="1.6" fill="none" stroke-linecap="round"/>`;
+        if(t==='~'&&!busy&&hs%11===3) rowFeat+=prop(x,yy+6,hs%2?'s_rock1':'s_rock2',26);
+        if(RES[key]||IMPS[key]) rowFeat+=tileStuff(x,y,key,true);
+        continue;
+      }
+      rowTop+=`<polygon points="${pts([cs[1],cs[2],[cs[2][0],cs[2][1]+SIDE],[cs[1][0],cs[1][1]+SIDE]])}" fill="${side}"/><polygon points="${pts([cs[2],cs[3],[cs[3][0],cs[3][1]+SIDE],[cs[2][0],cs[2][1]+SIDE]])}" fill="${side}"/><polygon points="${pts([cs[3],cs[4],[cs[4][0],cs[4][1]+SIDE],[cs[3][0],cs[3][1]+SIDE]])}" fill="${side}" opacity=".85"/>`+poly;
+      // sandy beach on every edge that meets water
+      let coastal=false;
+      for(let i=0;i<6;i++){ const[nc,nr]=nb(c,r,i); if(WATER.has(T_(nc,nr))){ coastal=true; const ci=corners(x,y,.8); rowTop+=`<polygon points="${pts([cs[i],cs[(i+1)%6],ci[(i+1)%6],ci[i]])}" fill="${i>=4||i===0?'#f6e3b0':'#eed69c'}"/>`; } }
       const own=owner(c,r);
       if(own){ const[cc]=CIVC[own]; rowTop+=`<polygon points="${pts(cs)}" fill="${cc}" opacity=".12"/>`;
         for(let i=0;i<6;i++){const[nc,nr]=nb(c,r,i); if(owner(nc,nr)!==own){const ci=corners(x,y,.93);rowTop+=`<line x1="${ci[i][0]}" y1="${ci[i][1]}" x2="${ci[(i+1)%6][0]}" y2="${ci[(i+1)%6][1]}" stroke="${cc}" stroke-width="3.2" stroke-linecap="round"/>`}}}
-      const key=c+','+r;
       if(reach.has(key)) rowTop+=`<polygon points="${pts(corners(x,y,.9))}" fill="rgba(255,255,255,.32)" stroke="#fff" stroke-width="2" stroke-dasharray="4 3"/>`;
+      // terrain features as sprites, with a few variants picked per tile so the map never looks stamped
+      const pick=(base,n)=>base+(1+hs%n);
+      const feat={f:[pick('f_forest',3),60,10],j:[pick('f_jungle',2),60,10],h:[pick('f_hill',2),54,12],m:[pick('f_mountain',3),62,12],w:['f_marsh',46,8],o:['i_Oasis',40,8]}[t];
+      if(feat&&ART[feat[0]]) rowFeat+=prop(x,y+feat[2],feat[0],feat[1]);
+      else if(t==='f') rowFeat+=tree(x-9,y+2,.9)+tree(x+8,y,.95)+tree(x,y+8,1);
+      else if(t==='m') rowFeat+=mountain(x,y);
+      else if(t==='o') rowFeat+=oasis(x,y);
+      if(!busy){
+        const decor={t:hs%2&&'f_tundra',s:hs%2&&'f_snow',d:hs%3===0&&(hs%2?'f_desert1':'f_desert2'),p:hs%4===0&&'f_plains',g:hs%6===0&&'f_grass'}[t];
+        if(decor&&ART[decor]) rowFeat+=prop(x+(hs%3-1)*6,y+8,decor,t==='g'||t==='p'?24:30);
+        if(coastal&&(t==='g'||t==='p')&&hs%4===1&&ART.s_palm) rowFeat+=prop(x+8,y+6,'s_palm',30);
+      }
       if(FARMS.includes(key)&&!ART['i_Farm']) rowFeat+=farm(x,y);
-      if(t==='f') rowFeat+=tree(x-9,y+2,.9)+tree(x+8,y,.95)+tree(x,y+8,1);
-      if(t==='h') rowFeat+=hill(x,y+2);
-      if(t==='m') rowFeat+=mountain(x,y);
-      if(t==='j') rowFeat+=jungle(x,y);
-      if(t==='w') rowFeat+=marsh(x,y);
-      if(t==='t') rowFeat+=tundra(x,y);
-      if(t==='s') rowFeat+=snow(x,y);
-      if(t==='o') rowFeat+=oasis(x,y);
       if(t==='n'){ rowFeat+=ART['nw_Grand Mesa']?prop(x,y+10,'nw_Grand Mesa',56):mesa(x,y); top+=wonderLabel(x,y,'Grand Mesa'); }
       if(MINES.includes(key)&&!ART['i_Mine']) rowFeat+=mine(x+4,y+1);
       const k=CITIES.find(k=>k.c==c&&k.r==r); if(k){ rowFeat+=city(k,x,y); top+=banner(k,x,y); }
@@ -536,7 +555,7 @@ function renderMap(o={}){
       if(attack.has(key)) top+=`<ellipse cx="${x}" cy="${y+3}" rx="20" ry="${20*SQ}" fill="none" stroke="#ff4d4d" stroke-width="3.5"/><path d="M${x+14} ${y-30}l6 6m0-6l-6 6" stroke="#ff4d4d" stroke-width="3" stroke-linecap="round"/>`;
     }
     rowTop+=riverRow(r);
-    for(const u of UNITS) if(u.r===r){const[x,y]=cen(u.c,r); rowFeat+=unit(u,x,u.k==='tri'?y+T:y, sel&&u===sel);}
+    for(const u of UNITS) if(u.r===r){const[x,y]=cen(u.c,r); rowFeat+=unit(u,x,u.k==='tri'?y+WOFF:y, sel&&u===sel);}
     land+=rowTop+rowFeat+rowFog;
   }
   return MAPCACHE[key]=`<svg width="913" height="1492" viewBox="-260 -320 913 1492" font-family="ui-rounded,system-ui,sans-serif"><defs>${CLOUD_DEFS}</defs><rect x="-260" y="-320" width="913" height="1492" fill="#e4edf4"/>${water}${land}${top}</svg>`;

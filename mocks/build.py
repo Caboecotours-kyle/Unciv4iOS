@@ -50,11 +50,11 @@ for f in sorted((src.parent / "art").glob("k_*.png")):
     webp = subprocess.run(["magick", str(f), "-resize", "160x160", "-quality", "92", "webp:-"], capture_output=True, check=True).stdout
     units[f.stem] = "data:image/webp;base64," + base64.b64encode(webp).decode()
 for f in sorted((src.parent / "art").glob("*.png")):
-    if f.stem.startswith("k_"):
+    if f.stem.startswith(("k_", "tc_", "contact", "preview")):
         continue
-    whole = f.stem.startswith(("p_", "wl_", "ws_", "r_", "i_", "nw_"))
+    whole = f.stem.startswith(("p_", "wl_", "ws_", "r_", "i_", "nw_", "f_", "s_"))
     key = f.stem if whole else f.stem[2:]
-    size = {"p_": "320x320", "ws": "720x1080", "wl": "160x160", "r_": "96x96", "i_": "112x112", "nw": "160x160"}.get(f.stem[:2], "128x128")
+    size = {"p_": "320x320", "ws": "720x1080", "wl": "160x160", "r_": "96x96", "i_": "112x112", "nw": "160x160", "f_": "160x160", "s_": "96x96"}.get(f.stem[:2], "128x128")
     webp = subprocess.run(["magick", str(f), "-resize", size, "-quality", "88", "webp:-"], capture_output=True, check=True).stdout
     art[key] = "data:image/webp;base64," + base64.b64encode(webp).decode()
 simple = {}
