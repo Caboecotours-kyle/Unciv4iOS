@@ -1,5 +1,5 @@
 # Inlines Unciv icon PNGs into the mock as data URIs so the HTML is a single offline file.
-import base64, json, pathlib, re, sys
+import base64, json, pathlib, re, subprocess, sys
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent / "android"
 DIRS = ["Images.ConstructionIcons/UnitActionIcons", "Images.ConstructionIcons/UnitIcons",
@@ -43,6 +43,16 @@ for u in unlocks:
 for r in res:
     icons["r_" + r] = uri(ROOT / "Images.Icons/ResourceIcons" / f"{r}.png")
 
+# generated art: bare names for icons, p_* kept for portraits; shrunk to webp for the mock payload
+art = {}
+for f in sorted((src.parent / "art").glob("*.png")):
+    key = f.stem if f.stem.startswith("p_") else f.stem[2:]
+    size = "320x320" if f.stem.startswith("p_") else "128x128"
+    webp = subprocess.run(["magick", str(f), "-resize", size, "-quality", "88", "webp:-"], capture_output=True, check=True).stdout
+    art[key] = "data:image/webp;base64," + base64.b64encode(webp).decode()
+if "Walls" in art:
+    art["Walls of Babylon"] = art["Walls"]
+
 out = src.with_name(src.name.replace(".src", ""))
-out.write_text(html.replace("/*ICONS*/{}", json.dumps(icons)).replace("/*TECHS*/[]", json.dumps(techs)))
+out.write_text(html.replace("/*ICONS*/{}", json.dumps(icons)).replace("/*TECHS*/[]", json.dumps(techs)).replace("/*ART*/{}", json.dumps(art)))
 print(f"{out}: {len(icons)} icons, {out.stat().st_size // 1024} KB; missing: {missing}")

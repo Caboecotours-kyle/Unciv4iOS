@@ -234,6 +234,17 @@ svg.st{width:18px;height:18px;flex:none}
 .odd{color:#9ff08a;font-weight:900}
 .qb small{font-size:12.5px;font-weight:700;color:var(--ink2)}
 .tmode{margin-top:4px}
+.ic.art{background:none!important;-webkit-mask:none!important;mask:none!important;object-fit:contain;filter:drop-shadow(0 2px 2px rgba(0,0,0,.25))}
+.disc.leader,.lport,.lmini{background-size:cover;background-position:center 20%}
+.disc.leader{box-shadow:0 0 0 3px var(--bab),0 5px 0 3px #0b1826,0 9px 18px rgba(0,0,0,.3)}
+.leadcard{display:flex;gap:14px;align-items:center;background:var(--navy2);border-radius:20px;padding:12px}
+.lport{width:112px;height:112px;border-radius:18px;flex:none}
+.lmeta{min-width:0}
+.mood{color:var(--gold)}
+.lquote{margin-top:8px;font-size:14.5px;font-weight:700;line-height:1.35;color:#fff}
+.dgrid{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-top:12px}
+.dgrid .qb.war{background:rgba(224,82,74,.18);color:#ffb1aa}
+.lmini{width:46px;height:46px;border-radius:50%;flex:none}
 .eralbl{position:absolute;left:10px;height:32px;display:flex;align-items:center;gap:8px;padding:0 12px;border-radius:16px;background:#0f2030;font-size:15px;font-weight:900;color:var(--ink2);box-shadow:0 0 0 1px var(--line);z-index:1}
 .eralbl small{font-size:12.5px;color:var(--ink3);font-weight:800}
 .urow{display:flex;gap:4px;align-items:center;justify-content:center;height:18px;margin-top:-2px}
@@ -302,7 +313,8 @@ const TECHS = /*TECHS*/[];
 /* ---------- icons ---------- */
 const slug = s => s.replace(/[^a-z0-9]/gi,'');
 (()=>{const st=document.createElement('style');st.textContent=Object.entries(ICON).map(([k,v])=>`.i-${slug(k)}{-webkit-mask-image:url("${v}");mask-image:url("${v}")}`).join('');document.head.appendChild(st)})();
-const ic = (n,style='') => `<i class="ic i-${slug(n)}" style="${style}"></i>`;
+const ART = /*ART*/{};  // generated low-poly art; falls back to Unciv's line icons where none exists yet
+const ic = (n,style='') => { const a=ART[n.replace(/^(t_|u_)/,'')]; return a?`<img class="ic art" src="${a}" style="${style}" alt="">`:`<i class="ic i-${slug(n)}" style="${style}"></i>`; };
 
 /* hand-drawn stat glyphs (flat, Polytopia-weight) */
 const STAT = {
@@ -322,9 +334,9 @@ const st = k => `<svg class="st" viewBox="0 0 16 16">${STAT[k]}</svg>`;
 /* ---------- map ---------- */
 const R=31, SQ=.6, W=Math.sqrt(3)*R, DY=1.5*R*SQ, T=7;
 const GRID=[
- 'FFFFFFFFF','FF~~~FFFF','F~~~~-gFF','~~~~-gffF','~~~-ggpfF','~~~-gpphm','~~--ggpmm','~~-ggfgph',
- '~--gffggp','~-gggpgpd','~-gpgggdd','~~-gphgdd','~~-ggmmpd','~--gghmpp','~-ggfgppg','~-gffggpg',
- '--ggpgggf','-ggpggfff','-gpgggfhf','-ggghggfF','--ggpggfF','~-gffgpgF','~~-gggpFF','~~--gpgFF',
+ 'FFFFFFFFF','FF~~~FFFF','F~~~~-tFF','~~~~-gtsF','~~~-ggpfF','~~~-gpphm','~~--ggpmm','~~-ggfgph',
+ '~--gffggp','~-gggpgpd','~-gpgggdo','~~-gphgdd','~~-ggmmpd','~--gghmpp','~-ggfgppg','~-gffgngg',
+ '--ggpgggf','-ggpggfff','-gpgggfhf','-ggghggfF','--wgplgfF','~-gjjgpgF','~~-gggpFF','~~--gpgFF',
  '~~~-ggFFF','~~~--gFFF','~~~~-FFFF','~~~~FFFFF','~~~FFFFFF','FFFFFFFFF','FFFFFFFFF'];
 const X0=-W*0.35, Y0=-8;
 const cen=(c,r)=>[X0+W*(c+(r&1?.5:0)), Y0+DY*r];
@@ -336,7 +348,7 @@ const nb=(c,r,i)=>{const[q,rr]=toCube(c,r);return fromCube(q+DIRS[i][0],rr+DIRS[
 const T_=(c,r)=> (r>=0&&c>=0&&GRID[r]&&GRID[r][c])||'F';
 let seed=7; const rnd=()=>{seed=(seed*16807)%2147483647;return seed/2147483647};
 const hsl=(h,s,l)=>`hsl(${h} ${s}% ${Math.max(0,Math.min(100,l)).toFixed(1)}%)`;
-const BASE={ '~':[205,62,50], '-':[190,62,62], g:[96,52,53], f:[104,48,44], h:[92,46,50], m:[96,40,50], p:[68,50,57], d:[44,60,69] };
+const BASE={ '~':[205,62,50], '-':[190,62,62], l:[195,60,58], g:[96,52,53], f:[104,48,44], h:[92,46,50], m:[96,40,50], p:[68,50,57], d:[44,60,69], o:[44,60,69], t:[75,16,63], s:[205,30,92], j:[118,52,40], w:[140,28,47], n:[60,48,60] };
 
 const CITIES=[
  {c:4,r:17,name:'Babylon',civ:'bab',pop:7,cap:true,build:'Library',t:4},
@@ -421,6 +433,17 @@ const CLOUD_DEFS=(()=>{const b=[[-16,4,13],[0,-3,16],[17,3,13],[-4,8,14],[10,9,1
   const one=(id,m)=>`<symbol id="${id}" overflow="visible">${b.map(([x,y,r])=>`<circle cx="${x*m}" cy="${y+5}" r="${r}" fill="#cfdde9"/>`).join('')}${b.map(([x,y,r])=>`<circle cx="${x*m}" cy="${y}" r="${r}" fill="#f5f9fc"/>`).join('')}</symbol>`;
   return one('cl1',1)+one('cl2',-1)})();
 
+const RIVER=[[4,13,1],[4,13,2],[4,13,3],[4,14,2],[4,14,3],[4,15,4],[4,15,3],[4,16,2],[4,17,5],[4,17,4],[3,17,3],[3,17,4],[2,17,3],[2,17,4],[1,17,3],[1,17,4]];
+const rv=([c,r,k])=>corners(...cen(c,r))[k];
+function riverRow(r){ let d=''; for(let i=1;i<RIVER.length;i++) if(RIVER[i][1]===r){const a=rv(RIVER[i-1]),b=rv(RIVER[i]); d+=`M${a[0].toFixed(1)} ${a[1].toFixed(1)}L${b[0].toFixed(1)} ${b[1].toFixed(1)}`;}
+  return d?`<path d="${d}" stroke="#2c7fc0" stroke-width="7.5" stroke-linecap="round" fill="none"/><path d="${d}" stroke="#63c4f0" stroke-width="4.5" stroke-linecap="round" fill="none"/>`:''; }
+function jungle(x,y){let s='';for(const[dx,dy]of[[-10,3],[9,0],[0,9]]){const X=x+dx,Y=y+dy;s+=`<path d="M${X} ${Y}q1 -8 -1 -15" stroke="#7a5a33" stroke-width="2.2" fill="none"/><polygon points="${X-1},${Y-15} ${X-10},${Y-11} ${X-2},${Y-12}" fill="#2f9a3e"/><polygon points="${X-1},${Y-15} ${X+9},${Y-12} ${X},${Y-12}" fill="#1f7a32"/><polygon points="${X-1},${Y-15} ${X-6},${Y-20} ${X},${Y-14}" fill="#3fb24c"/><polygon points="${X-1},${Y-15} ${X+5},${Y-20} ${X},${Y-14}" fill="#28893a"/>`}return s}
+function marsh(x,y){return `<ellipse cx="${x-7}" cy="${y+2}" rx="9" ry="4" fill="#5fb7c9"/><ellipse cx="${x+9}" cy="${y+6}" rx="7" ry="3" fill="#5fb7c9"/>`+[[-2,0],[1,1],[4,-1],[14,4],[-13,3]].map(([dx,dy])=>`<path d="M${x+dx} ${y+dy+3}v-9" stroke="#4d7a2a" stroke-width="1.8" stroke-linecap="round"/><ellipse cx="${x+dx}" cy="${y+dy-6}" rx="1.4" ry="3" fill="#7a4e2a"/>`).join('')}
+function tundra(x,y){return `<polygon points="${x-12},${y+4} ${x-8},${y-3} ${x-3},${y+4}" fill="#a3aab3"/><polygon points="${x-8},${y-3} ${x-3},${y+4} ${x-6},${y+4}" fill="#7f8792"/><circle cx="${x+7}" cy="${y+1}" r="4" fill="#5e7a3a"/><circle cx="${x+12}" cy="${y+5}" r="3" fill="#6f8b45"/>`}
+function snow(x,y){return `<polygon points="${x-10},${y+4} ${x-3},${y-6} ${x+5},${y+4}" fill="#ffffff"/><polygon points="${x-3},${y-6} ${x+5},${y+4} ${x+1},${y+4}" fill="#cfe0ee"/><polygon points="${x+6},${y+5} ${x+11},${y-1} ${x+16},${y+5}" fill="#e6f0f8"/>`}
+function oasis(x,y){return `<ellipse cx="${x}" cy="${y+3}" rx="12" ry="5.5" fill="#4fb7df"/>`+jungle(x+6,y-2).split('</polygon>').slice(0,5).join('</polygon>')+'</polygon>'}
+function mesa(x,y){return `<polygon points="${x-22},${y+5} ${x-15},${y-18} ${x+12},${y-20} ${x+22},${y+5}" fill="#d9774b"/><polygon points="${x+12},${y-20} ${x+22},${y+5} ${x+6},${y+5}" fill="#a9532f"/><polygon points="${x-15},${y-18} ${x-5},${y-24} ${x+18},${y-24} ${x+12},${y-20}" fill="#ef9a6a"/><rect x="${x-22}" y="${y-6}" width="44" height="2.5" fill="#b55f38" opacity=".7"/>`}
+function wonderLabel(x,y,name){const w=name.length*7.2+24;return `<g><rect x="${x-w/2}" y="${y+10}" width="${w}" height="20" rx="10" fill="#5a3f13"/><text x="${x}" y="${y+24}" text-anchor="middle" font-size="11.5" font-weight="900" fill="#ffc93c">${name}</text></g>`}
 let MAPCACHE={};
 function renderMap(o={}){
   const key=o.sel||'none'; if(MAPCACHE[key]) return MAPCACHE[key];
@@ -428,13 +451,13 @@ function renderMap(o={}){
   let water='', land='', top='';
   const sel=o.sel==='bow'?UNITS[0]:null;
   const reach=new Set(), attack=new Set();
-  if(sel){ for(let r=0;r<GRID.length;r++)for(let c=0;c<9;c++){const d=hexDist([c,r],[sel.c,sel.r]);const t=T_(c,r);if(d>0&&d<=2&&!'~-Fm'.includes(t)&&!UNITS.some(u=>u.c==c&&u.r==r)&&!CITIES.some(k=>k.c==c&&k.r==r))reach.add(c+','+r)} attack.add('3,11'); }
+  if(sel){ for(let r=0;r<GRID.length;r++)for(let c=0;c<9;c++){const d=hexDist([c,r],[sel.c,sel.r]);const t=T_(c,r);if(d>0&&d<=2&&!'~-lFm'.includes(t)&&!UNITS.some(u=>u.c==c&&u.r==r)&&!CITIES.some(k=>k.c==c&&k.r==r))reach.add(c+','+r)} attack.add('3,11'); }
   for(let r=-16;r<=48;r++){
     let rowTop='',rowFeat='',rowFog='';
     for(let c=-6;c<=14;c++){
       const t=T_(c,r); const[x,y]=cen(c,r);
       if(t==='F'){ rowFog+=`<use href="#cl${(c+r)&1?1:2}" x="${x.toFixed(1)}" y="${(y-4).toFixed(1)}"/>`; continue; }
-      const[h,s0,l0]=BASE[t]; const wat=t==='~'||t==='-';
+      const[h,s0,l0]=BASE[t]; const wat=t==='~'||t==='-'||t==='l';
       const yy=wat?y+T:y; const cs=corners(x,yy);
       const cx=x+(rnd()-.5)*4, cy=yy-2+(rnd()-.5)*2;
       let poly='';
@@ -450,11 +473,18 @@ function renderMap(o={}){
       if(t==='f') rowFeat+=tree(x-9,y+2,.9)+tree(x+8,y,.95)+tree(x,y+8,1);
       if(t==='h') rowFeat+=hill(x,y+2);
       if(t==='m') rowFeat+=mountain(x,y);
+      if(t==='j') rowFeat+=jungle(x,y);
+      if(t==='w') rowFeat+=marsh(x,y);
+      if(t==='t') rowFeat+=tundra(x,y);
+      if(t==='s') rowFeat+=snow(x,y);
+      if(t==='o') rowFeat+=oasis(x,y);
+      if(t==='n'){ rowFeat+=mesa(x,y); top+=wonderLabel(x,y,'Grand Mesa'); }
       if(MINES.includes(key)) rowFeat+=mine(x+4,y+1);
       const k=CITIES.find(k=>k.c==c&&k.r==r); if(k){ rowFeat+=city(k,x,y); top+=banner(k,x,y); }
       if(RES[key]) rowFeat+=res(x,y,RES[key]);
       if(attack.has(key)) top+=`<ellipse cx="${x}" cy="${y+3}" rx="20" ry="${20*SQ}" fill="none" stroke="#ff4d4d" stroke-width="3.5"/><path d="M${x+14} ${y-30}l6 6m0-6l-6 6" stroke="#ff4d4d" stroke-width="3" stroke-linecap="round"/>`;
     }
+    rowTop+=riverRow(r);
     for(const u of UNITS) if(u.r===r){const[x,y]=cen(u.c,r); rowFeat+=unit(u,x,u.k==='tri'?y+T:y, sel&&u===sel);}
     land+=rowTop+rowFeat+rowFog;
   }
@@ -646,16 +676,17 @@ function initTree(){
 }
 
 /* ---------- the direction: thumb arc + decision queue ---------- */
-const S=['Map','Unit','City','Tech','Tree'];
+const S=['Map','Unit','City','Tech','Tree','Diplomacy'];
 const THESIS={
   Map:'Everything radiates from the yellow corner button. It steps through this turn\'s decisions; the count shows what is left.',
   Unit:'A unit decision: actions fan out along the thumb arc. Shoot shows the combat preview right on the button.',
   City:'Full city detail. When a city needs a new build, the Next button opens this sheet on the Build tab. Tabs sit at the bottom for one thumb.',
   Tech:'Next up: what you are researching, what you can pick now, and goals by what you want. Tap a card or goal.',
   Tree:'Civ 5\'s real tree, re-laid into four lanes so it only scrolls up and down. Tap a tech for its path.',
+  Diplomacy:'Art test: GPT-generated leader portraits and icons in place. The Civ button is your leader.',
 };
 const notes=(bottom)=>`<div class="notes" style="bottom:${bottom}px"><button class="note" style="color:var(--gre)">${ic('Shield')}</button><button class="note" style="color:var(--food)">${ic('Cities')}<span class="badge">3</span></button></div>`;
-const civDisc=`<button class="civdisc col"><div class="disc navy" style="width:70px;height:70px">${ic('Policies')}<span class="badge" style="background:var(--cul)">!</span></div><div class="lbl">Civ</div></button>`;
+const civDisc=`<button class="civdisc col" data-s="Diplomacy"><div class="disc leader" style="width:70px;height:70px;background-image:url(${ART.p_Nebuchadnezzar})"><span class="badge" style="background:var(--cul)">!</span></div><div class="lbl">Civ</div></button>`;
 const techDisc=(b)=>`<button class="col" data-s="Tech" style="position:absolute;left:104px;bottom:${b}px;z-index:5"><div class="disc navy" style="width:58px;height:58px">${ic('t_Writing','width:30px;height:30px')}</div><div class="lbl">Writing 3</div></button>`;
 const anchor=(label,icon,left)=>`<button class="anchor">${ic(icon)}${label}${left?`<span class="badge" style="background:var(--navy);box-shadow:0 0 0 2.5px var(--yellow)">${left}</span>`:''}</button>`;
 const qdots=(i,n=4)=>`<div class="dots">${[...Array(n)].map((_,j)=>`<i class="${j===i?'on':''}"></i>`).join('')}</div>`;
@@ -674,6 +705,18 @@ function screenFor(s){
    `<div class="sheet fade-in" style="top:250px"><div class="grab"></div>${cityHead()}<div class="scroll" style="border-top:1px solid var(--line)">${cityBuild()}</div>
    <div class="btabs">${[['Settings','Build',1],['Library','Buildings'],['HexagonOutline','Tiles'],['Worker','Citizens'],['Resources','Buy']].map(([i,l,on])=>`<button class="${on?'on':''}">${ic(i)}${l}</button>`).join('')}</div></div>`;
   if(s==='Tech'||s==='Tree') return mapLayer()+sbar+techSheet(s);
+  if(s==='Diplomacy') return mapLayer()+sbar+`<div class="sheet fade-in" style="top:120px"><div class="grab"></div>
+   <div class="sh-head"><div><div class="sh-title">Diplomacy</div><div class="sh-sub">2 civilizations and 1 city-state met</div></div><button class="x">${ic('Close')}</button></div>
+   <div class="scroll">
+    <div class="leadcard"><div class="lport" style="background-image:url(${ART.p_Alexander})"></div>
+      <div class="lmeta"><div class="cname">Alexander</div><div class="rsub"><span>Greece</span><span class="mood">Guarded</span></div>
+      <div class="lquote">"Your borders creep toward Athens, Babylonian."</div></div></div>
+    <div class="dgrid"><button class="qb">${ic('Present','width:26px;height:26px')}Trade</button><button class="qb">${ic('Diplomacy','width:26px;height:26px')}Friendship</button><button class="qb">${ic('Espionage','width:26px;height:26px')}Denounce</button><button class="qb war">${ic('Hoplite','width:30px;height:30px')}Declare war</button></div>
+    <div class="h3">Everyone you have met</div>
+    <div class="row"><div class="lmini" style="background-image:url(${ART.p_Nebuchadnezzar})"></div><div><div class="rname">Nebuchadnezzar II</div><div class="rsub"><span>Babylon, you</span><span>Score 212</span></div></div></div>
+    <div class="row"><div class="lmini" style="background-image:url(${ART.p_Alexander})"></div><div><div class="rname">Alexander</div><div class="rsub"><span>Greece</span><span>Score 248</span></div></div><div class="turns" style="color:var(--gold)">Guarded</div></div>
+    <div class="row"><div class="cicon" style="background:var(--kab)">${ic('CityState')}</div><div><div class="rname">Kabul</div><div class="rsub"><span>Militaristic city-state</span><span>Influence 18 / 30</span></div></div><div class="turns" style="color:var(--hap)">Friend</div></div>
+   </div></div>`;
 }
 
 /* ---------- canvas ---------- */

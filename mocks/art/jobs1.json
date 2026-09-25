@@ -1,0 +1,16 @@
+[
+ {"name":"t_Pottery","prompt":"Subject: a clay amphora pot with two handles and a simple painted band, representing the Pottery technology."},
+ {"name":"t_Writing","prompt":"Subject: a clay cuneiform tablet with carved wedge marks and a reed stylus resting against it, representing the Writing technology."},
+ {"name":"t_The Wheel","prompt":"Subject: a sturdy wooden spoked cart wheel standing upright, representing The Wheel technology."},
+ {"name":"t_Iron Working","prompt":"Subject: a dark iron anvil with a glowing orange iron bar and a hammer on top, representing Iron Working."},
+ {"name":"b_Library","prompt":"Subject: an ancient library building, small cream stone facade with columns and a blue roof, scroll shelves visible through the door."},
+ {"name":"b_Granary","prompt":"Subject: a round mud-brick granary silo with a conical thatched roof and a few grain sacks at its base."},
+ {"name":"b_Walls","prompt":"Subject: a short segment of crenellated grey stone city wall with a small square tower."},
+ {"name":"w_The Great Library","prompt":"Subject: The Great Library of Alexandria, a grand cream stone hall with many columns, stepped base and a golden roof ornament. Majestic but still a compact toy-like icon."},
+ {"name":"w_The Pyramids","prompt":"Subject: the Pyramids of Giza, one large and two small sand-colored faceted pyramids on a small sand base."},
+ {"name":"u_Bowman","prompt":"Subject: a Babylonian bowman soldier figure, chunky toy proportions with a big head, blue tunic, conical helmet, holding a recurve bow, standing."},
+ {"name":"u_Hoplite","prompt":"Subject: a Greek hoplite soldier figure, chunky toy proportions with a big head, red tunic, bronze Corinthian helmet with a red crest, round bronze shield and a long spear, standing."},
+ {"name":"u_Trireme","prompt":"Subject: an ancient trireme galley ship with a single square blue-and-white sail and a row of oars, floating, no water."},
+ {"name":"p_Nebuchadnezzar","key":false,"size":"1024x1024","style":"Style: a chunky low-poly faceted 3D bust portrait in the style of The Battle of Polytopia leaders, toy-like proportions, large flat facets with flat shading and 3 to 4 tones per color, light from the upper left, no text, no outlines. Flat solid background color royal blue #2F7FE0 with a subtle lighter circle behind the head.","prompt":"Subject: Nebuchadnezzar II, king of Babylon: tall cylindrical royal crown, long curled black beard, gold jewelry, deep blue and gold robes, calm confident expression, facing three-quarters toward the viewer."},
+ {"name":"p_Alexander","key":false,"size":"1024x1024","style":"Style: a chunky low-poly faceted 3D bust portrait in the style of The Battle of Polytopia leaders, toy-like proportions, large flat facets with flat shading and 3 to 4 tones per color, light from the upper left, no text, no outlines. Flat solid background color warm red #E0524A with a subtle lighter circle behind the head.","prompt":"Subject: Alexander the Great, king of Macedon: young clean-shaven face, wavy golden-brown hair, bronze cuirass and a red cloak pinned at the shoulder, bold determined expression, facing three-quarters toward the viewer."}
+]
