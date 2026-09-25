@@ -421,6 +421,12 @@ function banner(k,x,y){
   return s+'</g>';
 }
 function unit(u,x,y,sel){
+  if(KIND_SPR[u.k]&&SPR[KIND_SPR[u.k]]){
+    let s=sel?`<ellipse cx="${x}" cy="${y+1}" rx="18" ry="${18*SQ}" fill="none" stroke="#fff" stroke-width="3" class="pulse"/><ellipse cx="${x}" cy="${y+1}" rx="16" ry="${16*SQ}" fill="none" stroke="#fff" stroke-width="3"/>`:'';
+    s+=spriteUnit(KIND_SPR[u.k],u.civ,'m'+UNITS.indexOf(u),36).replace(/<g class="kunit"/,`<g class="kunit" transform="translate(${x} ${y})${u.civ==='gre'?' scale(-1 1)':''}"`);
+    if(u.hp) s=s.replace('<g class="khp"></g>',`<g class="khp"><rect x="-13" y="-48" width="26" height="6" rx="3" fill="rgba(0,0,0,.5)"/><rect x="-12" y="-47" width="${24*u.hp}" height="4" rx="2" fill="#ffd23f"/></g>`);
+    return s;
+  }
   const [c,d,l]=CIVC[u.civ]; let s='';
   if(sel) s+=`<ellipse cx="${x}" cy="${y+3}" rx="17" ry="${17*SQ}" fill="none" stroke="#fff" stroke-width="3" class="pulse"/><ellipse cx="${x}" cy="${y+3}" rx="15" ry="${15*SQ}" fill="none" stroke="#fff" stroke-width="3"/>`;
   s+=`<ellipse cx="${x}" cy="${y+3}" rx="12" ry="${12*SQ}" fill="${c}" opacity=".95"/><ellipse cx="${x}" cy="${y+3}" rx="12" ry="${12*SQ}" fill="none" stroke="${d}" stroke-width="1.5"/>`;
@@ -503,133 +509,132 @@ function renderMap(o={}){
   return MAPCACHE[key]=`<svg width="913" height="1492" viewBox="-260 -320 913 1492" font-family="ui-rounded,system-ui,sans-serif"><defs>${CLOUD_DEFS}</defs><rect x="-260" y="-320" width="913" height="1492" fill="#e4edf4"/>${water}${land}${top}</svg>`;
 }
 
-/* ---------- unit kit: map units built from parts so they animate and recolor ---------- */
-// Feet sit at (0,0), facing right, about 34 units tall. Civ colors come from --c / --d on the root.
-const SKIN='#f2c49b', SKIN_D='#dca57a', CLOTH='#3b2d24', WOOD='#8a5a33', WOOD_D='#6b4426', BRONZE='#d8a534', BRONZE_D='#a87a1c', IRON='#aeb7c2', IRON_D='#7d8797';
-const KIT={
-  warrior:{hat:'cap', weapon:'club'},
-  bowman:{hat:'cone', weapon:'bow'},
-  hoplite:{hat:'crest', weapon:'spear', shield:true},
-  swordsman:{hat:'iron', weapon:'sword', shield:true},
-  horseman:{hat:'cone', weapon:'spear', mount:true},
-  settler:{hat:'straw', weapon:'staff', pack:true},
-  worker:{hat:'band', weapon:'hoe'},
-};
-function kitUnit(type,civ,id){
-  const k=KIT[type], [c,d]=CIVC[civ], lift=k.mount?-10:0;
-  const hats={
-    cap:`<rect x="-5.5" y="-31" width="11" height="4" rx="1.5" fill="${WOOD}"/>`,
-    cone:`<polygon points="-5.8,-27.5 0,-35 5.8,-27.5" fill="var(--d)"/><polygon points="0,-35 5.8,-27.5 1,-27.5" fill="rgba(0,0,0,.2)"/>`,
-    crest:`<path d="M-5.5 -24v-5a5.5 5 0 0 1 11 0v5z" fill="${BRONZE}"/><path d="M0 -24v-9.5a5.5 5 0 0 1 5.5 5v4.5z" fill="${BRONZE_D}"/><path d="M-6 -33q6 -6 12 0v2q-6 -4 -12 0z" fill="var(--c)"/>`,
-    iron:`<path d="M-5.5 -25v-4a5.5 5 0 0 1 11 0v4z" fill="${IRON}"/><path d="M0 -25v-8.5a5.5 5 0 0 1 5.5 4.5v4z" fill="${IRON_D}"/><rect x="2" y="-26" width="1.6" height="4" fill="${IRON_D}"/>`,
-    straw:`<ellipse cx="0" cy="-28.5" rx="8" ry="2.4" fill="#caa56a"/><rect x="-4" y="-32" width="8" height="4" rx="1.5" fill="#e0c07e"/>`,
-    band:`<rect x="-5" y="-27.5" width="10" height="2.2" fill="#e3b93f"/>`,
-  };
-  const weapons={
-    club:`<g><rect x="5" y="-19" width="3.2" height="12" rx="1.6" fill="${WOOD}" transform="rotate(-25 6.5 -9)"/><circle cx="10.5" cy="-18.5" r="3" fill="${WOOD_D}"/></g>`,
-    bow:`<path d="M9 -24q7 9 0 18" stroke="${WOOD}" stroke-width="2.4" fill="none" stroke-linecap="round"/><line x1="9" y1="-24" x2="9" y2="-6" stroke="#fff" stroke-width=".9"/>`,
-    spear:`<rect x="7.2" y="-36" width="1.8" height="32" fill="${WOOD}"/><polygon points="8.1,-40 6.2,-35 10,-35" fill="${IRON}"/>`,
-    sword:`<rect x="7" y="-27" width="2.6" height="13" fill="${IRON}"/><rect x="8.3" y="-27" width="1.3" height="13" fill="${IRON_D}"/><rect x="5" y="-14.5" width="7" height="2" fill="${WOOD_D}"/>`,
-    staff:`<rect x="7.2" y="-26" width="1.8" height="26" fill="${WOOD}"/>`,
-    hoe:`<rect x="7.2" y="-26" width="1.8" height="24" fill="${WOOD}"/><polygon points="5,-27 12,-27 12,-24" fill="${IRON}"/>`,
-  };
-  const legs=`<g class="kl1"><rect x="-3.6" y="-7.5" width="3.4" height="7.5" rx="1" fill="${CLOTH}"/></g><g class="kl2"><rect x="0.4" y="-7.5" width="3.4" height="7.5" rx="1" fill="${CLOTH}"/></g>`;
-  const horse=`<g class="kmount"><g class="kl1"><rect x="-9" y="-9" width="3" height="9" fill="${WOOD_D}"/><rect x="4" y="-9" width="3" height="9" fill="${WOOD_D}"/></g><g class="kl2"><rect x="-5.5" y="-9" width="3" height="9" fill="${WOOD}"/><rect x="7.5" y="-9" width="3" height="9" fill="${WOOD}"/></g>
-    <polygon points="-12,-18 10,-18 12,-9 -11,-9" fill="${WOOD}"/><polygon points="0,-18 10,-18 12,-9 0,-9" fill="${WOOD_D}"/><polygon points="8,-18 14,-27 18,-25 13,-15" fill="${WOOD}"/><polygon points="14,-27 18,-25 17,-21 15,-22" fill="${WOOD_D}"/><polygon points="7,-19 12,-27 10,-19" fill="#3b2d24"/><rect x="-8" y="-20" width="10" height="3" fill="var(--c)"/></g>`;
-  const body=`<g transform="translate(0 ${lift})">
-    ${k.pack?`<circle cx="-7" cy="-16" r="5.5" fill="#caa56a"/><circle cx="-8.5" cy="-17.5" r="2" fill="#e0c07e"/>`:''}
-    ${k.shield?`<circle cx="-6.5" cy="-14.5" r="6.5" fill="${BRONZE}" stroke="${BRONZE_D}" stroke-width="1.5"/><circle cx="-6.5" cy="-14.5" r="2.4" fill="var(--c)"/>`:''}
-    <polygon points="-6.5,-7 -5,-20 5,-20 6.5,-7" fill="var(--c)"/><polygon points="0,-7 0,-20 5,-20 6.5,-7" fill="var(--d)"/><rect x="-6.3" y="-10" width="12.6" height="2" fill="${WOOD_D}"/>
-    <g class="khead"><rect x="-4.5" y="-28.5" width="9" height="9" rx="2" fill="${SKIN}"/><rect x="0" y="-28.5" width="4.5" height="9" rx="1.5" fill="${SKIN_D}"/><circle cx="2.4" cy="-24.5" r=".9" fill="${CLOTH}"/>${hats[k.hat]}</g>
-    <g class="karm"><rect x="3.5" y="-19" width="3" height="8.5" rx="1.4" fill="${SKIN_D}"/>${weapons[k.weapon]}</g>
-  </g>`;
-  return `<g class="kunit" data-kid="${id||''}" style="--c:${c};--d:${d}">
-    <ellipse cx="0" cy="1" rx="${k.mount?15:11}" ry="${k.mount?5:4}" fill="rgba(0,0,0,.22)"/><ellipse cx="0" cy="0" rx="${k.mount?14:11}" ry="${k.mount?5.5:4.5}" fill="var(--c)" opacity=".9"/>
-    <g class="kbody">${k.mount?horse:legs}${body}</g><g class="khp"></g></g>`;
+/* ---------- units: generated low-poly sprites, recolored per civ, animated as whole sprites ---------- */
+// Sprites arrive with team-colored cloth in key green; each civ gets a recolored copy, plus a white copy for hit flashes.
+const UNITART = /*UNITART*/{};
+const SPR={};
+const KIND_SPR={bow:'k_bowman',war:'k_warrior',hop:'k_hoplite',set:'k_settler',wrk:'k_worker'};
+const hexRgb=h=>[1,3,5].map(i=>parseInt(h.slice(i,i+2),16));
+const loadImg=src=>new Promise(r=>{const i=new Image();i.onload=()=>r(i);i.src=src;});
+async function prepSprites(){
+  for(const [name,src] of Object.entries(UNITART)){
+    const img=await loadImg(src), W0=img.width, H0=img.height, cv=document.createElement('canvas');
+    cv.width=W0; cv.height=H0; const cx=cv.getContext('2d'); cx.drawImage(img,0,0);
+    const d=cx.getImageData(0,0,W0,H0).data;
+    let x0=W0,y0=H0,x1=0,y1=0;
+    for(let y=0;y<H0;y++) for(let x=0;x<W0;x++) if(d[(y*W0+x)*4+3]>24){ if(x<x0)x0=x; if(x>x1)x1=x; if(y<y0)y0=y; if(y>y1)y1=y; }
+    const w=x1-x0+1, h=y1-y0+1; SPR[name]={w,h};
+    for(const civ of [...Object.keys(CIVC),'white']){
+      const out=cx.createImageData(w,h), o=out.data, tint=civ==='white'?null:hexRgb(CIVC[civ][0]);
+      for(let y=0;y<h;y++) for(let x=0;x<w;x++){
+        const si=((y+y0)*W0+(x+x0))*4, di=(y*w+x)*4; let r=d[si],g=d[si+1],b=d[si+2]; const a=d[si+3];
+        if(!tint){ r=g=b=255; }
+        else if(g>60 && g>r*1.45 && g>b*1.45){ const f=Math.min(1.15,g/255*1.08); r=tint[0]*f; g=tint[1]*f; b=tint[2]*f; }
+        o[di]=r; o[di+1]=g; o[di+2]=b; o[di+3]=a;
+      }
+      const c2=document.createElement('canvas'); c2.width=w; c2.height=h; c2.getContext('2d').putImageData(out,0,0);
+      SPR[name][civ]=c2.toDataURL();
+    }
+  }
+}
+// Feet sit at (0,0). Height is in map units; the base ring keeps the owner readable at a glance.
+function spriteUnit(name,civ,id,height=40){
+  const s=SPR[name]; if(!s) return '';
+  const w=s.w*height/s.h, [c]=CIVC[civ];
+  return `<g class="kunit" data-kid="${id||''}"><ellipse cx="0" cy="1.5" rx="13" ry="5" fill="rgba(0,0,0,.24)"/><ellipse cx="0" cy="0" rx="12" ry="4.6" fill="none" stroke="${c}" stroke-width="2.6"/>
+    <g class="kbody"><image class="kimg" href="${s[civ]}" x="${(-w/2).toFixed(1)}" y="${-height}" width="${w.toFixed(1)}" height="${height}"/><image class="kflash" href="${s.white}" x="${(-w/2).toFixed(1)}" y="${-height}" width="${w.toFixed(1)}" height="${height}" opacity="0"/></g><g class="khp"></g></g>`;
 }
 
-/* tiny animation engine: every frame sets SVG transforms, so it works the same in Safari and Chrome */
+/* tiny animation engine: every frame sets SVG transforms, so it behaves the same in Safari and Chrome */
 const LAB={units:{}, fx:[], civs:['bab','gre','kab'], civIx:0};
-function labUnit(id,x,y,scale){
+const ease=p=>1-Math.pow(1-p,3);
+function labUnit(id,x,y,scale,opts={}){
   const el=document.querySelector(`[data-kid="${id}"]`); if(!el) return;
-  const arm=el.querySelector('.karm'), l1=el.querySelectorAll('.kl1'), l2=el.querySelectorAll('.kl2'), bodyG=el.querySelector('.kbody');
-  LAB.units[id]={el,arm,l1,l2,bodyG,x,y,home:[x,y],scale,phase:Math.random()*6,anim:null,hp:1};
+  LAB.units[id]={el,img:el.querySelector('.kimg'),flashEl:el.querySelector('.kflash'),body:el.querySelector('.kbody'),x,y,home:[x,y],scale,phase:Math.random()*6,anim:null,hp:1,...opts};
 }
 function labTick(t){
   for(const u of Object.values(LAB.units)){
     if(!u.el.isConnected) continue;
-    let x=u.x, y=u.y, sx=1, sy=1, arm=0, leg=Math.sin(t/260+u.phase)*0, bob=Math.sin(t/300+u.phase)*1.1, flash=0;
+    const br=Math.sin(t/420+u.phase);
+    let x=u.x, y=u.y, sx=1-br*.012, sy=1+br*.022, lean=0, flash=0, pose=null;
     const a=u.anim;
     if(a){ const p=Math.min(1,(t-a.t0)/a.dur);
-      if(a.kind==='move'){ x=a.x0+(a.x1-a.x0)*p; y=a.y0+(a.y1-a.y0)*p-Math.sin(Math.PI*p)*16; leg=Math.sin(p*Math.PI*4)*28; bob=0;
-        if(p>.82){const q=(p-.82)/.18; sy=1-.2*Math.sin(q*Math.PI); sx=1+.12*Math.sin(q*Math.PI);} }
-      if(a.kind==='melee'){ const dir=Math.sign(a.tx-u.x)||1; bob=0;
-        if(p<.3){ x-=dir*4*(p/.3); arm=-45*(p/.3); }
-        else if(p<.5){ const q=(p-.3)/.2; x+=dir*(-4+22*q); arm=-45+130*q; if(!a.hit){a.hit=1;a.onHit&&a.onHit();} }
-        else { const q=(p-.5)/.5; x+=dir*18*(1-q); arm=85*(1-q); } }
-      if(a.kind==='shoot'){ bob=0; arm=p<.4?-30*(p/.4):p<.5?-30+60*((p-.4)/.1):30*(1-(p-.5)/.5); if(p>.45&&!a.hit){a.hit=1;a.onShot&&a.onShot();} }
-      if(a.kind==='hit'){ x+=Math.sin(p*38)*3.5*(1-p); flash=1-p; }
+      if(a.kind==='move'){ // crouch, stretch through the hop, squash and kick up dust on landing
+        if(p<.14){ const q=p/.14; sy=1-.14*q; sx=1+.08*q; }
+        else if(p<.86){ const q=(p-.14)/.72; x=a.x0+(a.x1-a.x0)*ease(q); y=a.y0+(a.y1-a.y0)*q-Math.sin(Math.PI*q)*20*u.scale; sy=1.07; sx=.95; lean=-6; }
+        else { const q=(p-.86)/.14; x=a.x1; y=a.y1; sy=1-.16*Math.sin(q*Math.PI); sx=1+.1*Math.sin(q*Math.PI); if(!a.dust){a.dust=1;dust(u);} } }
+      if(a.kind==='shoot'){ if(p<.4){ lean=8*(p/.4); x-=2*(p/.4); } else if(p<.55){ const q=(p-.4)/.15; lean=8-18*q; x-=2-5*q; if(!a.fired){a.fired=1;a.onShot&&a.onShot();} } else { const q=(p-.55)/.45; lean=-10*(1-ease(q)); x+=3*(1-ease(q)); } }
+      if(a.kind==='melee'){ const dir=Math.sign(a.tx-u.x)||1;
+        if(p<.32){ const q=p/.32; x-=dir*5*q; lean=-dir*10*q; sy=1-.06*q; }
+        else if(p<.46){ const q=(p-.32)/.14; x+=dir*(-5+24*ease(q)); lean=dir*14*q; pose=a.pose; sy=1.04; if(q>.6&&!a.hit){a.hit=1;a.onHit&&a.onHit();} }
+        else { const q=(p-.46)/.54; x+=dir*19*(1-ease(q)); lean=dir*14*(1-ease(q)); if(q<.5) pose=a.pose; } }
+      if(a.kind==='hit'){ const dir=a.dir||1; x+=dir*8*Math.pow(1-p,2)+Math.sin(p*40)*2.5*(1-p); flash=Math.max(0,1-p*1.6); sy=1-.08*(1-p); }
       if(p>=1){ u.anim=null; a.done&&a.done(); }
     }
-    u.el.setAttribute('transform',`translate(${x.toFixed(2)} ${(y+bob).toFixed(2)}) scale(${(u.scale*sx*(u.flip?-1:1)).toFixed(3)} ${(u.scale*sy).toFixed(3)})`);
-    u.arm.setAttribute('transform',`rotate(${arm.toFixed(1)} 5 -19)`);
-    u.l1.forEach(g=>g.setAttribute('transform',`rotate(${leg.toFixed(1)} 0 -7)`)); u.l2.forEach(g=>g.setAttribute('transform',`rotate(${(-leg).toFixed(1)} 0 -7)`));
-    u.bodyG.style.filter=flash?`brightness(${1+flash*2.2})`:'';
+    u.el.setAttribute('transform',`translate(${x.toFixed(2)} ${y.toFixed(2)}) scale(${(u.scale*sx*(u.flip?-1:1)).toFixed(3)} ${(u.scale*sy).toFixed(3)})`);
+    u.body.setAttribute('transform',`skewX(${(-lean).toFixed(2)})`);
+    u.flashEl.setAttribute('opacity',flash.toFixed(2));
+    const want=pose&&SPR[pose]?pose:u.spr; if(u.shown!==want+u.civ){ u.shown=want+u.civ; const s=SPR[want],h=u.h||40,w=s.w*h/s.h; u.img.setAttribute('href',s[u.civ]); u.img.setAttribute('width',w); u.img.setAttribute('x',-w/2); }
   }
   LAB.fx=LAB.fx.filter(f=>{ const p=(t-f.t0)/f.dur; if(p>=1){f.el.remove();return false} f.step(p); return true; });
   requestAnimationFrame(labTick);
 }
 requestAnimationFrame(labTick);
-function labFx(svg,markup,dur,step){ const g=document.createElementNS('http://www.w3.org/2000/svg','g'); g.innerHTML=markup; svg.appendChild(g); LAB.fx.push({el:g,t0:performance.now(),dur,step:p=>step(g,p)}); }
-function damage(target,amount){
+function labFx(svg,markup,dur,step){ const g=document.createElementNS('http://www.w3.org/2000/svg','g'); g.innerHTML=markup; svg.appendChild(g); LAB.fx.push({el:g,t0:performance.now(),dur,step:p=>step(g,p)}); step(g,0); }
+function dust(u){ const svg=u.el.ownerSVGElement;
+  for(const dx of [-1,1]) labFx(svg,`<circle r="4" fill="#efe6cf"/><circle r="3" cx="${dx*5}" cy="-2" fill="#e2d6b8"/>`,420,(g,p)=>{g.setAttribute('transform',`translate(${u.x+dx*(6+14*ease(p))*u.scale} ${u.y-3*p}) scale(${(.6+.8*p)*u.scale})`);g.setAttribute('opacity',1-p);}); }
+function burst(svg,x,y){ labFx(svg,[0,60,120,180,240,300].map(a=>`<polygon points="0,-3 12,0 0,3" fill="${a%120?'#fff':'#ffd23f'}" transform="rotate(${a})"/>`).join(''),300,(g,p)=>{g.setAttribute('transform',`translate(${x} ${y}) scale(${.4+1.1*ease(p)})`);g.setAttribute('opacity',1-p);}); }
+function swoosh(svg,x,y,dir){ labFx(svg,`<path d="M-4 -26 Q ${dir*20} -18 ${dir*6} 2" stroke="#fff" stroke-width="4" fill="none" stroke-linecap="round"/>`,260,(g,p)=>{g.setAttribute('transform',`translate(${x} ${y})`);g.setAttribute('opacity',1-p);g.firstChild.setAttribute('stroke-width',5*(1-p)+1);}); }
+function damage(target,amount,dir){
   const svg=target.el.ownerSVGElement;
-  target.anim={kind:'hit',t0:performance.now(),dur:420};
+  target.anim={kind:'hit',t0:performance.now(),dur:460,dir};
   target.hp=Math.max(.1,target.hp-amount/100);
-  const bar=target.el.querySelector('.khp'); bar.innerHTML=`<rect x="-12" y="-44" width="24" height="5" rx="2.5" fill="rgba(0,0,0,.45)"/><rect x="-11" y="-43" width="${22*target.hp}" height="3" rx="1.5" fill="#ffd23f"/>`;
-  labFx(svg,`<text x="0" y="0" text-anchor="middle" font-size="15" font-weight="900" fill="#fff" stroke="#a8322c" stroke-width="3" paint-order="stroke">-${amount}</text>`,900,(g,p)=>{g.setAttribute('transform',`translate(${target.x} ${target.y-48*target.scale-26*p})`);g.style.opacity=p<.7?1:1-(p-.7)/.3;});
+  target.el.querySelector('.khp').innerHTML=`<rect x="-13" y="-50" width="26" height="6" rx="3" fill="rgba(0,0,0,.5)"/><rect x="-12" y="-49" width="${24*target.hp}" height="4" rx="2" fill="#ffd23f"/>`;
+  burst(svg,target.x,target.y-20*target.scale);
+  labFx(svg,`<text x="0" y="0" text-anchor="middle" font-size="16" font-weight="900" fill="#fff" stroke="#a8322c" stroke-width="3.5" paint-order="stroke">-${amount}</text>`,1000,(g,p)=>{
+    const pop=p<.18?.4+1*(p/.18):p<.3?1.4-.4*((p-.18)/.12):1;
+    g.setAttribute('transform',`translate(${target.x} ${target.y-(54+20*ease(p))*target.scale}) scale(${pop})`);g.setAttribute('opacity',p<.7?1:1-(p-.7)/.3);});
 }
 function labAction(kind){
   const bow=LAB.units.bow, hop=LAB.units.hop, now=performance.now(); if(!bow||!hop||bow.anim||hop.anim) return;
-  if(kind==='move'){ const [hx,hy]=bow.home, there=bow.x===hx; const to=there?[hx+LAB.step,hy-LAB.stepY]:[hx,hy];
-    bow.anim={kind:'move',t0:now,dur:560,x0:bow.x,y0:bow.y,x1:to[0],y1:to[1],done:()=>{bow.x=to[0];bow.y=to[1];}}; }
-  if(kind==='shoot'){ bow.anim={kind:'shoot',t0:now,dur:700,onShot:()=>{
-      const svg=bow.el.ownerSVGElement, x0=bow.x+10*bow.scale, y0=bow.y-18*bow.scale, x1=hop.x, y1=hop.y-18*hop.scale;
-      labFx(svg,`<g><line x1="-9" y1="0" x2="6" y2="0" stroke="#6b4426" stroke-width="2.2"/><polygon points="6,-2.5 11,0 6,2.5" fill="#aeb7c2"/></g>`,420,(g,p)=>{
-        const x=x0+(x1-x0)*p, y=y0+(y1-y0)*p-Math.sin(Math.PI*p)*40, dy=(y1-y0)-Math.cos(Math.PI*p)*40*Math.PI, ang=Math.atan2(dy,(x1-x0))*180/Math.PI;
-        g.setAttribute('transform',`translate(${x} ${y}) rotate(${ang})`); if(p>.97&&!g.done){g.done=1;damage(hop,26);} }); }}; }
+  if(kind==='move'){ const [hx,hy]=bow.home, there=bow.x===hx, to=there?[hx+LAB.step,hy]:[hx,hy];
+    bow.anim={kind:'move',t0:now,dur:620,x0:bow.x,y0:bow.y,x1:to[0],y1:to[1],done:()=>{bow.x=to[0];bow.y=to[1];}}; }
+  if(kind==='shoot'){ bow.anim={kind:'shoot',t0:now,dur:760,onShot:()=>{
+      const svg=bow.el.ownerSVGElement, x0=bow.x+14*bow.scale, y0=bow.y-26*bow.scale, x1=hop.x, y1=hop.y-22*hop.scale;
+      labFx(svg,`<g><line x1="-12" y1="0" x2="-30" y2="0" stroke="#fff" stroke-width="2" opacity=".35" stroke-linecap="round"/><line x1="-10" y1="0" x2="6" y2="0" stroke="#6b4426" stroke-width="2.4"/><polygon points="6,-3 12,0 6,3" fill="#c3cad4"/><polygon points="-10,0 -14,-3 -12,0 -14,3" fill="#f4ecd9"/></g>`,440,(g,p)=>{
+        const H=46, x=x0+(x1-x0)*p, y=y0+(y1-y0)*p-Math.sin(Math.PI*p)*H, dy=(y1-y0)-Math.cos(Math.PI*p)*H*Math.PI;
+        g.setAttribute('transform',`translate(${x} ${y}) rotate(${Math.atan2(dy,x1-x0)*180/Math.PI})`); if(p>.96&&!g.done){g.done=1;damage(hop,26,1);} }); }}; }
   if(kind==='melee'){ // walk up next to the bowman, strike, walk home
-    const home=hop.home, stand=bow.x+LAB.step, go=(x0,x1,done)=>({kind:'move',t0:performance.now(),dur:520,x0,y0:hop.y,x1,y1:hop.y,done});
-    hop.anim=go(hop.x,stand,()=>{ hop.x=stand; hop.anim={kind:'melee',t0:performance.now(),dur:640,tx:bow.x,onHit:()=>damage(bow,14),
+    const home=hop.home, stand=bow.x+LAB.step, go=(x0,x1,done)=>({kind:'move',t0:performance.now(),dur:560,x0,y0:hop.y,x1,y1:hop.y,done});
+    hop.anim=go(hop.x,stand,()=>{ hop.x=stand; hop.anim={kind:'melee',t0:performance.now(),dur:760,tx:bow.x,pose:'k_hoplite_attack',
+      onHit:()=>{swoosh(hop.el.ownerSVGElement,bow.x+8,bow.y,-1);damage(bow,14,-1);},
       done:()=>{ hop.anim=go(stand,home[0],()=>{hop.x=home[0];}); }}; }); }
-  if(kind==='recolor'){ LAB.civIx=(LAB.civIx+1)%3; const civ=LAB.civs[LAB.civIx]; document.querySelectorAll('.roster .kunit').forEach(g=>{const[c,d]=CIVC[civ];g.style.setProperty('--c',c);g.style.setProperty('--d',d);}); }
+  if(kind==='recolor'){ LAB.civIx=(LAB.civIx+1)%3; const civ=LAB.civs[LAB.civIx]; Object.entries(LAB.units).forEach(([id,u])=>{ if(id.startsWith('r')){ u.civ=civ; u.el.querySelector('ellipse+ellipse').setAttribute('stroke',CIVC[civ][0]); } }); }
 }
 
-function labUnitFlip(id,x,y,scale,flip){ labUnit(id,x,y,scale); if(flip&&LAB.units[id]) LAB.units[id].flip=true; }
 function slab(x,y,t){ const[h,s0,l0]=BASE[t]; const cs=corners(x,y); let o=`<polygon points="${pts([cs[2],cs[3],[cs[3][0],cs[3][1]+T],[cs[2][0],cs[2][1]+T]])}" fill="#7d5d3b"/><polygon points="${pts([cs[3],cs[4],[cs[4][0],cs[4][1]+T],[cs[3][0],cs[3][1]+T]])}" fill="#9a7550"/>`;
   for(let i=0;i<6;i++){const a=((60*i-60)+135)*Math.PI/180;const col=hsl(h,s0,l0+Math.cos(a)*5+((i*7)%5-2)*.5);o+=`<polygon points="${pts([[x,y-2],cs[i],cs[(i+1)%6]])}" fill="${col}" stroke="${col}" stroke-width=".6"/>`} return o; }
-const ROSTER=['warrior','bowman','hoplite','swordsman','horseman','settler','worker'];
+const ROSTER=[['k_warrior','Warrior'],['k_bowman','Bowman'],['k_hoplite','Hoplite'],['k_swordsman','Swordsman'],['k_horseman','Horseman'],['k_settler','Settler'],['k_worker','Worker']];
 function artLab(){
-  const W_=W, xs=[34,34+W_,34+2*W_,34+3*W_], y=78;
-  LAB.step=W_; LAB.stepY=0;
-  const pairs=['Writing','Library','The Great Library','Bowman'];
-  const iconRow=(src,label,size)=>`<div class="cmprow"><div class="cmplbl">${label}</div>${pairs.map(n=>src[n]?`<img src="${src[n]}" style="width:${size}px;height:${size}px">`:'<span class="miss">pending</span>').join('')}</div>`;
+  const xs=[34,34+W,34+2*W,34+3*W], y=82;
+  LAB.step=W;
   return `<div class="lab fade-in"><div class="scroll" style="padding-top:64px">
-    <div class="sh-title">Art lab</div>
-    <div class="h3">Icon detail, 64px</div>${iconRow(ART,'Current',64)}${iconRow(ART_SIMPLE,'Simpler',64)}
-    <div class="h3">Same icons at 32px, like in lists</div>${iconRow(ART,'Current',32)}${iconRow(ART_SIMPLE,'Simpler',32)}
-    <div class="h3">Unit kit, animated</div>
-    <div class="stage"><svg viewBox="0 0 250 120" width="100%">${xs.map((x,i)=>slab(x,y,i===2?'p':'g')).join('')}${kitUnit('bowman','bab','bow')}${kitUnit('hoplite','gre','hop')}</svg></div>
-    <div class="labbtns"><button class="qb" data-lab="move">${ic('MoveTo','width:26px;height:26px')}Move</button><button class="qb" data-lab="shoot">${ic('CrosshairB','width:26px;height:26px')}Shoot</button><button class="qb" data-lab="melee">${ic('Hoplite','width:30px;height:30px')}Hoplite hits</button></div>
-    <div class="h3">Every unit from the same parts</div>
-    <div class="roster">${ROSTER.map((t,i)=>`<div class="rcell"><svg viewBox="-30 -46 60 62" width="100%">${slab(0,0,'g')}${kitUnit(t,'bab','r'+i)}</svg><div class="rname" style="font-size:13px;text-align:center">${t[0].toUpperCase()+t.slice(1)}</div></div>`).join('')}
+    <div class="sh-title">Units</div>
+    <div class="h3">Tap to test the motion</div>
+    <div class="stage"><svg viewBox="0 0 250 120" width="100%" style="overflow:visible">${xs.map((x,i)=>slab(x,y,i===2?'p':'g')).join('')}${spriteUnit('k_bowman','bab','bow')}${spriteUnit('k_hoplite','gre','hop')}</svg></div>
+    <div class="labbtns"><button class="qb" data-lab="move">${ic('MoveTo','width:26px;height:26px')}Move</button><button class="qb" data-lab="shoot">${ic('CrosshairB','width:26px;height:26px')}Shoot</button><button class="qb" data-lab="melee">${ic('Fortify','width:26px;height:26px')}Hoplite hits</button></div>
+    <div class="h3">Same sprite, any civ color</div>
+    <div class="roster">${ROSTER.map(([n,l],i)=>`<div class="rcell"><svg viewBox="-32 -50 64 64" width="100%" style="overflow:visible">${slab(0,0,'g')}${spriteUnit(n,'bab','r'+i)}</svg><div class="rname" style="font-size:13px;text-align:center">${l}</div></div>`).join('')}
       <button class="rcell recolor" data-lab="recolor">${ic('NationSwap','width:30px;height:30px')}<span>Switch civ color</span></button></div>
   </div></div>`;
 }
 function initLab(){
-  if(!document.querySelector('.lab')) { LAB.units={}; return; }
-  LAB.units={}; const xs=[34,34+W,34+2*W,34+3*W];
-  labUnit('bow',xs[0],78,1.25); labUnitFlip('hop',xs[3],78,1.25,true);
-  ROSTER.forEach((t,i)=>labUnit('r'+i,0,0,1));
+  LAB.units={};
+  document.querySelectorAll('.map .kunit[data-kid]').forEach(el=>{ const u=UNITS[+el.dataset.kid.slice(1)]; if(!u) return; const[x,y]=cen(u.c,u.r); labUnit(el.dataset.kid,x,y,1,{spr:KIND_SPR[u.k],civ:u.civ,flip:u.civ==='gre',h:36}); });
+  if(!document.querySelector('.lab')) return;
+  const xs=[34,34+W,34+2*W,34+3*W];
+  labUnit('bow',xs[0],82,1.3,{spr:'k_bowman',civ:'bab'}); labUnit('hop',xs[3],82,1.3,{spr:'k_hoplite',civ:'gre',flip:true});
+  ROSTER.forEach(([n],i)=>labUnit('r'+i,0,0,1,{spr:n,civ:LAB.civs[LAB.civIx]}));
 }
 
 /* ---------- zoom rail ---------- */
@@ -824,7 +829,7 @@ const THESIS={
   City:'Full city detail. When a city needs a new build, the Next button opens this sheet on the Build tab. Tabs sit at the bottom for one thumb.',
   Tech:'Next up: what you are researching, what you can pick now, and goals by what you want. Tap a card or goal.',
   Tree:'Civ 5\'s real tree, re-laid into four lanes so it only scrolls up and down. Tap a tech for its path.',
-  'Art lab':'Detail comparison for generated icons, plus map units built from code parts: tap Move, Shoot, Hoplite hits, or switch civ color.',
+  'Art lab':'Generated low-poly unit sprites, recolored per civ in code. Tap Move, Shoot, Hoplite hits, or switch civ color.',
   Diplomacy:'Art test: GPT-generated leader portraits and icons in place. The Civ button is your leader.',
 };
 const notes=(bottom)=>`<div class="notes" style="bottom:${bottom}px"><button class="note" style="color:var(--gre)">${ic('Shield')}</button><button class="note" style="color:var(--food)">${ic('Cities')}<span class="badge">3</span></button></div>`;
@@ -891,7 +896,7 @@ document.addEventListener('click',e=>{
   const b=e.target.closest('button[data-s]');if(!b)return;cs=b.dataset.s;draw()});
 document.addEventListener('keydown',e=>{const i=S.indexOf(cs);if(e.key==='ArrowRight'){cs=S[(i+1)%S.length];draw()}if(e.key==='ArrowLeft'){cs=S[(i+S.length-1)%S.length];draw()}});
 addEventListener('resize',fit);
-draw();
+prepSprites().then(draw);
 </script>
 </body>
 </html>

@@ -45,7 +45,13 @@ for r in res:
 
 # generated art: bare names for icons, p_* kept for portraits; shrunk to webp for the mock payload
 art = {}
+units = {}
+for f in sorted((src.parent / "art").glob("k_*.png")):
+    webp = subprocess.run(["magick", str(f), "-resize", "160x160", "-quality", "92", "webp:-"], capture_output=True, check=True).stdout
+    units[f.stem] = "data:image/webp;base64," + base64.b64encode(webp).decode()
 for f in sorted((src.parent / "art").glob("*.png")):
+    if f.stem.startswith("k_"):
+        continue
     key = f.stem if f.stem.startswith("p_") else f.stem[2:]
     size = "320x320" if f.stem.startswith("p_") else "128x128"
     webp = subprocess.run(["magick", str(f), "-resize", size, "-quality", "88", "webp:-"], capture_output=True, check=True).stdout
@@ -58,5 +64,5 @@ if "Walls" in art:
     art["Walls of Babylon"] = art["Walls"]
 
 out = src.with_name(src.name.replace(".src", ""))
-out.write_text(html.replace("/*ICONS*/{}", json.dumps(icons)).replace("/*TECHS*/[]", json.dumps(techs)).replace("/*ART*/{}", json.dumps(art)).replace("/*ART_SIMPLE*/{}", json.dumps(simple)))
+out.write_text(html.replace("/*ICONS*/{}", json.dumps(icons)).replace("/*TECHS*/[]", json.dumps(techs)).replace("/*ART*/{}", json.dumps(art)).replace("/*ART_SIMPLE*/{}", json.dumps(simple)).replace("/*UNITART*/{}", json.dumps(units)))
 print(f"{out}: {len(icons)} icons, {out.stat().st_size // 1024} KB; missing: {missing}")

@@ -11,7 +11,8 @@ STYLE = pathlib.Path(OUT / "style.txt").read_text().strip()
 def generate(job):
     body = {
         "model": "gpt-6-luna", "stream": True,
-        "input": f"Generate an image. {job['prompt']}\n\n{job.get('style', STYLE)}",
+        "input": [{"role": "user", "content": [{"type": "input_text", "text": f"Generate an image. {job['prompt']}\n\n{job.get('style', STYLE)}"}]
+                   + ([{"type": "input_image", "image_url": "data:image/png;base64," + base64.b64encode((OUT / job["ref"]).read_bytes()).decode()}] if job.get("ref") else [])}],
         "tools": [{"type": "image_generation", "size": job.get("size", "1024x1024"), "quality": job.get("quality", "medium")}],
         "tool_choice": {"type": "image_generation"},
     }
