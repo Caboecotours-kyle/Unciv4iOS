@@ -485,7 +485,7 @@ class WorldScreen(
 
         if (uiEnabled) {
             // UnitActionsTable measures geometry (its own y, techPolicyAndDiplomacy and fogOfWarButton), so call update this late
-            unitActionsTable.y = bottomUnitTable.height
+            unitActionsTable.y = if (isPortrait()) safeAreaBoundsInWorld().y + statusButtons.height + 20f else bottomUnitTable.height
             unitActionsTable.update(bottomUnitTable.selectedUnit?.getUnit())
         }
 
@@ -517,6 +517,7 @@ class WorldScreen(
         }
 
         updateGameplayButtons()
+        if (isPortrait() && uiEnabled) layoutPortraitHud()
 
         val coveredNotificationsTop = stage.height - statusButtons.y
         val coveredNotificationsBottom = (bottomTileInfoTable.height + bottomTileInfoTable.y)
@@ -530,6 +531,23 @@ class WorldScreen(
             10f,
             Align.bottomRight
         )
+    }
+
+    /**
+     * Portrait, one-handed layout (DESIGN.md): stats on top with unit info under them, tech and civ bottom-left,
+     * Next bottom-right with the unit's actions stacked above it. Tile info and the minimap stay out of the map's way.
+     */
+    private fun layoutPortraitHud() {
+        val safeArea = safeAreaBoundsInWorld()
+        val right = safeArea.x + safeArea.width
+        statusButtons.setPosition(right - statusButtons.width - 10f, safeArea.y + 10f)
+        unitActionsTable.x = right - unitActionsTable.width - 8f
+        bottomUnitTable.setPosition(safeArea.x, topBar.y - bottomUnitTable.height)
+        minimapWrapper.isVisible = false
+        zoomController.isVisible = false
+        bottomTileInfoTable.isVisible = bottomUnitTable.selectedUnit == null && bottomUnitTable.selectedCity == null
+        bottomTileInfoTable.setPosition(right - bottomTileInfoTable.width, topBar.y - bottomTileInfoTable.height)
+        chatButton.updatePosition()
     }
 
     @Readonly

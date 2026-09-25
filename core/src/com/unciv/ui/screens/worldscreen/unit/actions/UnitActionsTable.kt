@@ -47,7 +47,9 @@ class UnitActionsTable(val worldScreen: WorldScreen) : Table() {
     }
 
     init {
-        defaults().left().padLeft(padBetweenButtons).padBottom(padBetweenButtons)
+        // Portrait right-aligns the stack so it sits under the right thumb
+        if (worldScreen.isPortrait()) defaults().right().padRight(padBetweenButtons).padBottom(padBetweenButtons)
+        else defaults().left().padLeft(padBetweenButtons).padBottom(padBetweenButtons)
     }
 
     fun changePage(delta: Int, unit: MapUnit) {
@@ -161,7 +163,9 @@ class UnitActionsTable(val worldScreen: WorldScreen) : Table() {
     }
 
     private fun updateButtonsPerPage(button: Button) {
-        val upperLimit = worldScreen.techPolicyAndDiplomacy.y
+        // Portrait stacks actions above the Next button, up to about the middle of the screen
+        val upperLimit = if (worldScreen.isPortrait()) worldScreen.stage.height * 0.58f
+            else worldScreen.techPolicyAndDiplomacy.y
         val lowerLimit = this.y
         val availableHeight = upperLimit - lowerLimit - padBetweenButtons
         val buttonHeight = button.height + padBetweenButtons
