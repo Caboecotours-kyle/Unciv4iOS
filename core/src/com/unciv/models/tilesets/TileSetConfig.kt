@@ -13,6 +13,8 @@ class TileSetConfig {
     var mapBackgroundColor: Color? = null
     /** Draw unit flags small and above the unit sprite (Civ 6 style) instead of over the tile centre. */
     var unitFlagsAboveSprites = false
+    /** Tint the unit color layer with whichever nation color is more saturated (some nations keep white or black inside). */
+    var vividUnitTeamColor = false
     /** Name of the tileset to use when this one is missing images. Null to disable. */
     var fallbackTileSet: String? = Constants.defaultFallbackTileset
     /** Scale factor for hex images, with hex center as origin. */
@@ -28,6 +30,7 @@ class TileSetConfig {
         toReturn.fogOfWarColor = fogOfWarColor
         toReturn.mapBackgroundColor = mapBackgroundColor
         toReturn.unitFlagsAboveSprites = unitFlagsAboveSprites
+        toReturn.vividUnitTeamColor = vividUnitTeamColor
         toReturn.fallbackTileSet = fallbackTileSet
         toReturn.tileScale = tileScale
         toReturn.tileScales = tileScales
@@ -42,6 +45,7 @@ class TileSetConfig {
         fogOfWarColor = other.fogOfWarColor
         if (other.mapBackgroundColor != null) mapBackgroundColor = other.mapBackgroundColor
         unitFlagsAboveSprites = other.unitFlagsAboveSprites
+        vividUnitTeamColor = other.vividUnitTeamColor
         fallbackTileSet = other.fallbackTileSet
         tileScale = other.tileScale
         for ((tileString, scale) in other.tileScales) {

@@ -19,5 +19,6 @@
         "b": 0.97,
         "a": 1
     },
-    "unitFlagsAboveSprites": true
+    "unitFlagsAboveSprites": true,
+    "vividUnitTeamColor": true
 }
