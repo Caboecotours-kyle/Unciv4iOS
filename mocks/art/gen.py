@@ -47,7 +47,7 @@ def generate(job):
 
 
 jobs = json.loads(pathlib.Path(sys.argv[1]).read_text())
-with concurrent.futures.ThreadPoolExecutor(max_workers=4) as pool:
+with concurrent.futures.ThreadPoolExecutor(max_workers=6) as pool:
     futures = {pool.submit(generate, j): j["name"] for j in jobs}
     for f in concurrent.futures.as_completed(futures):
         try:

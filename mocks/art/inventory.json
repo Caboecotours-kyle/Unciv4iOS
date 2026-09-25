@@ -1,0 +1,3678 @@
+[
+ {
+  "category": "Terrain",
+  "name": "Ocean",
+  "method": "code",
+  "files": [
+   "Tiles/Ocean.png"
+  ],
+  "note": "faceted hex slab with dirt sides; water sits lower",
+  "done": true
+ },
+ {
+  "category": "Terrain",
+  "name": "Coast",
+  "method": "code",
+  "files": [
+   "Tiles/Coast.png"
+  ],
+  "note": "faceted hex slab with dirt sides; water sits lower",
+  "done": true
+ },
+ {
+  "category": "Terrain",
+  "name": "Grassland",
+  "method": "code",
+  "files": [
+   "Tiles/Grassland.png"
+  ],
+  "note": "faceted hex slab with dirt sides; water sits lower",
+  "done": true
+ },
+ {
+  "category": "Terrain",
+  "name": "Plains",
+  "method": "code",
+  "files": [
+   "Tiles/Plains.png"
+  ],
+  "note": "faceted hex slab with dirt sides; water sits lower",
+  "done": true
+ },
+ {
+  "category": "Terrain",
+  "name": "Tundra",
+  "method": "code",
+  "files": [
+   "Tiles/Tundra.png"
+  ],
+  "note": "faceted hex slab with dirt sides; water sits lower",
+  "done": true
+ },
+ {
+  "category": "Terrain",
+  "name": "Desert",
+  "method": "code",
+  "files": [
+   "Tiles/Desert.png"
+  ],
+  "note": "faceted hex slab with dirt sides; water sits lower",
+  "done": true
+ },
+ {
+  "category": "Terrain",
+  "name": "Lakes",
+  "method": "code",
+  "files": [
+   "Tiles/Lakes.png"
+  ],
+  "note": "faceted hex slab with dirt sides; water sits lower",
+  "done": true
+ },
+ {
+  "category": "Terrain",
+  "name": "Mountain",
+  "method": "code",
+  "files": [
+   "Tiles/Mountain.png"
+  ],
+  "note": "faceted hex slab with dirt sides; water sits lower",
+  "done": true
+ },
+ {
+  "category": "Terrain",
+  "name": "Snow",
+  "method": "code",
+  "files": [
+   "Tiles/Snow.png"
+  ],
+  "note": "faceted hex slab with dirt sides; water sits lower",
+  "done": true
+ },
+ {
+  "category": "Terrain feature",
+  "name": "Hill",
+  "method": "code",
+  "files": [
+   "Tiles/Hill.png"
+  ],
+  "note": "",
+  "done": true
+ },
+ {
+  "category": "Terrain feature",
+  "name": "Forest",
+  "method": "code",
+  "files": [
+   "Tiles/Forest.png"
+  ],
+  "note": "",
+  "done": true
+ },
+ {
+  "category": "Terrain feature",
+  "name": "Jungle",
+  "method": "code",
+  "files": [
+   "Tiles/Jungle.png"
+  ],
+  "note": "",
+  "done": true
+ },
+ {
+  "category": "Terrain feature",
+  "name": "Marsh",
+  "method": "code",
+  "files": [
+   "Tiles/Marsh.png"
+  ],
+  "note": "",
+  "done": true
+ },
+ {
+  "category": "Terrain feature",
+  "name": "Fallout",
+  "method": "code",
+  "files": [
+   "Tiles/Fallout.png"
+  ],
+  "note": "",
+  "done": false
+ },
+ {
+  "category": "Terrain feature",
+  "name": "Oasis",
+  "method": "code",
+  "files": [
+   "Tiles/Oasis.png"
+  ],
+  "note": "",
+  "done": true
+ },
+ {
+  "category": "Terrain feature",
+  "name": "Flood plains",
+  "method": "code",
+  "files": [
+   "Tiles/Flood plains.png"
+  ],
+  "note": "",
+  "done": false
+ },
+ {
+  "category": "Terrain feature",
+  "name": "Ice",
+  "method": "code",
+  "files": [
+   "Tiles/Ice.png"
+  ],
+  "note": "",
+  "done": false
+ },
+ {
+  "category": "Terrain feature",
+  "name": "Atoll",
+  "method": "code",
+  "files": [
+   "Tiles/Atoll.png"
+  ],
+  "note": "",
+  "done": false
+ },
+ {
+  "category": "Terrain feature",
+  "name": "River",
+  "method": "code",
+  "files": [
+   "Tiles/River.png"
+  ],
+  "note": "rivers run on hex edges",
+  "done": true
+ },
+ {
+  "category": "Natural wonder",
+  "name": "Great Barrier Reef",
+  "method": "sprite",
+  "files": [
+   "Tiles/Great Barrier Reef.png"
+  ],
+  "note": "landmark sprite; discovery uses a scene",
+  "done": true
+ },
+ {
+  "category": "Natural wonder scene",
+  "name": "Great Barrier Reef",
+  "method": "scene",
+  "files": [],
+  "note": "shown when first discovered",
+  "done": false
+ },
+ {
+  "category": "Natural wonder",
+  "name": "Old Faithful",
+  "method": "sprite",
+  "files": [
+   "Tiles/Old Faithful.png"
+  ],
+  "note": "landmark sprite; discovery uses a scene",
+  "done": true
+ },
+ {
+  "category": "Natural wonder scene",
+  "name": "Old Faithful",
+  "method": "scene",
+  "files": [],
+  "note": "shown when first discovered",
+  "done": false
+ },
+ {
+  "category": "Natural wonder",
+  "name": "El Dorado",
+  "method": "sprite",
+  "files": [
+   "Tiles/El Dorado.png"
+  ],
+  "note": "landmark sprite; discovery uses a scene",
+  "done": true
+ },
+ {
+  "category": "Natural wonder scene",
+  "name": "El Dorado",
+  "method": "scene",
+  "files": [],
+  "note": "shown when first discovered",
+  "done": false
+ },
+ {
+  "category": "Natural wonder",
+  "name": "Fountain of Youth",
+  "method": "sprite",
+  "files": [
+   "Tiles/Fountain of Youth.png"
+  ],
+  "note": "landmark sprite; discovery uses a scene",
+  "done": true
+ },
+ {
+  "category": "Natural wonder scene",
+  "name": "Fountain of Youth",
+  "method": "scene",
+  "files": [],
+  "note": "shown when first discovered",
+  "done": false
+ },
+ {
+  "category": "Natural wonder",
+  "name": "Grand Mesa",
+  "method": "sprite",
+  "files": [
+   "Tiles/Grand Mesa.png"
+  ],
+  "note": "landmark sprite; discovery uses a scene",
+  "done": true
+ },
+ {
+  "category": "Natural wonder scene",
+  "name": "Grand Mesa",
+  "method": "scene",
+  "files": [],
+  "note": "shown when first discovered",
+  "done": false
+ },
+ {
+  "category": "Natural wonder",
+  "name": "Mount Fuji",
+  "method": "sprite",
+  "files": [
+   "Tiles/Mount Fuji.png"
+  ],
+  "note": "landmark sprite; discovery uses a scene",
+  "done": true
+ },
+ {
+  "category": "Natural wonder scene",
+  "name": "Mount Fuji",
+  "method": "scene",
+  "files": [],
+  "note": "shown when first discovered",
+  "done": false
+ },
+ {
+  "category": "Natural wonder",
+  "name": "Krakatoa",
+  "method": "sprite",
+  "files": [
+   "Tiles/Krakatoa.png"
+  ],
+  "note": "landmark sprite; discovery uses a scene",
+  "done": true
+ },
+ {
+  "category": "Natural wonder scene",
+  "name": "Krakatoa",
+  "method": "scene",
+  "files": [],
+  "note": "shown when first discovered",
+  "done": false
+ },
+ {
+  "category": "Natural wonder",
+  "name": "Rock of Gibraltar",
+  "method": "sprite",
+  "files": [
+   "Tiles/Rock of Gibraltar.png"
+  ],
+  "note": "landmark sprite; discovery uses a scene",
+  "done": true
+ },
+ {
+  "category": "Natural wonder scene",
+  "name": "Rock of Gibraltar",
+  "method": "scene",
+  "files": [],
+  "note": "shown when first discovered",
+  "done": false
+ },
+ {
+  "category": "Natural wonder",
+  "name": "Cerro de Potosi",
+  "method": "sprite",
+  "files": [
+   "Tiles/Cerro de Potosi.png"
+  ],
+  "note": "landmark sprite; discovery uses a scene",
+  "done": true
+ },
+ {
+  "category": "Natural wonder scene",
+  "name": "Cerro de Potosi",
+  "method": "scene",
+  "files": [],
+  "note": "shown when first discovered",
+  "done": false
+ },
+ {
+  "category": "Natural wonder",
+  "name": "Barringer Crater",
+  "method": "sprite",
+  "files": [
+   "Tiles/Barringer Crater.png"
+  ],
+  "note": "landmark sprite; discovery uses a scene",
+  "done": true
+ },
+ {
+  "category": "Natural wonder scene",
+  "name": "Barringer Crater",
+  "method": "scene",
+  "files": [],
+  "note": "shown when first discovered",
+  "done": false
+ },
+ {
+  "category": "Natural wonder",
+  "name": "Mount Kailash",
+  "method": "sprite",
+  "files": [
+   "Tiles/Mount Kailash.png"
+  ],
+  "note": "landmark sprite; discovery uses a scene",
+  "done": true
+ },
+ {
+  "category": "Natural wonder scene",
+  "name": "Mount Kailash",
+  "method": "scene",
+  "files": [],
+  "note": "shown when first discovered",
+  "done": false
+ },
+ {
+  "category": "Natural wonder",
+  "name": "Mount Sinai",
+  "method": "sprite",
+  "files": [
+   "Tiles/Mount Sinai.png"
+  ],
+  "note": "landmark sprite; discovery uses a scene",
+  "done": true
+ },
+ {
+  "category": "Natural wonder scene",
+  "name": "Mount Sinai",
+  "method": "scene",
+  "files": [],
+  "note": "shown when first discovered",
+  "done": false
+ },
+ {
+  "category": "Natural wonder",
+  "name": "Sri Pada",
+  "method": "sprite",
+  "files": [
+   "Tiles/Sri Pada.png"
+  ],
+  "note": "landmark sprite; discovery uses a scene",
+  "done": true
+ },
+ {
+  "category": "Natural wonder scene",
+  "name": "Sri Pada",
+  "method": "scene",
+  "files": [],
+  "note": "shown when first discovered",
+  "done": false
+ },
+ {
+  "category": "Natural wonder",
+  "name": "Uluru",
+  "method": "sprite",
+  "files": [
+   "Tiles/Uluru.png"
+  ],
+  "note": "landmark sprite; discovery uses a scene",
+  "done": true
+ },
+ {
+  "category": "Natural wonder scene",
+  "name": "Uluru",
+  "method": "scene",
+  "files": [],
+  "note": "shown when first discovered",
+  "done": false
+ },
+ {
+  "category": "Resource (bonus)",
+  "name": "Cattle",
+  "method": "sprite",
+  "files": [
+   "Tiles/Cattle.png"
+  ],
+  "note": "small tile prop, readable at map zoom",
+  "done": true
+ },
+ {
+  "category": "Resource (bonus)",
+  "name": "Sheep",
+  "method": "sprite",
+  "files": [
+   "Tiles/Sheep.png"
+  ],
+  "note": "small tile prop, readable at map zoom",
+  "done": true
+ },
+ {
+  "category": "Resource (bonus)",
+  "name": "Deer",
+  "method": "sprite",
+  "files": [
+   "Tiles/Deer.png"
+  ],
+  "note": "small tile prop, readable at map zoom",
+  "done": true
+ },
+ {
+  "category": "Resource (bonus)",
+  "name": "Bananas",
+  "method": "sprite",
+  "files": [
+   "Tiles/Bananas.png"
+  ],
+  "note": "small tile prop, readable at map zoom",
+  "done": true
+ },
+ {
+  "category": "Resource (bonus)",
+  "name": "Wheat",
+  "method": "sprite",
+  "files": [
+   "Tiles/Wheat.png"
+  ],
+  "note": "small tile prop, readable at map zoom",
+  "done": true
+ },
+ {
+  "category": "Resource (bonus)",
+  "name": "Stone",
+  "method": "sprite",
+  "files": [
+   "Tiles/Stone.png"
+  ],
+  "note": "small tile prop, readable at map zoom",
+  "done": true
+ },
+ {
+  "category": "Resource (bonus)",
+  "name": "Fish",
+  "method": "sprite",
+  "files": [
+   "Tiles/Fish.png"
+  ],
+  "note": "small tile prop, readable at map zoom",
+  "done": true
+ },
+ {
+  "category": "Resource (strategic)",
+  "name": "Horses",
+  "method": "sprite",
+  "files": [
+   "Tiles/Horses.png"
+  ],
+  "note": "small tile prop, readable at map zoom",
+  "done": true
+ },
+ {
+  "category": "Resource (strategic)",
+  "name": "Iron",
+  "method": "sprite",
+  "files": [
+   "Tiles/Iron.png"
+  ],
+  "note": "small tile prop, readable at map zoom",
+  "done": true
+ },
+ {
+  "category": "Resource (strategic)",
+  "name": "Coal",
+  "method": "sprite",
+  "files": [
+   "Tiles/Coal.png"
+  ],
+  "note": "small tile prop, readable at map zoom",
+  "done": true
+ },
+ {
+  "category": "Resource (strategic)",
+  "name": "Oil",
+  "method": "sprite",
+  "files": [
+   "Tiles/Oil.png"
+  ],
+  "note": "small tile prop, readable at map zoom",
+  "done": true
+ },
+ {
+  "category": "Resource (strategic)",
+  "name": "Aluminum",
+  "method": "sprite",
+  "files": [
+   "Tiles/Aluminum.png"
+  ],
+  "note": "small tile prop, readable at map zoom",
+  "done": true
+ },
+ {
+  "category": "Resource (strategic)",
+  "name": "Uranium",
+  "method": "sprite",
+  "files": [
+   "Tiles/Uranium.png"
+  ],
+  "note": "small tile prop, readable at map zoom",
+  "done": true
+ },
+ {
+  "category": "Resource (luxury)",
+  "name": "Furs",
+  "method": "sprite",
+  "files": [
+   "Tiles/Furs.png"
+  ],
+  "note": "small tile prop, readable at map zoom",
+  "done": true
+ },
+ {
+  "category": "Resource (luxury)",
+  "name": "Cotton",
+  "method": "sprite",
+  "files": [
+   "Tiles/Cotton.png"
+  ],
+  "note": "small tile prop, readable at map zoom",
+  "done": true
+ },
+ {
+  "category": "Resource (luxury)",
+  "name": "Dyes",
+  "method": "sprite",
+  "files": [
+   "Tiles/Dyes.png"
+  ],
+  "note": "small tile prop, readable at map zoom",
+  "done": true
+ },
+ {
+  "category": "Resource (luxury)",
+  "name": "Gems",
+  "method": "sprite",
+  "files": [
+   "Tiles/Gems.png"
+  ],
+  "note": "small tile prop, readable at map zoom",
+  "done": true
+ },
+ {
+  "category": "Resource (luxury)",
+  "name": "Gold Ore",
+  "method": "sprite",
+  "files": [
+   "Tiles/Gold Ore.png"
+  ],
+  "note": "small tile prop, readable at map zoom",
+  "done": true
+ },
+ {
+  "category": "Resource (luxury)",
+  "name": "Silver",
+  "method": "sprite",
+  "files": [
+   "Tiles/Silver.png"
+  ],
+  "note": "small tile prop, readable at map zoom",
+  "done": true
+ },
+ {
+  "category": "Resource (luxury)",
+  "name": "Incense",
+  "method": "sprite",
+  "files": [
+   "Tiles/Incense.png"
+  ],
+  "note": "small tile prop, readable at map zoom",
+  "done": true
+ },
+ {
+  "category": "Resource (luxury)",
+  "name": "Ivory",
+  "method": "sprite",
+  "files": [
+   "Tiles/Ivory.png"
+  ],
+  "note": "small tile prop, readable at map zoom",
+  "done": true
+ },
+ {
+  "category": "Resource (luxury)",
+  "name": "Silk",
+  "method": "sprite",
+  "files": [
+   "Tiles/Silk.png"
+  ],
+  "note": "small tile prop, readable at map zoom",
+  "done": true
+ },
+ {
+  "category": "Resource (luxury)",
+  "name": "Spices",
+  "method": "sprite",
+  "files": [
+   "Tiles/Spices.png"
+  ],
+  "note": "small tile prop, readable at map zoom",
+  "done": true
+ },
+ {
+  "category": "Resource (luxury)",
+  "name": "Wine",
+  "method": "sprite",
+  "files": [
+   "Tiles/Wine.png"
+  ],
+  "note": "small tile prop, readable at map zoom",
+  "done": true
+ },
+ {
+  "category": "Resource (luxury)",
+  "name": "Sugar",
+  "method": "sprite",
+  "files": [
+   "Tiles/Sugar.png"
+  ],
+  "note": "small tile prop, readable at map zoom",
+  "done": true
+ },
+ {
+  "category": "Resource (luxury)",
+  "name": "Marble",
+  "method": "sprite",
+  "files": [
+   "Tiles/Marble.png"
+  ],
+  "note": "small tile prop, readable at map zoom",
+  "done": true
+ },
+ {
+  "category": "Resource (luxury)",
+  "name": "Whales",
+  "method": "sprite",
+  "files": [
+   "Tiles/Whales.png"
+  ],
+  "note": "small tile prop, readable at map zoom",
+  "done": true
+ },
+ {
+  "category": "Resource (luxury)",
+  "name": "Pearls",
+  "method": "sprite",
+  "files": [
+   "Tiles/Pearls.png"
+  ],
+  "note": "small tile prop, readable at map zoom",
+  "done": true
+ },
+ {
+  "category": "Resource (luxury)",
+  "name": "Jewelry",
+  "method": "sprite",
+  "files": [
+   "Tiles/Jewelry.png"
+  ],
+  "note": "small tile prop, readable at map zoom",
+  "done": true
+ },
+ {
+  "category": "Resource (luxury)",
+  "name": "Porcelain",
+  "method": "sprite",
+  "files": [
+   "Tiles/Porcelain.png"
+  ],
+  "note": "small tile prop, readable at map zoom",
+  "done": true
+ },
+ {
+  "category": "Resource (luxury)",
+  "name": "Citrus",
+  "method": "sprite",
+  "files": [
+   "Tiles/Citrus.png"
+  ],
+  "note": "small tile prop, readable at map zoom",
+  "done": true
+ },
+ {
+  "category": "Resource (luxury)",
+  "name": "Copper",
+  "method": "sprite",
+  "files": [
+   "Tiles/Copper.png"
+  ],
+  "note": "small tile prop, readable at map zoom",
+  "done": true
+ },
+ {
+  "category": "Resource (luxury)",
+  "name": "Crab",
+  "method": "sprite",
+  "files": [
+   "Tiles/Crab.png"
+  ],
+  "note": "small tile prop, readable at map zoom",
+  "done": true
+ },
+ {
+  "category": "Resource (luxury)",
+  "name": "Salt",
+  "method": "sprite",
+  "files": [
+   "Tiles/Salt.png"
+  ],
+  "note": "small tile prop, readable at map zoom",
+  "done": true
+ },
+ {
+  "category": "Resource (luxury)",
+  "name": "Truffles",
+  "method": "sprite",
+  "files": [
+   "Tiles/Truffles.png"
+  ],
+  "note": "small tile prop, readable at map zoom",
+  "done": true
+ },
+ {
+  "category": "Improvement",
+  "name": "Farm",
+  "method": "sprite",
+  "files": [
+   "Tiles/Farm.png"
+  ],
+  "note": "",
+  "done": true
+ },
+ {
+  "category": "Improvement",
+  "name": "Lumber mill",
+  "method": "sprite",
+  "files": [
+   "Tiles/Lumber mill.png"
+  ],
+  "note": "",
+  "done": true
+ },
+ {
+  "category": "Improvement",
+  "name": "Mine",
+  "method": "sprite",
+  "files": [
+   "Tiles/Mine.png"
+  ],
+  "note": "",
+  "done": true
+ },
+ {
+  "category": "Improvement",
+  "name": "Trading post",
+  "method": "sprite",
+  "files": [
+   "Tiles/Trading post.png"
+  ],
+  "note": "",
+  "done": true
+ },
+ {
+  "category": "Improvement",
+  "name": "Camp",
+  "method": "sprite",
+  "files": [
+   "Tiles/Camp.png"
+  ],
+  "note": "",
+  "done": true
+ },
+ {
+  "category": "Improvement",
+  "name": "Oil well",
+  "method": "sprite",
+  "files": [
+   "Tiles/Oil well.png"
+  ],
+  "note": "",
+  "done": true
+ },
+ {
+  "category": "Improvement",
+  "name": "Offshore Platform",
+  "method": "sprite",
+  "files": [
+   "Tiles/Offshore Platform.png"
+  ],
+  "note": "",
+  "done": true
+ },
+ {
+  "category": "Improvement",
+  "name": "Pasture",
+  "method": "sprite",
+  "files": [
+   "Tiles/Pasture.png"
+  ],
+  "note": "",
+  "done": true
+ },
+ {
+  "category": "Improvement",
+  "name": "Plantation",
+  "method": "sprite",
+  "files": [
+   "Tiles/Plantation.png"
+  ],
+  "note": "",
+  "done": true
+ },
+ {
+  "category": "Improvement",
+  "name": "Quarry",
+  "method": "sprite",
+  "files": [
+   "Tiles/Quarry.png"
+  ],
+  "note": "",
+  "done": true
+ },
+ {
+  "category": "Improvement",
+  "name": "Fishing Boats",
+  "method": "sprite",
+  "files": [
+   "Tiles/Fishing Boats.png"
+  ],
+  "note": "",
+  "done": true
+ },
+ {
+  "category": "Improvement",
+  "name": "Fort",
+  "method": "sprite",
+  "files": [
+   "Tiles/Fort.png"
+  ],
+  "note": "",
+  "done": true
+ },
+ {
+  "category": "Improvement",
+  "name": "Road",
+  "method": "code",
+  "files": [
+   "Tiles/Road.png"
+  ],
+  "note": "drawn between tile centers",
+  "done": false
+ },
+ {
+  "category": "Improvement",
+  "name": "Railroad",
+  "method": "code",
+  "files": [
+   "Tiles/Railroad.png"
+  ],
+  "note": "drawn between tile centers",
+  "done": false
+ },
+ {
+  "category": "Improvement",
+  "name": "Academy",
+  "method": "sprite",
+  "files": [
+   "Tiles/Academy.png"
+  ],
+  "note": "",
+  "done": true
+ },
+ {
+  "category": "Improvement",
+  "name": "Landmark",
+  "method": "sprite",
+  "files": [
+   "Tiles/Landmark.png"
+  ],
+  "note": "",
+  "done": true
+ },
+ {
+  "category": "Improvement",
+  "name": "Manufactory",
+  "method": "sprite",
+  "files": [
+   "Tiles/Manufactory.png"
+  ],
+  "note": "",
+  "done": true
+ },
+ {
+  "category": "Improvement",
+  "name": "Customs house",
+  "method": "sprite",
+  "files": [
+   "Tiles/Customs house.png"
+  ],
+  "note": "",
+  "done": true
+ },
+ {
+  "category": "Improvement",
+  "name": "Holy site",
+  "method": "sprite",
+  "files": [
+   "Tiles/Holy site.png"
+  ],
+  "note": "",
+  "done": true
+ },
+ {
+  "category": "Improvement",
+  "name": "Citadel",
+  "method": "sprite",
+  "files": [
+   "Tiles/Citadel.png"
+  ],
+  "note": "",
+  "done": true
+ },
+ {
+  "category": "Improvement",
+  "name": "Moai",
+  "method": "sprite",
+  "files": [
+   "Tiles/Moai.png"
+  ],
+  "note": "",
+  "done": true
+ },
+ {
+  "category": "Improvement",
+  "name": "Terrace farm",
+  "method": "sprite",
+  "files": [
+   "Tiles/Terrace farm.png"
+  ],
+  "note": "",
+  "done": true
+ },
+ {
+  "category": "Improvement",
+  "name": "Polder",
+  "method": "sprite",
+  "files": [
+   "Tiles/Polder.png"
+  ],
+  "note": "",
+  "done": true
+ },
+ {
+  "category": "Improvement",
+  "name": "Ancient ruins",
+  "method": "sprite",
+  "files": [
+   "Tiles/Ancient ruins.png"
+  ],
+  "note": "goody hut",
+  "done": true
+ },
+ {
+  "category": "Improvement",
+  "name": "City ruins",
+  "method": "sprite",
+  "files": [
+   "Tiles/City ruins.png"
+  ],
+  "note": "",
+  "done": true
+ },
+ {
+  "category": "Improvement",
+  "name": "Barbarian encampment",
+  "method": "sprite",
+  "files": [
+   "Tiles/Barbarian encampment.png"
+  ],
+  "note": "hostile camp",
+  "done": true
+ },
+ {
+  "category": "City center",
+  "name": "Ancient era",
+  "method": "code",
+  "files": [
+   "Tiles/City center-Ancient era.png"
+  ],
+  "note": "houses kit grows with population; roofs and walls change by era",
+  "done": true
+ },
+ {
+  "category": "City center",
+  "name": "Classical era",
+  "method": "code",
+  "files": [
+   "Tiles/City center-Classical era.png"
+  ],
+  "note": "houses kit grows with population; roofs and walls change by era",
+  "done": false
+ },
+ {
+  "category": "City center",
+  "name": "Medieval era",
+  "method": "code",
+  "files": [
+   "Tiles/City center-Medieval era.png"
+  ],
+  "note": "houses kit grows with population; roofs and walls change by era",
+  "done": false
+ },
+ {
+  "category": "City center",
+  "name": "Renaissance era",
+  "method": "code",
+  "files": [
+   "Tiles/City center-Renaissance era.png"
+  ],
+  "note": "houses kit grows with population; roofs and walls change by era",
+  "done": false
+ },
+ {
+  "category": "City center",
+  "name": "Industrial era",
+  "method": "code",
+  "files": [
+   "Tiles/City center-Industrial era.png"
+  ],
+  "note": "houses kit grows with population; roofs and walls change by era",
+  "done": false
+ },
+ {
+  "category": "City center",
+  "name": "Modern era",
+  "method": "code",
+  "files": [
+   "Tiles/City center-Modern era.png"
+  ],
+  "note": "houses kit grows with population; roofs and walls change by era",
+  "done": false
+ },
+ {
+  "category": "City center",
+  "name": "Atomic era",
+  "method": "code",
+  "files": [
+   "Tiles/City center-Atomic era.png"
+  ],
+  "note": "houses kit grows with population; roofs and walls change by era",
+  "done": false
+ },
+ {
+  "category": "City center",
+  "name": "Information era",
+  "method": "code",
+  "files": [
+   "Tiles/City center-Information era.png"
+  ],
+  "note": "houses kit grows with population; roofs and walls change by era",
+  "done": false
+ },
+ {
+  "category": "City center",
+  "name": "Future era",
+  "method": "code",
+  "files": [
+   "Tiles/City center-Future era.png"
+  ],
+  "note": "houses kit grows with population; roofs and walls change by era",
+  "done": false
+ },
+ {
+  "category": "City state",
+  "name": "Capital marker",
+  "method": "code",
+  "files": [],
+  "note": "",
+  "done": true
+ },
+ {
+  "category": "City state",
+  "name": "City-state marker (5 types)",
+  "method": "code",
+  "files": [],
+  "note": "",
+  "done": false
+ },
+ {
+  "category": "City state",
+  "name": "Puppet city",
+  "method": "code",
+  "files": [],
+  "note": "",
+  "done": false
+ },
+ {
+  "category": "City state",
+  "name": "City being razed",
+  "method": "code",
+  "files": [],
+  "note": "",
+  "done": false
+ },
+ {
+  "category": "City state",
+  "name": "City under siege",
+  "method": "code",
+  "files": [],
+  "note": "",
+  "done": false
+ },
+ {
+  "category": "City state",
+  "name": "City ruins",
+  "method": "code",
+  "files": [],
+  "note": "",
+  "done": false
+ },
+ {
+  "category": "Unit",
+  "name": "Worker",
+  "method": "sprite",
+  "files": [
+   "Units/Worker.png",
+   "Units/Worker-1.png"
+  ],
+  "note": "Civilian",
+  "done": true
+ },
+ {
+  "category": "Unit",
+  "name": "Settler",
+  "method": "sprite",
+  "files": [
+   "Units/Settler.png",
+   "Units/Settler-1.png"
+  ],
+  "note": "Civilian",
+  "done": true
+ },
+ {
+  "category": "Unit",
+  "name": "Scout",
+  "method": "sprite",
+  "files": [
+   "Units/Scout.png",
+   "Units/Scout-1.png"
+  ],
+  "note": "Scout",
+  "done": false
+ },
+ {
+  "category": "Unit",
+  "name": "Warrior",
+  "method": "sprite",
+  "files": [
+   "Units/Warrior.png",
+   "Units/Warrior-1.png"
+  ],
+  "note": "Sword",
+  "done": true
+ },
+ {
+  "category": "Unit (civ unique)",
+  "name": "Maori Warrior",
+  "method": "sprite",
+  "files": [
+   "Units/Maori Warrior.png",
+   "Units/Maori Warrior-1.png"
+  ],
+  "note": "unique to Polynesia, replaces Warrior",
+  "done": false
+ },
+ {
+  "category": "Unit (civ unique)",
+  "name": "Jaguar",
+  "method": "sprite",
+  "files": [
+   "Units/Jaguar.png",
+   "Units/Jaguar-1.png"
+  ],
+  "note": "unique to Aztecs, replaces Warrior",
+  "done": false
+ },
+ {
+  "category": "Unit (civ unique)",
+  "name": "Brute",
+  "method": "sprite",
+  "files": [
+   "Units/Brute.png",
+   "Units/Brute-1.png"
+  ],
+  "note": "unique to Barbarians, replaces Warrior",
+  "done": false
+ },
+ {
+  "category": "Unit",
+  "name": "Archer",
+  "method": "sprite",
+  "files": [
+   "Units/Archer.png",
+   "Units/Archer-1.png"
+  ],
+  "note": "Archery",
+  "done": false
+ },
+ {
+  "category": "Unit (civ unique)",
+  "name": "Bowman",
+  "method": "sprite",
+  "files": [
+   "Units/Bowman.png",
+   "Units/Bowman-1.png"
+  ],
+  "note": "unique to Babylon, replaces Archer",
+  "done": true
+ },
+ {
+  "category": "Unit (civ unique)",
+  "name": "Slinger",
+  "method": "sprite",
+  "files": [
+   "Units/Slinger.png",
+   "Units/Slinger-1.png"
+  ],
+  "note": "unique to Inca, replaces Archer",
+  "done": false
+ },
+ {
+  "category": "Unit (civ unique)",
+  "name": "Atlatlist",
+  "method": "sprite",
+  "files": [
+   "Units/Atlatlist.png",
+   "Units/Atlatlist-1.png"
+  ],
+  "note": "unique to The Maya, replaces Archer",
+  "done": false
+ },
+ {
+  "category": "Unit (civ unique)",
+  "name": "Skirmisher",
+  "method": "sprite",
+  "files": [
+   "Units/Skirmisher.png",
+   "Units/Skirmisher-1.png"
+  ],
+  "note": "unique to Barbarians, replaces Archer",
+  "done": false
+ },
+ {
+  "category": "Unit",
+  "name": "Work Boats",
+  "method": "sprite",
+  "files": [
+   "Units/Work Boats.png",
+   "Units/Work Boats-1.png"
+  ],
+  "note": "Civilian Water",
+  "done": false
+ },
+ {
+  "category": "Unit",
+  "name": "Trireme",
+  "method": "sprite",
+  "files": [
+   "Units/Trireme.png",
+   "Units/Trireme-1.png"
+  ],
+  "note": "Melee Water",
+  "done": false
+ },
+ {
+  "category": "Unit (civ unique)",
+  "name": "Quinquereme",
+  "method": "sprite",
+  "files": [
+   "Units/Quinquereme.png",
+   "Units/Quinquereme-1.png"
+  ],
+  "note": "unique to Carthage, replaces Trireme",
+  "done": false
+ },
+ {
+  "category": "Unit (civ unique)",
+  "name": "Dromon",
+  "method": "sprite",
+  "files": [
+   "Units/Dromon.png",
+   "Units/Dromon-1.png"
+  ],
+  "note": "unique to Byzantium, replaces Trireme",
+  "done": false
+ },
+ {
+  "category": "Unit (civ unique)",
+  "name": "Galley",
+  "method": "sprite",
+  "files": [
+   "Units/Galley.png",
+   "Units/Galley-1.png"
+  ],
+  "note": "unique to Barbarians, replaces None",
+  "done": false
+ },
+ {
+  "category": "Unit",
+  "name": "Chariot Archer",
+  "method": "sprite",
+  "files": [
+   "Units/Chariot Archer.png",
+   "Units/Chariot Archer-1.png"
+  ],
+  "note": "Archery",
+  "done": false
+ },
+ {
+  "category": "Unit (civ unique)",
+  "name": "War Chariot",
+  "method": "sprite",
+  "files": [
+   "Units/War Chariot.png",
+   "Units/War Chariot-1.png"
+  ],
+  "note": "unique to Egypt, replaces Chariot Archer",
+  "done": false
+ },
+ {
+  "category": "Unit (civ unique)",
+  "name": "Horse Archer",
+  "method": "sprite",
+  "files": [
+   "Units/Horse Archer.png",
+   "Units/Horse Archer-1.png"
+  ],
+  "note": "unique to The Huns, replaces Chariot Archer",
+  "done": false
+ },
+ {
+  "category": "Unit (civ unique)",
+  "name": "War Elephant",
+  "method": "sprite",
+  "files": [
+   "Units/War Elephant.png",
+   "Units/War Elephant-1.png"
+  ],
+  "note": "unique to India, replaces Chariot Archer",
+  "done": false
+ },
+ {
+  "category": "Unit",
+  "name": "Spearman",
+  "method": "sprite",
+  "files": [
+   "Units/Spearman.png",
+   "Units/Spearman-1.png"
+  ],
+  "note": "Sword",
+  "done": false
+ },
+ {
+  "category": "Unit (civ unique)",
+  "name": "Hoplite",
+  "method": "sprite",
+  "files": [
+   "Units/Hoplite.png",
+   "Units/Hoplite-1.png"
+  ],
+  "note": "unique to Greece, replaces Spearman",
+  "done": true
+ },
+ {
+  "category": "Unit (civ unique)",
+  "name": "Persian Immortal",
+  "method": "sprite",
+  "files": [
+   "Units/Persian Immortal.png",
+   "Units/Persian Immortal-1.png"
+  ],
+  "note": "unique to Persia, replaces Spearman",
+  "done": false
+ },
+ {
+  "category": "Unit (civ unique)",
+  "name": "Battering Ram",
+  "method": "sprite",
+  "files": [
+   "Units/Battering Ram.png",
+   "Units/Battering Ram-1.png"
+  ],
+  "note": "unique to The Huns, replaces Spearman",
+  "done": false
+ },
+ {
+  "category": "Unit (civ unique)",
+  "name": "Pictish Warrior",
+  "method": "sprite",
+  "files": [
+   "Units/Pictish Warrior.png",
+   "Units/Pictish Warrior-1.png"
+  ],
+  "note": "unique to Celts, replaces Spearman",
+  "done": false
+ },
+ {
+  "category": "Unit (civ unique)",
+  "name": "Marauder",
+  "method": "sprite",
+  "files": [
+   "Units/Marauder.png",
+   "Units/Marauder-1.png"
+  ],
+  "note": "unique to Barbarians, replaces Spearman",
+  "done": false
+ },
+ {
+  "category": "Unit",
+  "name": "Horseman",
+  "method": "sprite",
+  "files": [
+   "Units/Horseman.png",
+   "Units/Horseman-1.png"
+  ],
+  "note": "Mounted",
+  "done": true
+ },
+ {
+  "category": "Unit (civ unique)",
+  "name": "Companion Cavalry",
+  "method": "sprite",
+  "files": [
+   "Units/Companion Cavalry.png",
+   "Units/Companion Cavalry-1.png"
+  ],
+  "note": "unique to Greece, replaces Horseman",
+  "done": false
+ },
+ {
+  "category": "Unit (civ unique)",
+  "name": "African Forest Elephant",
+  "method": "sprite",
+  "files": [
+   "Units/African Forest Elephant.png",
+   "Units/African Forest Elephant-1.png"
+  ],
+  "note": "unique to Carthage, replaces Horseman",
+  "done": false
+ },
+ {
+  "category": "Unit (civ unique)",
+  "name": "Cataphract",
+  "method": "sprite",
+  "files": [
+   "Units/Cataphract.png",
+   "Units/Cataphract-1.png"
+  ],
+  "note": "unique to Byzantium, replaces Horseman",
+  "done": false
+ },
+ {
+  "category": "Unit",
+  "name": "Catapult",
+  "method": "sprite",
+  "files": [
+   "Units/Catapult.png",
+   "Units/Catapult-1.png"
+  ],
+  "note": "Siege",
+  "done": false
+ },
+ {
+  "category": "Unit (civ unique)",
+  "name": "Ballista",
+  "method": "sprite",
+  "files": [
+   "Units/Ballista.png",
+   "Units/Ballista-1.png"
+  ],
+  "note": "unique to Rome, replaces Catapult",
+  "done": false
+ },
+ {
+  "category": "Unit",
+  "name": "Composite Bowman",
+  "method": "sprite",
+  "files": [
+   "Units/Composite Bowman.png",
+   "Units/Composite Bowman-1.png"
+  ],
+  "note": "Archery",
+  "done": false
+ },
+ {
+  "category": "Unit",
+  "name": "Swordsman",
+  "method": "sprite",
+  "files": [
+   "Units/Swordsman.png",
+   "Units/Swordsman-1.png"
+  ],
+  "note": "Sword",
+  "done": true
+ },
+ {
+  "category": "Unit (civ unique)",
+  "name": "Legion",
+  "method": "sprite",
+  "files": [
+   "Units/Legion.png",
+   "Units/Legion-1.png"
+  ],
+  "note": "unique to Rome, replaces Swordsman",
+  "done": false
+ },
+ {
+  "category": "Unit (civ unique)",
+  "name": "Mohawk Warrior",
+  "method": "sprite",
+  "files": [
+   "Units/Mohawk Warrior.png",
+   "Units/Mohawk Warrior-1.png"
+  ],
+  "note": "unique to Iroquois, replaces Swordsman",
+  "done": false
+ },
+ {
+  "category": "Unit",
+  "name": "Pikeman",
+  "method": "sprite",
+  "files": [
+   "Units/Pikeman.png",
+   "Units/Pikeman-1.png"
+  ],
+  "note": "Sword",
+  "done": false
+ },
+ {
+  "category": "Unit (civ unique)",
+  "name": "Landsknecht",
+  "method": "sprite",
+  "files": [
+   "Units/Landsknecht.png",
+   "Units/Landsknecht-1.png"
+  ],
+  "note": "unique to Germany, replaces Pikeman",
+  "done": false
+ },
+ {
+  "category": "Unit",
+  "name": "Galleass",
+  "method": "sprite",
+  "files": [
+   "Units/Galleass.png",
+   "Units/Galleass-1.png"
+  ],
+  "note": "Ranged Water",
+  "done": false
+ },
+ {
+  "category": "Unit",
+  "name": "Knight",
+  "method": "sprite",
+  "files": [
+   "Units/Knight.png",
+   "Units/Knight-1.png"
+  ],
+  "note": "Mounted",
+  "done": false
+ },
+ {
+  "category": "Unit (civ unique)",
+  "name": "Camel Archer",
+  "method": "sprite",
+  "files": [
+   "Units/Camel Archer.png",
+   "Units/Camel Archer-1.png"
+  ],
+  "note": "unique to Arabia, replaces Knight",
+  "done": false
+ },
+ {
+  "category": "Unit (civ unique)",
+  "name": "Conquistador",
+  "method": "sprite",
+  "files": [
+   "Units/Conquistador.png",
+   "Units/Conquistador-1.png"
+  ],
+  "note": "unique to Spain, replaces Knight",
+  "done": false
+ },
+ {
+  "category": "Unit (civ unique)",
+  "name": "Naresuan's Elephant",
+  "method": "sprite",
+  "files": [
+   "Units/Naresuan's Elephant.png",
+   "Units/Naresuan's Elephant-1.png"
+  ],
+  "note": "unique to Siam, replaces Knight",
+  "done": false
+ },
+ {
+  "category": "Unit (civ unique)",
+  "name": "Mandekalu Cavalry",
+  "method": "sprite",
+  "files": [
+   "Units/Mandekalu Cavalry.png",
+   "Units/Mandekalu Cavalry-1.png"
+  ],
+  "note": "unique to Songhai, replaces Knight",
+  "done": false
+ },
+ {
+  "category": "Unit (civ unique)",
+  "name": "Keshik",
+  "method": "sprite",
+  "files": [
+   "Units/Keshik.png",
+   "Units/Keshik-1.png"
+  ],
+  "note": "unique to Mongolia, replaces Knight",
+  "done": false
+ },
+ {
+  "category": "Unit",
+  "name": "Crossbowman",
+  "method": "sprite",
+  "files": [
+   "Units/Crossbowman.png",
+   "Units/Crossbowman-1.png"
+  ],
+  "note": "Archery",
+  "done": false
+ },
+ {
+  "category": "Unit (civ unique)",
+  "name": "Chu-Ko-Nu",
+  "method": "sprite",
+  "files": [
+   "Units/Chu-Ko-Nu.png",
+   "Units/Chu-Ko-Nu-1.png"
+  ],
+  "note": "unique to China, replaces Crossbowman",
+  "done": false
+ },
+ {
+  "category": "Unit (civ unique)",
+  "name": "Longbowman",
+  "method": "sprite",
+  "files": [
+   "Units/Longbowman.png",
+   "Units/Longbowman-1.png"
+  ],
+  "note": "unique to England, replaces Crossbowman",
+  "done": false
+ },
+ {
+  "category": "Unit",
+  "name": "Trebuchet",
+  "method": "sprite",
+  "files": [
+   "Units/Trebuchet.png",
+   "Units/Trebuchet-1.png"
+  ],
+  "note": "Siege",
+  "done": false
+ },
+ {
+  "category": "Unit (civ unique)",
+  "name": "Hwach'a",
+  "method": "sprite",
+  "files": [
+   "Units/Hwach'a.png",
+   "Units/Hwach'a-1.png"
+  ],
+  "note": "unique to Korea, replaces Trebuchet",
+  "done": false
+ },
+ {
+  "category": "Unit",
+  "name": "Longswordsman",
+  "method": "sprite",
+  "files": [
+   "Units/Longswordsman.png",
+   "Units/Longswordsman-1.png"
+  ],
+  "note": "Sword",
+  "done": false
+ },
+ {
+  "category": "Unit (civ unique)",
+  "name": "Samurai",
+  "method": "sprite",
+  "files": [
+   "Units/Samurai.png",
+   "Units/Samurai-1.png"
+  ],
+  "note": "unique to Japan, replaces Longswordsman",
+  "done": false
+ },
+ {
+  "category": "Unit (civ unique)",
+  "name": "Berserker",
+  "method": "sprite",
+  "files": [
+   "Units/Berserker.png",
+   "Units/Berserker-1.png"
+  ],
+  "note": "unique to Denmark, replaces Longswordsman",
+  "done": false
+ },
+ {
+  "category": "Unit",
+  "name": "Caravel",
+  "method": "sprite",
+  "files": [
+   "Units/Caravel.png",
+   "Units/Caravel-1.png"
+  ],
+  "note": "Melee Water",
+  "done": false
+ },
+ {
+  "category": "Unit (civ unique)",
+  "name": "Turtle Ship",
+  "method": "sprite",
+  "files": [
+   "Units/Turtle Ship.png",
+   "Units/Turtle Ship-1.png"
+  ],
+  "note": "unique to Korea, replaces Caravel",
+  "done": false
+ },
+ {
+  "category": "Unit",
+  "name": "Musketman",
+  "method": "sprite",
+  "files": [
+   "Units/Musketman.png",
+   "Units/Musketman-1.png"
+  ],
+  "note": "Gunpowder",
+  "done": false
+ },
+ {
+  "category": "Unit (civ unique)",
+  "name": "Musketeer",
+  "method": "sprite",
+  "files": [
+   "Units/Musketeer.png",
+   "Units/Musketeer-1.png"
+  ],
+  "note": "unique to France, replaces Musketman",
+  "done": false
+ },
+ {
+  "category": "Unit (civ unique)",
+  "name": "Janissary",
+  "method": "sprite",
+  "files": [
+   "Units/Janissary.png",
+   "Units/Janissary-1.png"
+  ],
+  "note": "unique to The Ottomans, replaces Musketman",
+  "done": false
+ },
+ {
+  "category": "Unit (civ unique)",
+  "name": "Minuteman",
+  "method": "sprite",
+  "files": [
+   "Units/Minuteman.png",
+   "Units/Minuteman-1.png"
+  ],
+  "note": "unique to America, replaces Musketman",
+  "done": false
+ },
+ {
+  "category": "Unit (civ unique)",
+  "name": "Tercio",
+  "method": "sprite",
+  "files": [
+   "Units/Tercio.png",
+   "Units/Tercio-1.png"
+  ],
+  "note": "unique to Spain, replaces Musketman",
+  "done": false
+ },
+ {
+  "category": "Unit",
+  "name": "Privateer",
+  "method": "sprite",
+  "files": [
+   "Units/Privateer.png",
+   "Units/Privateer-1.png"
+  ],
+  "note": "Melee Water",
+  "done": false
+ },
+ {
+  "category": "Unit (civ unique)",
+  "name": "Sea Beggar",
+  "method": "sprite",
+  "files": [
+   "Units/Sea Beggar.png",
+   "Units/Sea Beggar-1.png"
+  ],
+  "note": "unique to The Netherlands, replaces Privateer",
+  "done": false
+ },
+ {
+  "category": "Unit",
+  "name": "Frigate",
+  "method": "sprite",
+  "files": [
+   "Units/Frigate.png",
+   "Units/Frigate-1.png"
+  ],
+  "note": "Ranged Water",
+  "done": false
+ },
+ {
+  "category": "Unit (civ unique)",
+  "name": "Ship of the Line",
+  "method": "sprite",
+  "files": [
+   "Units/Ship of the Line.png",
+   "Units/Ship of the Line-1.png"
+  ],
+  "note": "unique to England, replaces Frigate",
+  "done": false
+ },
+ {
+  "category": "Unit",
+  "name": "Lancer",
+  "method": "sprite",
+  "files": [
+   "Units/Lancer.png",
+   "Units/Lancer-1.png"
+  ],
+  "note": "Mounted",
+  "done": false
+ },
+ {
+  "category": "Unit (civ unique)",
+  "name": "Sipahi",
+  "method": "sprite",
+  "files": [
+   "Units/Sipahi.png",
+   "Units/Sipahi-1.png"
+  ],
+  "note": "unique to The Ottomans, replaces Lancer",
+  "done": false
+ },
+ {
+  "category": "Unit (civ unique)",
+  "name": "Hakkapeliitta",
+  "method": "sprite",
+  "files": [
+   "Units/Hakkapeliitta.png",
+   "Units/Hakkapeliitta-1.png"
+  ],
+  "note": "unique to Sweden, replaces Lancer",
+  "done": false
+ },
+ {
+  "category": "Unit",
+  "name": "Cannon",
+  "method": "sprite",
+  "files": [
+   "Units/Cannon.png",
+   "Units/Cannon-1.png"
+  ],
+  "note": "Siege",
+  "done": false
+ },
+ {
+  "category": "Unit",
+  "name": "Gatling Gun",
+  "method": "sprite",
+  "files": [
+   "Units/Gatling Gun.png",
+   "Units/Gatling Gun-1.png"
+  ],
+  "note": "Ranged Gunpowder",
+  "done": false
+ },
+ {
+  "category": "Unit",
+  "name": "Rifleman",
+  "method": "sprite",
+  "files": [
+   "Units/Rifleman.png",
+   "Units/Rifleman-1.png"
+  ],
+  "note": "Gunpowder",
+  "done": false
+ },
+ {
+  "category": "Unit (civ unique)",
+  "name": "Norwegian Ski Infantry",
+  "method": "sprite",
+  "files": [
+   "Units/Norwegian Ski Infantry.png",
+   "Units/Norwegian Ski Infantry-1.png"
+  ],
+  "note": "unique to Denmark, replaces Rifleman",
+  "done": false
+ },
+ {
+  "category": "Unit (civ unique)",
+  "name": "Carolean",
+  "method": "sprite",
+  "files": [
+   "Units/Carolean.png",
+   "Units/Carolean-1.png"
+  ],
+  "note": "unique to Sweden, replaces Rifleman",
+  "done": false
+ },
+ {
+  "category": "Unit (civ unique)",
+  "name": "Mehal Sefari",
+  "method": "sprite",
+  "files": [
+   "Units/Mehal Sefari.png",
+   "Units/Mehal Sefari-1.png"
+  ],
+  "note": "unique to Ethiopia, replaces Rifleman",
+  "done": false
+ },
+ {
+  "category": "Unit",
+  "name": "Cavalry",
+  "method": "sprite",
+  "files": [
+   "Units/Cavalry.png",
+   "Units/Cavalry-1.png"
+  ],
+  "note": "Mounted",
+  "done": false
+ },
+ {
+  "category": "Unit (civ unique)",
+  "name": "Cossack",
+  "method": "sprite",
+  "files": [
+   "Units/Cossack.png",
+   "Units/Cossack-1.png"
+  ],
+  "note": "unique to Russia, replaces Cavalry",
+  "done": false
+ },
+ {
+  "category": "Unit (civ unique)",
+  "name": "Hussar",
+  "method": "sprite",
+  "files": [
+   "Units/Hussar.png",
+   "Units/Hussar-1.png"
+  ],
+  "note": "unique to Austria, replaces Cavalry",
+  "done": false
+ },
+ {
+  "category": "Unit",
+  "name": "Ironclad",
+  "method": "sprite",
+  "files": [
+   "Units/Ironclad.png",
+   "Units/Ironclad-1.png"
+  ],
+  "note": "Melee Water",
+  "done": false
+ },
+ {
+  "category": "Unit",
+  "name": "Artillery",
+  "method": "sprite",
+  "files": [
+   "Units/Artillery.png",
+   "Units/Artillery-1.png"
+  ],
+  "note": "Siege",
+  "done": false
+ },
+ {
+  "category": "Unit",
+  "name": "Submarine",
+  "method": "sprite",
+  "files": [
+   "Units/Submarine.png",
+   "Units/Submarine-1.png"
+  ],
+  "note": "Submarine",
+  "done": false
+ },
+ {
+  "category": "Unit",
+  "name": "Great War Infantry",
+  "method": "sprite",
+  "files": [
+   "Units/Great War Infantry.png",
+   "Units/Great War Infantry-1.png"
+  ],
+  "note": "Gunpowder",
+  "done": false
+ },
+ {
+  "category": "Unit (civ unique)",
+  "name": "Foreign Legion",
+  "method": "sprite",
+  "files": [
+   "Units/Foreign Legion.png",
+   "Units/Foreign Legion-1.png"
+  ],
+  "note": "unique to France, replaces Great War Infantry",
+  "done": false
+ },
+ {
+  "category": "Unit",
+  "name": "Triplane",
+  "method": "sprite",
+  "files": [
+   "Units/Triplane.png",
+   "Units/Triplane-1.png"
+  ],
+  "note": "Fighter",
+  "done": false
+ },
+ {
+  "category": "Unit",
+  "name": "Great War Bomber",
+  "method": "sprite",
+  "files": [
+   "Units/Great War Bomber.png",
+   "Units/Great War Bomber-1.png"
+  ],
+  "note": "Bomber",
+  "done": false
+ },
+ {
+  "category": "Unit",
+  "name": "Infantry",
+  "method": "sprite",
+  "files": [
+   "Units/Infantry.png",
+   "Units/Infantry-1.png"
+  ],
+  "note": "Gunpowder",
+  "done": false
+ },
+ {
+  "category": "Unit",
+  "name": "Carrier",
+  "method": "sprite",
+  "files": [
+   "Units/Carrier.png",
+   "Units/Carrier-1.png"
+  ],
+  "note": "Aircraft Carrier",
+  "done": false
+ },
+ {
+  "category": "Unit",
+  "name": "Battleship",
+  "method": "sprite",
+  "files": [
+   "Units/Battleship.png",
+   "Units/Battleship-1.png"
+  ],
+  "note": "Ranged Water",
+  "done": false
+ },
+ {
+  "category": "Unit",
+  "name": "Machine Gun",
+  "method": "sprite",
+  "files": [
+   "Units/Machine Gun.png",
+   "Units/Machine Gun-1.png"
+  ],
+  "note": "Ranged Gunpowder",
+  "done": false
+ },
+ {
+  "category": "Unit",
+  "name": "Anti-Aircraft Gun",
+  "method": "sprite",
+  "files": [
+   "Units/Anti-Aircraft Gun.png",
+   "Units/Anti-Aircraft Gun-1.png"
+  ],
+  "note": "Gunpowder",
+  "done": false
+ },
+ {
+  "category": "Unit",
+  "name": "Landship",
+  "method": "sprite",
+  "files": [
+   "Units/Landship.png",
+   "Units/Landship-1.png"
+  ],
+  "note": "Armored",
+  "done": false
+ },
+ {
+  "category": "Unit",
+  "name": "Destroyer",
+  "method": "sprite",
+  "files": [
+   "Units/Destroyer.png",
+   "Units/Destroyer-1.png"
+  ],
+  "note": "Melee Water",
+  "done": false
+ },
+ {
+  "category": "Unit",
+  "name": "Marine",
+  "method": "sprite",
+  "files": [
+   "Units/Marine.png",
+   "Units/Marine-1.png"
+  ],
+  "note": "Gunpowder",
+  "done": false
+ },
+ {
+  "category": "Unit",
+  "name": "Fighter",
+  "method": "sprite",
+  "files": [
+   "Units/Fighter.png",
+   "Units/Fighter-1.png"
+  ],
+  "note": "Fighter",
+  "done": false
+ },
+ {
+  "category": "Unit (civ unique)",
+  "name": "Zero",
+  "method": "sprite",
+  "files": [
+   "Units/Zero.png",
+   "Units/Zero-1.png"
+  ],
+  "note": "unique to Japan, replaces Fighter",
+  "done": false
+ },
+ {
+  "category": "Unit",
+  "name": "Bomber",
+  "method": "sprite",
+  "files": [
+   "Units/Bomber.png",
+   "Units/Bomber-1.png"
+  ],
+  "note": "Bomber",
+  "done": false
+ },
+ {
+  "category": "Unit (civ unique)",
+  "name": "B17",
+  "method": "sprite",
+  "files": [
+   "Units/B17.png",
+   "Units/B17-1.png"
+  ],
+  "note": "unique to America, replaces Bomber",
+  "done": false
+ },
+ {
+  "category": "Unit",
+  "name": "Paratrooper",
+  "method": "sprite",
+  "files": [
+   "Units/Paratrooper.png",
+   "Units/Paratrooper-1.png"
+  ],
+  "note": "Gunpowder",
+  "done": false
+ },
+ {
+  "category": "Unit",
+  "name": "Tank",
+  "method": "sprite",
+  "files": [
+   "Units/Tank.png",
+   "Units/Tank-1.png"
+  ],
+  "note": "Armored",
+  "done": false
+ },
+ {
+  "category": "Unit (civ unique)",
+  "name": "Panzer",
+  "method": "sprite",
+  "files": [
+   "Units/Panzer.png",
+   "Units/Panzer-1.png"
+  ],
+  "note": "unique to Germany, replaces Tank",
+  "done": false
+ },
+ {
+  "category": "Unit",
+  "name": "Anti-Tank Gun",
+  "method": "sprite",
+  "files": [
+   "Units/Anti-Tank Gun.png",
+   "Units/Anti-Tank Gun-1.png"
+  ],
+  "note": "Gunpowder",
+  "done": false
+ },
+ {
+  "category": "Unit",
+  "name": "Atomic Bomb",
+  "method": "sprite",
+  "files": [
+   "Units/Atomic Bomb.png",
+   "Units/Atomic Bomb-1.png"
+  ],
+  "note": "Atomic Bomber",
+  "done": false
+ },
+ {
+  "category": "Unit",
+  "name": "Rocket Artillery",
+  "method": "sprite",
+  "files": [
+   "Units/Rocket Artillery.png",
+   "Units/Rocket Artillery-1.png"
+  ],
+  "note": "Siege",
+  "done": false
+ },
+ {
+  "category": "Unit",
+  "name": "Mobile SAM",
+  "method": "sprite",
+  "files": [
+   "Units/Mobile SAM.png",
+   "Units/Mobile SAM-1.png"
+  ],
+  "note": "Gunpowder",
+  "done": false
+ },
+ {
+  "category": "Unit",
+  "name": "Guided Missile",
+  "method": "sprite",
+  "files": [
+   "Units/Guided Missile.png",
+   "Units/Guided Missile-1.png"
+  ],
+  "note": "Missile",
+  "done": false
+ },
+ {
+  "category": "Unit",
+  "name": "Nuclear Missile",
+  "method": "sprite",
+  "files": [
+   "Units/Nuclear Missile.png",
+   "Units/Nuclear Missile-1.png"
+  ],
+  "note": "Missile",
+  "done": false
+ },
+ {
+  "category": "Unit",
+  "name": "Helicopter Gunship",
+  "method": "sprite",
+  "files": [
+   "Units/Helicopter Gunship.png",
+   "Units/Helicopter Gunship-1.png"
+  ],
+  "note": "Helicopter",
+  "done": false
+ },
+ {
+  "category": "Unit",
+  "name": "Nuclear Submarine",
+  "method": "sprite",
+  "files": [
+   "Units/Nuclear Submarine.png",
+   "Units/Nuclear Submarine-1.png"
+  ],
+  "note": "Submarine",
+  "done": false
+ },
+ {
+  "category": "Unit",
+  "name": "Mechanized Infantry",
+  "method": "sprite",
+  "files": [
+   "Units/Mechanized Infantry.png",
+   "Units/Mechanized Infantry-1.png"
+  ],
+  "note": "Gunpowder",
+  "done": false
+ },
+ {
+  "category": "Unit",
+  "name": "Missile Cruiser",
+  "method": "sprite",
+  "files": [
+   "Units/Missile Cruiser.png",
+   "Units/Missile Cruiser-1.png"
+  ],
+  "note": "Ranged Water",
+  "done": false
+ },
+ {
+  "category": "Unit",
+  "name": "Modern Armor",
+  "method": "sprite",
+  "files": [
+   "Units/Modern Armor.png",
+   "Units/Modern Armor-1.png"
+  ],
+  "note": "Armored",
+  "done": false
+ },
+ {
+  "category": "Unit",
+  "name": "Jet Fighter",
+  "method": "sprite",
+  "files": [
+   "Units/Jet Fighter.png",
+   "Units/Jet Fighter-1.png"
+  ],
+  "note": "Fighter",
+  "done": false
+ },
+ {
+  "category": "Unit",
+  "name": "Giant Death Robot",
+  "method": "sprite",
+  "files": [
+   "Units/Giant Death Robot.png",
+   "Units/Giant Death Robot-1.png"
+  ],
+  "note": "Armored",
+  "done": false
+ },
+ {
+  "category": "Unit",
+  "name": "Stealth Bomber",
+  "method": "sprite",
+  "files": [
+   "Units/Stealth Bomber.png",
+   "Units/Stealth Bomber-1.png"
+  ],
+  "note": "Bomber",
+  "done": false
+ },
+ {
+  "category": "Unit",
+  "name": "Great Artist",
+  "method": "sprite",
+  "files": [
+   "Units/Great Artist.png",
+   "Units/Great Artist-1.png"
+  ],
+  "note": "Civilian",
+  "done": false
+ },
+ {
+  "category": "Unit",
+  "name": "Great Scientist",
+  "method": "sprite",
+  "files": [
+   "Units/Great Scientist.png",
+   "Units/Great Scientist-1.png"
+  ],
+  "note": "Civilian",
+  "done": false
+ },
+ {
+  "category": "Unit",
+  "name": "Great Merchant",
+  "method": "sprite",
+  "files": [
+   "Units/Great Merchant.png",
+   "Units/Great Merchant-1.png"
+  ],
+  "note": "Civilian",
+  "done": false
+ },
+ {
+  "category": "Unit",
+  "name": "Great Engineer",
+  "method": "sprite",
+  "files": [
+   "Units/Great Engineer.png",
+   "Units/Great Engineer-1.png"
+  ],
+  "note": "Civilian",
+  "done": false
+ },
+ {
+  "category": "Unit",
+  "name": "Great Prophet",
+  "method": "sprite",
+  "files": [
+   "Units/Great Prophet.png",
+   "Units/Great Prophet-1.png"
+  ],
+  "note": "Civilian",
+  "done": false
+ },
+ {
+  "category": "Unit",
+  "name": "Great General",
+  "method": "sprite",
+  "files": [
+   "Units/Great General.png",
+   "Units/Great General-1.png"
+  ],
+  "note": "Civilian",
+  "done": false
+ },
+ {
+  "category": "Unit (civ unique)",
+  "name": "Khan",
+  "method": "sprite",
+  "files": [
+   "Units/Khan.png",
+   "Units/Khan-1.png"
+  ],
+  "note": "unique to Mongolia, replaces Great General",
+  "done": false
+ },
+ {
+  "category": "Unit",
+  "name": "Great Admiral",
+  "method": "sprite",
+  "files": [
+   "Units/Great Admiral.png",
+   "Units/Great Admiral-1.png"
+  ],
+  "note": "Civilian Water",
+  "done": false
+ },
+ {
+  "category": "Unit",
+  "name": "Missionary",
+  "method": "sprite",
+  "files": [
+   "Units/Missionary.png",
+   "Units/Missionary-1.png"
+  ],
+  "note": "Civilian",
+  "done": false
+ },
+ {
+  "category": "Unit",
+  "name": "Inquisitor",
+  "method": "sprite",
+  "files": [
+   "Units/Inquisitor.png",
+   "Units/Inquisitor-1.png"
+  ],
+  "note": "Civilian",
+  "done": false
+ },
+ {
+  "category": "Unit",
+  "name": "SS Booster",
+  "method": "sprite",
+  "files": [
+   "Units/SS Booster.png",
+   "Units/SS Booster-1.png"
+  ],
+  "note": "Civilian",
+  "done": false
+ },
+ {
+  "category": "Unit",
+  "name": "SS Cockpit",
+  "method": "sprite",
+  "files": [
+   "Units/SS Cockpit.png",
+   "Units/SS Cockpit-1.png"
+  ],
+  "note": "Civilian",
+  "done": false
+ },
+ {
+  "category": "Unit",
+  "name": "SS Engine",
+  "method": "sprite",
+  "files": [
+   "Units/SS Engine.png",
+   "Units/SS Engine-1.png"
+  ],
+  "note": "Civilian",
+  "done": false
+ },
+ {
+  "category": "Unit",
+  "name": "SS Stasis Chamber",
+  "method": "sprite",
+  "files": [
+   "Units/SS Stasis Chamber.png",
+   "Units/SS Stasis Chamber-1.png"
+  ],
+  "note": "Civilian",
+  "done": false
+ },
+ {
+  "category": "Unit (embarked)",
+  "name": "EmbarkedUnit-Military",
+  "method": "sprite",
+  "files": [
+   "Units/EmbarkedUnit-Military.png",
+   "Units/EmbarkedUnit-Military-Modern era.png"
+  ],
+  "note": "boat a land unit rides at sea",
+  "done": false
+ },
+ {
+  "category": "Unit (embarked)",
+  "name": "EmbarkedUnit-Civilian",
+  "method": "sprite",
+  "files": [
+   "Units/EmbarkedUnit-Civilian.png",
+   "Units/EmbarkedUnit-Civilian-Modern era.png"
+  ],
+  "note": "boat a land unit rides at sea",
+  "done": false
+ },
+ {
+  "category": "Unit (embarked)",
+  "name": "EmbarkedUnit-Settler",
+  "method": "sprite",
+  "files": [
+   "Units/EmbarkedUnit-Settler.png",
+   "Units/EmbarkedUnit-Settler-Modern era.png"
+  ],
+  "note": "boat a land unit rides at sea",
+  "done": false
+ },
+ {
+  "category": "World wonder landmark",
+  "name": "Temple of Artemis",
+  "method": "sprite",
+  "files": [],
+  "note": "stands on its city tile",
+  "done": true
+ },
+ {
+  "category": "World wonder scene",
+  "name": "Temple of Artemis",
+  "method": "scene",
+  "files": [],
+  "note": "completion celebration",
+  "done": false
+ },
+ {
+  "category": "World wonder landmark",
+  "name": "Stonehenge",
+  "method": "sprite",
+  "files": [],
+  "note": "stands on its city tile",
+  "done": true
+ },
+ {
+  "category": "World wonder scene",
+  "name": "Stonehenge",
+  "method": "scene",
+  "files": [],
+  "note": "completion celebration",
+  "done": true
+ },
+ {
+  "category": "World wonder landmark",
+  "name": "The Great Library",
+  "method": "sprite",
+  "files": [],
+  "note": "stands on its city tile",
+  "done": false
+ },
+ {
+  "category": "World wonder scene",
+  "name": "The Great Library",
+  "method": "scene",
+  "files": [],
+  "note": "completion celebration",
+  "done": false
+ },
+ {
+  "category": "World wonder landmark",
+  "name": "The Pyramids",
+  "method": "sprite",
+  "files": [],
+  "note": "stands on its city tile",
+  "done": false
+ },
+ {
+  "category": "World wonder scene",
+  "name": "The Pyramids",
+  "method": "scene",
+  "files": [],
+  "note": "completion celebration",
+  "done": false
+ },
+ {
+  "category": "World wonder landmark",
+  "name": "Mausoleum of Halicarnassus",
+  "method": "sprite",
+  "files": [],
+  "note": "stands on its city tile",
+  "done": false
+ },
+ {
+  "category": "World wonder scene",
+  "name": "Mausoleum of Halicarnassus",
+  "method": "scene",
+  "files": [],
+  "note": "completion celebration",
+  "done": false
+ },
+ {
+  "category": "World wonder landmark",
+  "name": "Statue of Zeus",
+  "method": "sprite",
+  "files": [],
+  "note": "stands on its city tile",
+  "done": false
+ },
+ {
+  "category": "World wonder scene",
+  "name": "Statue of Zeus",
+  "method": "scene",
+  "files": [],
+  "note": "completion celebration",
+  "done": false
+ },
+ {
+  "category": "World wonder landmark",
+  "name": "The Great Lighthouse",
+  "method": "sprite",
+  "files": [],
+  "note": "stands on its city tile",
+  "done": false
+ },
+ {
+  "category": "World wonder scene",
+  "name": "The Great Lighthouse",
+  "method": "scene",
+  "files": [],
+  "note": "completion celebration",
+  "done": false
+ },
+ {
+  "category": "World wonder landmark",
+  "name": "Hanging Gardens",
+  "method": "sprite",
+  "files": [],
+  "note": "stands on its city tile",
+  "done": false
+ },
+ {
+  "category": "World wonder scene",
+  "name": "Hanging Gardens",
+  "method": "scene",
+  "files": [],
+  "note": "completion celebration",
+  "done": false
+ },
+ {
+  "category": "World wonder landmark",
+  "name": "Terracotta Army",
+  "method": "sprite",
+  "files": [],
+  "note": "stands on its city tile",
+  "done": false
+ },
+ {
+  "category": "World wonder scene",
+  "name": "Terracotta Army",
+  "method": "scene",
+  "files": [],
+  "note": "completion celebration",
+  "done": false
+ },
+ {
+  "category": "World wonder landmark",
+  "name": "The Oracle",
+  "method": "sprite",
+  "files": [],
+  "note": "stands on its city tile",
+  "done": false
+ },
+ {
+  "category": "World wonder scene",
+  "name": "The Oracle",
+  "method": "scene",
+  "files": [],
+  "note": "completion celebration",
+  "done": false
+ },
+ {
+  "category": "World wonder landmark",
+  "name": "Petra",
+  "method": "sprite",
+  "files": [],
+  "note": "stands on its city tile",
+  "done": false
+ },
+ {
+  "category": "World wonder scene",
+  "name": "Petra",
+  "method": "scene",
+  "files": [],
+  "note": "completion celebration",
+  "done": false
+ },
+ {
+  "category": "World wonder landmark",
+  "name": "Great Wall",
+  "method": "sprite",
+  "files": [],
+  "note": "stands on its city tile",
+  "done": false
+ },
+ {
+  "category": "World wonder scene",
+  "name": "Great Wall",
+  "method": "scene",
+  "files": [],
+  "note": "completion celebration",
+  "done": false
+ },
+ {
+  "category": "World wonder landmark",
+  "name": "Colossus",
+  "method": "sprite",
+  "files": [],
+  "note": "stands on its city tile",
+  "done": false
+ },
+ {
+  "category": "World wonder scene",
+  "name": "Colossus",
+  "method": "scene",
+  "files": [],
+  "note": "completion celebration",
+  "done": false
+ },
+ {
+  "category": "World wonder landmark",
+  "name": "Hagia Sophia",
+  "method": "sprite",
+  "files": [],
+  "note": "stands on its city tile",
+  "done": false
+ },
+ {
+  "category": "World wonder scene",
+  "name": "Hagia Sophia",
+  "method": "scene",
+  "files": [],
+  "note": "completion celebration",
+  "done": false
+ },
+ {
+  "category": "World wonder landmark",
+  "name": "Great Mosque of Djenne",
+  "method": "sprite",
+  "files": [],
+  "note": "stands on its city tile",
+  "done": false
+ },
+ {
+  "category": "World wonder scene",
+  "name": "Great Mosque of Djenne",
+  "method": "scene",
+  "files": [],
+  "note": "completion celebration",
+  "done": false
+ },
+ {
+  "category": "World wonder landmark",
+  "name": "Chichen Itza",
+  "method": "sprite",
+  "files": [],
+  "note": "stands on its city tile",
+  "done": false
+ },
+ {
+  "category": "World wonder scene",
+  "name": "Chichen Itza",
+  "method": "scene",
+  "files": [],
+  "note": "completion celebration",
+  "done": false
+ },
+ {
+  "category": "World wonder landmark",
+  "name": "Machu Picchu",
+  "method": "sprite",
+  "files": [],
+  "note": "stands on its city tile",
+  "done": false
+ },
+ {
+  "category": "World wonder scene",
+  "name": "Machu Picchu",
+  "method": "scene",
+  "files": [],
+  "note": "completion celebration",
+  "done": false
+ },
+ {
+  "category": "World wonder landmark",
+  "name": "Angkor Wat",
+  "method": "sprite",
+  "files": [],
+  "note": "stands on its city tile",
+  "done": false
+ },
+ {
+  "category": "World wonder scene",
+  "name": "Angkor Wat",
+  "method": "scene",
+  "files": [],
+  "note": "completion celebration",
+  "done": false
+ },
+ {
+  "category": "World wonder landmark",
+  "name": "Alhambra",
+  "method": "sprite",
+  "files": [],
+  "note": "stands on its city tile",
+  "done": false
+ },
+ {
+  "category": "World wonder scene",
+  "name": "Alhambra",
+  "method": "scene",
+  "files": [],
+  "note": "completion celebration",
+  "done": false
+ },
+ {
+  "category": "World wonder landmark",
+  "name": "Notre Dame",
+  "method": "sprite",
+  "files": [],
+  "note": "stands on its city tile",
+  "done": false
+ },
+ {
+  "category": "World wonder scene",
+  "name": "Notre Dame",
+  "method": "scene",
+  "files": [],
+  "note": "completion celebration",
+  "done": false
+ },
+ {
+  "category": "World wonder landmark",
+  "name": "Sistine Chapel",
+  "method": "sprite",
+  "files": [],
+  "note": "stands on its city tile",
+  "done": false
+ },
+ {
+  "category": "World wonder scene",
+  "name": "Sistine Chapel",
+  "method": "scene",
+  "files": [],
+  "note": "completion celebration",
+  "done": false
+ },
+ {
+  "category": "World wonder landmark",
+  "name": "Forbidden Palace",
+  "method": "sprite",
+  "files": [],
+  "note": "stands on its city tile",
+  "done": false
+ },
+ {
+  "category": "World wonder scene",
+  "name": "Forbidden Palace",
+  "method": "scene",
+  "files": [],
+  "note": "completion celebration",
+  "done": false
+ },
+ {
+  "category": "World wonder landmark",
+  "name": "Leaning Tower of Pisa",
+  "method": "sprite",
+  "files": [],
+  "note": "stands on its city tile",
+  "done": false
+ },
+ {
+  "category": "World wonder scene",
+  "name": "Leaning Tower of Pisa",
+  "method": "scene",
+  "files": [],
+  "note": "completion celebration",
+  "done": false
+ },
+ {
+  "category": "World wonder landmark",
+  "name": "Himeji Castle",
+  "method": "sprite",
+  "files": [],
+  "note": "stands on its city tile",
+  "done": false
+ },
+ {
+  "category": "World wonder scene",
+  "name": "Himeji Castle",
+  "method": "scene",
+  "files": [],
+  "note": "completion celebration",
+  "done": false
+ },
+ {
+  "category": "World wonder landmark",
+  "name": "Taj Mahal",
+  "method": "sprite",
+  "files": [],
+  "note": "stands on its city tile",
+  "done": false
+ },
+ {
+  "category": "World wonder scene",
+  "name": "Taj Mahal",
+  "method": "scene",
+  "files": [],
+  "note": "completion celebration",
+  "done": false
+ },
+ {
+  "category": "World wonder landmark",
+  "name": "Porcelain Tower",
+  "method": "sprite",
+  "files": [],
+  "note": "stands on its city tile",
+  "done": false
+ },
+ {
+  "category": "World wonder scene",
+  "name": "Porcelain Tower",
+  "method": "scene",
+  "files": [],
+  "note": "completion celebration",
+  "done": false
+ },
+ {
+  "category": "World wonder landmark",
+  "name": "Kremlin",
+  "method": "sprite",
+  "files": [],
+  "note": "stands on its city tile",
+  "done": false
+ },
+ {
+  "category": "World wonder scene",
+  "name": "Kremlin",
+  "method": "scene",
+  "files": [],
+  "note": "completion celebration",
+  "done": false
+ },
+ {
+  "category": "World wonder landmark",
+  "name": "The Louvre",
+  "method": "sprite",
+  "files": [],
+  "note": "stands on its city tile",
+  "done": false
+ },
+ {
+  "category": "World wonder scene",
+  "name": "The Louvre",
+  "method": "scene",
+  "files": [],
+  "note": "completion celebration",
+  "done": false
+ },
+ {
+  "category": "World wonder landmark",
+  "name": "Big Ben",
+  "method": "sprite",
+  "files": [],
+  "note": "stands on its city tile",
+  "done": false
+ },
+ {
+  "category": "World wonder scene",
+  "name": "Big Ben",
+  "method": "scene",
+  "files": [],
+  "note": "completion celebration",
+  "done": false
+ },
+ {
+  "category": "World wonder landmark",
+  "name": "Brandenburg Gate",
+  "method": "sprite",
+  "files": [],
+  "note": "stands on its city tile",
+  "done": false
+ },
+ {
+  "category": "World wonder scene",
+  "name": "Brandenburg Gate",
+  "method": "scene",
+  "files": [],
+  "note": "completion celebration",
+  "done": false
+ },
+ {
+  "category": "World wonder landmark",
+  "name": "Eiffel Tower",
+  "method": "sprite",
+  "files": [],
+  "note": "stands on its city tile",
+  "done": false
+ },
+ {
+  "category": "World wonder scene",
+  "name": "Eiffel Tower",
+  "method": "scene",
+  "files": [],
+  "note": "completion celebration",
+  "done": false
+ },
+ {
+  "category": "World wonder landmark",
+  "name": "Statue of Liberty",
+  "method": "sprite",
+  "files": [],
+  "note": "stands on its city tile",
+  "done": false
+ },
+ {
+  "category": "World wonder scene",
+  "name": "Statue of Liberty",
+  "method": "scene",
+  "files": [],
+  "note": "completion celebration",
+  "done": false
+ },
+ {
+  "category": "World wonder landmark",
+  "name": "Neuschwanstein",
+  "method": "sprite",
+  "files": [],
+  "note": "stands on its city tile",
+  "done": false
+ },
+ {
+  "category": "World wonder scene",
+  "name": "Neuschwanstein",
+  "method": "scene",
+  "files": [],
+  "note": "completion celebration",
+  "done": false
+ },
+ {
+  "category": "World wonder landmark",
+  "name": "Cristo Redentor",
+  "method": "sprite",
+  "files": [],
+  "note": "stands on its city tile",
+  "done": false
+ },
+ {
+  "category": "World wonder scene",
+  "name": "Cristo Redentor",
+  "method": "scene",
+  "files": [],
+  "note": "completion celebration",
+  "done": false
+ },
+ {
+  "category": "World wonder landmark",
+  "name": "Pentagon",
+  "method": "sprite",
+  "files": [],
+  "note": "stands on its city tile",
+  "done": false
+ },
+ {
+  "category": "World wonder scene",
+  "name": "Pentagon",
+  "method": "scene",
+  "files": [],
+  "note": "completion celebration",
+  "done": false
+ },
+ {
+  "category": "World wonder landmark",
+  "name": "Sydney Opera House",
+  "method": "sprite",
+  "files": [],
+  "note": "stands on its city tile",
+  "done": false
+ },
+ {
+  "category": "World wonder scene",
+  "name": "Sydney Opera House",
+  "method": "scene",
+  "files": [],
+  "note": "completion celebration",
+  "done": false
+ },
+ {
+  "category": "World wonder landmark",
+  "name": "Great Firewall",
+  "method": "sprite",
+  "files": [],
+  "note": "stands on its city tile",
+  "done": false
+ },
+ {
+  "category": "World wonder scene",
+  "name": "Great Firewall",
+  "method": "scene",
+  "files": [],
+  "note": "completion celebration",
+  "done": false
+ },
+ {
+  "category": "World wonder landmark",
+  "name": "CN Tower",
+  "method": "sprite",
+  "files": [],
+  "note": "stands on its city tile",
+  "done": false
+ },
+ {
+  "category": "World wonder scene",
+  "name": "CN Tower",
+  "method": "scene",
+  "files": [],
+  "note": "completion celebration",
+  "done": false
+ },
+ {
+  "category": "World wonder landmark",
+  "name": "Hubble Space Telescope",
+  "method": "sprite",
+  "files": [],
+  "note": "stands on its city tile",
+  "done": false
+ },
+ {
+  "category": "World wonder scene",
+  "name": "Hubble Space Telescope",
+  "method": "scene",
+  "files": [],
+  "note": "completion celebration",
+  "done": false
+ },
+ {
+  "category": "World wonder landmark",
+  "name": "United Nations",
+  "method": "sprite",
+  "files": [],
+  "note": "stands on its city tile",
+  "done": false
+ },
+ {
+  "category": "World wonder scene",
+  "name": "United Nations",
+  "method": "scene",
+  "files": [],
+  "note": "completion celebration",
+  "done": false
+ },
+ {
+  "category": "Leader portrait",
+  "name": "Nebuchadnezzar II (Babylon)",
+  "method": "scene",
+  "files": [],
+  "note": "diplomacy",
+  "done": true
+ },
+ {
+  "category": "Leader portrait",
+  "name": "Alexander (Greece)",
+  "method": "scene",
+  "files": [],
+  "note": "diplomacy",
+  "done": true
+ },
+ {
+  "category": "Leader portrait",
+  "name": "Wu Zetian (China)",
+  "method": "scene",
+  "files": [],
+  "note": "diplomacy",
+  "done": false
+ },
+ {
+  "category": "Leader portrait",
+  "name": "Ramesses II (Egypt)",
+  "method": "scene",
+  "files": [],
+  "note": "diplomacy",
+  "done": false
+ },
+ {
+  "category": "Leader portrait",
+  "name": "Elizabeth (England)",
+  "method": "scene",
+  "files": [],
+  "note": "diplomacy",
+  "done": false
+ },
+ {
+  "category": "Leader portrait",
+  "name": "Napoleon (France)",
+  "method": "scene",
+  "files": [],
+  "note": "diplomacy",
+  "done": false
+ },
+ {
+  "category": "Leader portrait",
+  "name": "Catherine (Russia)",
+  "method": "scene",
+  "files": [],
+  "note": "diplomacy",
+  "done": false
+ },
+ {
+  "category": "Leader portrait",
+  "name": "Augustus Caesar (Rome)",
+  "method": "scene",
+  "files": [],
+  "note": "diplomacy",
+  "done": false
+ },
+ {
+  "category": "Leader portrait",
+  "name": "Harun al-Rashid (Arabia)",
+  "method": "scene",
+  "files": [],
+  "note": "diplomacy",
+  "done": false
+ },
+ {
+  "category": "Leader portrait",
+  "name": "George Washington (America)",
+  "method": "scene",
+  "files": [],
+  "note": "diplomacy",
+  "done": false
+ },
+ {
+  "category": "Leader portrait",
+  "name": "Oda Nobunaga (Japan)",
+  "method": "scene",
+  "files": [],
+  "note": "diplomacy",
+  "done": false
+ },
+ {
+  "category": "Leader portrait",
+  "name": "Gandhi (India)",
+  "method": "scene",
+  "files": [],
+  "note": "diplomacy",
+  "done": false
+ },
+ {
+  "category": "Leader portrait",
+  "name": "Otto von Bismarck (Germany)",
+  "method": "scene",
+  "files": [],
+  "note": "diplomacy",
+  "done": false
+ },
+ {
+  "category": "Leader portrait",
+  "name": "Suleiman I (The Ottomans)",
+  "method": "scene",
+  "files": [],
+  "note": "diplomacy",
+  "done": false
+ },
+ {
+  "category": "Leader portrait",
+  "name": "Sejong (Korea)",
+  "method": "scene",
+  "files": [],
+  "note": "diplomacy",
+  "done": false
+ },
+ {
+  "category": "Leader portrait",
+  "name": "Hiawatha (Iroquois)",
+  "method": "scene",
+  "files": [],
+  "note": "diplomacy",
+  "done": false
+ },
+ {
+  "category": "Leader portrait",
+  "name": "Darius I (Persia)",
+  "method": "scene",
+  "files": [],
+  "note": "diplomacy",
+  "done": false
+ },
+ {
+  "category": "Leader portrait",
+  "name": "Kamehameha I (Polynesia)",
+  "method": "scene",
+  "files": [],
+  "note": "diplomacy",
+  "done": false
+ },
+ {
+  "category": "Leader portrait",
+  "name": "Ramkhamhaeng (Siam)",
+  "method": "scene",
+  "files": [],
+  "note": "diplomacy",
+  "done": false
+ },
+ {
+  "category": "Leader portrait",
+  "name": "Isabella (Spain)",
+  "method": "scene",
+  "files": [],
+  "note": "diplomacy",
+  "done": false
+ },
+ {
+  "category": "Leader portrait",
+  "name": "Askia (Songhai)",
+  "method": "scene",
+  "files": [],
+  "note": "diplomacy",
+  "done": false
+ },
+ {
+  "category": "Leader portrait",
+  "name": "Genghis Khan (Mongolia)",
+  "method": "scene",
+  "files": [],
+  "note": "diplomacy",
+  "done": false
+ },
+ {
+  "category": "Leader portrait",
+  "name": "Montezuma I (Aztecs)",
+  "method": "scene",
+  "files": [],
+  "note": "diplomacy",
+  "done": false
+ },
+ {
+  "category": "Leader portrait",
+  "name": "Pachacuti (Inca)",
+  "method": "scene",
+  "files": [],
+  "note": "diplomacy",
+  "done": false
+ },
+ {
+  "category": "Leader portrait",
+  "name": "Harald Bluetooth (Denmark)",
+  "method": "scene",
+  "files": [],
+  "note": "diplomacy",
+  "done": false
+ },
+ {
+  "category": "Leader portrait",
+  "name": "Attila the Hun (The Huns)",
+  "method": "scene",
+  "files": [],
+  "note": "diplomacy",
+  "done": false
+ },
+ {
+  "category": "Leader portrait",
+  "name": "William of Orange (The Netherlands)",
+  "method": "scene",
+  "files": [],
+  "note": "diplomacy",
+  "done": false
+ },
+ {
+  "category": "Leader portrait",
+  "name": "Gustavus Adolphus (Sweden)",
+  "method": "scene",
+  "files": [],
+  "note": "diplomacy",
+  "done": false
+ },
+ {
+  "category": "Leader portrait",
+  "name": "Maria Theresa (Austria)",
+  "method": "scene",
+  "files": [],
+  "note": "diplomacy",
+  "done": false
+ },
+ {
+  "category": "Leader portrait",
+  "name": "Dido (Carthage)",
+  "method": "scene",
+  "files": [],
+  "note": "diplomacy",
+  "done": false
+ },
+ {
+  "category": "Leader portrait",
+  "name": "Theodora (Byzantium)",
+  "method": "scene",
+  "files": [],
+  "note": "diplomacy",
+  "done": false
+ },
+ {
+  "category": "Leader portrait",
+  "name": "Boudicca (Celts)",
+  "method": "scene",
+  "files": [],
+  "note": "diplomacy",
+  "done": false
+ },
+ {
+  "category": "Leader portrait",
+  "name": "Haile Selassie (Ethiopia)",
+  "method": "scene",
+  "files": [],
+  "note": "diplomacy",
+  "done": false
+ },
+ {
+  "category": "Leader portrait",
+  "name": "Pacal (The Maya)",
+  "method": "scene",
+  "files": [],
+  "note": "diplomacy",
+  "done": false
+ },
+ {
+  "category": "Map overlay",
+  "name": "Borders",
+  "method": "code",
+  "files": [],
+  "note": "civ-colored edge line with a soft inner tint",
+  "done": true
+ },
+ {
+  "category": "Map overlay",
+  "name": "Unexplored fog",
+  "method": "code",
+  "files": [],
+  "note": "cloud cover",
+  "done": true
+ },
+ {
+  "category": "Map overlay",
+  "name": "Not-visible tiles",
+  "method": "code",
+  "files": [],
+  "note": "dimmed, no crosshatch",
+  "done": false
+ },
+ {
+  "category": "Map overlay",
+  "name": "Selection ring",
+  "method": "code",
+  "files": [],
+  "note": "pulsing ring under the unit",
+  "done": true
+ },
+ {
+  "category": "Map overlay",
+  "name": "Movement range",
+  "method": "code",
+  "files": [],
+  "note": "dashed white hexes",
+  "done": true
+ },
+ {
+  "category": "Map overlay",
+  "name": "Attack target",
+  "method": "code",
+  "files": [],
+  "note": "red ring with a cross",
+  "done": true
+ },
+ {
+  "category": "Map overlay",
+  "name": "Path preview",
+  "method": "code",
+  "files": [],
+  "note": "dotted route with turn numbers",
+  "done": false
+ },
+ {
+  "category": "Map overlay",
+  "name": "Unit arrows",
+  "method": "code",
+  "files": [],
+  "note": "moved, attacked, withdrew, teleported: 7 kinds",
+  "done": false
+ },
+ {
+  "category": "Map overlay",
+  "name": "City banner",
+  "method": "code",
+  "files": [],
+  "note": "population, name, capital star, wonder badge, build turns",
+  "done": true
+ },
+ {
+  "category": "Map overlay",
+  "name": "City health bar",
+  "method": "code",
+  "files": [],
+  "note": "shown when a city is damaged",
+  "done": false
+ },
+ {
+  "category": "Map overlay",
+  "name": "Unit health bar",
+  "method": "code",
+  "files": [],
+  "note": "shown when damaged",
+  "done": true
+ },
+ {
+  "category": "Map overlay",
+  "name": "Unit status icons",
+  "method": "code",
+  "files": [],
+  "note": "fortified, sleeping, automated, embarked",
+  "done": false
+ },
+ {
+  "category": "Map overlay",
+  "name": "Tile yields",
+  "method": "code",
+  "files": [],
+  "note": "food, production, gold pips when toggled",
+  "done": false
+ },
+ {
+  "category": "Map overlay",
+  "name": "Worked tiles",
+  "method": "code",
+  "files": [],
+  "note": "citizen markers in city view",
+  "done": false
+ },
+ {
+  "category": "Map overlay",
+  "name": "Resource amount",
+  "method": "code",
+  "files": [],
+  "note": "strategic resource count badge",
+  "done": false
+ },
+ {
+  "category": "Map overlay",
+  "name": "Improvement in progress",
+  "method": "code",
+  "files": [],
+  "note": "worker build with turns left",
+  "done": false
+ },
+ {
+  "category": "Map overlay",
+  "name": "Pillaged improvement",
+  "method": "code",
+  "files": [],
+  "note": "broken variant plus smoke",
+  "done": false
+ },
+ {
+  "category": "Map overlay",
+  "name": "Combat effects",
+  "method": "code",
+  "files": [],
+  "note": "hit flash, damage numbers, arrows, dust, burst",
+  "done": true
+ }
+]

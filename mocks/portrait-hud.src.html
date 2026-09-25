@@ -391,7 +391,9 @@ const UNITS=[
  {c:3,r:11,k:'hop',civ:'gre',hp:.7},
  {c:1,r:12,k:'tri',civ:'bab'},
 ];
-const RES={'5,16':'Wheat','6,14':'Horses','0,19':'Fish','7,12':'Iron','7,10':'Gems','2,8':'Fish','6,21':'Cattle'};
+const RES={'5,16':'Wheat','6,14':'Horses','0,19':'Fish','7,12':'Iron','7,10':'Gems','2,8':'Fish','6,21':'Cattle','6,9':'Wine','2,13':'Pearls','6,16':'Cotton','3,21':'Bananas','2,10':'Deer'};
+const AMOUNT={'6,14':2,'7,12':4};
+const IMPS={'3,16':'Farm','3,18':'Farm','5,18':'Farm','4,11':'Farm','7,18':'Mine','6,14':'Pasture','0,19':'Fishing Boats','7,12':'Mine','6,9':'Plantation','6,16':'Plantation','6,7':'Ancient ruins','7,20':'Barbarian encampment'};
 const FARMS=['3,16','3,18','5,18','4,11'], MINES=['7,18'];
 const CIVC={bab:['#2f7fe0','#1c56a6','#8fc3ff'],gre:['#e0524a','#a8322c','#ffb1aa'],kab:['#9a5bd6','#6c3aa3','#d8b8ff']};
 
@@ -416,6 +418,14 @@ function mountain(x,y){
 function hill(x,y){return `<polygon points="${x-18},${y+3} ${x-6},${y-10} ${x+6},${y-8} ${x+18},${y+3}" fill="#86c957"/><polygon points="${x+6},${y-8} ${x+18},${y+3} ${x+2},${y+3}" fill="#5f9d3c"/>`}
 function farm(x,y){const c=corners(x,y,.62);let s=`<polygon points="${pts(c)}" fill="#e9d56c"/>`;for(let i=-2;i<=2;i++)s+=`<line x1="${x-13+i*6}" y1="${y+6}" x2="${x-5+i*6}" y2="${y-7}" stroke="#c9ae3e" stroke-width="2"/>`;return s}
 function mine(x,y){return `<path d="M${x-7},${y+2} a7,6 0 0 1 14,0 z" fill="#4c4a47"/><rect x="${x-9}" y="${y+1}" width="18" height="2.5" fill="#8a6a44"/>`}
+function prop(x,y,key,size){ const a=ART[key]; return a?`<image href="${a}" x="${(x-size/2).toFixed(1)}" y="${(y-size*.78).toFixed(1)}" width="${size}" height="${size}"/>`:''; }
+function tileStuff(x,y,key,wat){
+  const imp=IMPS[key], r=RES[key]; let s='';
+  if(imp&&ART['i_'+imp]) s+=prop(x+(r?-6:0),y+(r?2:6),'i_'+imp,imp==='Farm'?38:34);
+  if(r&&ART['r_'+r]){ const rx=imp?x+10:x, ry=(imp?y+10:y+6)+(wat?T:0); s+=prop(rx,ry,'r_'+r,imp?22:28);
+    if(AMOUNT[key]) s+=`<circle cx="${rx+11}" cy="${ry-3}" r="7" fill="#132435" stroke="#fff" stroke-width="1.5"/><text x="${rx+11}" y="${ry+1}" text-anchor="middle" font-size="9.5" font-weight="900" fill="#fff">${AMOUNT[key]}</text>`; }
+  return s;
+}
 function res(x,y,n){return `<g><circle cx="${x+15}" cy="${y+5}" r="8.5" fill="#fff" stroke="rgba(0,0,0,.15)"/><image href="${ICON['r_'+n]||''}" x="${x+8.5}" y="${y-1.5}" width="13" height="13" style="filter:brightness(.25)"/></g>`}
 function house(x,y,col,dark,h=8){return `<polygon points="${x-5},${y} ${x+3},${y} ${x+3},${y-h} ${x-5},${y-h}" fill="#f4ecd9"/><polygon points="${x+3},${y} ${x+7},${y-3} ${x+7},${y-h-3} ${x+3},${y-h}" fill="#cfc2a4"/><polygon points="${x-6},${y-h} ${x-1},${y-h-6} ${x+4},${y-h}" fill="${col}"/><polygon points="${x-1},${y-h-6} ${x+8},${y-h-3.5} ${x+4},${y-h}" fill="${dark}"/>`}
 function city(k,x,y){
@@ -503,14 +513,14 @@ function renderMap(o={}){
       const cx=x+(rnd()-.5)*4, cy=yy-2+(rnd()-.5)*2;
       let poly='';
       for(let i=0;i<6;i++){const a=((60*i-60)+135)*Math.PI/180;const sh=Math.cos(a)*(wat?3:5)+(rnd()-.5)*2.4;const col=hsl(h,s0,l0+sh);poly+=`<polygon points="${pts([[cx,cy],cs[i],cs[(i+1)%6]])}" fill="${col}" stroke="${col}" stroke-width=".6"/>`}
-      if(wat){ water+=poly; if(t==='~'&&rnd()<.35) water+=`<path d="M${x-8} ${yy+2}q4 -3 8 0t8 0" stroke="rgba(255,255,255,.55)" stroke-width="1.6" fill="none" stroke-linecap="round"/>`; continue; }
+      if(wat){ water+=poly; if(t==='~'&&rnd()<.35) water+=`<path d="M${x-8} ${yy+2}q4 -3 8 0t8 0" stroke="rgba(255,255,255,.55)" stroke-width="1.6" fill="none" stroke-linecap="round"/>`; if(RES[c+','+r]||IMPS[c+','+r]) rowFeat+=tileStuff(x,y,c+','+r,true); continue; }
       rowTop+=`<polygon points="${pts([cs[2],cs[3],[cs[3][0],cs[3][1]+T],[cs[2][0],cs[2][1]+T]])}" fill="#7d5d3b"/><polygon points="${pts([cs[3],cs[4],[cs[4][0],cs[4][1]+T],[cs[3][0],cs[3][1]+T]])}" fill="#9a7550"/>`+poly;
       const own=owner(c,r);
       if(own){ const[cc]=CIVC[own]; rowTop+=`<polygon points="${pts(cs)}" fill="${cc}" opacity=".12"/>`;
         for(let i=0;i<6;i++){const[nc,nr]=nb(c,r,i); if(owner(nc,nr)!==own){const ci=corners(x,y,.93);rowTop+=`<line x1="${ci[i][0]}" y1="${ci[i][1]}" x2="${ci[(i+1)%6][0]}" y2="${ci[(i+1)%6][1]}" stroke="${cc}" stroke-width="3.2" stroke-linecap="round"/>`}}}
       const key=c+','+r;
       if(reach.has(key)) rowTop+=`<polygon points="${pts(corners(x,y,.9))}" fill="rgba(255,255,255,.32)" stroke="#fff" stroke-width="2" stroke-dasharray="4 3"/>`;
-      if(FARMS.includes(key)) rowFeat+=farm(x,y);
+      if(FARMS.includes(key)&&!ART['i_Farm']) rowFeat+=farm(x,y);
       if(t==='f') rowFeat+=tree(x-9,y+2,.9)+tree(x+8,y,.95)+tree(x,y+8,1);
       if(t==='h') rowFeat+=hill(x,y+2);
       if(t==='m') rowFeat+=mountain(x,y);
@@ -519,10 +529,10 @@ function renderMap(o={}){
       if(t==='t') rowFeat+=tundra(x,y);
       if(t==='s') rowFeat+=snow(x,y);
       if(t==='o') rowFeat+=oasis(x,y);
-      if(t==='n'){ rowFeat+=mesa(x,y); top+=wonderLabel(x,y,'Grand Mesa'); }
-      if(MINES.includes(key)) rowFeat+=mine(x+4,y+1);
+      if(t==='n'){ rowFeat+=ART['nw_Grand Mesa']?prop(x,y+10,'nw_Grand Mesa',56):mesa(x,y); top+=wonderLabel(x,y,'Grand Mesa'); }
+      if(MINES.includes(key)&&!ART['i_Mine']) rowFeat+=mine(x+4,y+1);
       const k=CITIES.find(k=>k.c==c&&k.r==r); if(k){ rowFeat+=city(k,x,y); top+=banner(k,x,y); }
-      if(RES[key]) rowFeat+=res(x,y,RES[key]);
+      if(RES[key]||IMPS[key]) rowFeat+=(ART['r_'+RES[key]]||ART['i_'+IMPS[key]])?tileStuff(x,y,key,wat):(RES[key]?res(x,y,RES[key]):'');
       if(attack.has(key)) top+=`<ellipse cx="${x}" cy="${y+3}" rx="20" ry="${20*SQ}" fill="none" stroke="#ff4d4d" stroke-width="3.5"/><path d="M${x+14} ${y-30}l6 6m0-6l-6 6" stroke="#ff4d4d" stroke-width="3" stroke-linecap="round"/>`;
     }
     rowTop+=riverRow(r);
