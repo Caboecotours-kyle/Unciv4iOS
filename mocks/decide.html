@@ -1,0 +1,102 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Unciv Portrait: open decisions</title>
+<style>
+:root{--navy:#132435;--panel:rgba(16,31,47,.9);--ink2:#b7cde0;--ink3:#7f9ab2;--yellow:#ffc93c;--yellow-ink:#3a2a00;--r:ui-rounded,"SF Pro Rounded","Nunito",system-ui,sans-serif}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#0b1622;color:#fff;font-family:var(--r);padding:18px 14px 80px;max-width:1100px;margin:0 auto}
+h1{font-size:28px;font-weight:900}
+.lead{color:var(--ink2);font-weight:700;margin:6px 0 8px;font-size:15px}
+.toc{display:flex;flex-wrap:wrap;gap:8px;margin:14px 0 6px}
+.toc a{background:#16283a;color:#fff;text-decoration:none;font-weight:800;font-size:14px;padding:10px 14px;border-radius:12px}
+h2{font-size:22px;font-weight:900;margin:34px 0 4px}
+.opts{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-top:12px}
+.opt{background:#122536;border-radius:20px;padding:14px}
+.opt h3{font-size:18px;font-weight:900}
+.opt p{color:var(--ink2);font-weight:700;font-size:14px;margin:4px 0 10px;line-height:1.3}
+.stage svg{width:100%;display:block}
+.lbls{display:flex;justify-content:space-around;font-size:12.5px;font-weight:800;color:var(--ink3);margin-top:4px;text-align:center}
+.icons{display:flex;gap:18px;align-items:flex-end;justify-content:center;padding:6px 0}
+.icons img{display:block;border-radius:22.5%;box-shadow:0 6px 16px rgba(0,0,0,.4)}
+.phone{width:100%;aspect-ratio:393/852;border-radius:34px;overflow:hidden;position:relative;background:#000;box-shadow:0 0 0 6px #05090e,0 14px 30px rgba(0,0,0,.4)}
+.phone .bg{position:absolute;inset:0;background-size:cover;background-position:center}
+.phone .word{position:absolute;top:13%;left:0;right:0;text-align:center;font-size:clamp(34px,9vw,54px);font-weight:900;letter-spacing:-.02em;color:#fff;text-shadow:0 3px 0 #1c3249,0 8px 20px rgba(0,0,0,.35)}
+.phone .menu{position:absolute;left:7%;right:7%;bottom:6%;display:flex;flex-direction:column;gap:9px}
+.phone .menu .cont{background:var(--yellow);color:var(--yellow-ink);border-radius:16px;padding:12px 14px;font-weight:900;font-size:clamp(15px,3.6vw,18px);box-shadow:0 4px 0 #c9951c;text-align:left}
+.phone .menu .cont small{display:block;font-size:.72em;font-weight:800;opacity:.75}
+.phone .menu .row{display:grid;grid-template-columns:1fr 1fr;gap:9px}
+.phone .menu .b{background:var(--panel);border-radius:14px;padding:12px 10px;font-weight:800;font-size:clamp(13px,3.2vw,15px);text-align:center}
+.links{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-top:12px}
+.links a{display:block;background:#122536;border-radius:18px;padding:16px;color:#fff;text-decoration:none}
+.links b{display:block;font-size:17px}
+.links span{display:block;color:var(--ink2);font-weight:700;font-size:13.5px;margin-top:4px}
+.pending{opacity:.55}
+@media (max-width:760px){.opts,.links{grid-template-columns:1fr}}
+</style></head><body>
+<h1>Open decisions</h1>
+<p class="lead">Pick one direction per section. Everything left after this gets generated in the chosen styles.</p>
+<div class="toc"><a href="#cities">1. Cities</a><a href="#icon">2. App icon</a><a href="#menu">3. Main menu</a><a href="#screens">4. Screens</a></div>
+
+<h2 id="cities">1. How cities change</h2>
+<p class="lead">Same sprites in all three; the question is what makes a city look different over a game. Roofs and flags take the owner's color.</p>
+<div class="opts">
+ <div class="opt"><h3>A. Grows with population</h3><p>Polytopia style: a village becomes a town, then a walled city. Style stays ancient all game.</p><div class="stage" data-row="Ancient_small,Ancient_medium,Ancient_large"></div><div class="lbls"><span>Pop 1-4</span><span>Pop 5-9</span><span>Pop 10+</span></div></div>
+ <div class="opt"><h3>B. Changes with era</h3><p>Every city looks like its era: mud brick, stone, brick and smokestacks, towers. Size stays fixed.</p><div class="stage" data-row="Ancient_medium,Medieval_medium,Industrial_medium,Modern_medium"></div><div class="lbls"><span>Ancient</span><span>Medieval</span><span>Industrial</span><span>Modern</span></div></div>
+ <div class="opt"><h3>C. Both</h3><p>Size shows population, style shows era. The most information on the map, and 3 sprites per era to make.</p><div class="stage" data-grid="1"></div><div class="lbls"><span>Small</span><span>Medium</span><span>Large</span></div></div>
+</div>
+
+<h2 id="icon">2. App icon</h2>
+<p class="lead">Shown at home screen size and large.</p>
+<div class="opts">
+ <div class="opt"><h3>A. The Bowman</h3><p>A hero unit, like Polytopia's warrior icon. Babylon blue.</p><div class="icons"><img src="art/ic_A.png" width="150" height="150" alt=""><img src="art/ic_A.png" width="60" height="60" alt=""></div></div>
+ <div class="opt"><h3>B. Floating island</h3><p>One hex of the world: city, mountain, forest. Says "map game" at a glance.</p><div class="icons"><img src="art/ic_B.png" width="150" height="150" alt=""><img src="art/ic_B.png" width="60" height="60" alt=""></div></div>
+ <div class="opt"><h3>C. Laurel emblem</h3><p>A gold laurel over a hex. Classic Civ prestige, quieter.</p><div class="icons"><img src="art/ic_C.png" width="150" height="150" alt=""><img src="art/ic_C.png" width="60" height="60" alt=""></div></div>
+</div>
+
+<h2 id="menu">3. Title and main menu</h2>
+<p class="lead">Continue is the big button in thumb reach; everything else is secondary.</p>
+<div class="opts">
+ <div class="opt"><h3>A. The army</h3><p>Units from every era lined up. Pairs with the Bowman icon.</p><div class="phone"><div class="bg" style="background-image:url(art/tt_A.png)"></div><div class="word">Unciv</div><div class="menu"><div class="cont">Continue<small>Babylon, turn 58</small></div><div class="row"><div class="b">New game</div><div class="b">Load</div><div class="b">Civilopedia</div><div class="b">Settings</div></div></div></div></div>
+ <div class="opt"><h3>B. The world</h3><p>A floating hex world in the clouds. Pairs with the island icon.</p><div class="phone"><div class="bg" style="background-image:url(art/tt_B.png)"></div><div class="word">Unciv</div><div class="menu"><div class="cont">Continue<small>Babylon, turn 58</small></div><div class="row"><div class="b">New game</div><div class="b">Load</div><div class="b">Civilopedia</div><div class="b">Settings</div></div></div></div></div>
+ <div class="opt"><h3>C. The wonders</h3><p>Pyramids, library and lighthouse at sunset. Pairs with the laurel icon.</p><div class="phone"><div class="bg" style="background-image:url(art/tt_C.png)"></div><div class="word">Unciv</div><div class="menu"><div class="cont">Continue<small>Babylon, turn 58</small></div><div class="row"><div class="b">New game</div><div class="b">Load</div><div class="b">Civilopedia</div><div class="b">Settings</div></div></div></div></div>
+</div>
+
+<h2 id="screens">4. Game screens</h2>
+<p class="lead">Each opens a phone mock with a direction switcher at the top.</p>
+<div class="links" id="screenlinks">
+ <a href="policies-religion.html" data-need="policies-religion.html"><b>Social policies and religion</b><span>3 directions each</span></a>
+ <a href="setup-cs-victory.html" data-need="setup-cs-victory.html"><b>New game, city-states, victory</b><span>2 to 3 directions each</span></a>
+ <a href="trade-notes-pedia.html" data-need="trade-notes-pedia.html"><b>Trade, notifications, Civilopedia</b><span>2 to 3 directions each</span></a>
+</div>
+
+<script>
+// Hex tiles in the chosen terrain style, with city sprites recolored to Babylon blue.
+const R=31,SQ=.6,W=Math.sqrt(3)*R;
+const corners=(x,y)=>[...Array(6)].map((_,i)=>{const a=(60*i-90)*Math.PI/180;return[x+R*Math.cos(a),y+R*Math.sin(a)*SQ]});
+const pts=a=>a.map(p=>p[0].toFixed(1)+','+p[1].toFixed(1)).join(' ');
+function hex(x,y){const cs=corners(x,y);let s=`<polygon points="${pts([cs[1],cs[2],[cs[2][0],cs[2][1]+4],[cs[1][0],cs[1][1]+4]])}" fill="#5f9a36"/><polygon points="${pts([cs[2],cs[3],[cs[3][0],cs[3][1]+4],[cs[2][0],cs[2][1]+4]])}" fill="#5f9a36"/><polygon points="${pts([cs[3],cs[4],[cs[4][0],cs[4][1]+4],[cs[3][0],cs[3][1]+4]])}" fill="#5f9a36"/>`;
+  for(let i=0;i<6;i++) s+=`<polygon points="${pts([[x,y],cs[i],cs[(i+1)%6]])}" fill="${i>=4||i===0?'#88cd50':'#7dc248'}" stroke="${i>=4||i===0?'#88cd50':'#7dc248'}" stroke-width=".7"/>`;
+  return s+`<polygon points="${pts(cs)}" fill="none" stroke="rgba(20,40,20,.1)"/>`;}
+const tint=[47,127,224];
+async function recolor(src){const img=await new Promise(r=>{const i=new Image();i.onload=()=>r(i);i.src=src});
+  const c=document.createElement('canvas');c.width=img.width;c.height=img.height;const x=c.getContext('2d');x.drawImage(img,0,0);
+  const d=x.getImageData(0,0,c.width,c.height),p=d.data;
+  for(let i=0;i<p.length;i+=4){const r=p[i],g=p[i+1],b=p[i+2];if(g>60&&g>r*1.45&&g>b*1.45){const f=Math.min(1.15,g/255*1.08);p[i]=tint[0]*f;p[i+1]=tint[1]*f;p[i+2]=tint[2]*f;}}
+  x.putImageData(d,0,0);return c.toDataURL();}
+async function build(){
+  const cache={};const get=async n=>cache[n]||(cache[n]=await recolor(`art/c_${n}.png`));
+  for(const el of document.querySelectorAll('[data-row]')){const names=el.dataset.row.split(','),n=names.length,w=n*W+10;
+    let s=`<svg viewBox="0 -34 ${w} 76">`;for(let i=0;i<n;i++)s+=hex(W/2+5+i*W,20);
+    for(let i=0;i<n;i++){const u=await get(names[i]);s+=`<image href="${u}" x="${W/2+5+i*W-30}" y="${20-42}" width="60" height="60"/>`;}
+    el.innerHTML=s+'</svg>';}
+  for(const el of document.querySelectorAll('[data-grid]')){const eras=['Ancient','Medieval','Industrial','Modern'],sz=['small','medium','large'];
+    let s=`<svg viewBox="0 -34 ${3*W+10} ${eras.length*46+40}">`;
+    eras.forEach((e,r)=>{for(let i=0;i<3;i++)s+=hex(W/2+5+i*W,20+r*46)});
+    for(let r=0;r<eras.length;r++)for(let i=0;i<3;i++){const u=await get(eras[r]+'_'+sz[i]);s+=`<image href="${u}" x="${W/2+5+i*W-30}" y="${20+r*46-42}" width="60" height="60"/>`;}
+    el.innerHTML=s+'</svg>';}
+}
+build();
+// screen mocks light up as the design agents deliver them
+document.querySelectorAll('[data-need]').forEach(a=>fetch(a.dataset.need,{method:'HEAD'}).then(r=>{if(!r.ok){a.classList.add('pending');a.querySelector('span').textContent='Still being built';}}).catch(()=>a.classList.add('pending')));
+</script>
+</body></html>
