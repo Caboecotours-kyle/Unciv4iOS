@@ -46,6 +46,7 @@ class CaptureGame(
         if (current is LanguagePickerScreen) {
             settings.isFreshlyCreated = false
             settings.showTutorials = false
+            settings.screenSize = GameSettings.ScreenSize.Small // what a fresh iPhone install uses
             settings.windowState = GameSettings.WindowState(PHONE_W, PHONE_H)
             Gdx.graphics.setWindowedMode(PHONE_W, PHONE_H)
             replaceCurrentScreen { MainMenuScreen() }
