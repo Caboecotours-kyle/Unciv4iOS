@@ -40,8 +40,15 @@ end
 lane :tester do |options|
   Spaceship::ConnectAPI.token = api_token
   app = Spaceship::ConnectAPI::App.find(BUNDLE_ID) || UI.user_error!("no App Store Connect app for #{BUNDLE_ID}")
-  group = app.get_beta_groups.find { |g| g.name == "Internal" } ||
-          app.create_beta_group(group_name: "Internal", is_internal_group: true, has_access_to_all_builds: true)
+  group = app.get_beta_groups.find { |g| g.name == "Internal" }
+  unless group
+    # fastlane's create_beta_group sends publicLinkLimitEnabled, which Apple rejects for internal groups
+    Spaceship::ConnectAPI.test_flight_request_client.post("betaGroups", {
+      data: { type: "betaGroups", attributes: { name: "Internal", isInternalGroup: true, hasAccessToAllBuilds: true },
+              relationships: { app: { data: { type: "apps", id: app.id } } } }
+    })
+    group = app.get_beta_groups.find { |g| g.name == "Internal" }
+  end
   email = options.fetch(:email)
   if group.fetch_beta_testers.any? { |t| t.email.casecmp?(email) }
     UI.message("#{email} is already in #{group.name}")
