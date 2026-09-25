@@ -150,16 +150,16 @@ svg.st{width:18px;height:18px;flex:none}
 .tt{position:relative;flex:1;min-height:0}
 .ttscroll{position:absolute;inset:0;overflow:auto;scrollbar-width:none;overscroll-behavior:contain}
 .ttscroll::-webkit-scrollbar{display:none}
-.canvas{position:relative}
+.canvas{position:relative;width:393px;margin:0 auto}
 .band{position:relative;border-top:1px solid rgba(255,255,255,.06)}
 .band.odd{background:rgba(255,255,255,.028)}
-.band h4{position:sticky;left:0;display:inline-flex;align-items:center;gap:8px;height:40px;padding:0 14px 0 76px;font-size:15px;font-weight:900;color:var(--ink2);white-space:nowrap}
+.band h4{position:sticky;left:0;display:inline-flex;align-items:center;gap:8px;height:40px;padding:0 14px;font-size:15px;font-weight:900;color:var(--ink2);white-space:nowrap}
 .band h4 small{font-size:12.5px;color:var(--ink3);font-weight:800}
 .links{position:absolute;left:0;top:0;pointer-events:none}
 .tn{position:absolute;width:92px;margin-left:-46px;display:flex;flex-direction:column;align-items:center;gap:7px;text-align:center}
 .tn .d{width:66px;height:66px;border-radius:50%;display:grid;place-items:center;position:relative;transition:box-shadow .15s}
 .tn .d .ic{width:38px;height:38px}
-.tn .nm{font-size:13px;font-weight:800;line-height:1.15;max-width:92px}
+.tn .nm{font-size:13px;font-weight:800;line-height:1.15;max-width:92px;text-shadow:0 0 3px #122536,0 0 3px #122536,0 0 6px #122536}
 .tn.done .d{background:var(--bab);color:#fff;box-shadow:inset 0 -5px 0 rgba(0,0,0,.2)}
 .tn.done .nm{color:var(--ink2)}
 .tn.now .d{background:#fff;color:var(--navy);box-shadow:0 0 0 5px var(--yellow)}
@@ -234,6 +234,32 @@ svg.st{width:18px;height:18px;flex:none}
 .odd{color:#9ff08a;font-weight:900}
 .qcard{position:absolute;left:10px;right:10px;bottom:176px;background:var(--panel);border-radius:28px;z-index:6;box-shadow:0 10px 30px rgba(0,0,0,.35);padding:14px;-webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px)}
 .qb small{font-size:12.5px;font-weight:700;color:var(--ink2)}
+.tmode{margin-top:4px}
+.erabar{flex:none;display:flex;align-items:flex-start;gap:6px;padding:8px 0 36px 10px;background:#0f2030;border-top:1px solid var(--line);position:relative;z-index:3}
+.erabar .eras{padding:0 10px 0 0;border:0;background:none;flex:1;min-width:0}
+.erabar .zoom{position:relative;left:auto;flex:none;width:50px;height:50px;border-radius:14px;box-shadow:none;background:rgba(255,255,255,.08)}
+.erabar .ztoggle{width:50px;height:50px}
+.erabar .zoom.open .ztoggle{display:flex;background:#fff;color:var(--navy);border-radius:14px}
+.erabar .zrail{position:absolute;left:0;bottom:62px;width:56px;background:var(--panel);border-radius:28px;padding:4px 0;box-shadow:0 6px 18px rgba(0,0,0,.35)}
+.tpick{padding-bottom:16px}
+.nowcard{display:flex;align-items:center;gap:14px;background:var(--navy2);border-radius:20px;padding:14px}
+.nowcard .bar{margin-top:9px}
+.tcard,.grow{width:100%;display:flex;align-items:center;gap:12px;min-height:76px;padding:10px 12px;margin-bottom:8px;border-radius:18px;background:rgba(255,255,255,.05);text-align:left;box-shadow:inset 0 0 0 2px transparent;transition:box-shadow .15s,background .15s}
+.tcard.on,.grow.on{background:rgba(255,201,60,.1);box-shadow:inset 0 0 0 2.5px var(--yellow)}
+.grow{min-height:68px}
+.tc-mid{flex:1;min-width:0}
+.tcard .unl{display:flex;gap:10px;margin-top:5px;overflow:hidden}
+.mini{display:flex;align-items:center;gap:4px;font-size:13px;font-weight:700;color:var(--ink2);white-space:nowrap}
+.mini .ic{width:17px;height:17px}
+.mini.w{color:var(--yellow)}
+.gtabs{display:flex;gap:6px;margin-bottom:10px}
+.gtabs button{flex:1;min-height:48px;border-radius:14px;font-size:15px;font-weight:800;color:var(--ink3);background:rgba(255,255,255,.05)}
+.gtabs button.on{background:#fff;color:var(--navy)}
+.tbar{flex:none;padding:12px 14px 36px;background:#0f2030;border-top:1px solid var(--line);display:flex;flex-direction:column;gap:10px}
+.tbarhead{display:flex;align-items:center;gap:8px;font-size:15px;font-weight:800;color:var(--ink2)}
+.tbarhead b{color:#fff;font-size:17px;font-weight:900}
+.tbarhead span{margin-left:auto}
+.tdetail{flex:none;background:var(--navy2);border-radius:22px 22px 0 0;padding:12px 16px 12px;display:flex;flex-direction:column;gap:10px;box-shadow:0 -8px 24px rgba(0,0,0,.3);position:relative;z-index:2}
 .fade-in{animation:rise .38s cubic-bezier(.16,1,.3,1) both}
 @keyframes rise{from{transform:translateY(24px);opacity:0}to{transform:none;opacity:1}}
 @keyframes pulse{0%{transform:scale(.8);opacity:.9}100%{transform:scale(1.5);opacity:0}}
@@ -415,7 +441,7 @@ function renderMap(o={}){
 }
 
 /* ---------- zoom rail ---------- */
-const ZOOM={map:{v:1,min:.65,max:1.6},tech:{v:.7,min:.4,max:1.1}};
+const ZOOM={map:{v:1,min:.65,max:1.6},tech:{v:1,min:.5,max:1.25}};
 // Collapsed to one button; opens into the rail on tap and folds away after a few idle seconds.
 const zoomRail=(key,style)=>`<div class="zoom" data-zoom="${key}" style="${style}"><button class="ztoggle" data-ztoggle>${ic('Search')}<span class="zpct"></span></button><div class="zrail"><button class="zb" data-zstep="1">+</button><div class="ztrack"><div class="zfill"></div><div class="zknob"></div></div><button class="zb" data-zstep="-1">&minus;</button><div class="zval"></div></div></div>`;
 let zoomTimer=null;
@@ -429,8 +455,8 @@ function applyZoom(key){
   });
   if(key==='map') document.querySelectorAll('.map').forEach(m=>m.style.transform=`scale(${z.v})`);
   if(key==='tech'){const sc=document.querySelector('.ttscroll'),cv=document.querySelector('.canvas');if(cv){
-    const old=parseFloat(cv.style.zoom||1), cx=(sc.scrollLeft+sc.clientWidth/2)/old, cy=(sc.scrollTop+sc.clientHeight/2)/old;
-    cv.style.zoom=z.v; sc.scrollLeft=cx*z.v-sc.clientWidth/2; sc.scrollTop=cy*z.v-sc.clientHeight/2;}}
+    const old=parseFloat(cv.style.zoom||1), cy=(sc.scrollTop+sc.clientHeight/2)/old;
+    cv.style.zoom=z.v; sc.scrollTop=cy*z.v-sc.clientHeight/2;}}
 }
 function setZoom(key,v){const z=ZOOM[key]; z.v=Math.max(z.min,Math.min(z.max,Math.round(v*100)/100)); applyZoom(key);}
 let drag=null;
@@ -472,12 +498,12 @@ function cityBuild(){
   <div class="h3">Can build</div>${CITY_ROWS.map(cityRow).join('')}`;
 }
 
-/* ---------- tech tree: Civ 5's real tree, eras top to bottom ---------- */
+/* ---------- tech: "Next up" decision view + portrait "Full tree" ---------- */
 const SCI=18;
 const DONE=new Set(['Agriculture','Pottery','Animal Husbandry','Archery','Mining','Sailing','Calendar','Bronze Working']);
-const NOW='Writing', NOW_LEFT=50;
-let SEL='Philosophy';
+const NOW='Writing', NOW_LEFT=40;
 const TBY=Object.fromEntries(TECHS.map(t=>[t[0],{name:t[0],col:t[1],row:t[2],era:t[3].replace(' era',''),cost:t[4],pre:t[5],unl:t[6]}]));
+const ERAS=[...new Set(TECHS.map(t=>t[3].replace(' era','')))];
 const state=n=>DONE.has(n)?'done':n===NOW?'now':TBY[n].pre.every(p=>DONE.has(p))?'av':'lock';
 const turnsFor=n=>Math.ceil((n===NOW?NOW_LEFT:TBY[n].cost)/SCI);
 function pathTo(n){ // unresearched prerequisites in research order, current research first
@@ -485,67 +511,111 @@ function pathTo(n){ // unresearched prerequisites in research order, current res
   (function walk(x){ if(seen.has(x)||DONE.has(x)) return; seen.add(x); TBY[x].pre.forEach(walk); out.push(x); })(n);
   return out.sort((a,b)=>(a===NOW?-1:b===NOW?1:TBY[a].col-TBY[b].col));
 }
-const LW=100, TH=124, PADX=70, BANDH=40;
+const pathTurns=n=>pathTo(n).reduce((a,x)=>a+turnsFor(x),0);
+const KIND={w:'Wonders',u:'Units',b:'Buildings'};
+let PICK=null, GOALTAB='w', TSEL=null;
+
+const tdisc=(n,size=56)=>`<div class="tn ${state(n)}" style="position:static;width:auto;margin:0"><div class="d" style="width:${size}px;height:${size}px">${ic('t_'+n,`width:${size*.58}px;height:${size*.58}px`)}</div></div>`;
+const chips=(t,max=4)=>t.unl.slice(0,max).map(u=>`<span class="chip ${u[1]==='w'?'w':''}">${ic('u_'+u[0])}${u[0]}</span>`).join('');
+const pathChips=path=>`<div class="pathline hscroll">${path.map((n,i)=>`${i?'<span class="arrow">&rarr;</span>':''}<span class="pi"><i class="n">${i+1}</i>${n}</span>`).join('')}</div>`;
+const techHead=mode=>`<div class="sh-head"><div><div class="sh-title">Technology</div><div class="sh-sub">+${SCI} science per turn</div></div><button class="x">${ic('Close')}</button></div>
+  <div class="tabs tmode"><button data-s="Tech" class="${mode==='Tech'?'on':''}">Next up</button><button data-s="Tree" class="${mode==='Tree'?'on':''}">Full tree</button></div>`;
+
+/* A: what can I do now, and where do I want to go */
+function goalsFor(kind){
+  const g=[];
+  for(const t of Object.values(TBY)){ if(DONE.has(t.name)) continue;
+    for(const u of t.unl){ if((u[1]==='n'?'b':u[1])!==kind) continue; g.push({u:u[0],k:u[1],tech:t.name,turns:pathTurns(t.name),steps:pathTo(t.name).length}); } }
+  return g.sort((a,b)=>a.turns-b.turns).slice(0,8);
+}
+function techPick(){
+  const now=TBY[NOW], avail=Object.values(TBY).filter(t=>state(t.name)==='av').sort((a,b)=>turnsFor(a.name)-turnsFor(b.name));
+  const pct=Math.round((1-NOW_LEFT/now.cost)*100);
+  let bar;
+  if(!PICK) bar=`<button class="ghost" data-s="Tree">${ic('t_Philosophy','width:20px;height:20px')}See the full tree</button>`;
+  else if(PICK.kind==='tech') bar=`<button class="big">Research ${PICK.tech} next, ${turnsFor(PICK.tech)} turns</button>`;
+  else { const p=pathTo(PICK.tech); bar=`<div class="tbarhead">${ic('u_'+PICK.u,'width:22px;height:22px;color:var(--yellow)')}<b>${PICK.u}</b><span>${p.length} ${p.length>1?'techs':'tech'}, ${pathTurns(PICK.tech)} turns</span></div>${pathChips(p)}<button class="big">Queue the path</button>`; }
+  return `<div class="scroll tpick">
+    <div class="nowcard">${tdisc(NOW,60)}<div style="flex:1;min-width:0"><div class="rsub" style="margin:0 0 2px">Researching</div><div class="cname">${NOW}</div><div class="bar"><i style="width:${pct}%;background:var(--sci)"></i></div></div><div class="turns">${turnsFor(NOW)}<small>turns</small></div></div>
+    <div class="hscroll" style="margin-top:10px">${chips(now)}</div>
+    <div class="h3">Pick next</div>
+    ${avail.map(t=>`<button class="tcard ${PICK&&PICK.kind==='tech'&&PICK.tech===t.name?'on':''}" data-pick="tech|${t.name}">${tdisc(t.name,50)}<div class="tc-mid"><div class="rname">${t.name}</div><div class="unl">${t.unl.slice(0,3).map(u=>`<span class="mini ${u[1]==='w'?'w':''}">${ic('u_'+u[0])}${u[0]}</span>`).join('')||'<span class="mini">Opens later techs</span>'}</div></div><div class="turns">${turnsFor(t.name)}<small>turns</small></div></button>`).join('')}
+    <div class="h3">Goals</div>
+    <div class="gtabs">${Object.entries(KIND).map(([k,l])=>`<button data-gtab="${k}" class="${GOALTAB===k?'on':''}">${l}</button>`).join('')}</div>
+    ${goalsFor(GOALTAB).map(g=>`<button class="grow ${PICK&&PICK.kind==='goal'&&PICK.u===g.u?'on':''} ${g.k==='w'?'wonder':''}" data-pick="goal|${g.tech}|${g.u}"><div class="cicon">${ic('u_'+g.u)}</div><div class="tc-mid"><div class="rname">${g.u}</div><div class="rsub"><span>via ${g.tech}</span><span>${g.steps} ${g.steps>1?'techs':'tech'}</span></div></div><div class="turns">${g.turns}<small>turns</small></div></button>`).join('')}
+  </div><div class="tbar">${bar}</div>`;
+}
+
+/* B: Civ's tree re-laid into four lanes so it only scrolls vertically */
+const LX=[62,154,246,338], RH=112, BANDH=42;
+const TREE=(()=>{
+  const pos={}, bands=[]; let y=0;
+  for(const era of ERAS){
+    const top=y; y+=BANDH;
+    const cols=[...new Set(TECHS.filter(t=>t[3].replace(' era','')===era).map(t=>t[1]))];
+    for(const c of cols){
+      const ts=TECHS.filter(t=>t[1]===c).map(t=>t[0]);
+      const bary=n=>{const p=TBY[n].pre.filter(x=>pos[x]);return p.length?p.reduce((a,x)=>a+pos[x][0],0)/p.length:196};
+      ts.sort((a,b)=>bary(a)-bary(b));
+      const rows=ts.length<=4?[ts]:[ts.filter((_,i)=>i%2===0),ts.filter((_,i)=>i%2===1)];
+      for(const row of rows){
+        // pick the lanes that keep each tech closest to its parents, preserving left-to-right order
+        let best=null;
+        (function choose(start,picked){ if(picked.length===row.length){const cost=picked.reduce((a,l,i)=>a+Math.abs(LX[l]-bary(row[i])),0);if(!best||cost<best.cost)best={cost,picked:[...picked]};return}
+          for(let l=start;l<=4-(row.length-picked.length);l++){picked.push(l);choose(l+1,picked);picked.pop()} })(0,[]);
+        row.forEach((n,i)=>pos[n]=[LX[best.picked[i]], y+40]);
+        y+=RH;
+      }
+    }
+    bands.push({era,top,h:y-top});
+  }
+  return {pos,bands,H:y+30};
+})();
 function techTree(){
-  const path=pathTo(SEL), onpath=new Set(path);
-  const eras=[...new Set(TECHS.map(t=>t[3].replace(' era','')))];
-  const colsByEra=eras.map(e=>[...new Set(TECHS.filter(t=>t[3].replace(' era','')===e).map(t=>t[1]))]);
-  const colY={}; let y=0, bands='';
-  eras.forEach((e,i)=>{ const cols=colsByEra[i]; const h=BANDH+cols.length*TH;
-    cols.forEach((c,j)=>colY[c]=y+BANDH+j*TH+48);
-    const inEra=TECHS.filter(t=>t[3].replace(' era','')===e), got=inEra.filter(t=>DONE.has(t[0])).length;
-    bands+=`<div class="band ${i%2?'odd':''}" data-era="${e}" style="height:${h}px"><h4>${e}<small>${got} of ${inEra.length} researched</small></h4></div>`; y+=h; });
-  const Wd=PADX+10*LW+20, Ht=y+40;
-  const pos=n=>[PADX+(TBY[n].row-1)*LW+LW/2, colY[TBY[n].col]];
+  const path=TSEL?pathTo(TSEL):[], onpath=new Set(path), {pos,bands,H}=TREE;
   let links='';
   for(const t of Object.values(TBY)) for(const p of t.pre){
-    const[x1,y1]=pos(p),[x2,y2]=pos(t.name); const a=y1+36, b=y2-36, m=(a+b)/2;
+    const[x1,y1]=pos[p],[x2,y2]=pos[t.name]; const a=y1+34, b=y2-34, m=(a+b)/2;
     const hot=onpath.has(t.name)&&(onpath.has(p)||DONE.has(p));
-    const col=hot?'#ffc93c':DONE.has(t.name)?'#2f7fe0':DONE.has(p)?'#6f95ba':'#274360';
+    const col=hot?'#ffc93c':DONE.has(t.name)?'#2f7fe0':DONE.has(p)?'#6f95ba':'#28435d';
     links+=`<path d="M${x1} ${a}C${x1} ${m} ${x2} ${m} ${x2} ${b}" stroke="${col}" stroke-width="${hot?5:DONE.has(t.name)?4:3}" fill="none" stroke-linecap="round"/>`;
   }
-  const nodes=Object.values(TBY).map(t=>{const[x,yy]=pos(t.name); const s=state(t.name); const q=path.indexOf(t.name);
-    return `<button class="tn ${s} ${onpath.has(t.name)?'onpath':''} ${t.name===SEL?'sel':''}" data-tech="${t.name}" style="left:${x}px;top:${yy-33}px"><div class="d">${ic('t_'+t.name)}${q>=0?`<span class="q">${q+1}</span>`:''}${s!=='done'?`<span class="t">${turnsFor(t.name)}</span>`:''}</div><div class="nm">${t.name}</div></button>`}).join('');
-  return `<div class="tt"><div class="ttscroll"><div class="canvas" style="width:${Wd}px;height:${Ht}px;zoom:${ZOOM.tech.v}">${bands}<svg class="links" width="${Wd}" height="${Ht}">${links}</svg>${nodes}</div></div>${zoomRail('tech','top:12px')}</div>`;
+  const nodes=Object.values(TBY).map(t=>{const[x,y]=pos[t.name]; const s=state(t.name); const q=path.indexOf(t.name);
+    return `<button class="tn ${s} ${onpath.has(t.name)?'onpath':''} ${t.name===TSEL?'sel':''}" data-tech="${t.name}" style="left:${x}px;top:${y-33}px"><div class="d">${ic('t_'+t.name)}${q>=0?`<span class="q">${q+1}</span>`:''}${s!=='done'?`<span class="t">${turnsFor(t.name)}</span>`:''}</div><div class="nm">${t.name}</div></button>`}).join('');
+  const bandHtml=bands.map((b,i)=>{const inEra=TECHS.filter(t=>t[3].replace(' era','')===b.era),got=inEra.filter(t=>DONE.has(t[0])).length;
+    return `<div class="band ${i%2?'odd':''}" data-era="${b.era}" style="position:absolute;left:0;right:0;top:${b.top}px;height:${b.h}px"><h4>${b.era}<small>${got} of ${inEra.length}</small></h4></div>`}).join('');
+  let card='';
+  if(TSEL){ const t=TBY[TSEL], s=state(TSEL), total=pathTurns(TSEL);
+    card=`<div class="tdetail fade-in"><div class="tf1">${tdisc(TSEL,52)}<div style="min-width:0;flex:1"><div class="cname">${TSEL}</div><div class="rsub"><span>${st('sci')}${t.cost}</span><span>${t.era} era</span></div></div><button class="x" data-tclose>${ic('Close')}</button></div>
+      ${path.length>1?pathChips(path):''}${t.unl.length?`<div class="hscroll">${chips(t,5)}</div>`:''}
+      ${s==='done'?`<button class="ghost">Already researched</button>`:s==='now'?`<button class="ghost">Researching now, ${turnsFor(TSEL)} turns left</button>`:`<button class="big">${path.length>1?`Queue ${path.length} techs, ${total} turns`:`Research next, ${total} turns`}</button>`}</div>`; }
+  return `<div class="tt"><div class="ttscroll"><div class="canvas" style="height:${H}px;zoom:${ZOOM.tech.v}">${bandHtml}<svg class="links" width="393" height="${H}">${links}</svg>${nodes}</div></div></div>${card}
+  <div class="erabar">${zoomRail('tech','')}<div class="eras">${ERAS.map(e=>`<button data-era="${e}">${e==='Renaissance'?'Renaiss.':e==='Information'?'Info':e}</button>`).join('')}</div></div>`;
 }
-function techFoot(){
-  const t=TBY[SEL], s=state(SEL), path=pathTo(SEL), total=path.reduce((a,n)=>a+turnsFor(n),0);
-  const kindIcon=u=>u[1]==='w'?'w':'';
-  const btn= s==='done'?`<button class="ghost">Already researched</button>`: s==='now'?`<button class="ghost">Researching now, ${turnsFor(SEL)} turns left</button>`:
-    `<button class="big">${path.length>1?`Research path: ${path.length} techs, ${total} turns`:`Research ${SEL}, ${total} turns`}</button>`;
-  return `<div class="tfoot">
-    <div class="tf1"><div class="tn ${s}" style="position:static;width:auto;margin:0"><div class="d" style="width:54px;height:54px">${ic('t_'+SEL,'width:32px;height:32px')}</div></div>
-      <div style="min-width:0"><div class="cname">${SEL}</div><div class="rsub"><span>${st('sci')}${t.cost}</span><span>${t.era} era</span>${s!=='done'?`<span>${turnsFor(SEL)} turns alone</span>`:''}</div></div></div>
-    ${path.length>1?`<div class="pathline hscroll">${path.map((n,i)=>`${i?'<span class="arrow">&rarr;</span>':''}<span class="pi"><i class="n">${i+1}</i>${n}</span>`).join('')}</div>`:''}
-    ${t.unl.length?`<div class="hscroll">${t.unl.map(u=>`<span class="chip ${kindIcon(u)}">${ic('u_'+u[0])}${u[0]}</span>`).join('')}</div>`:''}
-    ${btn}</div>`;
+function techSheet(mode){
+  return `<div class="sheet fade-in" style="top:56px"><div class="grab"></div>${techHead(mode)}${mode==='Tech'?techPick():techTree()}</div>`;
 }
-function techSheet(top){
-  const eras=[...new Set(TECHS.map(t=>t[3].replace(' era','')))];
-  return `<div class="sheet fade-in" style="top:${top}px"><div class="grab"></div><div class="sh-head"><div><div class="sh-title">Technology</div><div class="sh-sub">Researching ${NOW}, ${turnsFor(NOW)} turns &middot; +${SCI} science</div></div><button class="x">${ic('Close')}</button></div>${techTree()}${techFoot()}
-  <div class="eras">${eras.map(e=>`<button data-era="${e}" class="${e==='Ancient'?'on':''}">${e==='Renaissance'?'Renaiss.':e==='Information'?'Info':e}</button>`).join('')}</div></div>`;
-}
-function initTech(){
+function initTree(){
   const sc=document.querySelector('.ttscroll'); if(!sc) return;
-  if(window._ttScroll){sc.scrollLeft=_ttScroll[0];sc.scrollTop=_ttScroll[1];}
-  else { sc.scrollLeft=(PADX+(TBY[NOW].row-1)*LW+LW/2)*ZOOM.tech.v-sc.clientWidth/2+40; sc.scrollTop=0; }
-  const tabs=[...document.querySelectorAll('.eras button')], bands=[...document.querySelectorAll('.band')];
-  const sync=()=>{const z=ZOOM.tech.v, y=sc.scrollTop/z+40; let i=0; bands.forEach((b,j)=>{if(b.offsetTop<=y)i=j}); tabs.forEach((t,j)=>t.classList.toggle('on',j===i)); const on=tabs[i]; if(on) on.scrollIntoView({block:'nearest',inline:'nearest'});};
+  if(window._ttScroll){sc.scrollTop=_ttScroll[1];} else sc.scrollTop=Math.max(0,(TREE.pos[NOW][1]-150)*ZOOM.tech.v);
+  const tabs=[...document.querySelectorAll('.eras button')];
+  const sync=()=>{const y=sc.scrollTop/ZOOM.tech.v+60; let i=0; TREE.bands.forEach((b,j)=>{if(b.top<=y)i=j}); tabs.forEach((t,j)=>t.classList.toggle('on',j===i)); tabs[i]&&tabs[i].scrollIntoView({block:'nearest',inline:'nearest'});};
   sc.addEventListener('scroll',sync,{passive:true}); sync();
 }
 
 /* ---------- the direction: thumb arc + decision queue ---------- */
-const S=['Map','Unit','Build','City','Tech'];
+const S=['Map','Unit','Build','City','Tech','Tree'];
 const THESIS={
   Map:'Everything radiates from the yellow corner button. It steps through this turn\'s decisions; the count shows what is left.',
   Unit:'A unit decision: actions fan out along the thumb arc. Shoot shows the combat preview right on the button.',
   Build:'A repeat decision from the queue: three likely picks in thumb reach, one tap each. The map stays visible.',
   City:'Full city detail when you want it. Tabs sit at the bottom so one thumb covers the whole sheet.',
-  Tech:'Civ 5\'s real tree flowing top to bottom by era. Tap any tech to see the path to it. Era tabs at the bottom jump between eras.',
+  Tech:'Next up: what you are researching, what you can pick now, and goals by what you want. Tap a card or goal.',
+  Tree:'Civ 5\'s real tree, re-laid into four lanes so it only scrolls up and down. Tap a tech for its path.',
 };
 const notes=(bottom)=>`<div class="notes" style="bottom:${bottom}px"><button class="note" style="color:var(--gre)">${ic('Shield')}</button><button class="note" style="color:var(--food)">${ic('Cities')}<span class="badge">3</span></button></div>`;
 const civDisc=`<button class="civdisc col"><div class="disc navy" style="width:70px;height:70px">${ic('Policies')}<span class="badge" style="background:var(--cul)">!</span></div><div class="lbl">Civ</div></button>`;
-const techDisc=(b)=>`<button class="col" style="position:absolute;left:104px;bottom:${b}px;z-index:5"><div class="disc navy" style="width:58px;height:58px">${ic('t_Writing','width:30px;height:30px')}</div><div class="lbl">Writing 3</div></button>`;
+const techDisc=(b)=>`<button class="col" data-s="Tech" style="position:absolute;left:104px;bottom:${b}px;z-index:5"><div class="disc navy" style="width:58px;height:58px">${ic('t_Writing','width:30px;height:30px')}</div><div class="lbl">Writing 3</div></button>`;
 const anchor=(label,icon,left)=>`<button class="anchor">${ic(icon)}${label}${left?`<span class="badge" style="background:var(--navy);box-shadow:0 0 0 2.5px var(--yellow)">${left}</span>`:''}</button>`;
 const qdots=(i,n=4)=>`<div class="dots">${[...Array(n)].map((_,j)=>`<i class="${j===i?'on':''}"></i>`).join('')}</div>`;
 
@@ -568,18 +638,18 @@ function screenFor(s){
   if(s==='City') return mapLayer({shift:-120})+sbar+
    `<div class="sheet fade-in" style="top:250px"><div class="grab"></div>${cityHead()}<div class="scroll" style="border-top:1px solid var(--line)">${cityBuild()}</div>
    <div class="btabs">${[['Settings','Build',1],['Library','Buildings'],['HexagonOutline','Tiles'],['Worker','Citizens'],['Resources','Buy']].map(([i,l,on])=>`<button class="${on?'on':''}">${ic(i)}${l}</button>`).join('')}</div></div>`;
-  if(s==='Tech') return mapLayer()+sbar+techSheet(56);
+  if(s==='Tech'||s==='Tree') return mapLayer()+sbar+techSheet(s);
 }
 
 /* ---------- canvas ---------- */
 let cs=localStorage.getItem('ps2')||'Map'; if(!S.includes(cs))cs='Map';
 function draw(keepTech){
-  const sc=document.querySelector('.ttscroll'); window._ttScroll=keepTech&&sc?[sc.scrollLeft,sc.scrollTop]:null;
+  const sc=document.querySelector('.ttscroll'), tp=document.querySelector('.tpick'); window._ttScroll=keepTech&&sc?[sc.scrollLeft,sc.scrollTop]:null; const keepPick=keepTech&&tp?tp.scrollTop:null;
   document.getElementById('screen').innerHTML=screenFor(cs);
   document.getElementById('sseg').innerHTML=S.map(s=>`<button aria-pressed="${s===cs}" data-s="${s}">${s}</button>`).join('');
   document.getElementById('thesis').textContent=THESIS[cs];
   localStorage.setItem('ps2',cs);
-  fit(); applyZoom('map'); applyZoom('tech'); initTech();
+  fit(); applyZoom('map'); applyZoom('tech'); initTree(); if(keepPick!=null) document.querySelector('.tpick').scrollTop=keepPick;
 }
 function fit(){
   const d=document.getElementById('device'), wrap=document.getElementById('stagewrap');
@@ -591,8 +661,11 @@ document.addEventListener('click',e=>{
   const zt=e.target.closest('[data-ztoggle]'); if(zt){touchZoom(zt.closest('.zoom'));return}
   const z=e.target.closest('[data-zstep]'); if(z){const k=z.closest('.zoom').dataset.zoom;touchZoom(z.closest('.zoom'));setZoom(k,ZOOM[k].v+z.dataset.zstep*.15);return}
   if(!e.target.closest('.zoom')) document.querySelectorAll('.zoom.open').forEach(el=>el.classList.remove('open'));
-  const t=e.target.closest('[data-tech]'); if(t){SEL=t.dataset.tech;draw(true);return}
-  const er=e.target.closest('[data-era]'); if(er){const b=[...document.querySelectorAll('.band')].find(b=>b.dataset.era===er.dataset.era);const sc=document.querySelector('.ttscroll');sc.scrollTo({top:b.offsetTop*ZOOM.tech.v,behavior:'smooth'});return}
+  const t=e.target.closest('[data-tech]'); if(t){TSEL=t.dataset.tech;draw(true);return}
+  if(e.target.closest('[data-tclose]')){TSEL=null;draw(true);return}
+  const pk=e.target.closest('[data-pick]'); if(pk){const[kind,tech,u]=pk.dataset.pick.split('|');PICK=PICK&&PICK.tech===tech&&PICK.u===u?null:{kind,tech,u};draw(true);return}
+  const gt=e.target.closest('[data-gtab]'); if(gt){GOALTAB=gt.dataset.gtab;PICK=null;draw(true);return}
+  const er=e.target.closest('button[data-era]'); if(er){const b=TREE.bands.find(b=>b.era===er.dataset.era);document.querySelector('.ttscroll').scrollTo({top:b.top*ZOOM.tech.v,behavior:'smooth'});return}
   const b=e.target.closest('button[data-s]');if(!b)return;cs=b.dataset.s;draw()});
 document.addEventListener('keydown',e=>{const i=S.indexOf(cs);if(e.key==='ArrowRight'){cs=S[(i+1)%S.length];draw()}if(e.key==='ArrowLeft'){cs=S[(i+S.length-1)%S.length];draw()}});
 addEventListener('resize',fit);
