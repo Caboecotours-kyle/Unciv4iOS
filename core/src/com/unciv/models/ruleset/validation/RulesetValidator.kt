@@ -816,7 +816,7 @@ open class RulesetValidator protected constructor(
         // but not for Tileset *graphics* as loaded by AtlasPreview, if it sees a non-vanilla base
         // ruleset. Therefore, if we're checking a base or combined ruleset, ignore those configs.
         val vanillaTilesets = if (this is BaseRulesetValidator && ruleset.mods.isNotEmpty())
-                setOf("Minimal", Constants.defaultTileset, Constants.defaultFallbackTileset)
+                setOf("Minimal", "HexaRealm", Constants.defaultTileset, Constants.defaultFallbackTileset)
             else emptySet()
         val configOnlyTilesets = configTilesets - atlasTilesets - vanillaTilesets
         if (configOnlyTilesets.isNotEmpty())
