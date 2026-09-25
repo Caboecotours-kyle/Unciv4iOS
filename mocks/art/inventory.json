@@ -137,7 +137,7 @@
    "Tiles/Fallout.png"
   ],
   "note": "",
-  "done": false
+  "done": true
  },
  {
   "category": "Terrain feature",
@@ -157,7 +157,7 @@
    "Tiles/Flood plains.png"
   ],
   "note": "",
-  "done": false
+  "done": true
  },
  {
   "category": "Terrain feature",
@@ -167,7 +167,7 @@
    "Tiles/Ice.png"
   ],
   "note": "",
-  "done": false
+  "done": true
  },
  {
   "category": "Terrain feature",
@@ -177,7 +177,7 @@
    "Tiles/Atoll.png"
   ],
   "note": "",
-  "done": false
+  "done": true
  },
  {
   "category": "Terrain feature",
@@ -205,7 +205,7 @@
   "method": "scene",
   "files": [],
   "note": "shown when first discovered",
-  "done": false
+  "done": true
  },
  {
   "category": "Natural wonder",
@@ -223,7 +223,7 @@
   "method": "scene",
   "files": [],
   "note": "shown when first discovered",
-  "done": false
+  "done": true
  },
  {
   "category": "Natural wonder",
@@ -241,7 +241,7 @@
   "method": "scene",
   "files": [],
   "note": "shown when first discovered",
-  "done": false
+  "done": true
  },
  {
   "category": "Natural wonder",
@@ -259,7 +259,7 @@
   "method": "scene",
   "files": [],
   "note": "shown when first discovered",
-  "done": false
+  "done": true
  },
  {
   "category": "Natural wonder",
@@ -277,7 +277,7 @@
   "method": "scene",
   "files": [],
   "note": "shown when first discovered",
-  "done": false
+  "done": true
  },
  {
   "category": "Natural wonder",
@@ -295,7 +295,7 @@
   "method": "scene",
   "files": [],
   "note": "shown when first discovered",
-  "done": false
+  "done": true
  },
  {
   "category": "Natural wonder",
@@ -313,7 +313,7 @@
   "method": "scene",
   "files": [],
   "note": "shown when first discovered",
-  "done": false
+  "done": true
  },
  {
   "category": "Natural wonder",
@@ -331,7 +331,7 @@
   "method": "scene",
   "files": [],
   "note": "shown when first discovered",
-  "done": false
+  "done": true
  },
  {
   "category": "Natural wonder",
@@ -349,7 +349,7 @@
   "method": "scene",
   "files": [],
   "note": "shown when first discovered",
-  "done": false
+  "done": true
  },
  {
   "category": "Natural wonder",
@@ -367,7 +367,7 @@
   "method": "scene",
   "files": [],
   "note": "shown when first discovered",
-  "done": false
+  "done": true
  },
  {
   "category": "Natural wonder",
@@ -385,7 +385,7 @@
   "method": "scene",
   "files": [],
   "note": "shown when first discovered",
-  "done": false
+  "done": true
  },
  {
   "category": "Natural wonder",
@@ -403,7 +403,7 @@
   "method": "scene",
   "files": [],
   "note": "shown when first discovered",
-  "done": false
+  "done": true
  },
  {
   "category": "Natural wonder",
@@ -421,7 +421,7 @@
   "method": "scene",
   "files": [],
   "note": "shown when first discovered",
-  "done": false
+  "done": true
  },
  {
   "category": "Natural wonder",
@@ -439,7 +439,7 @@
   "method": "scene",
   "files": [],
   "note": "shown when first discovered",
-  "done": false
+  "done": true
  },
  {
   "category": "Resource (bonus)",
@@ -1054,92 +1054,92 @@
  {
   "category": "City center",
   "name": "Ancient era",
-  "method": "code",
+  "method": "sprite",
   "files": [
    "Tiles/City center-Ancient era.png"
   ],
-  "note": "houses kit grows with population; roofs and walls change by era",
+  "note": "one sprite per era, roofs in the owner's color",
   "done": true
  },
  {
   "category": "City center",
   "name": "Classical era",
-  "method": "code",
+  "method": "sprite",
   "files": [
    "Tiles/City center-Classical era.png"
   ],
-  "note": "houses kit grows with population; roofs and walls change by era",
-  "done": false
+  "note": "one sprite per era, roofs in the owner's color",
+  "done": true
  },
  {
   "category": "City center",
   "name": "Medieval era",
-  "method": "code",
+  "method": "sprite",
   "files": [
    "Tiles/City center-Medieval era.png"
   ],
-  "note": "houses kit grows with population; roofs and walls change by era",
-  "done": false
+  "note": "one sprite per era, roofs in the owner's color",
+  "done": true
  },
  {
   "category": "City center",
   "name": "Renaissance era",
-  "method": "code",
+  "method": "sprite",
   "files": [
    "Tiles/City center-Renaissance era.png"
   ],
-  "note": "houses kit grows with population; roofs and walls change by era",
-  "done": false
+  "note": "one sprite per era, roofs in the owner's color",
+  "done": true
  },
  {
   "category": "City center",
   "name": "Industrial era",
-  "method": "code",
+  "method": "sprite",
   "files": [
    "Tiles/City center-Industrial era.png"
   ],
-  "note": "houses kit grows with population; roofs and walls change by era",
-  "done": false
+  "note": "one sprite per era, roofs in the owner's color",
+  "done": true
  },
  {
   "category": "City center",
   "name": "Modern era",
-  "method": "code",
+  "method": "sprite",
   "files": [
    "Tiles/City center-Modern era.png"
   ],
-  "note": "houses kit grows with population; roofs and walls change by era",
-  "done": false
+  "note": "one sprite per era, roofs in the owner's color",
+  "done": true
  },
  {
   "category": "City center",
   "name": "Atomic era",
-  "method": "code",
+  "method": "sprite",
   "files": [
    "Tiles/City center-Atomic era.png"
   ],
-  "note": "houses kit grows with population; roofs and walls change by era",
-  "done": false
+  "note": "one sprite per era, roofs in the owner's color",
+  "done": true
  },
  {
   "category": "City center",
   "name": "Information era",
-  "method": "code",
+  "method": "sprite",
   "files": [
    "Tiles/City center-Information era.png"
   ],
-  "note": "houses kit grows with population; roofs and walls change by era",
-  "done": false
+  "note": "one sprite per era, roofs in the owner's color",
+  "done": true
  },
  {
   "category": "City center",
   "name": "Future era",
-  "method": "code",
+  "method": "sprite",
   "files": [
    "Tiles/City center-Future era.png"
   ],
-  "note": "houses kit grows with population; roofs and walls change by era",
-  "done": false
+  "note": "one sprite per era, roofs in the owner's color",
+  "done": true
  },
  {
   "category": "City state",
@@ -1220,7 +1220,7 @@
    "Units/Scout-1.png"
   ],
   "note": "Scout",
-  "done": false
+  "done": true
  },
  {
   "category": "Unit",
@@ -1242,7 +1242,7 @@
    "Units/Maori Warrior-1.png"
   ],
   "note": "unique to Polynesia, replaces Warrior",
-  "done": false
+  "done": true
  },
  {
   "category": "Unit (civ unique)",
@@ -1253,7 +1253,7 @@
    "Units/Jaguar-1.png"
   ],
   "note": "unique to Aztecs, replaces Warrior",
-  "done": false
+  "done": true
  },
  {
   "category": "Unit (civ unique)",
@@ -1264,7 +1264,7 @@
    "Units/Brute-1.png"
   ],
   "note": "unique to Barbarians, replaces Warrior",
-  "done": false
+  "done": true
  },
  {
   "category": "Unit",
@@ -1275,7 +1275,7 @@
    "Units/Archer-1.png"
   ],
   "note": "Archery",
-  "done": false
+  "done": true
  },
  {
   "category": "Unit (civ unique)",
@@ -1297,7 +1297,7 @@
    "Units/Slinger-1.png"
   ],
   "note": "unique to Inca, replaces Archer",
-  "done": false
+  "done": true
  },
  {
   "category": "Unit (civ unique)",
@@ -1308,7 +1308,7 @@
    "Units/Atlatlist-1.png"
   ],
   "note": "unique to The Maya, replaces Archer",
-  "done": false
+  "done": true
  },
  {
   "category": "Unit (civ unique)",
@@ -1319,7 +1319,7 @@
    "Units/Skirmisher-1.png"
   ],
   "note": "unique to Barbarians, replaces Archer",
-  "done": false
+  "done": true
  },
  {
   "category": "Unit",
@@ -1330,7 +1330,7 @@
    "Units/Work Boats-1.png"
   ],
   "note": "Civilian Water",
-  "done": false
+  "done": true
  },
  {
   "category": "Unit",
@@ -1341,7 +1341,7 @@
    "Units/Trireme-1.png"
   ],
   "note": "Melee Water",
-  "done": false
+  "done": true
  },
  {
   "category": "Unit (civ unique)",
@@ -1352,7 +1352,7 @@
    "Units/Quinquereme-1.png"
   ],
   "note": "unique to Carthage, replaces Trireme",
-  "done": false
+  "done": true
  },
  {
   "category": "Unit (civ unique)",
@@ -1363,7 +1363,7 @@
    "Units/Dromon-1.png"
   ],
   "note": "unique to Byzantium, replaces Trireme",
-  "done": false
+  "done": true
  },
  {
   "category": "Unit (civ unique)",
@@ -1374,7 +1374,7 @@
    "Units/Galley-1.png"
   ],
   "note": "unique to Barbarians, replaces None",
-  "done": false
+  "done": true
  },
  {
   "category": "Unit",
@@ -1385,7 +1385,7 @@
    "Units/Chariot Archer-1.png"
   ],
   "note": "Archery",
-  "done": false
+  "done": true
  },
  {
   "category": "Unit (civ unique)",
@@ -1396,7 +1396,7 @@
    "Units/War Chariot-1.png"
   ],
   "note": "unique to Egypt, replaces Chariot Archer",
-  "done": false
+  "done": true
  },
  {
   "category": "Unit (civ unique)",
@@ -1407,7 +1407,7 @@
    "Units/Horse Archer-1.png"
   ],
   "note": "unique to The Huns, replaces Chariot Archer",
-  "done": false
+  "done": true
  },
  {
   "category": "Unit (civ unique)",
@@ -1418,7 +1418,7 @@
    "Units/War Elephant-1.png"
   ],
   "note": "unique to India, replaces Chariot Archer",
-  "done": false
+  "done": true
  },
  {
   "category": "Unit",
@@ -1429,7 +1429,7 @@
    "Units/Spearman-1.png"
   ],
   "note": "Sword",
-  "done": false
+  "done": true
  },
  {
   "category": "Unit (civ unique)",
@@ -1451,7 +1451,7 @@
    "Units/Persian Immortal-1.png"
   ],
   "note": "unique to Persia, replaces Spearman",
-  "done": false
+  "done": true
  },
  {
   "category": "Unit (civ unique)",
@@ -1462,7 +1462,7 @@
    "Units/Battering Ram-1.png"
   ],
   "note": "unique to The Huns, replaces Spearman",
-  "done": false
+  "done": true
  },
  {
   "category": "Unit (civ unique)",
@@ -1473,7 +1473,7 @@
    "Units/Pictish Warrior-1.png"
   ],
   "note": "unique to Celts, replaces Spearman",
-  "done": false
+  "done": true
  },
  {
   "category": "Unit (civ unique)",
@@ -1484,7 +1484,7 @@
    "Units/Marauder-1.png"
   ],
   "note": "unique to Barbarians, replaces Spearman",
-  "done": false
+  "done": true
  },
  {
   "category": "Unit",
@@ -1506,7 +1506,7 @@
    "Units/Companion Cavalry-1.png"
   ],
   "note": "unique to Greece, replaces Horseman",
-  "done": false
+  "done": true
  },
  {
   "category": "Unit (civ unique)",
@@ -1517,7 +1517,7 @@
    "Units/African Forest Elephant-1.png"
   ],
   "note": "unique to Carthage, replaces Horseman",
-  "done": false
+  "done": true
  },
  {
   "category": "Unit (civ unique)",
@@ -1528,7 +1528,7 @@
    "Units/Cataphract-1.png"
   ],
   "note": "unique to Byzantium, replaces Horseman",
-  "done": false
+  "done": true
  },
  {
   "category": "Unit",
@@ -1539,7 +1539,7 @@
    "Units/Catapult-1.png"
   ],
   "note": "Siege",
-  "done": false
+  "done": true
  },
  {
   "category": "Unit (civ unique)",
@@ -1550,7 +1550,7 @@
    "Units/Ballista-1.png"
   ],
   "note": "unique to Rome, replaces Catapult",
-  "done": false
+  "done": true
  },
  {
   "category": "Unit",
@@ -1561,7 +1561,7 @@
    "Units/Composite Bowman-1.png"
   ],
   "note": "Archery",
-  "done": false
+  "done": true
  },
  {
   "category": "Unit",
@@ -1583,7 +1583,7 @@
    "Units/Legion-1.png"
   ],
   "note": "unique to Rome, replaces Swordsman",
-  "done": false
+  "done": true
  },
  {
   "category": "Unit (civ unique)",
@@ -1594,7 +1594,7 @@
    "Units/Mohawk Warrior-1.png"
   ],
   "note": "unique to Iroquois, replaces Swordsman",
-  "done": false
+  "done": true
  },
  {
   "category": "Unit",
@@ -1605,7 +1605,7 @@
    "Units/Pikeman-1.png"
   ],
   "note": "Sword",
-  "done": false
+  "done": true
  },
  {
   "category": "Unit (civ unique)",
@@ -1616,7 +1616,7 @@
    "Units/Landsknecht-1.png"
   ],
   "note": "unique to Germany, replaces Pikeman",
-  "done": false
+  "done": true
  },
  {
   "category": "Unit",
@@ -1627,7 +1627,7 @@
    "Units/Galleass-1.png"
   ],
   "note": "Ranged Water",
-  "done": false
+  "done": true
  },
  {
   "category": "Unit",
@@ -1638,7 +1638,7 @@
    "Units/Knight-1.png"
   ],
   "note": "Mounted",
-  "done": false
+  "done": true
  },
  {
   "category": "Unit (civ unique)",
@@ -1649,7 +1649,7 @@
    "Units/Camel Archer-1.png"
   ],
   "note": "unique to Arabia, replaces Knight",
-  "done": false
+  "done": true
  },
  {
   "category": "Unit (civ unique)",
@@ -1660,7 +1660,7 @@
    "Units/Conquistador-1.png"
   ],
   "note": "unique to Spain, replaces Knight",
-  "done": false
+  "done": true
  },
  {
   "category": "Unit (civ unique)",
@@ -1671,7 +1671,7 @@
    "Units/Naresuan's Elephant-1.png"
   ],
   "note": "unique to Siam, replaces Knight",
-  "done": false
+  "done": true
  },
  {
   "category": "Unit (civ unique)",
@@ -1682,7 +1682,7 @@
    "Units/Mandekalu Cavalry-1.png"
   ],
   "note": "unique to Songhai, replaces Knight",
-  "done": false
+  "done": true
  },
  {
   "category": "Unit (civ unique)",
@@ -1693,7 +1693,7 @@
    "Units/Keshik-1.png"
   ],
   "note": "unique to Mongolia, replaces Knight",
-  "done": false
+  "done": true
  },
  {
   "category": "Unit",
@@ -1704,7 +1704,7 @@
    "Units/Crossbowman-1.png"
   ],
   "note": "Archery",
-  "done": false
+  "done": true
  },
  {
   "category": "Unit (civ unique)",
@@ -1715,7 +1715,7 @@
    "Units/Chu-Ko-Nu-1.png"
   ],
   "note": "unique to China, replaces Crossbowman",
-  "done": false
+  "done": true
  },
  {
   "category": "Unit (civ unique)",
@@ -1726,7 +1726,7 @@
    "Units/Longbowman-1.png"
   ],
   "note": "unique to England, replaces Crossbowman",
-  "done": false
+  "done": true
  },
  {
   "category": "Unit",
@@ -1737,7 +1737,7 @@
    "Units/Trebuchet-1.png"
   ],
   "note": "Siege",
-  "done": false
+  "done": true
  },
  {
   "category": "Unit (civ unique)",
@@ -1748,7 +1748,7 @@
    "Units/Hwach'a-1.png"
   ],
   "note": "unique to Korea, replaces Trebuchet",
-  "done": false
+  "done": true
  },
  {
   "category": "Unit",
@@ -1759,7 +1759,7 @@
    "Units/Longswordsman-1.png"
   ],
   "note": "Sword",
-  "done": false
+  "done": true
  },
  {
   "category": "Unit (civ unique)",
@@ -1770,7 +1770,7 @@
    "Units/Samurai-1.png"
   ],
   "note": "unique to Japan, replaces Longswordsman",
-  "done": false
+  "done": true
  },
  {
   "category": "Unit (civ unique)",
@@ -1781,7 +1781,7 @@
    "Units/Berserker-1.png"
   ],
   "note": "unique to Denmark, replaces Longswordsman",
-  "done": false
+  "done": true
  },
  {
   "category": "Unit",
@@ -1792,7 +1792,7 @@
    "Units/Caravel-1.png"
   ],
   "note": "Melee Water",
-  "done": false
+  "done": true
  },
  {
   "category": "Unit (civ unique)",
@@ -1803,7 +1803,7 @@
    "Units/Turtle Ship-1.png"
   ],
   "note": "unique to Korea, replaces Caravel",
-  "done": false
+  "done": true
  },
  {
   "category": "Unit",
@@ -1814,7 +1814,7 @@
    "Units/Musketman-1.png"
   ],
   "note": "Gunpowder",
-  "done": false
+  "done": true
  },
  {
   "category": "Unit (civ unique)",
@@ -1825,7 +1825,7 @@
    "Units/Musketeer-1.png"
   ],
   "note": "unique to France, replaces Musketman",
-  "done": false
+  "done": true
  },
  {
   "category": "Unit (civ unique)",
@@ -1836,7 +1836,7 @@
    "Units/Janissary-1.png"
   ],
   "note": "unique to The Ottomans, replaces Musketman",
-  "done": false
+  "done": true
  },
  {
   "category": "Unit (civ unique)",
@@ -1847,7 +1847,7 @@
    "Units/Minuteman-1.png"
   ],
   "note": "unique to America, replaces Musketman",
-  "done": false
+  "done": true
  },
  {
   "category": "Unit (civ unique)",
@@ -1858,7 +1858,7 @@
    "Units/Tercio-1.png"
   ],
   "note": "unique to Spain, replaces Musketman",
-  "done": false
+  "done": true
  },
  {
   "category": "Unit",
@@ -1869,7 +1869,7 @@
    "Units/Privateer-1.png"
   ],
   "note": "Melee Water",
-  "done": false
+  "done": true
  },
  {
   "category": "Unit (civ unique)",
@@ -1880,7 +1880,7 @@
    "Units/Sea Beggar-1.png"
   ],
   "note": "unique to The Netherlands, replaces Privateer",
-  "done": false
+  "done": true
  },
  {
   "category": "Unit",
@@ -1891,7 +1891,7 @@
    "Units/Frigate-1.png"
   ],
   "note": "Ranged Water",
-  "done": false
+  "done": true
  },
  {
   "category": "Unit (civ unique)",
@@ -1902,7 +1902,7 @@
    "Units/Ship of the Line-1.png"
   ],
   "note": "unique to England, replaces Frigate",
-  "done": false
+  "done": true
  },
  {
   "category": "Unit",
@@ -1913,7 +1913,7 @@
    "Units/Lancer-1.png"
   ],
   "note": "Mounted",
-  "done": false
+  "done": true
  },
  {
   "category": "Unit (civ unique)",
@@ -1924,7 +1924,7 @@
    "Units/Sipahi-1.png"
   ],
   "note": "unique to The Ottomans, replaces Lancer",
-  "done": false
+  "done": true
  },
  {
   "category": "Unit (civ unique)",
@@ -1935,7 +1935,7 @@
    "Units/Hakkapeliitta-1.png"
   ],
   "note": "unique to Sweden, replaces Lancer",
-  "done": false
+  "done": true
  },
  {
   "category": "Unit",
@@ -1946,7 +1946,7 @@
    "Units/Cannon-1.png"
   ],
   "note": "Siege",
-  "done": false
+  "done": true
  },
  {
   "category": "Unit",
@@ -1957,7 +1957,7 @@
    "Units/Gatling Gun-1.png"
   ],
   "note": "Ranged Gunpowder",
-  "done": false
+  "done": true
  },
  {
   "category": "Unit",
@@ -1968,7 +1968,7 @@
    "Units/Rifleman-1.png"
   ],
   "note": "Gunpowder",
-  "done": false
+  "done": true
  },
  {
   "category": "Unit (civ unique)",
@@ -1979,7 +1979,7 @@
    "Units/Norwegian Ski Infantry-1.png"
   ],
   "note": "unique to Denmark, replaces Rifleman",
-  "done": false
+  "done": true
  },
  {
   "category": "Unit (civ unique)",
@@ -1990,7 +1990,7 @@
    "Units/Carolean-1.png"
   ],
   "note": "unique to Sweden, replaces Rifleman",
-  "done": false
+  "done": true
  },
  {
   "category": "Unit (civ unique)",
@@ -2001,7 +2001,7 @@
    "Units/Mehal Sefari-1.png"
   ],
   "note": "unique to Ethiopia, replaces Rifleman",
-  "done": false
+  "done": true
  },
  {
   "category": "Unit",
@@ -2012,7 +2012,7 @@
    "Units/Cavalry-1.png"
   ],
   "note": "Mounted",
-  "done": false
+  "done": true
  },
  {
   "category": "Unit (civ unique)",
@@ -2023,7 +2023,7 @@
    "Units/Cossack-1.png"
   ],
   "note": "unique to Russia, replaces Cavalry",
-  "done": false
+  "done": true
  },
  {
   "category": "Unit (civ unique)",
@@ -2034,7 +2034,7 @@
    "Units/Hussar-1.png"
   ],
   "note": "unique to Austria, replaces Cavalry",
-  "done": false
+  "done": true
  },
  {
   "category": "Unit",
@@ -2045,7 +2045,7 @@
    "Units/Ironclad-1.png"
   ],
   "note": "Melee Water",
-  "done": false
+  "done": true
  },
  {
   "category": "Unit",
@@ -2056,7 +2056,7 @@
    "Units/Artillery-1.png"
   ],
   "note": "Siege",
-  "done": false
+  "done": true
  },
  {
   "category": "Unit",
@@ -2067,7 +2067,7 @@
    "Units/Submarine-1.png"
   ],
   "note": "Submarine",
-  "done": false
+  "done": true
  },
  {
   "category": "Unit",
@@ -2078,7 +2078,7 @@
    "Units/Great War Infantry-1.png"
   ],
   "note": "Gunpowder",
-  "done": false
+  "done": true
  },
  {
   "category": "Unit (civ unique)",
@@ -2089,7 +2089,7 @@
    "Units/Foreign Legion-1.png"
   ],
   "note": "unique to France, replaces Great War Infantry",
-  "done": false
+  "done": true
  },
  {
   "category": "Unit",
@@ -2100,7 +2100,7 @@
    "Units/Triplane-1.png"
   ],
   "note": "Fighter",
-  "done": false
+  "done": true
  },
  {
   "category": "Unit",
@@ -2111,7 +2111,7 @@
    "Units/Great War Bomber-1.png"
   ],
   "note": "Bomber",
-  "done": false
+  "done": true
  },
  {
   "category": "Unit",
@@ -2122,7 +2122,7 @@
    "Units/Infantry-1.png"
   ],
   "note": "Gunpowder",
-  "done": false
+  "done": true
  },
  {
   "category": "Unit",
@@ -2133,7 +2133,7 @@
    "Units/Carrier-1.png"
   ],
   "note": "Aircraft Carrier",
-  "done": false
+  "done": true
  },
  {
   "category": "Unit",
@@ -2144,7 +2144,7 @@
    "Units/Battleship-1.png"
   ],
   "note": "Ranged Water",
-  "done": false
+  "done": true
  },
  {
   "category": "Unit",
@@ -2155,7 +2155,7 @@
    "Units/Machine Gun-1.png"
   ],
   "note": "Ranged Gunpowder",
-  "done": false
+  "done": true
  },
  {
   "category": "Unit",
@@ -2166,7 +2166,7 @@
    "Units/Anti-Aircraft Gun-1.png"
   ],
   "note": "Gunpowder",
-  "done": false
+  "done": true
  },
  {
   "category": "Unit",
@@ -2177,7 +2177,7 @@
    "Units/Landship-1.png"
   ],
   "note": "Armored",
-  "done": false
+  "done": true
  },
  {
   "category": "Unit",
@@ -2188,7 +2188,7 @@
    "Units/Destroyer-1.png"
   ],
   "note": "Melee Water",
-  "done": false
+  "done": true
  },
  {
   "category": "Unit",
@@ -2199,7 +2199,7 @@
    "Units/Marine-1.png"
   ],
   "note": "Gunpowder",
-  "done": false
+  "done": true
  },
  {
   "category": "Unit",
@@ -2210,7 +2210,7 @@
    "Units/Fighter-1.png"
   ],
   "note": "Fighter",
-  "done": false
+  "done": true
  },
  {
   "category": "Unit (civ unique)",
@@ -2221,7 +2221,7 @@
    "Units/Zero-1.png"
   ],
   "note": "unique to Japan, replaces Fighter",
-  "done": false
+  "done": true
  },
  {
   "category": "Unit",
@@ -2232,7 +2232,7 @@
    "Units/Bomber-1.png"
   ],
   "note": "Bomber",
-  "done": false
+  "done": true
  },
  {
   "category": "Unit (civ unique)",
@@ -2243,7 +2243,7 @@
    "Units/B17-1.png"
   ],
   "note": "unique to America, replaces Bomber",
-  "done": false
+  "done": true
  },
  {
   "category": "Unit",
@@ -2254,7 +2254,7 @@
    "Units/Paratrooper-1.png"
   ],
   "note": "Gunpowder",
-  "done": false
+  "done": true
  },
  {
   "category": "Unit",
@@ -2265,7 +2265,7 @@
    "Units/Tank-1.png"
   ],
   "note": "Armored",
-  "done": false
+  "done": true
  },
  {
   "category": "Unit (civ unique)",
@@ -2276,7 +2276,7 @@
    "Units/Panzer-1.png"
   ],
   "note": "unique to Germany, replaces Tank",
-  "done": false
+  "done": true
  },
  {
   "category": "Unit",
@@ -2287,7 +2287,7 @@
    "Units/Anti-Tank Gun-1.png"
   ],
   "note": "Gunpowder",
-  "done": false
+  "done": true
  },
  {
   "category": "Unit",
@@ -2298,7 +2298,7 @@
    "Units/Atomic Bomb-1.png"
   ],
   "note": "Atomic Bomber",
-  "done": false
+  "done": true
  },
  {
   "category": "Unit",
@@ -2309,7 +2309,7 @@
    "Units/Rocket Artillery-1.png"
   ],
   "note": "Siege",
-  "done": false
+  "done": true
  },
  {
   "category": "Unit",
@@ -2320,7 +2320,7 @@
    "Units/Mobile SAM-1.png"
   ],
   "note": "Gunpowder",
-  "done": false
+  "done": true
  },
  {
   "category": "Unit",
@@ -2331,7 +2331,7 @@
    "Units/Guided Missile-1.png"
   ],
   "note": "Missile",
-  "done": false
+  "done": true
  },
  {
   "category": "Unit",
@@ -2342,7 +2342,7 @@
    "Units/Nuclear Missile-1.png"
   ],
   "note": "Missile",
-  "done": false
+  "done": true
  },
  {
   "category": "Unit",
@@ -2353,7 +2353,7 @@
    "Units/Helicopter Gunship-1.png"
   ],
   "note": "Helicopter",
-  "done": false
+  "done": true
  },
  {
   "category": "Unit",
@@ -2364,7 +2364,7 @@
    "Units/Nuclear Submarine-1.png"
   ],
   "note": "Submarine",
-  "done": false
+  "done": true
  },
  {
   "category": "Unit",
@@ -2375,7 +2375,7 @@
    "Units/Mechanized Infantry-1.png"
   ],
   "note": "Gunpowder",
-  "done": false
+  "done": true
  },
  {
   "category": "Unit",
@@ -2386,7 +2386,7 @@
    "Units/Missile Cruiser-1.png"
   ],
   "note": "Ranged Water",
-  "done": false
+  "done": true
  },
  {
   "category": "Unit",
@@ -2397,7 +2397,7 @@
    "Units/Modern Armor-1.png"
   ],
   "note": "Armored",
-  "done": false
+  "done": true
  },
  {
   "category": "Unit",
@@ -2408,7 +2408,7 @@
    "Units/Jet Fighter-1.png"
   ],
   "note": "Fighter",
-  "done": false
+  "done": true
  },
  {
   "category": "Unit",
@@ -2419,7 +2419,7 @@
    "Units/Giant Death Robot-1.png"
   ],
   "note": "Armored",
-  "done": false
+  "done": true
  },
  {
   "category": "Unit",
@@ -2430,7 +2430,7 @@
    "Units/Stealth Bomber-1.png"
   ],
   "note": "Bomber",
-  "done": false
+  "done": true
  },
  {
   "category": "Unit",
@@ -2441,7 +2441,7 @@
    "Units/Great Artist-1.png"
   ],
   "note": "Civilian",
-  "done": false
+  "done": true
  },
  {
   "category": "Unit",
@@ -2452,7 +2452,7 @@
    "Units/Great Scientist-1.png"
   ],
   "note": "Civilian",
-  "done": false
+  "done": true
  },
  {
   "category": "Unit",
@@ -2463,7 +2463,7 @@
    "Units/Great Merchant-1.png"
   ],
   "note": "Civilian",
-  "done": false
+  "done": true
  },
  {
   "category": "Unit",
@@ -2474,7 +2474,7 @@
    "Units/Great Engineer-1.png"
   ],
   "note": "Civilian",
-  "done": false
+  "done": true
  },
  {
   "category": "Unit",
@@ -2485,7 +2485,7 @@
    "Units/Great Prophet-1.png"
   ],
   "note": "Civilian",
-  "done": false
+  "done": true
  },
  {
   "category": "Unit",
@@ -2496,7 +2496,7 @@
    "Units/Great General-1.png"
   ],
   "note": "Civilian",
-  "done": false
+  "done": true
  },
  {
   "category": "Unit (civ unique)",
@@ -2507,7 +2507,7 @@
    "Units/Khan-1.png"
   ],
   "note": "unique to Mongolia, replaces Great General",
-  "done": false
+  "done": true
  },
  {
   "category": "Unit",
@@ -2518,7 +2518,7 @@
    "Units/Great Admiral-1.png"
   ],
   "note": "Civilian Water",
-  "done": false
+  "done": true
  },
  {
   "category": "Unit",
@@ -2529,7 +2529,7 @@
    "Units/Missionary-1.png"
   ],
   "note": "Civilian",
-  "done": false
+  "done": true
  },
  {
   "category": "Unit",
@@ -2540,7 +2540,7 @@
    "Units/Inquisitor-1.png"
   ],
   "note": "Civilian",
-  "done": false
+  "done": true
  },
  {
   "category": "Unit",
@@ -2551,7 +2551,7 @@
    "Units/SS Booster-1.png"
   ],
   "note": "Civilian",
-  "done": false
+  "done": true
  },
  {
   "category": "Unit",
@@ -2562,7 +2562,7 @@
    "Units/SS Cockpit-1.png"
   ],
   "note": "Civilian",
-  "done": false
+  "done": true
  },
  {
   "category": "Unit",
@@ -2573,7 +2573,7 @@
    "Units/SS Engine-1.png"
   ],
   "note": "Civilian",
-  "done": false
+  "done": true
  },
  {
   "category": "Unit",
@@ -2584,7 +2584,7 @@
    "Units/SS Stasis Chamber-1.png"
   ],
   "note": "Civilian",
-  "done": false
+  "done": true
  },
  {
   "category": "Unit (embarked)",
@@ -2595,7 +2595,7 @@
    "Units/EmbarkedUnit-Military-Modern era.png"
   ],
   "note": "boat a land unit rides at sea",
-  "done": false
+  "done": true
  },
  {
   "category": "Unit (embarked)",
@@ -2606,7 +2606,7 @@
    "Units/EmbarkedUnit-Civilian-Modern era.png"
   ],
   "note": "boat a land unit rides at sea",
-  "done": false
+  "done": true
  },
  {
   "category": "Unit (embarked)",
@@ -2617,7 +2617,7 @@
    "Units/EmbarkedUnit-Settler-Modern era.png"
   ],
   "note": "boat a land unit rides at sea",
-  "done": false
+  "done": true
  },
  {
   "category": "World wonder landmark",
@@ -2633,7 +2633,7 @@
   "method": "scene",
   "files": [],
   "note": "completion celebration",
-  "done": false
+  "done": true
  },
  {
   "category": "World wonder landmark",
@@ -2657,7 +2657,7 @@
   "method": "sprite",
   "files": [],
   "note": "stands on its city tile",
-  "done": false
+  "done": true
  },
  {
   "category": "World wonder scene",
@@ -2665,7 +2665,7 @@
   "method": "scene",
   "files": [],
   "note": "completion celebration",
-  "done": false
+  "done": true
  },
  {
   "category": "World wonder landmark",
@@ -2673,7 +2673,7 @@
   "method": "sprite",
   "files": [],
   "note": "stands on its city tile",
-  "done": false
+  "done": true
  },
  {
   "category": "World wonder scene",
@@ -2681,7 +2681,7 @@
   "method": "scene",
   "files": [],
   "note": "completion celebration",
-  "done": false
+  "done": true
  },
  {
   "category": "World wonder landmark",
@@ -2689,7 +2689,7 @@
   "method": "sprite",
   "files": [],
   "note": "stands on its city tile",
-  "done": false
+  "done": true
  },
  {
   "category": "World wonder scene",
@@ -2697,7 +2697,7 @@
   "method": "scene",
   "files": [],
   "note": "completion celebration",
-  "done": false
+  "done": true
  },
  {
   "category": "World wonder landmark",
@@ -2705,7 +2705,7 @@
   "method": "sprite",
   "files": [],
   "note": "stands on its city tile",
-  "done": false
+  "done": true
  },
  {
   "category": "World wonder scene",
@@ -2713,7 +2713,7 @@
   "method": "scene",
   "files": [],
   "note": "completion celebration",
-  "done": false
+  "done": true
  },
  {
   "category": "World wonder landmark",
@@ -2721,7 +2721,7 @@
   "method": "sprite",
   "files": [],
   "note": "stands on its city tile",
-  "done": false
+  "done": true
  },
  {
   "category": "World wonder scene",
@@ -2729,7 +2729,7 @@
   "method": "scene",
   "files": [],
   "note": "completion celebration",
-  "done": false
+  "done": true
  },
  {
   "category": "World wonder landmark",
@@ -2737,7 +2737,7 @@
   "method": "sprite",
   "files": [],
   "note": "stands on its city tile",
-  "done": false
+  "done": true
  },
  {
   "category": "World wonder scene",
@@ -2745,7 +2745,7 @@
   "method": "scene",
   "files": [],
   "note": "completion celebration",
-  "done": false
+  "done": true
  },
  {
   "category": "World wonder landmark",
@@ -2753,7 +2753,7 @@
   "method": "sprite",
   "files": [],
   "note": "stands on its city tile",
-  "done": false
+  "done": true
  },
  {
   "category": "World wonder scene",
@@ -2761,7 +2761,7 @@
   "method": "scene",
   "files": [],
   "note": "completion celebration",
-  "done": false
+  "done": true
  },
  {
   "category": "World wonder landmark",
@@ -2769,7 +2769,7 @@
   "method": "sprite",
   "files": [],
   "note": "stands on its city tile",
-  "done": false
+  "done": true
  },
  {
   "category": "World wonder scene",
@@ -2777,7 +2777,7 @@
   "method": "scene",
   "files": [],
   "note": "completion celebration",
-  "done": false
+  "done": true
  },
  {
   "category": "World wonder landmark",
@@ -2785,7 +2785,7 @@
   "method": "sprite",
   "files": [],
   "note": "stands on its city tile",
-  "done": false
+  "done": true
  },
  {
   "category": "World wonder scene",
@@ -2793,7 +2793,7 @@
   "method": "scene",
   "files": [],
   "note": "completion celebration",
-  "done": false
+  "done": true
  },
  {
   "category": "World wonder landmark",
@@ -2801,7 +2801,7 @@
   "method": "sprite",
   "files": [],
   "note": "stands on its city tile",
-  "done": false
+  "done": true
  },
  {
   "category": "World wonder scene",
@@ -2809,7 +2809,7 @@
   "method": "scene",
   "files": [],
   "note": "completion celebration",
-  "done": false
+  "done": true
  },
  {
   "category": "World wonder landmark",
@@ -2817,7 +2817,7 @@
   "method": "sprite",
   "files": [],
   "note": "stands on its city tile",
-  "done": false
+  "done": true
  },
  {
   "category": "World wonder scene",
@@ -2825,7 +2825,7 @@
   "method": "scene",
   "files": [],
   "note": "completion celebration",
-  "done": false
+  "done": true
  },
  {
   "category": "World wonder landmark",
@@ -2833,7 +2833,7 @@
   "method": "sprite",
   "files": [],
   "note": "stands on its city tile",
-  "done": false
+  "done": true
  },
  {
   "category": "World wonder scene",
@@ -2841,7 +2841,7 @@
   "method": "scene",
   "files": [],
   "note": "completion celebration",
-  "done": false
+  "done": true
  },
  {
   "category": "World wonder landmark",
@@ -2849,7 +2849,7 @@
   "method": "sprite",
   "files": [],
   "note": "stands on its city tile",
-  "done": false
+  "done": true
  },
  {
   "category": "World wonder scene",
@@ -2857,7 +2857,7 @@
   "method": "scene",
   "files": [],
   "note": "completion celebration",
-  "done": false
+  "done": true
  },
  {
   "category": "World wonder landmark",
@@ -2865,7 +2865,7 @@
   "method": "sprite",
   "files": [],
   "note": "stands on its city tile",
-  "done": false
+  "done": true
  },
  {
   "category": "World wonder scene",
@@ -2873,7 +2873,7 @@
   "method": "scene",
   "files": [],
   "note": "completion celebration",
-  "done": false
+  "done": true
  },
  {
   "category": "World wonder landmark",
@@ -2881,7 +2881,7 @@
   "method": "sprite",
   "files": [],
   "note": "stands on its city tile",
-  "done": false
+  "done": true
  },
  {
   "category": "World wonder scene",
@@ -2889,7 +2889,7 @@
   "method": "scene",
   "files": [],
   "note": "completion celebration",
-  "done": false
+  "done": true
  },
  {
   "category": "World wonder landmark",
@@ -2897,7 +2897,7 @@
   "method": "sprite",
   "files": [],
   "note": "stands on its city tile",
-  "done": false
+  "done": true
  },
  {
   "category": "World wonder scene",
@@ -2905,7 +2905,7 @@
   "method": "scene",
   "files": [],
   "note": "completion celebration",
-  "done": false
+  "done": true
  },
  {
   "category": "World wonder landmark",
@@ -2913,7 +2913,7 @@
   "method": "sprite",
   "files": [],
   "note": "stands on its city tile",
-  "done": false
+  "done": true
  },
  {
   "category": "World wonder scene",
@@ -2921,7 +2921,7 @@
   "method": "scene",
   "files": [],
   "note": "completion celebration",
-  "done": false
+  "done": true
  },
  {
   "category": "World wonder landmark",
@@ -2929,7 +2929,7 @@
   "method": "sprite",
   "files": [],
   "note": "stands on its city tile",
-  "done": false
+  "done": true
  },
  {
   "category": "World wonder scene",
@@ -2937,7 +2937,7 @@
   "method": "scene",
   "files": [],
   "note": "completion celebration",
-  "done": false
+  "done": true
  },
  {
   "category": "World wonder landmark",
@@ -2945,7 +2945,7 @@
   "method": "sprite",
   "files": [],
   "note": "stands on its city tile",
-  "done": false
+  "done": true
  },
  {
   "category": "World wonder scene",
@@ -2953,7 +2953,7 @@
   "method": "scene",
   "files": [],
   "note": "completion celebration",
-  "done": false
+  "done": true
  },
  {
   "category": "World wonder landmark",
@@ -2961,7 +2961,7 @@
   "method": "sprite",
   "files": [],
   "note": "stands on its city tile",
-  "done": false
+  "done": true
  },
  {
   "category": "World wonder scene",
@@ -2969,7 +2969,7 @@
   "method": "scene",
   "files": [],
   "note": "completion celebration",
-  "done": false
+  "done": true
  },
  {
   "category": "World wonder landmark",
@@ -2977,7 +2977,7 @@
   "method": "sprite",
   "files": [],
   "note": "stands on its city tile",
-  "done": false
+  "done": true
  },
  {
   "category": "World wonder scene",
@@ -2985,7 +2985,7 @@
   "method": "scene",
   "files": [],
   "note": "completion celebration",
-  "done": false
+  "done": true
  },
  {
   "category": "World wonder landmark",
@@ -2993,7 +2993,7 @@
   "method": "sprite",
   "files": [],
   "note": "stands on its city tile",
-  "done": false
+  "done": true
  },
  {
   "category": "World wonder scene",
@@ -3001,7 +3001,7 @@
   "method": "scene",
   "files": [],
   "note": "completion celebration",
-  "done": false
+  "done": true
  },
  {
   "category": "World wonder landmark",
@@ -3009,7 +3009,7 @@
   "method": "sprite",
   "files": [],
   "note": "stands on its city tile",
-  "done": false
+  "done": true
  },
  {
   "category": "World wonder scene",
@@ -3017,7 +3017,7 @@
   "method": "scene",
   "files": [],
   "note": "completion celebration",
-  "done": false
+  "done": true
  },
  {
   "category": "World wonder landmark",
@@ -3025,7 +3025,7 @@
   "method": "sprite",
   "files": [],
   "note": "stands on its city tile",
-  "done": false
+  "done": true
  },
  {
   "category": "World wonder scene",
@@ -3033,7 +3033,7 @@
   "method": "scene",
   "files": [],
   "note": "completion celebration",
-  "done": false
+  "done": true
  },
  {
   "category": "World wonder landmark",
@@ -3041,7 +3041,7 @@
   "method": "sprite",
   "files": [],
   "note": "stands on its city tile",
-  "done": false
+  "done": true
  },
  {
   "category": "World wonder scene",
@@ -3049,7 +3049,7 @@
   "method": "scene",
   "files": [],
   "note": "completion celebration",
-  "done": false
+  "done": true
  },
  {
   "category": "World wonder landmark",
@@ -3057,7 +3057,7 @@
   "method": "sprite",
   "files": [],
   "note": "stands on its city tile",
-  "done": false
+  "done": true
  },
  {
   "category": "World wonder scene",
@@ -3065,7 +3065,7 @@
   "method": "scene",
   "files": [],
   "note": "completion celebration",
-  "done": false
+  "done": true
  },
  {
   "category": "World wonder landmark",
@@ -3073,7 +3073,7 @@
   "method": "sprite",
   "files": [],
   "note": "stands on its city tile",
-  "done": false
+  "done": true
  },
  {
   "category": "World wonder scene",
@@ -3081,7 +3081,7 @@
   "method": "scene",
   "files": [],
   "note": "completion celebration",
-  "done": false
+  "done": true
  },
  {
   "category": "World wonder landmark",
@@ -3089,7 +3089,7 @@
   "method": "sprite",
   "files": [],
   "note": "stands on its city tile",
-  "done": false
+  "done": true
  },
  {
   "category": "World wonder scene",
@@ -3097,7 +3097,7 @@
   "method": "scene",
   "files": [],
   "note": "completion celebration",
-  "done": false
+  "done": true
  },
  {
   "category": "World wonder landmark",
@@ -3105,7 +3105,7 @@
   "method": "sprite",
   "files": [],
   "note": "stands on its city tile",
-  "done": false
+  "done": true
  },
  {
   "category": "World wonder scene",
@@ -3113,7 +3113,7 @@
   "method": "scene",
   "files": [],
   "note": "completion celebration",
-  "done": false
+  "done": true
  },
  {
   "category": "World wonder landmark",
@@ -3121,7 +3121,7 @@
   "method": "sprite",
   "files": [],
   "note": "stands on its city tile",
-  "done": false
+  "done": true
  },
  {
   "category": "World wonder scene",
@@ -3129,7 +3129,7 @@
   "method": "scene",
   "files": [],
   "note": "completion celebration",
-  "done": false
+  "done": true
  },
  {
   "category": "World wonder landmark",
@@ -3137,7 +3137,7 @@
   "method": "sprite",
   "files": [],
   "note": "stands on its city tile",
-  "done": false
+  "done": true
  },
  {
   "category": "World wonder scene",
@@ -3145,7 +3145,7 @@
   "method": "scene",
   "files": [],
   "note": "completion celebration",
-  "done": false
+  "done": true
  },
  {
   "category": "World wonder landmark",
@@ -3153,7 +3153,7 @@
   "method": "sprite",
   "files": [],
   "note": "stands on its city tile",
-  "done": false
+  "done": true
  },
  {
   "category": "World wonder scene",
@@ -3161,7 +3161,7 @@
   "method": "scene",
   "files": [],
   "note": "completion celebration",
-  "done": false
+  "done": true
  },
  {
   "category": "World wonder landmark",
@@ -3169,7 +3169,7 @@
   "method": "sprite",
   "files": [],
   "note": "stands on its city tile",
-  "done": false
+  "done": true
  },
  {
   "category": "World wonder scene",
@@ -3177,7 +3177,7 @@
   "method": "scene",
   "files": [],
   "note": "completion celebration",
-  "done": false
+  "done": true
  },
  {
   "category": "World wonder landmark",
@@ -3185,7 +3185,7 @@
   "method": "sprite",
   "files": [],
   "note": "stands on its city tile",
-  "done": false
+  "done": true
  },
  {
   "category": "World wonder scene",
@@ -3193,7 +3193,7 @@
   "method": "scene",
   "files": [],
   "note": "completion celebration",
-  "done": false
+  "done": true
  },
  {
   "category": "World wonder landmark",
@@ -3201,7 +3201,7 @@
   "method": "sprite",
   "files": [],
   "note": "stands on its city tile",
-  "done": false
+  "done": true
  },
  {
   "category": "World wonder scene",
@@ -3209,7 +3209,7 @@
   "method": "scene",
   "files": [],
   "note": "completion celebration",
-  "done": false
+  "done": true
  },
  {
   "category": "World wonder landmark",
@@ -3217,7 +3217,7 @@
   "method": "sprite",
   "files": [],
   "note": "stands on its city tile",
-  "done": false
+  "done": true
  },
  {
   "category": "World wonder scene",
@@ -3225,7 +3225,7 @@
   "method": "scene",
   "files": [],
   "note": "completion celebration",
-  "done": false
+  "done": true
  },
  {
   "category": "World wonder landmark",
@@ -3233,7 +3233,7 @@
   "method": "sprite",
   "files": [],
   "note": "stands on its city tile",
-  "done": false
+  "done": true
  },
  {
   "category": "World wonder scene",
@@ -3241,7 +3241,7 @@
   "method": "scene",
   "files": [],
   "note": "completion celebration",
-  "done": false
+  "done": true
  },
  {
   "category": "World wonder landmark",
@@ -3249,7 +3249,7 @@
   "method": "sprite",
   "files": [],
   "note": "stands on its city tile",
-  "done": false
+  "done": true
  },
  {
   "category": "World wonder scene",
@@ -3257,7 +3257,7 @@
   "method": "scene",
   "files": [],
   "note": "completion celebration",
-  "done": false
+  "done": true
  },
  {
   "category": "Leader portrait",
@@ -3281,7 +3281,7 @@
   "method": "scene",
   "files": [],
   "note": "diplomacy",
-  "done": false
+  "done": true
  },
  {
   "category": "Leader portrait",
@@ -3289,7 +3289,7 @@
   "method": "scene",
   "files": [],
   "note": "diplomacy",
-  "done": false
+  "done": true
  },
  {
   "category": "Leader portrait",
@@ -3297,7 +3297,7 @@
   "method": "scene",
   "files": [],
   "note": "diplomacy",
-  "done": false
+  "done": true
  },
  {
   "category": "Leader portrait",
@@ -3305,7 +3305,7 @@
   "method": "scene",
   "files": [],
   "note": "diplomacy",
-  "done": false
+  "done": true
  },
  {
   "category": "Leader portrait",
@@ -3313,7 +3313,7 @@
   "method": "scene",
   "files": [],
   "note": "diplomacy",
-  "done": false
+  "done": true
  },
  {
   "category": "Leader portrait",
@@ -3321,7 +3321,7 @@
   "method": "scene",
   "files": [],
   "note": "diplomacy",
-  "done": false
+  "done": true
  },
  {
   "category": "Leader portrait",
@@ -3329,7 +3329,7 @@
   "method": "scene",
   "files": [],
   "note": "diplomacy",
-  "done": false
+  "done": true
  },
  {
   "category": "Leader portrait",
@@ -3337,7 +3337,7 @@
   "method": "scene",
   "files": [],
   "note": "diplomacy",
-  "done": false
+  "done": true
  },
  {
   "category": "Leader portrait",
@@ -3345,7 +3345,7 @@
   "method": "scene",
   "files": [],
   "note": "diplomacy",
-  "done": false
+  "done": true
  },
  {
   "category": "Leader portrait",
@@ -3353,7 +3353,7 @@
   "method": "scene",
   "files": [],
   "note": "diplomacy",
-  "done": false
+  "done": true
  },
  {
   "category": "Leader portrait",
@@ -3361,7 +3361,7 @@
   "method": "scene",
   "files": [],
   "note": "diplomacy",
-  "done": false
+  "done": true
  },
  {
   "category": "Leader portrait",
@@ -3369,7 +3369,7 @@
   "method": "scene",
   "files": [],
   "note": "diplomacy",
-  "done": false
+  "done": true
  },
  {
   "category": "Leader portrait",
@@ -3377,7 +3377,7 @@
   "method": "scene",
   "files": [],
   "note": "diplomacy",
-  "done": false
+  "done": true
  },
  {
   "category": "Leader portrait",
@@ -3385,7 +3385,7 @@
   "method": "scene",
   "files": [],
   "note": "diplomacy",
-  "done": false
+  "done": true
  },
  {
   "category": "Leader portrait",
@@ -3393,7 +3393,7 @@
   "method": "scene",
   "files": [],
   "note": "diplomacy",
-  "done": false
+  "done": true
  },
  {
   "category": "Leader portrait",
@@ -3401,7 +3401,7 @@
   "method": "scene",
   "files": [],
   "note": "diplomacy",
-  "done": false
+  "done": true
  },
  {
   "category": "Leader portrait",
@@ -3409,7 +3409,7 @@
   "method": "scene",
   "files": [],
   "note": "diplomacy",
-  "done": false
+  "done": true
  },
  {
   "category": "Leader portrait",
@@ -3417,7 +3417,7 @@
   "method": "scene",
   "files": [],
   "note": "diplomacy",
-  "done": false
+  "done": true
  },
  {
   "category": "Leader portrait",
@@ -3425,7 +3425,7 @@
   "method": "scene",
   "files": [],
   "note": "diplomacy",
-  "done": false
+  "done": true
  },
  {
   "category": "Leader portrait",
@@ -3433,7 +3433,7 @@
   "method": "scene",
   "files": [],
   "note": "diplomacy",
-  "done": false
+  "done": true
  },
  {
   "category": "Leader portrait",
@@ -3441,7 +3441,7 @@
   "method": "scene",
   "files": [],
   "note": "diplomacy",
-  "done": false
+  "done": true
  },
  {
   "category": "Leader portrait",
@@ -3449,7 +3449,7 @@
   "method": "scene",
   "files": [],
   "note": "diplomacy",
-  "done": false
+  "done": true
  },
  {
   "category": "Leader portrait",
@@ -3457,7 +3457,7 @@
   "method": "scene",
   "files": [],
   "note": "diplomacy",
-  "done": false
+  "done": true
  },
  {
   "category": "Leader portrait",
@@ -3465,7 +3465,7 @@
   "method": "scene",
   "files": [],
   "note": "diplomacy",
-  "done": false
+  "done": true
  },
  {
   "category": "Leader portrait",
@@ -3473,7 +3473,7 @@
   "method": "scene",
   "files": [],
   "note": "diplomacy",
-  "done": false
+  "done": true
  },
  {
   "category": "Leader portrait",
@@ -3481,7 +3481,7 @@
   "method": "scene",
   "files": [],
   "note": "diplomacy",
-  "done": false
+  "done": true
  },
  {
   "category": "Leader portrait",
@@ -3489,7 +3489,7 @@
   "method": "scene",
   "files": [],
   "note": "diplomacy",
-  "done": false
+  "done": true
  },
  {
   "category": "Leader portrait",
@@ -3497,7 +3497,7 @@
   "method": "scene",
   "files": [],
   "note": "diplomacy",
-  "done": false
+  "done": true
  },
  {
   "category": "Leader portrait",
@@ -3505,7 +3505,7 @@
   "method": "scene",
   "files": [],
   "note": "diplomacy",
-  "done": false
+  "done": true
  },
  {
   "category": "Leader portrait",
@@ -3513,7 +3513,7 @@
   "method": "scene",
   "files": [],
   "note": "diplomacy",
-  "done": false
+  "done": true
  },
  {
   "category": "Leader portrait",
@@ -3521,7 +3521,7 @@
   "method": "scene",
   "files": [],
   "note": "diplomacy",
-  "done": false
+  "done": true
  },
  {
   "category": "Leader portrait",
@@ -3529,7 +3529,7 @@
   "method": "scene",
   "files": [],
   "note": "diplomacy",
-  "done": false
+  "done": true
  },
  {
   "category": "Map overlay",

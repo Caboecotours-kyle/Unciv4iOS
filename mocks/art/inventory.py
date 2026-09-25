@@ -37,7 +37,7 @@ for t in terrains:
         add("Terrain", n, "code", [f"Tiles/{n}.png"], "faceted hex slab with dirt sides; water sits lower", done=True if n in ("Ocean", "Coast", "Grassland", "Plains", "Desert", "Mountain", "Lakes", "Tundra", "Snow") else False)
     elif kind == "TerrainFeature":
         add("Terrain feature", n, "code", [f"Tiles/{n}.png"], "rivers run on hex edges" if n == "River" else "",
-            done=n in ("Hill", "Forest", "Jungle", "Marsh", "Oasis", "River"))
+            done=n in ("Hill", "Forest", "Jungle", "Marsh", "Oasis", "River") or have({"Ice": "f_ice.png", "Atoll": "f_atoll.png", "Flood plains": "f_flood.png", "Fallout": "f_fallout.png"}.get(n, "-")))
     else:
         add("Natural wonder", n, "sprite", [f"Tiles/{n}.png"], "landmark sprite; discovery uses a scene",
             done=have(f"nw_{n}.png") or n == "Grand Mesa")
@@ -57,8 +57,8 @@ for i in improvements:
     add("Improvement", n, method, [f"Tiles/{n}.png"], note, done=have(f"i_{n}.png") or n in ("Farm", "Mine"))
 
 for e in eras:
-    add("City center", e["name"], "code", [f"Tiles/City center-{e['name']}.png"],
-        "houses kit grows with population; roofs and walls change by era", done=e["name"] == "Ancient era")
+    add("City center", e["name"], "sprite", [f"Tiles/City center-{e['name']}.png"],
+        "one sprite per era, roofs in the owner's color", done=have(f"c_{e['name'].split()[0]}_medium.png"))
 for label in ("Capital marker", "City-state marker (5 types)", "Puppet city", "City being razed", "City under siege", "City ruins"):
     add("City state", label, "code", [], "", done=label == "Capital marker")
 
@@ -69,7 +69,7 @@ for u in units:
         f"unique to {unique}, replaces {u.get('replaces')}" if unique else u.get("unitType", ""),
         done=have(f"k_{u['name'].lower()}.png"))
 for n in ("EmbarkedUnit-Military", "EmbarkedUnit-Civilian", "EmbarkedUnit-Settler"):
-    add("Unit (embarked)", n, "sprite", [f"Units/{n}.png", f"Units/{n}-Modern era.png"], "boat a land unit rides at sea", done=False)
+    add("Unit (embarked)", n, "sprite", [f"Units/{n}.png", f"Units/{n}-Modern era.png"], "boat a land unit rides at sea", done=have(f"k_{n.lower()}.png"))
 
 for b in buildings:
     if b.get("isWonder"):

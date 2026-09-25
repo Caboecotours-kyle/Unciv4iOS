@@ -1,0 +1,543 @@
+[
+ {
+  "name": "ws_Temple of Artemis",
+  "key": false,
+  "size": "1024x1536",
+  "quality": "high",
+  "out_size": "683x1024",
+  "prompt": "Subject: Temple of Artemis standing on a floating hexagonal island at its most majestic, true to its real appearance and setting, with a few low-poly trees and details around it.",
+  "style": "Style: a polished low-poly 3D diorama illustration in the spirit of The Battle of Polytopia but richer and more detailed, crisp flat-shaded facets, warm light from the upper left, soft light rays, saturated but harmonious palette. No text, no UI, no border, no people unless named. Vertical portrait composition for a phone screen, the subject in the middle third, generous sky above and a soft cloud sea or landscape below."
+ },
+ {
+  "name": "wl_The Great Library",
+  "prompt": "Subject: The Great Library, the world wonder, as a compact landmark building true to its real appearance.",
+  "style": "Style: a very simple chunky low-poly game icon in the style of The Battle of Polytopia. Minimal geometry: the fewest large flat facets that still read clearly, like a toy made of about 20 to 40 polygons. Two tones per color only (lit side and shadow side), light from the upper left. No small details, no ornaments, no faces, no textures, no gradients, no outlines, no text, no ground plane, no drop shadow. Bold simple silhouette that reads at 24 pixels. Palette: grass green #8BD14F, sky blue #5CC8FF, sand #E8D27A, terracotta #D9774B, stone #C3CAD4, wood #8A5A33, gold #FFC93C, cream #F4ECD9. Three-quarter isometric view matching a tile-based strategy map seen from above at 45 degrees, object centered and filling about 80 percent of the frame, no ground tile, no base plate. Background: solid flat pure magenta #FF00FF filling the whole canvas edge to edge. The object must not contain any magenta or pink."
+ },
+ {
+  "name": "ws_The Great Library",
+  "key": false,
+  "size": "1024x1536",
+  "quality": "high",
+  "out_size": "683x1024",
+  "prompt": "Subject: The Great Library standing on a floating hexagonal island at its most majestic, true to its real appearance and setting, with a few low-poly trees and details around it.",
+  "style": "Style: a polished low-poly 3D diorama illustration in the spirit of The Battle of Polytopia but richer and more detailed, crisp flat-shaded facets, warm light from the upper left, soft light rays, saturated but harmonious palette. No text, no UI, no border, no people unless named. Vertical portrait composition for a phone screen, the subject in the middle third, generous sky above and a soft cloud sea or landscape below."
+ },
+ {
+  "name": "wl_The Pyramids",
+  "prompt": "Subject: The Pyramids, the world wonder, as a compact landmark building true to its real appearance.",
+  "style": "Style: a very simple chunky low-poly game icon in the style of The Battle of Polytopia. Minimal geometry: the fewest large flat facets that still read clearly, like a toy made of about 20 to 40 polygons. Two tones per color only (lit side and shadow side), light from the upper left. No small details, no ornaments, no faces, no textures, no gradients, no outlines, no text, no ground plane, no drop shadow. Bold simple silhouette that reads at 24 pixels. Palette: grass green #8BD14F, sky blue #5CC8FF, sand #E8D27A, terracotta #D9774B, stone #C3CAD4, wood #8A5A33, gold #FFC93C, cream #F4ECD9. Three-quarter isometric view matching a tile-based strategy map seen from above at 45 degrees, object centered and filling about 80 percent of the frame, no ground tile, no base plate. Background: solid flat pure magenta #FF00FF filling the whole canvas edge to edge. The object must not contain any magenta or pink."
+ },
+ {
+  "name": "ws_The Pyramids",
+  "key": false,
+  "size": "1024x1536",
+  "quality": "high",
+  "out_size": "683x1024",
+  "prompt": "Subject: The Pyramids standing on a floating hexagonal island at its most majestic, true to its real appearance and setting, with a few low-poly trees and details around it.",
+  "style": "Style: a polished low-poly 3D diorama illustration in the spirit of The Battle of Polytopia but richer and more detailed, crisp flat-shaded facets, warm light from the upper left, soft light rays, saturated but harmonious palette. No text, no UI, no border, no people unless named. Vertical portrait composition for a phone screen, the subject in the middle third, generous sky above and a soft cloud sea or landscape below."
+ },
+ {
+  "name": "wl_Mausoleum of Halicarnassus",
+  "prompt": "Subject: Mausoleum of Halicarnassus, the world wonder, as a compact landmark building true to its real appearance.",
+  "style": "Style: a very simple chunky low-poly game icon in the style of The Battle of Polytopia. Minimal geometry: the fewest large flat facets that still read clearly, like a toy made of about 20 to 40 polygons. Two tones per color only (lit side and shadow side), light from the upper left. No small details, no ornaments, no faces, no textures, no gradients, no outlines, no text, no ground plane, no drop shadow. Bold simple silhouette that reads at 24 pixels. Palette: grass green #8BD14F, sky blue #5CC8FF, sand #E8D27A, terracotta #D9774B, stone #C3CAD4, wood #8A5A33, gold #FFC93C, cream #F4ECD9. Three-quarter isometric view matching a tile-based strategy map seen from above at 45 degrees, object centered and filling about 80 percent of the frame, no ground tile, no base plate. Background: solid flat pure magenta #FF00FF filling the whole canvas edge to edge. The object must not contain any magenta or pink."
+ },
+ {
+  "name": "ws_Mausoleum of Halicarnassus",
+  "key": false,
+  "size": "1024x1536",
+  "quality": "high",
+  "out_size": "683x1024",
+  "prompt": "Subject: Mausoleum of Halicarnassus standing on a floating hexagonal island at its most majestic, true to its real appearance and setting, with a few low-poly trees and details around it.",
+  "style": "Style: a polished low-poly 3D diorama illustration in the spirit of The Battle of Polytopia but richer and more detailed, crisp flat-shaded facets, warm light from the upper left, soft light rays, saturated but harmonious palette. No text, no UI, no border, no people unless named. Vertical portrait composition for a phone screen, the subject in the middle third, generous sky above and a soft cloud sea or landscape below."
+ },
+ {
+  "name": "wl_Statue of Zeus",
+  "prompt": "Subject: Statue of Zeus, the world wonder, as a compact landmark building true to its real appearance.",
+  "style": "Style: a very simple chunky low-poly game icon in the style of The Battle of Polytopia. Minimal geometry: the fewest large flat facets that still read clearly, like a toy made of about 20 to 40 polygons. Two tones per color only (lit side and shadow side), light from the upper left. No small details, no ornaments, no faces, no textures, no gradients, no outlines, no text, no ground plane, no drop shadow. Bold simple silhouette that reads at 24 pixels. Palette: grass green #8BD14F, sky blue #5CC8FF, sand #E8D27A, terracotta #D9774B, stone #C3CAD4, wood #8A5A33, gold #FFC93C, cream #F4ECD9. Three-quarter isometric view matching a tile-based strategy map seen from above at 45 degrees, object centered and filling about 80 percent of the frame, no ground tile, no base plate. Background: solid flat pure magenta #FF00FF filling the whole canvas edge to edge. The object must not contain any magenta or pink."
+ },
+ {
+  "name": "ws_Statue of Zeus",
+  "key": false,
+  "size": "1024x1536",
+  "quality": "high",
+  "out_size": "683x1024",
+  "prompt": "Subject: Statue of Zeus standing on a floating hexagonal island at its most majestic, true to its real appearance and setting, with a few low-poly trees and details around it.",
+  "style": "Style: a polished low-poly 3D diorama illustration in the spirit of The Battle of Polytopia but richer and more detailed, crisp flat-shaded facets, warm light from the upper left, soft light rays, saturated but harmonious palette. No text, no UI, no border, no people unless named. Vertical portrait composition for a phone screen, the subject in the middle third, generous sky above and a soft cloud sea or landscape below."
+ },
+ {
+  "name": "wl_The Great Lighthouse",
+  "prompt": "Subject: The Great Lighthouse, the world wonder, as a compact landmark building true to its real appearance.",
+  "style": "Style: a very simple chunky low-poly game icon in the style of The Battle of Polytopia. Minimal geometry: the fewest large flat facets that still read clearly, like a toy made of about 20 to 40 polygons. Two tones per color only (lit side and shadow side), light from the upper left. No small details, no ornaments, no faces, no textures, no gradients, no outlines, no text, no ground plane, no drop shadow. Bold simple silhouette that reads at 24 pixels. Palette: grass green #8BD14F, sky blue #5CC8FF, sand #E8D27A, terracotta #D9774B, stone #C3CAD4, wood #8A5A33, gold #FFC93C, cream #F4ECD9. Three-quarter isometric view matching a tile-based strategy map seen from above at 45 degrees, object centered and filling about 80 percent of the frame, no ground tile, no base plate. Background: solid flat pure magenta #FF00FF filling the whole canvas edge to edge. The object must not contain any magenta or pink."
+ },
+ {
+  "name": "ws_The Great Lighthouse",
+  "key": false,
+  "size": "1024x1536",
+  "quality": "high",
+  "out_size": "683x1024",
+  "prompt": "Subject: The Great Lighthouse standing on a floating hexagonal island at its most majestic, true to its real appearance and setting, with a few low-poly trees and details around it.",
+  "style": "Style: a polished low-poly 3D diorama illustration in the spirit of The Battle of Polytopia but richer and more detailed, crisp flat-shaded facets, warm light from the upper left, soft light rays, saturated but harmonious palette. No text, no UI, no border, no people unless named. Vertical portrait composition for a phone screen, the subject in the middle third, generous sky above and a soft cloud sea or landscape below."
+ },
+ {
+  "name": "wl_Hanging Gardens",
+  "prompt": "Subject: Hanging Gardens, the world wonder, as a compact landmark building true to its real appearance.",
+  "style": "Style: a very simple chunky low-poly game icon in the style of The Battle of Polytopia. Minimal geometry: the fewest large flat facets that still read clearly, like a toy made of about 20 to 40 polygons. Two tones per color only (lit side and shadow side), light from the upper left. No small details, no ornaments, no faces, no textures, no gradients, no outlines, no text, no ground plane, no drop shadow. Bold simple silhouette that reads at 24 pixels. Palette: grass green #8BD14F, sky blue #5CC8FF, sand #E8D27A, terracotta #D9774B, stone #C3CAD4, wood #8A5A33, gold #FFC93C, cream #F4ECD9. Three-quarter isometric view matching a tile-based strategy map seen from above at 45 degrees, object centered and filling about 80 percent of the frame, no ground tile, no base plate. Background: solid flat pure magenta #FF00FF filling the whole canvas edge to edge. The object must not contain any magenta or pink."
+ },
+ {
+  "name": "ws_Hanging Gardens",
+  "key": false,
+  "size": "1024x1536",
+  "quality": "high",
+  "out_size": "683x1024",
+  "prompt": "Subject: Hanging Gardens standing on a floating hexagonal island at its most majestic, true to its real appearance and setting, with a few low-poly trees and details around it.",
+  "style": "Style: a polished low-poly 3D diorama illustration in the spirit of The Battle of Polytopia but richer and more detailed, crisp flat-shaded facets, warm light from the upper left, soft light rays, saturated but harmonious palette. No text, no UI, no border, no people unless named. Vertical portrait composition for a phone screen, the subject in the middle third, generous sky above and a soft cloud sea or landscape below."
+ },
+ {
+  "name": "wl_Terracotta Army",
+  "prompt": "Subject: Terracotta Army, the world wonder, as a compact landmark building true to its real appearance.",
+  "style": "Style: a very simple chunky low-poly game icon in the style of The Battle of Polytopia. Minimal geometry: the fewest large flat facets that still read clearly, like a toy made of about 20 to 40 polygons. Two tones per color only (lit side and shadow side), light from the upper left. No small details, no ornaments, no faces, no textures, no gradients, no outlines, no text, no ground plane, no drop shadow. Bold simple silhouette that reads at 24 pixels. Palette: grass green #8BD14F, sky blue #5CC8FF, sand #E8D27A, terracotta #D9774B, stone #C3CAD4, wood #8A5A33, gold #FFC93C, cream #F4ECD9. Three-quarter isometric view matching a tile-based strategy map seen from above at 45 degrees, object centered and filling about 80 percent of the frame, no ground tile, no base plate. Background: solid flat pure magenta #FF00FF filling the whole canvas edge to edge. The object must not contain any magenta or pink."
+ },
+ {
+  "name": "ws_Terracotta Army",
+  "key": false,
+  "size": "1024x1536",
+  "quality": "high",
+  "out_size": "683x1024",
+  "prompt": "Subject: Terracotta Army standing on a floating hexagonal island at its most majestic, true to its real appearance and setting, with a few low-poly trees and details around it.",
+  "style": "Style: a polished low-poly 3D diorama illustration in the spirit of The Battle of Polytopia but richer and more detailed, crisp flat-shaded facets, warm light from the upper left, soft light rays, saturated but harmonious palette. No text, no UI, no border, no people unless named. Vertical portrait composition for a phone screen, the subject in the middle third, generous sky above and a soft cloud sea or landscape below."
+ },
+ {
+  "name": "wl_The Oracle",
+  "prompt": "Subject: The Oracle, the world wonder, as a compact landmark building true to its real appearance.",
+  "style": "Style: a very simple chunky low-poly game icon in the style of The Battle of Polytopia. Minimal geometry: the fewest large flat facets that still read clearly, like a toy made of about 20 to 40 polygons. Two tones per color only (lit side and shadow side), light from the upper left. No small details, no ornaments, no faces, no textures, no gradients, no outlines, no text, no ground plane, no drop shadow. Bold simple silhouette that reads at 24 pixels. Palette: grass green #8BD14F, sky blue #5CC8FF, sand #E8D27A, terracotta #D9774B, stone #C3CAD4, wood #8A5A33, gold #FFC93C, cream #F4ECD9. Three-quarter isometric view matching a tile-based strategy map seen from above at 45 degrees, object centered and filling about 80 percent of the frame, no ground tile, no base plate. Background: solid flat pure magenta #FF00FF filling the whole canvas edge to edge. The object must not contain any magenta or pink."
+ },
+ {
+  "name": "ws_The Oracle",
+  "key": false,
+  "size": "1024x1536",
+  "quality": "high",
+  "out_size": "683x1024",
+  "prompt": "Subject: The Oracle standing on a floating hexagonal island at its most majestic, true to its real appearance and setting, with a few low-poly trees and details around it.",
+  "style": "Style: a polished low-poly 3D diorama illustration in the spirit of The Battle of Polytopia but richer and more detailed, crisp flat-shaded facets, warm light from the upper left, soft light rays, saturated but harmonious palette. No text, no UI, no border, no people unless named. Vertical portrait composition for a phone screen, the subject in the middle third, generous sky above and a soft cloud sea or landscape below."
+ },
+ {
+  "name": "wl_Petra",
+  "prompt": "Subject: Petra, the world wonder, as a compact landmark building true to its real appearance.",
+  "style": "Style: a very simple chunky low-poly game icon in the style of The Battle of Polytopia. Minimal geometry: the fewest large flat facets that still read clearly, like a toy made of about 20 to 40 polygons. Two tones per color only (lit side and shadow side), light from the upper left. No small details, no ornaments, no faces, no textures, no gradients, no outlines, no text, no ground plane, no drop shadow. Bold simple silhouette that reads at 24 pixels. Palette: grass green #8BD14F, sky blue #5CC8FF, sand #E8D27A, terracotta #D9774B, stone #C3CAD4, wood #8A5A33, gold #FFC93C, cream #F4ECD9. Three-quarter isometric view matching a tile-based strategy map seen from above at 45 degrees, object centered and filling about 80 percent of the frame, no ground tile, no base plate. Background: solid flat pure magenta #FF00FF filling the whole canvas edge to edge. The object must not contain any magenta or pink."
+ },
+ {
+  "name": "ws_Petra",
+  "key": false,
+  "size": "1024x1536",
+  "quality": "high",
+  "out_size": "683x1024",
+  "prompt": "Subject: Petra standing on a floating hexagonal island at its most majestic, true to its real appearance and setting, with a few low-poly trees and details around it.",
+  "style": "Style: a polished low-poly 3D diorama illustration in the spirit of The Battle of Polytopia but richer and more detailed, crisp flat-shaded facets, warm light from the upper left, soft light rays, saturated but harmonious palette. No text, no UI, no border, no people unless named. Vertical portrait composition for a phone screen, the subject in the middle third, generous sky above and a soft cloud sea or landscape below."
+ },
+ {
+  "name": "wl_Great Wall",
+  "prompt": "Subject: Great Wall, the world wonder, as a compact landmark building true to its real appearance.",
+  "style": "Style: a very simple chunky low-poly game icon in the style of The Battle of Polytopia. Minimal geometry: the fewest large flat facets that still read clearly, like a toy made of about 20 to 40 polygons. Two tones per color only (lit side and shadow side), light from the upper left. No small details, no ornaments, no faces, no textures, no gradients, no outlines, no text, no ground plane, no drop shadow. Bold simple silhouette that reads at 24 pixels. Palette: grass green #8BD14F, sky blue #5CC8FF, sand #E8D27A, terracotta #D9774B, stone #C3CAD4, wood #8A5A33, gold #FFC93C, cream #F4ECD9. Three-quarter isometric view matching a tile-based strategy map seen from above at 45 degrees, object centered and filling about 80 percent of the frame, no ground tile, no base plate. Background: solid flat pure magenta #FF00FF filling the whole canvas edge to edge. The object must not contain any magenta or pink."
+ },
+ {
+  "name": "ws_Great Wall",
+  "key": false,
+  "size": "1024x1536",
+  "quality": "high",
+  "out_size": "683x1024",
+  "prompt": "Subject: Great Wall standing on a floating hexagonal island at its most majestic, true to its real appearance and setting, with a few low-poly trees and details around it.",
+  "style": "Style: a polished low-poly 3D diorama illustration in the spirit of The Battle of Polytopia but richer and more detailed, crisp flat-shaded facets, warm light from the upper left, soft light rays, saturated but harmonious palette. No text, no UI, no border, no people unless named. Vertical portrait composition for a phone screen, the subject in the middle third, generous sky above and a soft cloud sea or landscape below."
+ },
+ {
+  "name": "wl_Colossus",
+  "prompt": "Subject: Colossus, the world wonder, as a compact landmark building true to its real appearance.",
+  "style": "Style: a very simple chunky low-poly game icon in the style of The Battle of Polytopia. Minimal geometry: the fewest large flat facets that still read clearly, like a toy made of about 20 to 40 polygons. Two tones per color only (lit side and shadow side), light from the upper left. No small details, no ornaments, no faces, no textures, no gradients, no outlines, no text, no ground plane, no drop shadow. Bold simple silhouette that reads at 24 pixels. Palette: grass green #8BD14F, sky blue #5CC8FF, sand #E8D27A, terracotta #D9774B, stone #C3CAD4, wood #8A5A33, gold #FFC93C, cream #F4ECD9. Three-quarter isometric view matching a tile-based strategy map seen from above at 45 degrees, object centered and filling about 80 percent of the frame, no ground tile, no base plate. Background: solid flat pure magenta #FF00FF filling the whole canvas edge to edge. The object must not contain any magenta or pink."
+ },
+ {
+  "name": "ws_Colossus",
+  "key": false,
+  "size": "1024x1536",
+  "quality": "high",
+  "out_size": "683x1024",
+  "prompt": "Subject: Colossus standing on a floating hexagonal island at its most majestic, true to its real appearance and setting, with a few low-poly trees and details around it.",
+  "style": "Style: a polished low-poly 3D diorama illustration in the spirit of The Battle of Polytopia but richer and more detailed, crisp flat-shaded facets, warm light from the upper left, soft light rays, saturated but harmonious palette. No text, no UI, no border, no people unless named. Vertical portrait composition for a phone screen, the subject in the middle third, generous sky above and a soft cloud sea or landscape below."
+ },
+ {
+  "name": "wl_Hagia Sophia",
+  "prompt": "Subject: Hagia Sophia, the world wonder, as a compact landmark building true to its real appearance.",
+  "style": "Style: a very simple chunky low-poly game icon in the style of The Battle of Polytopia. Minimal geometry: the fewest large flat facets that still read clearly, like a toy made of about 20 to 40 polygons. Two tones per color only (lit side and shadow side), light from the upper left. No small details, no ornaments, no faces, no textures, no gradients, no outlines, no text, no ground plane, no drop shadow. Bold simple silhouette that reads at 24 pixels. Palette: grass green #8BD14F, sky blue #5CC8FF, sand #E8D27A, terracotta #D9774B, stone #C3CAD4, wood #8A5A33, gold #FFC93C, cream #F4ECD9. Three-quarter isometric view matching a tile-based strategy map seen from above at 45 degrees, object centered and filling about 80 percent of the frame, no ground tile, no base plate. Background: solid flat pure magenta #FF00FF filling the whole canvas edge to edge. The object must not contain any magenta or pink."
+ },
+ {
+  "name": "ws_Hagia Sophia",
+  "key": false,
+  "size": "1024x1536",
+  "quality": "high",
+  "out_size": "683x1024",
+  "prompt": "Subject: Hagia Sophia standing on a floating hexagonal island at its most majestic, true to its real appearance and setting, with a few low-poly trees and details around it.",
+  "style": "Style: a polished low-poly 3D diorama illustration in the spirit of The Battle of Polytopia but richer and more detailed, crisp flat-shaded facets, warm light from the upper left, soft light rays, saturated but harmonious palette. No text, no UI, no border, no people unless named. Vertical portrait composition for a phone screen, the subject in the middle third, generous sky above and a soft cloud sea or landscape below."
+ },
+ {
+  "name": "wl_Great Mosque of Djenne",
+  "prompt": "Subject: Great Mosque of Djenne, the world wonder, as a compact landmark building true to its real appearance.",
+  "style": "Style: a very simple chunky low-poly game icon in the style of The Battle of Polytopia. Minimal geometry: the fewest large flat facets that still read clearly, like a toy made of about 20 to 40 polygons. Two tones per color only (lit side and shadow side), light from the upper left. No small details, no ornaments, no faces, no textures, no gradients, no outlines, no text, no ground plane, no drop shadow. Bold simple silhouette that reads at 24 pixels. Palette: grass green #8BD14F, sky blue #5CC8FF, sand #E8D27A, terracotta #D9774B, stone #C3CAD4, wood #8A5A33, gold #FFC93C, cream #F4ECD9. Three-quarter isometric view matching a tile-based strategy map seen from above at 45 degrees, object centered and filling about 80 percent of the frame, no ground tile, no base plate. Background: solid flat pure magenta #FF00FF filling the whole canvas edge to edge. The object must not contain any magenta or pink."
+ },
+ {
+  "name": "ws_Great Mosque of Djenne",
+  "key": false,
+  "size": "1024x1536",
+  "quality": "high",
+  "out_size": "683x1024",
+  "prompt": "Subject: Great Mosque of Djenne standing on a floating hexagonal island at its most majestic, true to its real appearance and setting, with a few low-poly trees and details around it.",
+  "style": "Style: a polished low-poly 3D diorama illustration in the spirit of The Battle of Polytopia but richer and more detailed, crisp flat-shaded facets, warm light from the upper left, soft light rays, saturated but harmonious palette. No text, no UI, no border, no people unless named. Vertical portrait composition for a phone screen, the subject in the middle third, generous sky above and a soft cloud sea or landscape below."
+ },
+ {
+  "name": "wl_Chichen Itza",
+  "prompt": "Subject: Chichen Itza, the world wonder, as a compact landmark building true to its real appearance.",
+  "style": "Style: a very simple chunky low-poly game icon in the style of The Battle of Polytopia. Minimal geometry: the fewest large flat facets that still read clearly, like a toy made of about 20 to 40 polygons. Two tones per color only (lit side and shadow side), light from the upper left. No small details, no ornaments, no faces, no textures, no gradients, no outlines, no text, no ground plane, no drop shadow. Bold simple silhouette that reads at 24 pixels. Palette: grass green #8BD14F, sky blue #5CC8FF, sand #E8D27A, terracotta #D9774B, stone #C3CAD4, wood #8A5A33, gold #FFC93C, cream #F4ECD9. Three-quarter isometric view matching a tile-based strategy map seen from above at 45 degrees, object centered and filling about 80 percent of the frame, no ground tile, no base plate. Background: solid flat pure magenta #FF00FF filling the whole canvas edge to edge. The object must not contain any magenta or pink."
+ },
+ {
+  "name": "ws_Chichen Itza",
+  "key": false,
+  "size": "1024x1536",
+  "quality": "high",
+  "out_size": "683x1024",
+  "prompt": "Subject: Chichen Itza standing on a floating hexagonal island at its most majestic, true to its real appearance and setting, with a few low-poly trees and details around it.",
+  "style": "Style: a polished low-poly 3D diorama illustration in the spirit of The Battle of Polytopia but richer and more detailed, crisp flat-shaded facets, warm light from the upper left, soft light rays, saturated but harmonious palette. No text, no UI, no border, no people unless named. Vertical portrait composition for a phone screen, the subject in the middle third, generous sky above and a soft cloud sea or landscape below."
+ },
+ {
+  "name": "wl_Machu Picchu",
+  "prompt": "Subject: Machu Picchu, the world wonder, as a compact landmark building true to its real appearance.",
+  "style": "Style: a very simple chunky low-poly game icon in the style of The Battle of Polytopia. Minimal geometry: the fewest large flat facets that still read clearly, like a toy made of about 20 to 40 polygons. Two tones per color only (lit side and shadow side), light from the upper left. No small details, no ornaments, no faces, no textures, no gradients, no outlines, no text, no ground plane, no drop shadow. Bold simple silhouette that reads at 24 pixels. Palette: grass green #8BD14F, sky blue #5CC8FF, sand #E8D27A, terracotta #D9774B, stone #C3CAD4, wood #8A5A33, gold #FFC93C, cream #F4ECD9. Three-quarter isometric view matching a tile-based strategy map seen from above at 45 degrees, object centered and filling about 80 percent of the frame, no ground tile, no base plate. Background: solid flat pure magenta #FF00FF filling the whole canvas edge to edge. The object must not contain any magenta or pink."
+ },
+ {
+  "name": "ws_Machu Picchu",
+  "key": false,
+  "size": "1024x1536",
+  "quality": "high",
+  "out_size": "683x1024",
+  "prompt": "Subject: Machu Picchu standing on a floating hexagonal island at its most majestic, true to its real appearance and setting, with a few low-poly trees and details around it.",
+  "style": "Style: a polished low-poly 3D diorama illustration in the spirit of The Battle of Polytopia but richer and more detailed, crisp flat-shaded facets, warm light from the upper left, soft light rays, saturated but harmonious palette. No text, no UI, no border, no people unless named. Vertical portrait composition for a phone screen, the subject in the middle third, generous sky above and a soft cloud sea or landscape below."
+ },
+ {
+  "name": "wl_Angkor Wat",
+  "prompt": "Subject: Angkor Wat, the world wonder, as a compact landmark building true to its real appearance.",
+  "style": "Style: a very simple chunky low-poly game icon in the style of The Battle of Polytopia. Minimal geometry: the fewest large flat facets that still read clearly, like a toy made of about 20 to 40 polygons. Two tones per color only (lit side and shadow side), light from the upper left. No small details, no ornaments, no faces, no textures, no gradients, no outlines, no text, no ground plane, no drop shadow. Bold simple silhouette that reads at 24 pixels. Palette: grass green #8BD14F, sky blue #5CC8FF, sand #E8D27A, terracotta #D9774B, stone #C3CAD4, wood #8A5A33, gold #FFC93C, cream #F4ECD9. Three-quarter isometric view matching a tile-based strategy map seen from above at 45 degrees, object centered and filling about 80 percent of the frame, no ground tile, no base plate. Background: solid flat pure magenta #FF00FF filling the whole canvas edge to edge. The object must not contain any magenta or pink."
+ },
+ {
+  "name": "ws_Angkor Wat",
+  "key": false,
+  "size": "1024x1536",
+  "quality": "high",
+  "out_size": "683x1024",
+  "prompt": "Subject: Angkor Wat standing on a floating hexagonal island at its most majestic, true to its real appearance and setting, with a few low-poly trees and details around it.",
+  "style": "Style: a polished low-poly 3D diorama illustration in the spirit of The Battle of Polytopia but richer and more detailed, crisp flat-shaded facets, warm light from the upper left, soft light rays, saturated but harmonious palette. No text, no UI, no border, no people unless named. Vertical portrait composition for a phone screen, the subject in the middle third, generous sky above and a soft cloud sea or landscape below."
+ },
+ {
+  "name": "wl_Alhambra",
+  "prompt": "Subject: Alhambra, the world wonder, as a compact landmark building true to its real appearance.",
+  "style": "Style: a very simple chunky low-poly game icon in the style of The Battle of Polytopia. Minimal geometry: the fewest large flat facets that still read clearly, like a toy made of about 20 to 40 polygons. Two tones per color only (lit side and shadow side), light from the upper left. No small details, no ornaments, no faces, no textures, no gradients, no outlines, no text, no ground plane, no drop shadow. Bold simple silhouette that reads at 24 pixels. Palette: grass green #8BD14F, sky blue #5CC8FF, sand #E8D27A, terracotta #D9774B, stone #C3CAD4, wood #8A5A33, gold #FFC93C, cream #F4ECD9. Three-quarter isometric view matching a tile-based strategy map seen from above at 45 degrees, object centered and filling about 80 percent of the frame, no ground tile, no base plate. Background: solid flat pure magenta #FF00FF filling the whole canvas edge to edge. The object must not contain any magenta or pink."
+ },
+ {
+  "name": "ws_Alhambra",
+  "key": false,
+  "size": "1024x1536",
+  "quality": "high",
+  "out_size": "683x1024",
+  "prompt": "Subject: Alhambra standing on a floating hexagonal island at its most majestic, true to its real appearance and setting, with a few low-poly trees and details around it.",
+  "style": "Style: a polished low-poly 3D diorama illustration in the spirit of The Battle of Polytopia but richer and more detailed, crisp flat-shaded facets, warm light from the upper left, soft light rays, saturated but harmonious palette. No text, no UI, no border, no people unless named. Vertical portrait composition for a phone screen, the subject in the middle third, generous sky above and a soft cloud sea or landscape below."
+ },
+ {
+  "name": "wl_Notre Dame",
+  "prompt": "Subject: Notre Dame, the world wonder, as a compact landmark building true to its real appearance.",
+  "style": "Style: a very simple chunky low-poly game icon in the style of The Battle of Polytopia. Minimal geometry: the fewest large flat facets that still read clearly, like a toy made of about 20 to 40 polygons. Two tones per color only (lit side and shadow side), light from the upper left. No small details, no ornaments, no faces, no textures, no gradients, no outlines, no text, no ground plane, no drop shadow. Bold simple silhouette that reads at 24 pixels. Palette: grass green #8BD14F, sky blue #5CC8FF, sand #E8D27A, terracotta #D9774B, stone #C3CAD4, wood #8A5A33, gold #FFC93C, cream #F4ECD9. Three-quarter isometric view matching a tile-based strategy map seen from above at 45 degrees, object centered and filling about 80 percent of the frame, no ground tile, no base plate. Background: solid flat pure magenta #FF00FF filling the whole canvas edge to edge. The object must not contain any magenta or pink."
+ },
+ {
+  "name": "ws_Notre Dame",
+  "key": false,
+  "size": "1024x1536",
+  "quality": "high",
+  "out_size": "683x1024",
+  "prompt": "Subject: Notre Dame standing on a floating hexagonal island at its most majestic, true to its real appearance and setting, with a few low-poly trees and details around it.",
+  "style": "Style: a polished low-poly 3D diorama illustration in the spirit of The Battle of Polytopia but richer and more detailed, crisp flat-shaded facets, warm light from the upper left, soft light rays, saturated but harmonious palette. No text, no UI, no border, no people unless named. Vertical portrait composition for a phone screen, the subject in the middle third, generous sky above and a soft cloud sea or landscape below."
+ },
+ {
+  "name": "wl_Sistine Chapel",
+  "prompt": "Subject: Sistine Chapel, the world wonder, as a compact landmark building true to its real appearance.",
+  "style": "Style: a very simple chunky low-poly game icon in the style of The Battle of Polytopia. Minimal geometry: the fewest large flat facets that still read clearly, like a toy made of about 20 to 40 polygons. Two tones per color only (lit side and shadow side), light from the upper left. No small details, no ornaments, no faces, no textures, no gradients, no outlines, no text, no ground plane, no drop shadow. Bold simple silhouette that reads at 24 pixels. Palette: grass green #8BD14F, sky blue #5CC8FF, sand #E8D27A, terracotta #D9774B, stone #C3CAD4, wood #8A5A33, gold #FFC93C, cream #F4ECD9. Three-quarter isometric view matching a tile-based strategy map seen from above at 45 degrees, object centered and filling about 80 percent of the frame, no ground tile, no base plate. Background: solid flat pure magenta #FF00FF filling the whole canvas edge to edge. The object must not contain any magenta or pink."
+ },
+ {
+  "name": "ws_Sistine Chapel",
+  "key": false,
+  "size": "1024x1536",
+  "quality": "high",
+  "out_size": "683x1024",
+  "prompt": "Subject: Sistine Chapel standing on a floating hexagonal island at its most majestic, true to its real appearance and setting, with a few low-poly trees and details around it.",
+  "style": "Style: a polished low-poly 3D diorama illustration in the spirit of The Battle of Polytopia but richer and more detailed, crisp flat-shaded facets, warm light from the upper left, soft light rays, saturated but harmonious palette. No text, no UI, no border, no people unless named. Vertical portrait composition for a phone screen, the subject in the middle third, generous sky above and a soft cloud sea or landscape below."
+ },
+ {
+  "name": "wl_Forbidden Palace",
+  "prompt": "Subject: Forbidden Palace, the world wonder, as a compact landmark building true to its real appearance.",
+  "style": "Style: a very simple chunky low-poly game icon in the style of The Battle of Polytopia. Minimal geometry: the fewest large flat facets that still read clearly, like a toy made of about 20 to 40 polygons. Two tones per color only (lit side and shadow side), light from the upper left. No small details, no ornaments, no faces, no textures, no gradients, no outlines, no text, no ground plane, no drop shadow. Bold simple silhouette that reads at 24 pixels. Palette: grass green #8BD14F, sky blue #5CC8FF, sand #E8D27A, terracotta #D9774B, stone #C3CAD4, wood #8A5A33, gold #FFC93C, cream #F4ECD9. Three-quarter isometric view matching a tile-based strategy map seen from above at 45 degrees, object centered and filling about 80 percent of the frame, no ground tile, no base plate. Background: solid flat pure magenta #FF00FF filling the whole canvas edge to edge. The object must not contain any magenta or pink."
+ },
+ {
+  "name": "ws_Forbidden Palace",
+  "key": false,
+  "size": "1024x1536",
+  "quality": "high",
+  "out_size": "683x1024",
+  "prompt": "Subject: Forbidden Palace standing on a floating hexagonal island at its most majestic, true to its real appearance and setting, with a few low-poly trees and details around it.",
+  "style": "Style: a polished low-poly 3D diorama illustration in the spirit of The Battle of Polytopia but richer and more detailed, crisp flat-shaded facets, warm light from the upper left, soft light rays, saturated but harmonious palette. No text, no UI, no border, no people unless named. Vertical portrait composition for a phone screen, the subject in the middle third, generous sky above and a soft cloud sea or landscape below."
+ },
+ {
+  "name": "wl_Leaning Tower of Pisa",
+  "prompt": "Subject: Leaning Tower of Pisa, the world wonder, as a compact landmark building true to its real appearance.",
+  "style": "Style: a very simple chunky low-poly game icon in the style of The Battle of Polytopia. Minimal geometry: the fewest large flat facets that still read clearly, like a toy made of about 20 to 40 polygons. Two tones per color only (lit side and shadow side), light from the upper left. No small details, no ornaments, no faces, no textures, no gradients, no outlines, no text, no ground plane, no drop shadow. Bold simple silhouette that reads at 24 pixels. Palette: grass green #8BD14F, sky blue #5CC8FF, sand #E8D27A, terracotta #D9774B, stone #C3CAD4, wood #8A5A33, gold #FFC93C, cream #F4ECD9. Three-quarter isometric view matching a tile-based strategy map seen from above at 45 degrees, object centered and filling about 80 percent of the frame, no ground tile, no base plate. Background: solid flat pure magenta #FF00FF filling the whole canvas edge to edge. The object must not contain any magenta or pink."
+ },
+ {
+  "name": "ws_Leaning Tower of Pisa",
+  "key": false,
+  "size": "1024x1536",
+  "quality": "high",
+  "out_size": "683x1024",
+  "prompt": "Subject: Leaning Tower of Pisa standing on a floating hexagonal island at its most majestic, true to its real appearance and setting, with a few low-poly trees and details around it.",
+  "style": "Style: a polished low-poly 3D diorama illustration in the spirit of The Battle of Polytopia but richer and more detailed, crisp flat-shaded facets, warm light from the upper left, soft light rays, saturated but harmonious palette. No text, no UI, no border, no people unless named. Vertical portrait composition for a phone screen, the subject in the middle third, generous sky above and a soft cloud sea or landscape below."
+ },
+ {
+  "name": "wl_Himeji Castle",
+  "prompt": "Subject: Himeji Castle, the world wonder, as a compact landmark building true to its real appearance.",
+  "style": "Style: a very simple chunky low-poly game icon in the style of The Battle of Polytopia. Minimal geometry: the fewest large flat facets that still read clearly, like a toy made of about 20 to 40 polygons. Two tones per color only (lit side and shadow side), light from the upper left. No small details, no ornaments, no faces, no textures, no gradients, no outlines, no text, no ground plane, no drop shadow. Bold simple silhouette that reads at 24 pixels. Palette: grass green #8BD14F, sky blue #5CC8FF, sand #E8D27A, terracotta #D9774B, stone #C3CAD4, wood #8A5A33, gold #FFC93C, cream #F4ECD9. Three-quarter isometric view matching a tile-based strategy map seen from above at 45 degrees, object centered and filling about 80 percent of the frame, no ground tile, no base plate. Background: solid flat pure magenta #FF00FF filling the whole canvas edge to edge. The object must not contain any magenta or pink."
+ },
+ {
+  "name": "ws_Himeji Castle",
+  "key": false,
+  "size": "1024x1536",
+  "quality": "high",
+  "out_size": "683x1024",
+  "prompt": "Subject: Himeji Castle standing on a floating hexagonal island at its most majestic, true to its real appearance and setting, with a few low-poly trees and details around it.",
+  "style": "Style: a polished low-poly 3D diorama illustration in the spirit of The Battle of Polytopia but richer and more detailed, crisp flat-shaded facets, warm light from the upper left, soft light rays, saturated but harmonious palette. No text, no UI, no border, no people unless named. Vertical portrait composition for a phone screen, the subject in the middle third, generous sky above and a soft cloud sea or landscape below."
+ },
+ {
+  "name": "wl_Taj Mahal",
+  "prompt": "Subject: Taj Mahal, the world wonder, as a compact landmark building true to its real appearance.",
+  "style": "Style: a very simple chunky low-poly game icon in the style of The Battle of Polytopia. Minimal geometry: the fewest large flat facets that still read clearly, like a toy made of about 20 to 40 polygons. Two tones per color only (lit side and shadow side), light from the upper left. No small details, no ornaments, no faces, no textures, no gradients, no outlines, no text, no ground plane, no drop shadow. Bold simple silhouette that reads at 24 pixels. Palette: grass green #8BD14F, sky blue #5CC8FF, sand #E8D27A, terracotta #D9774B, stone #C3CAD4, wood #8A5A33, gold #FFC93C, cream #F4ECD9. Three-quarter isometric view matching a tile-based strategy map seen from above at 45 degrees, object centered and filling about 80 percent of the frame, no ground tile, no base plate. Background: solid flat pure magenta #FF00FF filling the whole canvas edge to edge. The object must not contain any magenta or pink."
+ },
+ {
+  "name": "ws_Taj Mahal",
+  "key": false,
+  "size": "1024x1536",
+  "quality": "high",
+  "out_size": "683x1024",
+  "prompt": "Subject: Taj Mahal standing on a floating hexagonal island at its most majestic, true to its real appearance and setting, with a few low-poly trees and details around it.",
+  "style": "Style: a polished low-poly 3D diorama illustration in the spirit of The Battle of Polytopia but richer and more detailed, crisp flat-shaded facets, warm light from the upper left, soft light rays, saturated but harmonious palette. No text, no UI, no border, no people unless named. Vertical portrait composition for a phone screen, the subject in the middle third, generous sky above and a soft cloud sea or landscape below."
+ },
+ {
+  "name": "wl_Porcelain Tower",
+  "prompt": "Subject: Porcelain Tower, the world wonder, as a compact landmark building true to its real appearance.",
+  "style": "Style: a very simple chunky low-poly game icon in the style of The Battle of Polytopia. Minimal geometry: the fewest large flat facets that still read clearly, like a toy made of about 20 to 40 polygons. Two tones per color only (lit side and shadow side), light from the upper left. No small details, no ornaments, no faces, no textures, no gradients, no outlines, no text, no ground plane, no drop shadow. Bold simple silhouette that reads at 24 pixels. Palette: grass green #8BD14F, sky blue #5CC8FF, sand #E8D27A, terracotta #D9774B, stone #C3CAD4, wood #8A5A33, gold #FFC93C, cream #F4ECD9. Three-quarter isometric view matching a tile-based strategy map seen from above at 45 degrees, object centered and filling about 80 percent of the frame, no ground tile, no base plate. Background: solid flat pure magenta #FF00FF filling the whole canvas edge to edge. The object must not contain any magenta or pink."
+ },
+ {
+  "name": "ws_Porcelain Tower",
+  "key": false,
+  "size": "1024x1536",
+  "quality": "high",
+  "out_size": "683x1024",
+  "prompt": "Subject: Porcelain Tower standing on a floating hexagonal island at its most majestic, true to its real appearance and setting, with a few low-poly trees and details around it.",
+  "style": "Style: a polished low-poly 3D diorama illustration in the spirit of The Battle of Polytopia but richer and more detailed, crisp flat-shaded facets, warm light from the upper left, soft light rays, saturated but harmonious palette. No text, no UI, no border, no people unless named. Vertical portrait composition for a phone screen, the subject in the middle third, generous sky above and a soft cloud sea or landscape below."
+ },
+ {
+  "name": "wl_Kremlin",
+  "prompt": "Subject: Kremlin, the world wonder, as a compact landmark building true to its real appearance.",
+  "style": "Style: a very simple chunky low-poly game icon in the style of The Battle of Polytopia. Minimal geometry: the fewest large flat facets that still read clearly, like a toy made of about 20 to 40 polygons. Two tones per color only (lit side and shadow side), light from the upper left. No small details, no ornaments, no faces, no textures, no gradients, no outlines, no text, no ground plane, no drop shadow. Bold simple silhouette that reads at 24 pixels. Palette: grass green #8BD14F, sky blue #5CC8FF, sand #E8D27A, terracotta #D9774B, stone #C3CAD4, wood #8A5A33, gold #FFC93C, cream #F4ECD9. Three-quarter isometric view matching a tile-based strategy map seen from above at 45 degrees, object centered and filling about 80 percent of the frame, no ground tile, no base plate. Background: solid flat pure magenta #FF00FF filling the whole canvas edge to edge. The object must not contain any magenta or pink."
+ },
+ {
+  "name": "ws_Kremlin",
+  "key": false,
+  "size": "1024x1536",
+  "quality": "high",
+  "out_size": "683x1024",
+  "prompt": "Subject: Kremlin standing on a floating hexagonal island at its most majestic, true to its real appearance and setting, with a few low-poly trees and details around it.",
+  "style": "Style: a polished low-poly 3D diorama illustration in the spirit of The Battle of Polytopia but richer and more detailed, crisp flat-shaded facets, warm light from the upper left, soft light rays, saturated but harmonious palette. No text, no UI, no border, no people unless named. Vertical portrait composition for a phone screen, the subject in the middle third, generous sky above and a soft cloud sea or landscape below."
+ },
+ {
+  "name": "wl_The Louvre",
+  "prompt": "Subject: The Louvre, the world wonder, as a compact landmark building true to its real appearance.",
+  "style": "Style: a very simple chunky low-poly game icon in the style of The Battle of Polytopia. Minimal geometry: the fewest large flat facets that still read clearly, like a toy made of about 20 to 40 polygons. Two tones per color only (lit side and shadow side), light from the upper left. No small details, no ornaments, no faces, no textures, no gradients, no outlines, no text, no ground plane, no drop shadow. Bold simple silhouette that reads at 24 pixels. Palette: grass green #8BD14F, sky blue #5CC8FF, sand #E8D27A, terracotta #D9774B, stone #C3CAD4, wood #8A5A33, gold #FFC93C, cream #F4ECD9. Three-quarter isometric view matching a tile-based strategy map seen from above at 45 degrees, object centered and filling about 80 percent of the frame, no ground tile, no base plate. Background: solid flat pure magenta #FF00FF filling the whole canvas edge to edge. The object must not contain any magenta or pink."
+ },
+ {
+  "name": "ws_The Louvre",
+  "key": false,
+  "size": "1024x1536",
+  "quality": "high",
+  "out_size": "683x1024",
+  "prompt": "Subject: The Louvre standing on a floating hexagonal island at its most majestic, true to its real appearance and setting, with a few low-poly trees and details around it.",
+  "style": "Style: a polished low-poly 3D diorama illustration in the spirit of The Battle of Polytopia but richer and more detailed, crisp flat-shaded facets, warm light from the upper left, soft light rays, saturated but harmonious palette. No text, no UI, no border, no people unless named. Vertical portrait composition for a phone screen, the subject in the middle third, generous sky above and a soft cloud sea or landscape below."
+ },
+ {
+  "name": "wl_Big Ben",
+  "prompt": "Subject: Big Ben, the world wonder, as a compact landmark building true to its real appearance.",
+  "style": "Style: a very simple chunky low-poly game icon in the style of The Battle of Polytopia. Minimal geometry: the fewest large flat facets that still read clearly, like a toy made of about 20 to 40 polygons. Two tones per color only (lit side and shadow side), light from the upper left. No small details, no ornaments, no faces, no textures, no gradients, no outlines, no text, no ground plane, no drop shadow. Bold simple silhouette that reads at 24 pixels. Palette: grass green #8BD14F, sky blue #5CC8FF, sand #E8D27A, terracotta #D9774B, stone #C3CAD4, wood #8A5A33, gold #FFC93C, cream #F4ECD9. Three-quarter isometric view matching a tile-based strategy map seen from above at 45 degrees, object centered and filling about 80 percent of the frame, no ground tile, no base plate. Background: solid flat pure magenta #FF00FF filling the whole canvas edge to edge. The object must not contain any magenta or pink."
+ },
+ {
+  "name": "ws_Big Ben",
+  "key": false,
+  "size": "1024x1536",
+  "quality": "high",
+  "out_size": "683x1024",
+  "prompt": "Subject: Big Ben standing on a floating hexagonal island at its most majestic, true to its real appearance and setting, with a few low-poly trees and details around it.",
+  "style": "Style: a polished low-poly 3D diorama illustration in the spirit of The Battle of Polytopia but richer and more detailed, crisp flat-shaded facets, warm light from the upper left, soft light rays, saturated but harmonious palette. No text, no UI, no border, no people unless named. Vertical portrait composition for a phone screen, the subject in the middle third, generous sky above and a soft cloud sea or landscape below."
+ },
+ {
+  "name": "wl_Brandenburg Gate",
+  "prompt": "Subject: Brandenburg Gate, the world wonder, as a compact landmark building true to its real appearance.",
+  "style": "Style: a very simple chunky low-poly game icon in the style of The Battle of Polytopia. Minimal geometry: the fewest large flat facets that still read clearly, like a toy made of about 20 to 40 polygons. Two tones per color only (lit side and shadow side), light from the upper left. No small details, no ornaments, no faces, no textures, no gradients, no outlines, no text, no ground plane, no drop shadow. Bold simple silhouette that reads at 24 pixels. Palette: grass green #8BD14F, sky blue #5CC8FF, sand #E8D27A, terracotta #D9774B, stone #C3CAD4, wood #8A5A33, gold #FFC93C, cream #F4ECD9. Three-quarter isometric view matching a tile-based strategy map seen from above at 45 degrees, object centered and filling about 80 percent of the frame, no ground tile, no base plate. Background: solid flat pure magenta #FF00FF filling the whole canvas edge to edge. The object must not contain any magenta or pink."
+ },
+ {
+  "name": "ws_Brandenburg Gate",
+  "key": false,
+  "size": "1024x1536",
+  "quality": "high",
+  "out_size": "683x1024",
+  "prompt": "Subject: Brandenburg Gate standing on a floating hexagonal island at its most majestic, true to its real appearance and setting, with a few low-poly trees and details around it.",
+  "style": "Style: a polished low-poly 3D diorama illustration in the spirit of The Battle of Polytopia but richer and more detailed, crisp flat-shaded facets, warm light from the upper left, soft light rays, saturated but harmonious palette. No text, no UI, no border, no people unless named. Vertical portrait composition for a phone screen, the subject in the middle third, generous sky above and a soft cloud sea or landscape below."
+ },
+ {
+  "name": "wl_Eiffel Tower",
+  "prompt": "Subject: Eiffel Tower, the world wonder, as a compact landmark building true to its real appearance.",
+  "style": "Style: a very simple chunky low-poly game icon in the style of The Battle of Polytopia. Minimal geometry: the fewest large flat facets that still read clearly, like a toy made of about 20 to 40 polygons. Two tones per color only (lit side and shadow side), light from the upper left. No small details, no ornaments, no faces, no textures, no gradients, no outlines, no text, no ground plane, no drop shadow. Bold simple silhouette that reads at 24 pixels. Palette: grass green #8BD14F, sky blue #5CC8FF, sand #E8D27A, terracotta #D9774B, stone #C3CAD4, wood #8A5A33, gold #FFC93C, cream #F4ECD9. Three-quarter isometric view matching a tile-based strategy map seen from above at 45 degrees, object centered and filling about 80 percent of the frame, no ground tile, no base plate. Background: solid flat pure magenta #FF00FF filling the whole canvas edge to edge. The object must not contain any magenta or pink."
+ },
+ {
+  "name": "ws_Eiffel Tower",
+  "key": false,
+  "size": "1024x1536",
+  "quality": "high",
+  "out_size": "683x1024",
+  "prompt": "Subject: Eiffel Tower standing on a floating hexagonal island at its most majestic, true to its real appearance and setting, with a few low-poly trees and details around it.",
+  "style": "Style: a polished low-poly 3D diorama illustration in the spirit of The Battle of Polytopia but richer and more detailed, crisp flat-shaded facets, warm light from the upper left, soft light rays, saturated but harmonious palette. No text, no UI, no border, no people unless named. Vertical portrait composition for a phone screen, the subject in the middle third, generous sky above and a soft cloud sea or landscape below."
+ },
+ {
+  "name": "wl_Statue of Liberty",
+  "prompt": "Subject: Statue of Liberty, the world wonder, as a compact landmark building true to its real appearance.",
+  "style": "Style: a very simple chunky low-poly game icon in the style of The Battle of Polytopia. Minimal geometry: the fewest large flat facets that still read clearly, like a toy made of about 20 to 40 polygons. Two tones per color only (lit side and shadow side), light from the upper left. No small details, no ornaments, no faces, no textures, no gradients, no outlines, no text, no ground plane, no drop shadow. Bold simple silhouette that reads at 24 pixels. Palette: grass green #8BD14F, sky blue #5CC8FF, sand #E8D27A, terracotta #D9774B, stone #C3CAD4, wood #8A5A33, gold #FFC93C, cream #F4ECD9. Three-quarter isometric view matching a tile-based strategy map seen from above at 45 degrees, object centered and filling about 80 percent of the frame, no ground tile, no base plate. Background: solid flat pure magenta #FF00FF filling the whole canvas edge to edge. The object must not contain any magenta or pink."
+ },
+ {
+  "name": "ws_Statue of Liberty",
+  "key": false,
+  "size": "1024x1536",
+  "quality": "high",
+  "out_size": "683x1024",
+  "prompt": "Subject: Statue of Liberty standing on a floating hexagonal island at its most majestic, true to its real appearance and setting, with a few low-poly trees and details around it.",
+  "style": "Style: a polished low-poly 3D diorama illustration in the spirit of The Battle of Polytopia but richer and more detailed, crisp flat-shaded facets, warm light from the upper left, soft light rays, saturated but harmonious palette. No text, no UI, no border, no people unless named. Vertical portrait composition for a phone screen, the subject in the middle third, generous sky above and a soft cloud sea or landscape below."
+ },
+ {
+  "name": "wl_Neuschwanstein",
+  "prompt": "Subject: Neuschwanstein, the world wonder, as a compact landmark building true to its real appearance.",
+  "style": "Style: a very simple chunky low-poly game icon in the style of The Battle of Polytopia. Minimal geometry: the fewest large flat facets that still read clearly, like a toy made of about 20 to 40 polygons. Two tones per color only (lit side and shadow side), light from the upper left. No small details, no ornaments, no faces, no textures, no gradients, no outlines, no text, no ground plane, no drop shadow. Bold simple silhouette that reads at 24 pixels. Palette: grass green #8BD14F, sky blue #5CC8FF, sand #E8D27A, terracotta #D9774B, stone #C3CAD4, wood #8A5A33, gold #FFC93C, cream #F4ECD9. Three-quarter isometric view matching a tile-based strategy map seen from above at 45 degrees, object centered and filling about 80 percent of the frame, no ground tile, no base plate. Background: solid flat pure magenta #FF00FF filling the whole canvas edge to edge. The object must not contain any magenta or pink."
+ },
+ {
+  "name": "ws_Neuschwanstein",
+  "key": false,
+  "size": "1024x1536",
+  "quality": "high",
+  "out_size": "683x1024",
+  "prompt": "Subject: Neuschwanstein standing on a floating hexagonal island at its most majestic, true to its real appearance and setting, with a few low-poly trees and details around it.",
+  "style": "Style: a polished low-poly 3D diorama illustration in the spirit of The Battle of Polytopia but richer and more detailed, crisp flat-shaded facets, warm light from the upper left, soft light rays, saturated but harmonious palette. No text, no UI, no border, no people unless named. Vertical portrait composition for a phone screen, the subject in the middle third, generous sky above and a soft cloud sea or landscape below."
+ },
+ {
+  "name": "wl_Cristo Redentor",
+  "prompt": "Subject: Cristo Redentor, the world wonder, as a compact landmark building true to its real appearance.",
+  "style": "Style: a very simple chunky low-poly game icon in the style of The Battle of Polytopia. Minimal geometry: the fewest large flat facets that still read clearly, like a toy made of about 20 to 40 polygons. Two tones per color only (lit side and shadow side), light from the upper left. No small details, no ornaments, no faces, no textures, no gradients, no outlines, no text, no ground plane, no drop shadow. Bold simple silhouette that reads at 24 pixels. Palette: grass green #8BD14F, sky blue #5CC8FF, sand #E8D27A, terracotta #D9774B, stone #C3CAD4, wood #8A5A33, gold #FFC93C, cream #F4ECD9. Three-quarter isometric view matching a tile-based strategy map seen from above at 45 degrees, object centered and filling about 80 percent of the frame, no ground tile, no base plate. Background: solid flat pure magenta #FF00FF filling the whole canvas edge to edge. The object must not contain any magenta or pink."
+ },
+ {
+  "name": "ws_Cristo Redentor",
+  "key": false,
+  "size": "1024x1536",
+  "quality": "high",
+  "out_size": "683x1024",
+  "prompt": "Subject: Cristo Redentor standing on a floating hexagonal island at its most majestic, true to its real appearance and setting, with a few low-poly trees and details around it.",
+  "style": "Style: a polished low-poly 3D diorama illustration in the spirit of The Battle of Polytopia but richer and more detailed, crisp flat-shaded facets, warm light from the upper left, soft light rays, saturated but harmonious palette. No text, no UI, no border, no people unless named. Vertical portrait composition for a phone screen, the subject in the middle third, generous sky above and a soft cloud sea or landscape below."
+ },
+ {
+  "name": "wl_Pentagon",
+  "prompt": "Subject: Pentagon, the world wonder, as a compact landmark building true to its real appearance.",
+  "style": "Style: a very simple chunky low-poly game icon in the style of The Battle of Polytopia. Minimal geometry: the fewest large flat facets that still read clearly, like a toy made of about 20 to 40 polygons. Two tones per color only (lit side and shadow side), light from the upper left. No small details, no ornaments, no faces, no textures, no gradients, no outlines, no text, no ground plane, no drop shadow. Bold simple silhouette that reads at 24 pixels. Palette: grass green #8BD14F, sky blue #5CC8FF, sand #E8D27A, terracotta #D9774B, stone #C3CAD4, wood #8A5A33, gold #FFC93C, cream #F4ECD9. Three-quarter isometric view matching a tile-based strategy map seen from above at 45 degrees, object centered and filling about 80 percent of the frame, no ground tile, no base plate. Background: solid flat pure magenta #FF00FF filling the whole canvas edge to edge. The object must not contain any magenta or pink."
+ },
+ {
+  "name": "ws_Pentagon",
+  "key": false,
+  "size": "1024x1536",
+  "quality": "high",
+  "out_size": "683x1024",
+  "prompt": "Subject: Pentagon standing on a floating hexagonal island at its most majestic, true to its real appearance and setting, with a few low-poly trees and details around it.",
+  "style": "Style: a polished low-poly 3D diorama illustration in the spirit of The Battle of Polytopia but richer and more detailed, crisp flat-shaded facets, warm light from the upper left, soft light rays, saturated but harmonious palette. No text, no UI, no border, no people unless named. Vertical portrait composition for a phone screen, the subject in the middle third, generous sky above and a soft cloud sea or landscape below."
+ },
+ {
+  "name": "wl_Sydney Opera House",
+  "prompt": "Subject: Sydney Opera House, the world wonder, as a compact landmark building true to its real appearance.",
+  "style": "Style: a very simple chunky low-poly game icon in the style of The Battle of Polytopia. Minimal geometry: the fewest large flat facets that still read clearly, like a toy made of about 20 to 40 polygons. Two tones per color only (lit side and shadow side), light from the upper left. No small details, no ornaments, no faces, no textures, no gradients, no outlines, no text, no ground plane, no drop shadow. Bold simple silhouette that reads at 24 pixels. Palette: grass green #8BD14F, sky blue #5CC8FF, sand #E8D27A, terracotta #D9774B, stone #C3CAD4, wood #8A5A33, gold #FFC93C, cream #F4ECD9. Three-quarter isometric view matching a tile-based strategy map seen from above at 45 degrees, object centered and filling about 80 percent of the frame, no ground tile, no base plate. Background: solid flat pure magenta #FF00FF filling the whole canvas edge to edge. The object must not contain any magenta or pink."
+ },
+ {
+  "name": "ws_Sydney Opera House",
+  "key": false,
+  "size": "1024x1536",
+  "quality": "high",
+  "out_size": "683x1024",
+  "prompt": "Subject: Sydney Opera House standing on a floating hexagonal island at its most majestic, true to its real appearance and setting, with a few low-poly trees and details around it.",
+  "style": "Style: a polished low-poly 3D diorama illustration in the spirit of The Battle of Polytopia but richer and more detailed, crisp flat-shaded facets, warm light from the upper left, soft light rays, saturated but harmonious palette. No text, no UI, no border, no people unless named. Vertical portrait composition for a phone screen, the subject in the middle third, generous sky above and a soft cloud sea or landscape below."
+ },
+ {
+  "name": "wl_Great Firewall",
+  "prompt": "Subject: Great Firewall, the world wonder, as a compact landmark building true to its real appearance.",
+  "style": "Style: a very simple chunky low-poly game icon in the style of The Battle of Polytopia. Minimal geometry: the fewest large flat facets that still read clearly, like a toy made of about 20 to 40 polygons. Two tones per color only (lit side and shadow side), light from the upper left. No small details, no ornaments, no faces, no textures, no gradients, no outlines, no text, no ground plane, no drop shadow. Bold simple silhouette that reads at 24 pixels. Palette: grass green #8BD14F, sky blue #5CC8FF, sand #E8D27A, terracotta #D9774B, stone #C3CAD4, wood #8A5A33, gold #FFC93C, cream #F4ECD9. Three-quarter isometric view matching a tile-based strategy map seen from above at 45 degrees, object centered and filling about 80 percent of the frame, no ground tile, no base plate. Background: solid flat pure magenta #FF00FF filling the whole canvas edge to edge. The object must not contain any magenta or pink."
+ },
+ {
+  "name": "ws_Great Firewall",
+  "key": false,
+  "size": "1024x1536",
+  "quality": "high",
+  "out_size": "683x1024",
+  "prompt": "Subject: Great Firewall standing on a floating hexagonal island at its most majestic, true to its real appearance and setting, with a few low-poly trees and details around it.",
+  "style": "Style: a polished low-poly 3D diorama illustration in the spirit of The Battle of Polytopia but richer and more detailed, crisp flat-shaded facets, warm light from the upper left, soft light rays, saturated but harmonious palette. No text, no UI, no border, no people unless named. Vertical portrait composition for a phone screen, the subject in the middle third, generous sky above and a soft cloud sea or landscape below."
+ },
+ {
+  "name": "wl_CN Tower",
+  "prompt": "Subject: CN Tower, the world wonder, as a compact landmark building true to its real appearance.",
+  "style": "Style: a very simple chunky low-poly game icon in the style of The Battle of Polytopia. Minimal geometry: the fewest large flat facets that still read clearly, like a toy made of about 20 to 40 polygons. Two tones per color only (lit side and shadow side), light from the upper left. No small details, no ornaments, no faces, no textures, no gradients, no outlines, no text, no ground plane, no drop shadow. Bold simple silhouette that reads at 24 pixels. Palette: grass green #8BD14F, sky blue #5CC8FF, sand #E8D27A, terracotta #D9774B, stone #C3CAD4, wood #8A5A33, gold #FFC93C, cream #F4ECD9. Three-quarter isometric view matching a tile-based strategy map seen from above at 45 degrees, object centered and filling about 80 percent of the frame, no ground tile, no base plate. Background: solid flat pure magenta #FF00FF filling the whole canvas edge to edge. The object must not contain any magenta or pink."
+ },
+ {
+  "name": "ws_CN Tower",
+  "key": false,
+  "size": "1024x1536",
+  "quality": "high",
+  "out_size": "683x1024",
+  "prompt": "Subject: CN Tower standing on a floating hexagonal island at its most majestic, true to its real appearance and setting, with a few low-poly trees and details around it.",
+  "style": "Style: a polished low-poly 3D diorama illustration in the spirit of The Battle of Polytopia but richer and more detailed, crisp flat-shaded facets, warm light from the upper left, soft light rays, saturated but harmonious palette. No text, no UI, no border, no people unless named. Vertical portrait composition for a phone screen, the subject in the middle third, generous sky above and a soft cloud sea or landscape below."
+ },
+ {
+  "name": "wl_Hubble Space Telescope",
+  "prompt": "Subject: Hubble Space Telescope, the world wonder, as a compact landmark building true to its real appearance.",
+  "style": "Style: a very simple chunky low-poly game icon in the style of The Battle of Polytopia. Minimal geometry: the fewest large flat facets that still read clearly, like a toy made of about 20 to 40 polygons. Two tones per color only (lit side and shadow side), light from the upper left. No small details, no ornaments, no faces, no textures, no gradients, no outlines, no text, no ground plane, no drop shadow. Bold simple silhouette that reads at 24 pixels. Palette: grass green #8BD14F, sky blue #5CC8FF, sand #E8D27A, terracotta #D9774B, stone #C3CAD4, wood #8A5A33, gold #FFC93C, cream #F4ECD9. Three-quarter isometric view matching a tile-based strategy map seen from above at 45 degrees, object centered and filling about 80 percent of the frame, no ground tile, no base plate. Background: solid flat pure magenta #FF00FF filling the whole canvas edge to edge. The object must not contain any magenta or pink."
+ },
+ {
+  "name": "ws_Hubble Space Telescope",
+  "key": false,
+  "size": "1024x1536",
+  "quality": "high",
+  "out_size": "683x1024",
+  "prompt": "Subject: Hubble Space Telescope standing on a floating hexagonal island at its most majestic, true to its real appearance and setting, with a few low-poly trees and details around it.",
+  "style": "Style: a polished low-poly 3D diorama illustration in the spirit of The Battle of Polytopia but richer and more detailed, crisp flat-shaded facets, warm light from the upper left, soft light rays, saturated but harmonious palette. No text, no UI, no border, no people unless named. Vertical portrait composition for a phone screen, the subject in the middle third, generous sky above and a soft cloud sea or landscape below."
+ },
+ {
+  "name": "wl_United Nations",
+  "prompt": "Subject: United Nations, the world wonder, as a compact landmark building true to its real appearance.",
+  "style": "Style: a very simple chunky low-poly game icon in the style of The Battle of Polytopia. Minimal geometry: the fewest large flat facets that still read clearly, like a toy made of about 20 to 40 polygons. Two tones per color only (lit side and shadow side), light from the upper left. No small details, no ornaments, no faces, no textures, no gradients, no outlines, no text, no ground plane, no drop shadow. Bold simple silhouette that reads at 24 pixels. Palette: grass green #8BD14F, sky blue #5CC8FF, sand #E8D27A, terracotta #D9774B, stone #C3CAD4, wood #8A5A33, gold #FFC93C, cream #F4ECD9. Three-quarter isometric view matching a tile-based strategy map seen from above at 45 degrees, object centered and filling about 80 percent of the frame, no ground tile, no base plate. Background: solid flat pure magenta #FF00FF filling the whole canvas edge to edge. The object must not contain any magenta or pink."
+ },
+ {
+  "name": "ws_United Nations",
+  "key": false,
+  "size": "1024x1536",
+  "quality": "high",
+  "out_size": "683x1024",
+  "prompt": "Subject: United Nations standing on a floating hexagonal island at its most majestic, true to its real appearance and setting, with a few low-poly trees and details around it.",
+  "style": "Style: a polished low-poly 3D diorama illustration in the spirit of The Battle of Polytopia but richer and more detailed, crisp flat-shaded facets, warm light from the upper left, soft light rays, saturated but harmonious palette. No text, no UI, no border, no people unless named. Vertical portrait composition for a phone screen, the subject in the middle third, generous sky above and a soft cloud sea or landscape below."
+ }
+]
