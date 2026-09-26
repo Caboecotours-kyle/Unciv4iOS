@@ -24,7 +24,7 @@ public final class IOSLauncher extends IOSApplication.Delegate {
         config.useAudio = true;
         config.allowIpod = true;
         config.overrideRingerSwitch = false;
-        config.statusBarVisible = false;
+        config.statusBarVisible = true;
         config.hideHomeIndicator = true;
         config.hdpiMode = HdpiMode.Logical;
         return config;
