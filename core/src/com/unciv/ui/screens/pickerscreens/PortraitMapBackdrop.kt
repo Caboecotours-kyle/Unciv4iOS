@@ -2,11 +2,29 @@ package com.unciv.ui.screens.pickerscreens
 
 import com.badlogic.gdx.graphics.Color
 import com.badlogic.gdx.graphics.g2d.Batch
+import com.badlogic.gdx.Gdx
 import com.badlogic.gdx.scenes.scene2d.Actor
 import com.badlogic.gdx.scenes.scene2d.Touchable
 import com.unciv.logic.civilization.Civilization
 import com.unciv.logic.map.HexMath
 import com.unciv.ui.images.ImageGetter
+import com.unciv.ui.screens.basescreen.BaseScreen
+import com.unciv.ui.screens.basescreen.SafeAreaViewport
+import com.unciv.utils.Display
+
+/** Desktop mocks include status and home areas; native safe stages already exclude those pixels. */
+internal fun BaseScreen.portraitChromeGaps(): Pair<Float, Float> {
+    val viewport = stage.viewport as SafeAreaViewport
+    viewport.apply()
+    val safe = safeAreaBoundsInWorld()
+    val drawing = viewport.drawingBounds
+    val insets = Display.getSafeInsets()
+    val safePixelHeight = (Gdx.graphics.height - insets.top - insets.bottom).coerceAtLeast(1)
+    val unitsPerPixel = safe.height / safePixelHeight
+    val topInset = maxOf((drawing.y + drawing.height - safe.y - safe.height).coerceAtLeast(0f), insets.top * unitsPerPixel)
+    val bottomInset = maxOf((safe.y - drawing.y).coerceAtLeast(0f), insets.bottom * unitsPerPixel)
+    return (56f - topInset).coerceAtLeast(0f) to (30f - bottomInset).coerceAtLeast(0f)
+}
 
 /** A small, static piece of the actual explored map behind the translucent portrait sheets. */
 internal class PortraitMapBackdrop(private val civ: Civilization) : Actor() {

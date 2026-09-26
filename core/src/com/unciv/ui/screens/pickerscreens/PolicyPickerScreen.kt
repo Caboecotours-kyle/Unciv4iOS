@@ -277,11 +277,12 @@ class PolicyPickerScreen(
 
         pickerPane.remove()
         val safeArea = safeAreaBoundsInWorld()
-        val topGap = (56f - (stage.height - safeArea.y - safeArea.height)).coerceAtLeast(0f)
+        val (topGap, bottomGap) = portraitChromeGaps()
+        val drawing = (stage.viewport as com.unciv.ui.screens.basescreen.SafeAreaViewport).drawingBounds
         stage.addActor(PortraitMapBackdrop(viewingCiv).apply {
-            setBounds(safeArea.x, safeArea.y, safeArea.width, safeArea.height)
+            setBounds(drawing.x, drawing.y, drawing.width, drawing.height)
         })
-        val view = PolicyPickerPortrait(this, safeArea.width, branches, portraitBranch, select)
+        val view = PolicyPickerPortrait(this, safeArea.width, branches, portraitBranch, select, bottomGap)
         view.setBounds(safeArea.x, safeArea.y, safeArea.width, safeArea.height - topGap)
         stage.addActor(view)
     }

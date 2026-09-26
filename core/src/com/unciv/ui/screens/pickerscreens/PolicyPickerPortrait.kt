@@ -28,6 +28,7 @@ internal class PolicyPickerPortrait(
     private val branches: Map<String, PolicyBranch>,
     initialBranch: String?,
     initialPolicy: String?,
+    private val bottomGap: Float,
 ) : Table() {
     private val civ = screen.viewingCiv
     private val policies = civ.policies
@@ -88,7 +89,7 @@ internal class PolicyPickerPortrait(
             body.add(tree).grow().prefHeight(0f)
         }
         rail.clear()
-        rail.pad(8f, 10f, 28f, 10f)
+        rail.pad(8f, 10f, bottomGap, 10f)
         for (candidate in branches.values) {
             val chosen = current == candidate
             val adopted = policies.isAdopted(candidate.name)

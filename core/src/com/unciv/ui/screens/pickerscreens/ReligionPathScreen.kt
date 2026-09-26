@@ -27,6 +27,7 @@ import com.unciv.ui.components.tilegroups.WorldTileGroup
 import com.unciv.ui.images.ImageGetter
 import com.unciv.ui.screens.basescreen.BaseScreen
 import com.unciv.ui.screens.basescreen.RecreateOnResize
+import com.unciv.ui.screens.basescreen.SafeAreaViewport
 import com.unciv.ui.screens.worldscreen.WorldScreen
 import com.unciv.ui.screens.worldscreen.unit.actions.UnitActionsReligion
 import com.unciv.ui.screens.worldscreen.worldmap.WorldMapHolder
@@ -69,10 +70,11 @@ class ReligionPathScreen(
 
     private fun buildPath() {
         val bounds = safeAreaBoundsInWorld()
+        val (topGap, bottomGap) = portraitChromeGaps()
+        val drawing = (stage.viewport as SafeAreaViewport).drawingBounds
         stage.addActor(PortraitMapBackdrop(viewingCiv).apply {
-            setBounds(bounds.x, bounds.y, bounds.width, bounds.height)
+            setBounds(drawing.x, drawing.y, drawing.width, drawing.height)
         })
-        val topGap = (56f - (stage.height - bounds.y - bounds.height)).coerceAtLeast(0f)
         val root = Table().apply {
             background = rounded(SHEET.cpy().apply { a = .9f }, BaseScreen.skinStrings.roundedTopEdgeRectangleSmallShape)
             setBounds(bounds.x, bounds.y, bounds.width, bounds.height - topGap)
@@ -91,7 +93,7 @@ class ReligionPathScreen(
         root.add(Image(solid(LINE))).growX().height(1f).row()
         val content = if (worldTab) worldContent(bounds.width) else faithContent(bounds.width)
         root.add(scroll(content)).grow().prefHeight(0f).row()
-        root.add(pathFooter(bounds.width)).growX()
+        root.add(pathFooter(bounds.width, bottomGap)).growX()
         stage.addActor(root)
         if (showingBeliefs != null) beliefSheet(bounds.width)
     }
@@ -217,9 +219,9 @@ class ReligionPathScreen(
         return row
     }
 
-    private fun pathFooter(width: Float) = Table().apply {
+    private fun pathFooter(width: Float, bottomGap: Float) = Table().apply {
         background = solid(BAR)
-        pad(12f, 14f, 30f, 14f)
+        pad(12f, 14f, bottomGap, 14f)
         val mapButton = button("Map", Color.WHITE, SHEET, 76f, 60f, 14)
         mapButton.onClick { lens = true; rebuild() }
         add(mapButton).size(76f, 60f).padRight(10f)
@@ -278,11 +280,13 @@ class ReligionPathScreen(
 
     private fun buildLens() {
         val bounds = safeAreaBoundsInWorld()
+        val (_, bottomGap) = portraitChromeGaps()
+        val drawing = (stage.viewport as SafeAreaViewport).drawingBounds
         val mapHolder = WorldMapHolder(worldScreen, viewingCiv.gameInfo.tileMap)
         map = mapHolder
         stage.addActor(mapHolder)
         mapHolder.addTiles()
-        mapHolder.setBounds(bounds.x, bounds.y, bounds.width, bounds.height)
+        mapHolder.setBounds(drawing.x, drawing.y, drawing.width, drawing.height)
         mapHolder.layout()
         mapHolder.reloadMaxZoom()
         mapHolder.zoom(.85f)
@@ -367,7 +371,7 @@ class ReligionPathScreen(
         legend.pack()
         legend.setPosition(10f, bounds.height - legend.height - 66f)
         overlay.addActor(legend)
-        val panel = lensPanel(bounds.width)
+        val panel = lensPanel(bounds.width, bottomGap)
         panel.pack()
         panel.setBounds(0f, 0f, bounds.width, panel.prefHeight)
         overlay.addActor(panel)
@@ -397,8 +401,8 @@ class ReligionPathScreen(
         return marker
     }
 
-    private fun lensPanel(width: Float): Table {
-        val panel = Table().apply { background = rounded(PANEL, BaseScreen.skinStrings.roundedTopEdgeRectangleSmallShape); pad(12f, 16f, 30f, 16f) }
+    private fun lensPanel(width: Float, bottomGap: Float): Table {
+        val panel = Table().apply { background = rounded(PANEL, BaseScreen.skinStrings.roundedTopEdgeRectangleSmallShape); pad(12f, 16f, bottomGap, 16f) }
         val city = selectedCity?.takeIf { viewingCiv.hasExplored(it.getCenterTile()) }
         if (city == null) {
             val status = Table().left()
