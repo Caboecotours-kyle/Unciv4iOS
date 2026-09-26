@@ -278,13 +278,16 @@ class PolicyPickerScreen(
 
         pickerPane.remove()
         val safeArea = safeAreaBoundsInWorld()
-        val (topGap, bottomGap) = portraitChromeGaps()
+        val scale = safeArea.width / 393f
+        val (topGap, bottomGap) = portraitChromeGaps(393f)
         stage.addActor(PortraitMapBackdrop(viewingCiv).apply {
             val canvas = portraitCanvasBounds()
             setBounds(canvas.x, canvas.y, canvas.width, canvas.height)
         })
-        val view = PolicyPickerPortrait(this, safeArea.width, branches, portraitBranch, select, bottomGap)
-        view.setBounds(safeArea.x, safeArea.y, safeArea.width, safeArea.height - topGap)
+        val view = PolicyPickerPortrait(this, 393f, branches, portraitBranch, select, bottomGap)
+        view.isTransform = true
+        view.setScale(scale)
+        view.setBounds(safeArea.x, safeArea.y, 393f, safeArea.height / scale - topGap)
         stage.addActor(view)
     }
 

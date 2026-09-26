@@ -11,7 +11,7 @@ import com.unciv.ui.screens.basescreen.SafeAreaViewport
 import com.unciv.utils.Display
 
 /** Desktop mocks include status and home areas; native safe stages already exclude those pixels. */
-internal fun BaseScreen.portraitChromeGaps(): Pair<Float, Float> {
+internal fun BaseScreen.portraitChromeGaps(logicalWidth: Float? = null): Pair<Float, Float> {
     val viewport = stage.viewport as SafeAreaViewport
     viewport.apply()
     val safe = safeAreaBoundsInWorld()
@@ -21,7 +21,9 @@ internal fun BaseScreen.portraitChromeGaps(): Pair<Float, Float> {
     val unitsPerPixel = safe.height / safePixelHeight
     val topInset = maxOf((drawing.y + drawing.height - safe.y - safe.height).coerceAtLeast(0f), insets.top * unitsPerPixel)
     val bottomInset = maxOf((safe.y - drawing.y).coerceAtLeast(0f), insets.bottom * unitsPerPixel)
-    return (56f - topInset).coerceAtLeast(0f) to (30f - bottomInset).coerceAtLeast(0f)
+    val unitsPerPoint = logicalWidth?.let { safe.width / it } ?: 1f
+    return (56f - topInset / unitsPerPoint).coerceAtLeast(0f) to
+        (30f - bottomInset / unitsPerPoint).coerceAtLeast(0f)
 }
 
 /** Captures the player's rendered map once, without HUD actors or extra map copies. */

@@ -75,14 +75,18 @@ class ReligionPathScreen(
     }
 
     private fun buildPath() {
-        val bounds = safeAreaBoundsInWorld()
-        val (topGap, bottomGap) = portraitChromeGaps()
+        val safe = safeAreaBoundsInWorld()
+        val scale = safe.width / 393f
+        val bounds = com.badlogic.gdx.math.Rectangle(safe.x, safe.y, 393f, safe.height / scale)
+        val (topGap, bottomGap) = portraitChromeGaps(393f)
         stage.addActor(PortraitMapBackdrop(viewingCiv).apply {
             val canvas = portraitCanvasBounds()
             setBounds(canvas.x, canvas.y, canvas.width, canvas.height)
         })
         val root = Table().apply {
             background = rounded(SHEET.cpy().apply { a = .9f }, BaseScreen.skinStrings.roundedTopEdgeRectangleSmallShape)
+            isTransform = true
+            setScale(scale)
             setBounds(bounds.x, bounds.y, bounds.width, bounds.height - topGap)
         }
         root.add(Table().apply { add(Image(solid(Color(1f, 1f, 1f, .3f)))).size(44f, 5f) }).growX().height(16f).row()
@@ -293,8 +297,10 @@ class ReligionPathScreen(
     }
 
     private fun buildLens() {
-        val bounds = safeAreaBoundsInWorld()
-        val (_, bottomGap) = portraitChromeGaps()
+        val safe = safeAreaBoundsInWorld()
+        val scale = safe.width / 393f
+        val bounds = com.badlogic.gdx.math.Rectangle(safe.x, safe.y, 393f, safe.height / scale)
+        val (topGap, bottomGap) = portraitChromeGaps(393f)
         val drawing = (stage.viewport as SafeAreaViewport).drawingBounds
         val mapHolder = WorldMapHolder(worldScreen, viewingCiv.gameInfo.tileMap, gameplayInput = false)
         map = mapHolder
@@ -322,8 +328,8 @@ class ReligionPathScreen(
         val mapGroup = mapHolder.actor as Group
         // The lens is read-only. Its own city markers get touch handling after map layers are disabled.
         for (child in mapGroup.children) child.touchable = Touchable.disabled
-        mapHolder.addActorToTileGroupMap(Image(solid(Color(0.06f, 0.13f, 0.19f, .3f))).apply {
-            setBounds(0f, 0f, mapGroup.width, mapGroup.height)
+        stage.addActor(Image(solid(Color(0.06f, 0.13f, 0.19f, .3f))).apply {
+            setBounds(drawing.x, drawing.y, drawing.width, drawing.height)
             touchable = Touchable.disabled
         })
         val cities = visibleCities()
@@ -354,6 +360,8 @@ class ReligionPathScreen(
             mapHolder.addActorToTileGroupMap(marker)
         }
         val overlay = WidgetGroup().apply {
+            isTransform = true
+            setScale(scale)
             setBounds(bounds.x, bounds.y, bounds.width, bounds.height)
             touchable = Touchable.childrenOnly
         }
@@ -371,7 +379,7 @@ class ReligionPathScreen(
             stats.add(value.toLabel(fontSize = 13)).padRight(7f)
         }
         stats.pack()
-        stats.setBounds(10f, bounds.height - 58f, bounds.width - 20f, 48f)
+        stats.setBounds(10f, bounds.height - topGap - 48f, bounds.width - 20f, 48f)
         overlay.addActor(stats)
         val legend = Table().top().left()
         legend.pad(8f)
@@ -384,7 +392,7 @@ class ReligionPathScreen(
             legend.add(chip).left().padBottom(6f).row()
         }
         legend.pack()
-        legend.setPosition(10f, bounds.height - legend.height - 66f)
+        legend.setPosition(10f, bounds.height - topGap - legend.height - 58f)
         overlay.addActor(legend)
         val panel = lensPanel(bounds.width, bottomGap)
         panel.pack()
@@ -471,8 +479,15 @@ class ReligionPathScreen(
 
     private fun beliefSheet(width: Float) {
         val type = showingBeliefs ?: return
-        val bounds = safeAreaBoundsInWorld()
-        val sheet = Table().apply { background = solid(PANEL); setBounds(bounds.x, bounds.y, bounds.width, bounds.height * .75f) }
+        val safe = safeAreaBoundsInWorld()
+        val scale = safe.width / 393f
+        val bounds = com.badlogic.gdx.math.Rectangle(safe.x, safe.y, 393f, safe.height / scale)
+        val sheet = Table().apply {
+            background = solid(PANEL)
+            isTransform = true
+            setScale(scale)
+            setBounds(bounds.x, bounds.y, bounds.width, bounds.height * .75f)
+        }
         val header = Table()
         header.add("${type.name} beliefs".toLabel(fontSize = 21)).growX().left().pad(12f)
         val close = button("×", CHIP, Color.WHITE, 48f)
