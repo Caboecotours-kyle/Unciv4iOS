@@ -140,7 +140,7 @@ open class TileGroup(
     }
 
     override fun hit(x: Float, y: Float, touchable: Boolean): Actor? {
-        if (mapVerticalScale == 1f) return super.hit(x, y, touchable)
+        if (mapVerticalScale == 1f || isForMapEditorIcon) return super.hit(x, y, touchable)
         if (!isVisible || touchable && this.touchable != Touchable.enabled) return null
         return if (HexMath.isWithinHex(x - groundCenterX, y - groundCenterY,
                 TileGroupMap.groupSize * 0.8f, mapVerticalScale)) this else null

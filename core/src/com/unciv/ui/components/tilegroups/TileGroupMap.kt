@@ -6,6 +6,8 @@ import com.badlogic.gdx.math.Vector2
 import com.badlogic.gdx.scenes.scene2d.Actor
 import com.badlogic.gdx.scenes.scene2d.Group
 import com.badlogic.gdx.scenes.scene2d.Touchable
+import com.badlogic.gdx.utils.viewport.Viewport
+import com.unciv.logic.map.HexCoord
 import com.unciv.logic.map.HexMath
 import com.unciv.logic.map.TileMap
 import com.unciv.ui.components.tilegroups.layers.*
@@ -71,6 +73,7 @@ class TileGroupMap<T: TileGroup>(
      *  so world-wrap can reposition the click-target by index. */
     private val sortedTileGroups: List<T>
     val mapVerticalScale = tileGroups.firstOrNull()?.mapVerticalScale ?: 1f
+    private val groundCenterY = tileGroups.firstOrNull()?.groundCenterY ?: groupSize / 2f
     private val tiltedRows = ArrayList<Group>()
     private val registeredMapLayers: List<TileMapLayer<*>>
 
@@ -225,6 +228,23 @@ class TileGroupMap<T: TileGroup>(
             .sub(if (mapVerticalScale == 1f) groupSize / 2f else sortedTileGroups.first().groundCenterX,
                 if (mapVerticalScale == 1f) groupSize / 2f else sortedTileGroups.first().groundCenterY)
             .scl(1f / trueGroupSize, 1f / (trueGroupSize * mapVerticalScale))
+    }
+
+    fun getFlatHeight(mapHeight: Float) = if (mapVerticalScale == 1f) mapHeight
+        else (mapHeight - groupSize) / mapVerticalScale + groupSize
+
+    fun getFlatY(mapY: Float) = if (mapVerticalScale == 1f) mapY
+        else (mapY - groundCenterY) / mapVerticalScale + groundCenterY
+
+    fun getProjectedY(flatY: Float) = if (mapVerticalScale == 1f) flatY
+        else (flatY - groundCenterY) * mapVerticalScale + groundCenterY
+
+    /** Screen coordinates are logical points on iOS; the camera also covers safe-area/cutout modes. */
+    fun getDefaultZoom(viewport: Viewport): Float {
+        if (mapVerticalScale == 1f) return 1f
+        val rowSpacing = HexMath.hex2WorldCoords(HexCoord(1, 0), mapVerticalScale).y * 0.8f * groupSize
+        val unitsPerPoint = viewport.camera.viewportHeight / viewport.screenHeight
+        return max(1.6f, 44f * unitsPerPoint / rowSpacing)
     }
 
     override fun act(delta: Float) {

@@ -178,9 +178,21 @@ class CityScreen(
         globalShortcuts.add(KeyboardBinding.NextCity) { page(1) }
 
         if (isPortrait()) mapScrollPane.apply {
-            // center scrolling so city center sits more to the bottom right
-            scrollX = (maxX - constructionsTable.getLowerWidth() - posFromEdge) / 2
-            scrollY = (maxY - cityStatsTable.packIfNeeded().height - posFromEdge + cityPickerTable.top) / 2
+            if ((actor as TileGroupMap<*>).mapVerticalScale != 1f) {
+                val cityTile = tileGroups.first { it.tileView.position() == cityView.location }
+                val safe = safeAreaBoundsInWorld()
+                val left = safe.x + posFromEdge + if (constructionsTable.isVisible) constructionsTable.getLowerWidth() else 0f
+                val centerX = (left + safe.x + safe.width - posFromEdge) / 2f
+                val centerY = (portraitTabBar.top + cityPickerTable.y) / 2f
+                validate()
+                // Place the city's ground center in the free map area after zoom and safe-area layout.
+                scrollX = cityTile.x + cityTile.groundCenterX + width / 2f - (centerX - x) / scaleX
+                scrollY = maxY - cityTile.y - cityTile.groundCenterY - height / 2f + (centerY - y) / scaleY
+            } else {
+                // center scrolling so city center sits more to the bottom right
+                scrollX = (maxX - constructionsTable.getLowerWidth() - posFromEdge) / 2
+                scrollY = (maxY - cityStatsTable.packIfNeeded().height - posFromEdge + cityPickerTable.top) / 2
+            }
             updateVisualScroll()
         }
 
@@ -463,6 +475,7 @@ class CityScreen(
         stage.addActor(mapScrollPane)
 
         mapScrollPane.layout() // center scrolling
+        mapScrollPane.setDefaultZoom(stage.viewport)
         mapScrollPane.scrollPercentX = 0.5f
         mapScrollPane.scrollPercentY = 0.5f
         mapScrollPane.updateVisualScroll()
