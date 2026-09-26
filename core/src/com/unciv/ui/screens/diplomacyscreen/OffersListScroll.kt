@@ -47,7 +47,7 @@ class OffersListScroll(
     init {
         fadeScrollBars=false
         setScrollbarsVisible(true)
-        if (portraitTray) setScrollingDisabled(false, true)
+        if (portraitTray) setScrollingDisabled(false, false)
     }
 
     /**

@@ -51,9 +51,14 @@ class TradeTable(
                 .height(76f * scale).left().padTop(4f * scale).row()
             diplomacyScreen.stylePortraitPrimary(offerButton)
         }
-        offerColumnsTableWrapper.add(offerColumnsTable)
-        add(offerColumnsTableWrapper).width(if (portrait) diplomacyScreen.portraitWidth else offerColumnsTable.prefWidth)
-            .top().row()
+        val columnsCell = offerColumnsTableWrapper.add(offerColumnsTable)
+        val wrapperCell = add(offerColumnsTableWrapper)
+            .width(if (portrait) diplomacyScreen.portraitWidth else offerColumnsTable.prefWidth).top()
+        if (portrait) {
+            columnsCell.grow()
+            wrapperCell.growY().minHeight(0f)
+        }
+        row()
 
         val lowerTable = Table().apply { defaults().pad(10f) }
 

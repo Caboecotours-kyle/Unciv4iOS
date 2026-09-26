@@ -113,7 +113,7 @@ class OfferColumnsTable(
             fun showTray() {
                 tray.clear()
                 tray.add(if (ourItemsActive) ourAvailableOffersTable else theirAvailableOffersTable)
-                    .width(pileWidth).height(178f * scale)
+                    .width(pileWidth).minHeight(80f * scale).prefHeight(178f * scale).growY()
                 ourFrame.background = BaseScreen.skinStrings.getUiBackground("DiplomacyScreen/OurPileBorder",
                     BaseScreen.skinStrings.roundedEdgeRectangleMidShape,
                     if (ourItemsActive) colorFromRGB(49, 147, 225) else colorFromRGB(45, 69, 89))
@@ -130,31 +130,31 @@ class OfferColumnsTable(
             val ourHeader = Table()
             ourHeader.add(ImageGetter.getCircle(colorFromRGB(49, 147, 225), 8f * scale))
                 .size(8f * scale).padLeft(8f * scale).padRight(5f * scale)
-            ourHeader.add(ourPile).width(insideWidth * .50f).height(44f * scale).left()
+            ourHeader.add(ourPile).width(insideWidth * .50f).height(48f * scale).left()
             ourHeader.add(ourWorth).growX().right().padRight(8f * scale)
             val ourBox = Table().apply {
                 background = BaseScreen.skinStrings.getUiBackground("DiplomacyScreen/OurPile",
                     BaseScreen.skinStrings.roundedEdgeRectangleMidShape, colorFromRGB(27, 50, 70))
                 top()
             }
-            ourBox.add(ourHeader).width(insideWidth).height(44f * scale).row()
-            ourBox.add(ourOffersTable).width(insideWidth).height(88f * scale).row()
-            ourFrame.add(ourBox).width(insideWidth).height(132f * scale)
-            add(ourFrame).width(pileWidth).height(136f * scale).row()
+            ourBox.add(ourHeader).width(insideWidth).height(48f * scale).row()
+            ourBox.add(ourOffersTable).width(insideWidth).minHeight(56f * scale).prefHeight(88f * scale).growY().row()
+            ourFrame.add(ourBox).width(insideWidth).growY()
+            add(ourFrame).width(pileWidth).minHeight(108f * scale).prefHeight(140f * scale).growY().row()
             val theirHeader = Table()
             theirHeader.add(ImageGetter.getCircle(colorFromRGB(213, 85, 80), 8f * scale))
                 .size(8f * scale).padLeft(8f * scale).padRight(5f * scale)
-            theirHeader.add(theirPile).width(insideWidth * .50f).height(44f * scale).left()
+            theirHeader.add(theirPile).width(insideWidth * .50f).height(48f * scale).left()
             theirHeader.add(theirCost).growX().right().padRight(8f * scale)
             val theirBox = Table().apply {
                 background = BaseScreen.skinStrings.getUiBackground("DiplomacyScreen/TheirPile",
                     BaseScreen.skinStrings.roundedEdgeRectangleMidShape, colorFromRGB(27, 50, 70))
                 top()
             }
-            theirBox.add(theirHeader).width(insideWidth).height(44f * scale).row()
-            theirBox.add(theirOffersTable).width(insideWidth).height(88f * scale).row()
-            theirFrame.add(theirBox).width(insideWidth).height(132f * scale)
-            add(theirFrame).width(pileWidth).height(136f * scale).padTop(8f * scale).row()
+            theirBox.add(theirHeader).width(insideWidth).height(48f * scale).row()
+            theirBox.add(theirOffersTable).width(insideWidth).minHeight(56f * scale).prefHeight(88f * scale).growY().row()
+            theirFrame.add(theirBox).width(insideWidth).growY()
+            add(theirFrame).width(pileWidth).minHeight(108f * scale).prefHeight(140f * scale).growY().padTop(8f * scale).row()
 
             val verdict = Table().apply {
                 background = BaseScreen.skinStrings.getUiBackground("DiplomacyScreen/TradeVerdict",
@@ -177,15 +177,15 @@ class OfferColumnsTable(
             verdict.add(meter).size(72f * scale, 10f * scale).padRight(12f * scale)
             add(verdict).width(pileWidth).height(62f * scale).padTop(10f * scale).row()
 
-            tabs.add(ourTab).width(pileWidth / 2).height(44f * scale)
-            tabs.add(theirTab).width(pileWidth / 2).height(44f * scale)
+            tabs.add(ourTab).width(pileWidth / 2).height(48f * scale)
+            tabs.add(theirTab).width(pileWidth / 2).height(48f * scale)
             val trayBox = Table().apply {
                 background = BaseScreen.skinStrings.getUiBackground("DiplomacyScreen/TradeTray",
                     tintColor = colorFromRGB(15, 32, 48))
             }
-            trayBox.add(tabs).width(pileWidth).height(44f * scale).row()
-            trayBox.add(tray).width(pileWidth).height(178f * scale).row()
-            add(trayBox).width(pileWidth).height(232f * scale).padTop(12f * scale).row()
+            trayBox.add(tabs).width(pileWidth).height(48f * scale).row()
+            trayBox.add(tray).width(pileWidth).minHeight(80f * scale).prefHeight(178f * scale).growY().row()
+            add(trayBox).width(pileWidth).minHeight(128f * scale).prefHeight(232f * scale).growY().padTop(12f * scale).row()
             showTray()
         } else if (!isPortraitMode) {
             // In landscape, arrange in 4 panels: ours left / theirs right ; items top / offers bottom.

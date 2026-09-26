@@ -37,9 +37,16 @@ class AskNumberPopup(
     actionOnOk: (input: Int) -> Unit = { },
 ): Popup(screen) {
     init {
+        val portrait = screen.isPortrait()
+        val pointScale = screen.safeAreaBoundsInWorld().width / 393f
+        val contentWidth = goodTextWidth
         val wrapper = Table()
         wrapper.add(icon).padRight(10f)
-        wrapper.add(label.toLabel())
+        val prompt = label.toLabel()
+        if (portrait) {
+            prompt.wrap = true
+            wrapper.add(prompt).width(contentWidth - icon.width - 10f)
+        } else wrapper.add(prompt)
         add(wrapper).colspan(2).row()
 
         val nameField = UncivTextField.Integer(label, defaultValue)
@@ -63,7 +70,7 @@ class AskNumberPopup(
         val centerTable = Table(skin)
 
         fun addValueButton(delta: Int) {
-            centerTable.add(
+            val cell = centerTable.add(
                 Button(
                     delta.toStringSigned().toLabel(),
                     skin
@@ -74,28 +81,34 @@ class AskNumberPopup(
                     }
                 }
             ).pad(5f)
+            if (portrait) cell.width(contentWidth / (amountButtons.size * 2).coerceAtLeast(1) - 10f)
+                .height(48f * pointScale)
         }
 
-        for (value in amountButtons.reversed()) {
-            addValueButton(-value)
+        if (portrait) {
+            centerTable.add(nameField).width(contentWidth - 20f).height(56f * pointScale)
+                .colspan((amountButtons.size * 2).coerceAtLeast(1)).pad(10f).row()
+            for (value in amountButtons.reversed()) addValueButton(-value)
+            for (value in amountButtons) addValueButton(value)
+        } else {
+            for (value in amountButtons.reversed()) addValueButton(-value)
+            centerTable.add(nameField).growX().pad(10f)
+            for (value in amountButtons) addValueButton(value)
         }
-
-        centerTable.add(nameField).growX().pad(10f)
-
         add(centerTable).colspan(2).row()
-
-        for (value in amountButtons) {
-            addValueButton(value)
-        }
 
         val errorLabel = errorText.toLabel()
         errorLabel.color = Color.RED
+        errorLabel.wrap = portrait
 
         addCloseButton()
         addOKButton(
             validate = {
                 val errorFound = nameField.intValue?.let { validate(it) } != true
-                if (errorFound) add(errorLabel).colspan(2).center()
+                if (errorFound) {
+                    val errorCell = add(errorLabel).colspan(2).center()
+                    if (portrait) errorCell.width(contentWidth)
+                }
                 !errorFound
             }
         ) {
