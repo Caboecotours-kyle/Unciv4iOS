@@ -24,6 +24,7 @@ import com.unciv.ui.components.extensions.disable
 import com.unciv.ui.components.extensions.surroundWithCircle
 import com.unciv.ui.components.extensions.toLabel
 import com.unciv.ui.components.fonts.Fonts
+import com.unciv.ui.components.input.KeyCharAndCode
 import com.unciv.ui.components.input.KeyboardBinding
 import com.unciv.ui.components.input.keyShortcuts
 import com.unciv.ui.components.input.onActivation
@@ -42,12 +43,14 @@ class TechPickerScreen(
     centerOnTech: Technology? = null,
 ) : PickerScreen() {
 
-    private val freeTechPick: Boolean = civInfo.tech.freeTechs != 0
+    internal val freeTechPick: Boolean = civInfo.tech.freeTechs != 0
     private val ruleset = civInfo.gameInfo.ruleset
     private var techNameToButton = HashMap<String, TechButton>()
-    private var selectedTech: Technology? = null
+    internal var selectedTech: Technology? = null
+        private set
     private var civTech: TechManager = civInfo.tech
-    private var tempTechsToResearch: ArrayList<String>
+    internal var tempTechsToResearch: ArrayList<String>
+        private set
     private var lines = NonTransformGroup().apply { touchable = Touchable.disabled }
     private var orderIndicators = NonTransformGroup().apply { touchable = Touchable.disabled }
     private var eraLabels = ArrayList<Label>()
@@ -67,8 +70,9 @@ class TechPickerScreen(
     }
 
     // All these are to counter performance problems when updating buttons for all techs.
-    private var researchableTechs = ruleset.technologies.keys
+    internal var researchableTechs = ruleset.technologies.keys
             .filter { civTech.canBeResearched(it) }.toHashSet()
+        private set
 
     private val currentTechColor = skinStrings.getUIColor("TechPickerScreen/CurrentTechColor", colorFromRGB(72, 147, 175))
     private val researchedTechColor = skinStrings.getUIColor("TechPickerScreen/ResearchedTechColor", colorFromRGB(255, 215, 0))
@@ -76,11 +80,22 @@ class TechPickerScreen(
     private val queuedTechColor = skinStrings.getUIColor("TechPickerScreen/QueuedTechColor", colorFromRGB(7*2, 46*2, 43*2))
     private val researchedFutureTechColor = skinStrings.getUIColor("TechPickerScreen/ResearchedFutureTechColor", colorFromRGB(127, 50, 0))
 
-    private val turnsToTech = ruleset.technologies.values.associateBy({ it.name }, { civTech.turnsToTech(it.name) })
+    internal val turnsToTech = ruleset.technologies.values.associateBy({ it.name }, { civTech.turnsToTech(it.name) })
+
+    /** Portrait lays the screen out one-handed in [TechPickerPortrait]; landscape keeps the classic tree below */
+    private val portrait = isPortrait()
+    private var portraitView: TechPickerPortrait? = null
 
     init {
         Gdx.input.inputProcessor = null // Avoid ANRs while building the tech screen
 
+        tempTechsToResearch = ArrayList(civTech.techsToResearch)
+        if (portrait) initPortrait(centerOnTech) else initLandscape(centerOnTech)
+
+        Gdx.input.inputProcessor = stage // Return input 
+    }
+
+    private fun initLandscape(centerOnTech: Technology?) {
         setDefaultCloseAction()
         scrollPane.setOverscroll(false, false)
 
@@ -89,8 +104,6 @@ class TechPickerScreen(
                 openCivilopedia(selectedTech!!.makeLink())
         }
         descriptionLabel.keyShortcuts.add(KeyboardBinding.Civilopedia)
-
-        tempTechsToResearch = ArrayList(civTech.techsToResearch)
 
         createTechTable()
         setButtonsInfo()
@@ -119,13 +132,42 @@ class TechPickerScreen(
             if (firstAvailableTech != null)
                 centerOnTechnology(firstAvailableTech)
         }
-        Gdx.input.inputProcessor = stage // Return input 
+    }
+
+    private fun initPortrait(centerOnTech: Technology?) {
+        pickerPane.remove()
+        globalShortcuts.add(KeyCharAndCode.BACK) { game.popScreen() }
+        globalShortcuts.add(KeyboardBinding.Civilopedia) { selectedTech?.let { openCivilopedia(it.makeLink()) } }
+        rightSideButton.setText(if (freeTechPick) "Pick a free tech".tr() else "Pick a tech".tr())
+
+        val safeArea = safeAreaBoundsInWorld()
+        val view = TechPickerPortrait(this, safeArea.width, startOnTree = centerOnTech != null)
+        view.setBounds(safeArea.x, safeArea.y, safeArea.width, safeArea.height)
+        stage.addActor(view)
+        portraitView = view
+
+        // Opened from a notification: show that tech in the tree, selected unless that would drop the queue
+        if (centerOnTech != null && (civTech.isResearched(centerOnTech.name) || civTech.techsToResearch.size <= 1))
+            selectTechnology(centerOnTech, queue = false, center = true)
+        else {
+            if (centerOnTech != null) centerOnTechnology(centerOnTech)
+            view.refresh()
+        }
+    }
+
+    /** Portrait only: drop the selection and go back to the queue as it was when the screen opened */
+    internal fun clearSelection() {
+        selectedTech = null
+        tempTechsToResearch = ArrayList(civTech.techsToResearch)
+        rightSideButton.setText(if (freeTechPick) "Pick a free tech".tr() else "Pick a tech".tr())
+        rightSideButton.disable()
+        setButtonsInfo()
     }
 
     override fun getCivilopediaRuleset() = ruleset
 
 
-    private fun tryExit() {
+    internal fun tryExit() {
         if (freeTechPick) {
             val freeTech = selectedTech!!.name
             // More evil people fast-clicking to cheat - #4977
@@ -220,6 +262,11 @@ class TechPickerScreen(
     }
 
     private fun setButtonsInfo() {
+        if (portrait) {
+            portraitView?.refresh()
+            return
+        }
+
         for ((techName, techButton) in techNameToButton) {
             val isResearched = civTech.isResearched(techName)
             techButton.setButtonColor(when {
@@ -387,7 +434,7 @@ class TechPickerScreen(
         orderIndicators.setSize(techTable.width, techTable.height)
     }
 
-    private fun selectTechnology(tech: Technology?, queue: Boolean = false, center: Boolean = false, switchFromWorldScreen: Boolean = true) {
+    internal fun selectTechnology(tech: Technology?, queue: Boolean = false, center: Boolean = false, switchFromWorldScreen: Boolean = true) {
 
         val previousSelectedTech = selectedTech
         selectedTech = tech
@@ -468,6 +515,10 @@ class TechPickerScreen(
     }
 
     private fun centerOnTechnology(tech: Technology) {
+        if (portrait) {
+            portraitView?.centerOn(tech)
+            return
+        }
         Concurrency.runOnGLThread {
             techNameToButton[tech.name]?.parent?.let {
                 scrollPane.scrollTo(it.x, it.y, it.width, it.height, true, true)
