@@ -67,6 +67,10 @@ class DiplomacyScreen(
         private const val closeButtonSize = 50f
         /** distance of the floating close button from the top and right */
         private const val closeButtonPad = 10f
+        /** Portrait list sheet leaves this much map visible above it (approved mock: sheet top at 120px) */
+        private const val sheetTopGap = 64f
+        private val sheetColor = Color.valueOf("122536")
+        private val ink2 = Color.valueOf("b7cde0")
     }
 
     internal val viewingCiv: Civilization = viewingCivView.getCiv()
@@ -78,7 +82,8 @@ class DiplomacyScreen(
     private val highlightColor: Color = clearColor.cpy().lerp(skin.getColor("color"), 0.333f)
 
     private val leftSideTable = Table().apply {
-        background = skinStrings.getUiBackground("DiplomacyScreen/LeftSide", tintColor = clearColor)
+        // Portrait: the list sits on the sheet, so it must not paint its own navy over it
+        if (!isPortrait()) background = skinStrings.getUiBackground("DiplomacyScreen/LeftSide", tintColor = clearColor)
     }
     private val leftSideScroll = ScrollPaneWithMinSize()
 
@@ -195,15 +200,53 @@ class DiplomacyScreen(
         }
     }
 
+    /** Portrait: the civ list is a sheet over the map, with its own header and close */
     private fun showPortraitList() {
-        portraitBackdrop?.isVisible = false
+        portraitBackdrop?.isVisible = true
+        closeButton.isVisible = false
         portraitHolder.clear()
-        portraitHolder.add(leftSideScroll).grow()
+        val knownCivs = viewingCiv.diplomacyFunctions.getKnownCivsSorted().toList()
+        val sheet = Table().apply {
+            background = skinStrings.getUiBackground("DiplomacyScreen/PortraitSheet",
+                skinStrings.roundedTopEdgeRectangleSmallShape, sheetColor)
+        }
+        sheet.add(ImageGetter.getWhiteDot().apply { color = Color(1f, 1f, 1f, .3f) })
+            .size(44f, 5f).padTop(8f).row()
+        sheet.add(getPortraitSheetHeader(knownCivs)).growX().row()
+        if (knownCivs.isEmpty()) {
+            val guidance = "Explore the map to meet other civilizations and city-states.".toLabel(ink2, 17, Align.center)
+            guidance.wrap = true
+            sheet.add(guidance).width(portraitWidth - 64f).expand().top().padTop(40f)
+        } else sheet.add(leftSideScroll).grow()
+        portraitHolder.add(sheet).grow().padTop(sheetTopGap)
+    }
+
+    private fun getPortraitSheetHeader(knownCivs: List<Civilization>) = Table().apply {
+        pad(10f, 16f, 6f, 16f)
+        val majors = knownCivs.count { !it.isCityState }
+        val cityStates = knownCivs.count { it.isCityState }
+        val met = listOfNotNull(
+            if (majors > 0) "$majors " + (if (majors == 1) "civilization" else "civilizations") else null,
+            if (cityStates > 0) "$cityStates " + (if (cityStates == 1) "city-state" else "city-states") else null
+        )
+        val subtitle = if (met.isEmpty()) "No civilizations met yet" else met.joinToString(" and ") + " met"
+        val titles = Table()
+        titles.add("Diplomacy".toLabel(fontSize = 23)).left().row()
+        titles.add(subtitle.toLabel(ink2, 14)).left().padTop(1f)
+        add(titles).expandX().left()
+        val close = ImageGetter.getImage("OtherIcons/Close").apply {
+            color = ink2
+            setSize(18f, 18f)
+        }.surroundWithCircle(48f, resizeActor = false, color = Color(1f, 1f, 1f, .09f))
+        close.onActivation { game.popScreen() }
+        close.keyShortcuts.add(KeyCharAndCode.BACK)
+        add(close).size(48f)
     }
 
     /** Portrait: after any right-side content change, show it full width with a way back to the list */
     private fun showPortraitDetail() {
         if (!isPortrait()) return
+        closeButton.isVisible = true
         portraitHolder.clear()
         val back = "‹  Back".toTextButton()
         back.style = TextButton.TextButtonStyle(back.style).apply {
