@@ -12,6 +12,7 @@ import com.badlogic.gdx.scenes.scene2d.ui.ScrollPane
 import com.badlogic.gdx.scenes.scene2d.ui.Table
 import com.badlogic.gdx.scenes.scene2d.utils.TextureRegionDrawable
 import com.badlogic.gdx.math.Interpolation
+import com.badlogic.gdx.utils.Align
 import com.badlogic.gdx.utils.Scaling
 import com.unciv.Constants
 import com.unciv.UncivGame
@@ -38,11 +39,13 @@ import com.unciv.ui.components.extensions.pad
 import com.unciv.ui.components.extensions.toLabel
 import com.unciv.ui.components.extensions.toTextButton
 import com.unciv.ui.components.input.onClick
+import com.unciv.ui.components.input.KeyCharAndCode
 import com.unciv.ui.components.input.KeyboardBinding
 import com.unciv.ui.components.input.keyShortcuts
 import com.unciv.ui.components.input.onActivation
 import com.unciv.ui.images.ImageGetter
 import com.unciv.ui.popups.Popup
+import com.unciv.ui.popups.PortraitDialog
 import com.unciv.ui.screens.basescreen.BaseScreen
 import com.unciv.ui.screens.basescreen.portraitCanvasBounds
 import com.unciv.ui.screens.cityscreen.CityScreen
@@ -79,6 +82,7 @@ class AlertPopup(
 ): Popup(worldScreen) {
 
     private var wonderSceneTexture: Texture? = null
+    private var leaderSceneTexture: Texture? = null
     
     companion object {
         private const val SEPARATOR_LINE_TO_TEXT_PADDING = 25f
@@ -484,15 +488,99 @@ class AlertPopup(
 
     private fun addStartIntro() {
         val civInfo = viewingCiv
-        addLeaderName(civInfo)
-        addGoodSizedLabel(civInfo.nation.startIntroPart1).row()
-        addGoodSizedLabel(civInfo.nation.startIntroPart2).row()
-        addCloseButton("Let's begin!")
+        if (stageHeight > stageWidth) addPortraitStartIntro(civInfo)
+        else {
+            addLeaderName(civInfo)
+            addGoodSizedLabel(civInfo.nation.startIntroPart1).row()
+            addGoodSizedLabel(civInfo.nation.startIntroPart2).row()
+            addCloseButton("Let's begin!")
+        }
 
         // Since there's introduction text, play the startIntroPart1 voice hook with the nation's theme.
         val music = UncivGame.Current.musicController
         music.chooseTrack(civInfo.nation.name, MusicMood.themeOrPeace, MusicTrackChooserFlags.setSpecific)
         music.playVoice("${civInfo.nation.name}.startIntroPart1")
+    }
+
+    /** Leader moment like the wonder scene: portrait fills the top, the intro scrolls in a card, "Let's begin!" in thumb reach */
+    private fun addPortraitStartIntro(civInfo: Civilization) {
+        val nation = civInfo.nation
+        background = null
+        innerTable.background = null
+        val canvas = worldScreen.portraitCanvasBounds()
+        val logicalWidth = 393f
+        val scale = stageWidth / logicalWidth
+        addActorAt(0, Image(ImageGetter.getWhiteDotDrawable()).apply {
+            color = nation.getOuterColor()
+            touchable = Touchable.disabled
+            setBounds(canvas.x, canvas.y, canvas.width, canvas.height)
+        })
+
+        val artTop = canvas.y + canvas.height
+        val artHeight = canvas.height * .62f
+        val art = Gdx.files.internal("ExtraImages/Leaders/p_${nation.leaderName.substringBefore(' ')}.png")
+        val leaderIcon = "LeaderIcons/${nation.leaderName}"
+        val picture = when {
+            nation.leaderName.isNotEmpty() && art.exists() -> {
+                val texture = Texture(art)
+                leaderSceneTexture = texture
+                texture.setFilter(TextureFilter.Linear, TextureFilter.Linear)
+                Image(TextureRegionDrawable(TextureRegion(texture))).apply {
+                    setScaling(Scaling.fill)
+                    setAlign(Align.top)
+                    setBounds(canvas.x, artTop - artHeight, canvas.width, artHeight)
+                }
+            }
+            nation.leaderName.isNotEmpty() && ImageGetter.imageExists(leaderIcon) ->
+                ImageGetter.getImage(leaderIcon).apply { setSize(200f * scale, 200f * scale) }
+            else -> ImageGetter.getNationPortrait(nation, 160f * scale)
+        }
+        if (picture.width < canvas.width)  // mod leaders without generated art sit centered in the art area
+            picture.setPosition(canvas.x + (canvas.width - picture.width) / 2f,
+                artTop - artHeight / 2f - picture.height / 2f)
+        picture.touchable = Touchable.disabled
+        picture.setOrigin(picture.width / 2f, picture.height / 2f)
+        picture.setScale(1.12f)
+        picture.addAction(Actions.scaleTo(1f, 1f, 1.8f, Interpolation.pow3Out))
+        addActorAt(1, picture)
+
+        val bottom = maxOf(canvas.y + 30f * scale, worldScreen.safeAreaBoundsInWorld().y)
+        val cardWidth = logicalWidth - 20f
+        val textWidth = cardWidth - 36f
+        val story = Table()
+        for (part in listOf(nation.startIntroPart1, nation.startIntroPart2).filter { it.isNotEmpty() })
+            story.add(part.toLabel(Color.valueOf("e8f0f7"), 16).apply { wrap = true })
+                .width(textWidth).left().padBottom(12f).row()
+        val begin = "Let's begin!".toTextButton(PortraitDialog.buttonStyle(PortraitDialog.Kind.Primary))
+        // Same keys as the landscape close button
+        begin.onActivation(binding = KeyboardBinding.NextTurnAlternate) { close() }
+        begin.keyShortcuts.add(KeyCharAndCode.BACK)
+        val card = Table().apply {
+            background = PortraitDialog.panel(Color(16f / 255f, 31f / 255f, 47f / 255f, .92f))
+            pad(20f, 18f, 16f, 18f)
+            // Tapping the leader opens their Civilopedia entry, as LeaderIntroTable does
+            add(civInfo.getLeaderDisplayName().toLabel(Color.valueOf("ffd97a"), 30, hideIcons = true).apply {
+                wrap = true
+                onClick { worldScreen.openCivilopedia(nation.makeLink()) }
+            }).width(textWidth).left().row()
+            add(ScrollPane(story).apply {
+                setOverscroll(false, false)
+                setScrollingDisabled(true, false)
+            }).width(textWidth).expandY().fill().top().padTop(14f).row()
+            add(begin).growX().height(56f).padTop(8f)
+        }
+        card.isTransform = true
+        card.setSize(cardWidth, (canvas.y + canvas.height * .54f - bottom) / scale)
+        card.setScale(scale)
+        card.setPosition((stageWidth - cardWidth * scale) / 2f, bottom)
+        card.touchable = Touchable.enabled
+        card.color.a = 0f
+        card.moveBy(0f, -40f * scale)
+        card.addAction(Actions.sequence(Actions.delay(.4f), Actions.parallel(
+            Actions.fadeIn(.7f, Interpolation.pow3Out),
+            Actions.moveBy(0f, 40f * scale, .7f, Interpolation.pow3Out)
+        )))
+        addActor(card)
     }
 
     private fun addTechResearched() {
@@ -836,5 +924,7 @@ class AlertPopup(
         super.close()
         wonderSceneTexture?.dispose()
         wonderSceneTexture = null
+        leaderSceneTexture?.dispose()
+        leaderSceneTexture = null
     }
 }
