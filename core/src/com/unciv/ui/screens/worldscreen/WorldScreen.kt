@@ -565,7 +565,9 @@ class WorldScreen(
             portraitHud.tutorialTop - bottomTileInfoTable.height)
         if (tutorialTaskTable.isVisible) {
             tutorialTaskTable.y = portraitHud.tutorialTop - tutorialTaskTable.height
-            tutorialTaskTable.toFront()
+            // Removing an earlier actor shifts the HUD index; keep the task just above it, below dialogs.
+            val hudIndex = portraitHud.zIndex
+            tutorialTaskTable.zIndex = hudIndex + if (tutorialTaskTable.zIndex < hudIndex) 0 else 1
         }
         chatButton.updatePosition()
     }
