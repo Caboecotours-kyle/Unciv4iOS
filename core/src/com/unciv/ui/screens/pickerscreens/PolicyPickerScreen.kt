@@ -294,7 +294,8 @@ class PolicyPickerScreen(
                 adopted -> PolicyColors.BranchBGAdopted.color.cpy().lerp(Color.WHITE, 0.4f)
                 else -> Color.WHITE
             }
-            button.onClick { portraitBranch = branch.name; game.replaceCurrentScreen { recreate() } }
+            // open the branch itself: recreate() would carry over a selected policy, which wins over the rail's branch
+            button.onClick { game.replaceCurrentScreen { PolicyPickerScreen(viewingCiv, canChangeState, branch.name) } }
             rail.add(button)
         }
         val railScroll = AutoScrollPane(rail).apply { setScrollingDisabled(false, true) }
