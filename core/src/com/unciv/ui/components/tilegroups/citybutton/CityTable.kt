@@ -135,8 +135,9 @@ internal class CityTable(
     }
 
     override fun hit(x: Float, y: Float, touchable: Boolean): com.badlogic.gdx.scenes.scene2d.Actor? {
+        // Extend the 48-point target below the banner, keeping its city's ground center selectable.
         if (compact && isVisible && (!touchable || this.touchable == Touchable.enabled)
-            && x >= 0f && x < width && kotlin.math.abs(y - height / 2f) <= 24f) return this
+            && x >= 0f && x < width && y >= height - 48f && y < height) return this
         return super.hit(x, y, touchable)
     }
 

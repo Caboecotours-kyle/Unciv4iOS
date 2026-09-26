@@ -324,10 +324,10 @@ class TileGroupMap<T: TileGroup>(
         if (!shouldHit || !isVisible || touchable && this.touchable == Touchable.disabled) return null
         if (!projection.tilted || sortedTileGroups.firstOrNull() !is WorldTileGroup)
             return super.hit(x, y, touchable)
-        // Explicit action overlays stay interactive. Upright art and city banners do not intercept ground taps.
+        // Explicit overlays and city banners receive taps before the projected ground.
         for (index in children.size - 1 downTo 0) {
             val child = children[index]
-            if (child in allMapLayers) continue
+            if (child in allMapLayers && child !is CityButtonMapLayer) continue
             child.parentToLocalCoordinates(hitPoint.set(x, y))
             child.hit(hitPoint.x, hitPoint.y, touchable)?.let { return it }
         }

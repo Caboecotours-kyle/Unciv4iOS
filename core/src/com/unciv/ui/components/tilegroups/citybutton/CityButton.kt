@@ -12,6 +12,7 @@ import com.unciv.GUI
 import com.unciv.ui.components.extensions.center
 import com.unciv.ui.components.extensions.centerX
 import com.unciv.ui.components.input.onClick
+import com.unciv.ui.components.input.onClickSuppressive
 import com.unciv.ui.components.input.onRightClick
 import com.unciv.ui.components.tilegroups.TileGroup
 import com.unciv.ui.images.ImageGetter
@@ -170,23 +171,24 @@ class CityButton(val foreignCityView: ForeignCityView, private val tileGroup: Ti
 
     private fun setButtonActions() {
         val unitTable = GUI.getUnitTable()
+        val compact = tileGroup.mapVerticalScale != 1f
 
         // So you can click anywhere on the button to go to the city
         touchable = Touchable.childrenOnly
 
         fun enterCityOrInfoPopup() {
-            // second tap on the button will go to the city screen
-            // if this city belongs to you and you are not iterating though the air units
+            // Compact banners open directly; landscape keeps its air-unit selection behavior.
             val cityView = foreignCityView.tryGetCityView()
             val isIteratingUnits = tileGroup.tileView.getVisibleUnits().none { it == unitTable.selectedUnit }
-            if (cityView != null && isIteratingUnits) {
+            if (cityView != null && (compact || isIteratingUnits)) {
                 GUI.pushScreen{ CityScreen(cityView) }
             }
             else if (foreignCityView.isKnownTo(viewingPlayer))
                 foreignCityInfoPopup()
         }
 
-        onClick {
+        if (compact) onClickSuppressive(action = ::enterCityOrInfoPopup)
+        else onClick {
             // clicking swings the button a little down to allow selection of units there.
             // this also allows to target selected units to move to the city tile from elsewhere.
             if (isButtonMoved) {
