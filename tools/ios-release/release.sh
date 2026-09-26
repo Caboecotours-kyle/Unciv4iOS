@@ -28,3 +28,5 @@ IPA="$(find "$ROOT/ios/build" -name "*.ipa" -mmin -60 -print | head -1)"
 [ -n "$IPA" ] || { echo "no IPA produced" >&2; exit 1; }
 echo "IPA: $IPA"
 cd "$ROOT/tools/ios-release" && fastlane upload ipa:"$IPA"
+# the uploaded IPA is only needed for the upload; the Mac has little free disk
+rm -f "$IPA"
