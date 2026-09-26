@@ -109,7 +109,7 @@ class CityStateDiplomacyTable(private val diplomacyScreen: DiplomacyScreen) {
             it.isMajorCiv() && !it.isDefeated() && it != viewingCiv && viewingCiv.knows(it)
         }.mapNotNull { rival ->
             otherCiv.getDiplomacyManager(rival)?.let { rival to it.getInfluence().toInt() }
-        }.sortedByDescending { it.second }
+        }.sortedByDescending { it.second }.toList()
         val quests = otherCiv.questManager.getAssignedQuestsFor(viewingCiv)
         // A gold gift completes GiveGold quests immediately, in addition to its normal influence gain.
         val giftQuestBonus = quests.filter { it.questNameInstance == QuestName.GiveGold }
@@ -122,19 +122,21 @@ class CityStateDiplomacyTable(private val diplomacyScreen: DiplomacyScreen) {
             .maxOrNull()!!.coerceAtLeast(60) + 10
         val width = diplomacyScreen.stage.width - 32f
         val trackWidth = 140f
+        val trackHeight = maxOf(480f, 20f + 22f * (rivals.size + 3))
+        val trackLength = trackHeight - 60f
         val root = Table().apply { defaults().pad(5f) }
         root.add(LeaderIntroTable(otherCiv)).width(width).left().row()
         root.add(diplomacyScreen.getRelationshipTable(manager)).left().row()
 
         val content = Table()
-        val track = Group().apply { setSize(trackWidth, 480f) }
+        val track = Group().apply { setSize(trackWidth, trackHeight) }
         val trackLine = ImageGetter.getWhiteDot().apply {
             color = Color.CYAN.cpy().apply { a = 0.45f }
-            setSize(5f, 420f)
+            setSize(5f, trackLength)
             setPosition(119f, 25f)
         }
         track.addActor(trackLine)
-        fun position(value: Int): Float = 25f + (value.coerceAtLeast(0).toFloat() / maximum) * 420f
+        fun position(value: Int): Float = 25f + (value.coerceAtLeast(0).toFloat() / maximum) * trackLength
         data class InfluenceMarker(
             var value: Int,
             val group: Group,
@@ -145,7 +147,7 @@ class CityStateDiplomacyTable(private val diplomacyScreen: DiplomacyScreen) {
         val markers = mutableListOf<InfluenceMarker>()
         fun marker(name: String, value: Int, color: Color): InfluenceMarker {
             val marker = Group().apply {
-                setSize(trackWidth, 480f)
+                setSize(trackWidth, trackHeight)
                 touchable = Touchable.disabled
             }
             val connector = ImageGetter.getWhiteDot().apply {
@@ -165,13 +167,13 @@ class CityStateDiplomacyTable(private val diplomacyScreen: DiplomacyScreen) {
         }
         fun layoutMarkers() {
             val visible = markers.filter { it.group.isVisible }.sortedBy { position(it.value) }
-            val spacing = minOf(22f, 460f / (visible.size - 1).coerceAtLeast(1))
+            val spacing = 22f
             var lastCenter = 10f - spacing
             val centers = visible.map {
                 maxOf(position(it.value), lastCenter + spacing).also { center -> lastCenter = center }
             }.toMutableList()
             if (centers.isNotEmpty()) {
-                centers[centers.lastIndex] = minOf(centers.last(), 470f)
+                centers[centers.lastIndex] = minOf(centers.last(), trackHeight - 10f)
                 for (index in centers.lastIndex - 1 downTo 0)
                     centers[index] = minOf(centers[index], centers[index + 1] - spacing)
             }
@@ -194,7 +196,7 @@ class CityStateDiplomacyTable(private val diplomacyScreen: DiplomacyScreen) {
         val preview = marker("→", current, Color.GOLD)
         preview.group.isVisible = false
         layoutMarkers()
-        content.add(track).width(trackWidth).height(480f).top()
+        content.add(track).width(trackWidth).height(trackHeight).top()
 
         val actions = Table().apply { defaults().padBottom(7f) }
         actions.add("Ways to gain influence".toLabel(fontSize = Constants.headingFontSize)).left().row()
@@ -205,6 +207,7 @@ class CityStateDiplomacyTable(private val diplomacyScreen: DiplomacyScreen) {
             val result = current + delta
             preview.group.isVisible = delta != 0
             preview.value = result
+            preview.label.setText("[→] [$result]".tr())
             layoutMarkers()
             summary.setText("[${viewingCiv.civName}]: [$current] → [$result] influence".tr())
             actionHolder.clear()
