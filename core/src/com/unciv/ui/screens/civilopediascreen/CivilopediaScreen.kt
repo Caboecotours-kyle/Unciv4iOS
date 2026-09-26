@@ -1,5 +1,7 @@
 package com.unciv.ui.screens.civilopediascreen
 
+import com.unciv.ui.screens.basescreen.portraitCanvasBounds
+
 import com.badlogic.gdx.Input
 import com.badlogic.gdx.graphics.Color
 import com.badlogic.gdx.scenes.scene2d.Actor
@@ -230,9 +232,9 @@ class CivilopediaScreen(
         flavourTable.clear()
         if (entry.flavour != null) {
             flavourTable.isVisible = true
-            flavourTable.add(
-                entry.flavour.assembleCivilopediaText(ruleset)
-                    .renderCivilopediaText(if (portrait) 393f - 2 * portraitPad else stage.width * 0.5f) { selectLink(it) })
+            flavourTable.add(if (portrait) portraitArticle(entry)
+                else entry.flavour.assembleCivilopediaText(ruleset)
+                    .renderCivilopediaText(stage.width * 0.5f) { selectLink(it) })
         } else {
             flavourTable.isVisible = false
         }
@@ -355,7 +357,7 @@ class CivilopediaScreen(
         portraitRoot.add(portraitFooter).growX()
         val safe = safeAreaBoundsInWorld()
         val unit = safe.width / 393f
-        val drawing = (stage.viewport as com.unciv.ui.screens.basescreen.SafeAreaViewport).drawingBounds
+        val drawing = portraitCanvasBounds()
         val topInset = (drawing.y + drawing.height - safe.y - safe.height) / unit
         val top = (56f - topInset).coerceAtLeast(0f)
         portraitRoot.isTransform = true
@@ -476,7 +478,11 @@ class CivilopediaScreen(
         portraitFooter.pad(10f, portraitPad, portraitBottomPad(), portraitPad)
         portraitFooter.defaults().height(52f)
         portraitFooter.add(getPortraitCircleButton("OtherIcons/BackArrow") { navigateEntries(-1) }).size(52f)
-        val all = currentCategory.label.toTextButton()
+        val all = Table().apply {
+            background = portraitPanel(Color(1f, 1f, 1f, .07f), 16f)
+            touchable = Touchable.enabled
+            add(currentCategory.label.toLabel(Color.WHITE, 15))
+        }
         all.onClick { showPortraitList(); selectEntryInList(entry.name) }
         portraitFooter.add(all).growX().padLeft(10f).padRight(10f)
         portraitFooter.add(getPortraitCircleButton("OtherIcons/BackArrow", flip = true) { navigateEntries(1) }).size(52f)
@@ -538,10 +544,11 @@ class CivilopediaScreen(
             val results = Table().apply { top(); pad(0f, 14f, 14f, 14f); defaults().growX() }
             var count = 0
             for ((category, entries) in categoryToEntries) {
-                val matches = entries.filter { it.name.tr().contains(query, ignoreCase = true) }
+                val matches = entries.asSequence().filter { it.name.tr().contains(query, ignoreCase = true) }
+                    .take(61 - count).toList()
                 if (matches.isEmpty()) continue
-                results.add(category.label.toLabel(mutedPedia(), 15)).left().padTop(12f).row()
-                for (entry in matches) {
+                if (count < 60) results.add(category.label.toLabel(mutedPedia(), 15)).left().padTop(12f).row()
+                for (entry in matches.take(60 - count)) {
                     val result = Table().apply {
                         touchable = Touchable.enabled
                         val art = portraitArt(category, entry.flavour?.getIconName() ?: entry.name, 40f)
@@ -551,6 +558,11 @@ class CivilopediaScreen(
                     }
                     results.add(result).minHeight(60f).row()
                     count++
+                }
+                if (count >= 60) {
+                    results.add("Refine your search for more results".toLabel(mutedPedia(), 14).apply { wrap = true })
+                        .width(365f).padTop(12f).row()
+                    break
                 }
             }
             if (count == 0) results.add("No results".toLabel(mutedPedia(), 16)).padTop(20f)
@@ -586,7 +598,7 @@ class CivilopediaScreen(
 
     private fun portraitBottomPad(): Float {
         val safe = safeAreaBoundsInWorld()
-        val drawing = (stage.viewport as com.unciv.ui.screens.basescreen.SafeAreaViewport).drawingBounds
+        val drawing = portraitCanvasBounds()
         return (34f - (safe.y - drawing.y) / (safe.width / 393f)).coerceAtLeast(10f)
     }
 
@@ -655,6 +667,68 @@ class CivilopediaScreen(
         card.add(why.toLabel(mutedPedia(), 12, Align.center).apply { wrap = true }).width(96f)
         card.onClick { selectLink("${cardCategory.name}/$name") }
         return card
+    }
+
+    private fun portraitArticle(entry: CivilopediaEntry): Table {
+        val article = Table().apply { top().left(); defaults().growX().left() }
+        val stats = mutableListOf<Triple<String, Int, String>>()
+        when (currentCategory) {
+            CivilopediaCategories.Technology -> ruleset.technologies[entry.name]?.let {
+                stats.add(Triple("Science", it.cost, "Cost"))
+            }
+            CivilopediaCategories.Unit -> ruleset.units[entry.name]?.let {
+                if (it.strength > 0) stats.add(Triple("Strength", it.strength, "Strength"))
+                if (it.rangedStrength > 0) stats.add(Triple("RangedStrength", it.rangedStrength, "Ranged strength"))
+                stats.add(Triple("Movement", it.movement, "Movement"))
+            }
+            else -> Unit
+        }
+        if (stats.isNotEmpty()) {
+            val tiles = Table().left()
+            for ((icon, value, label) in stats) {
+                val tile = Table().apply {
+                    background = portraitPanel(Color(1f, 1f, 1f, .06f), 16f)
+                    pad(10f)
+                    val path = "StatIcons/$icon"
+                    if (ImageGetter.imageExists(path)) add(ImageGetter.getImage(path)).size(22f).padRight(6f)
+                    add(value.toString().toLabel(Color.WHITE, 22)).row()
+                    add(label.toLabel(mutedPedia(), 12)).colspan(2).padTop(4f)
+                }
+                tiles.add(tile).minWidth(82f).height(78f).padRight(8f)
+            }
+            article.add(tiles).left().padBottom(14f).row()
+        }
+        var lines = entry.flavour!!.assembleCivilopediaText(ruleset).civilopediaText
+        if (lines.firstOrNull()?.text == entry.name) {
+            lines = lines.drop(1)
+            if (lines.firstOrNull()?.separator == true) lines = lines.drop(1)
+        }
+        for (line in lines) {
+            if (line.isEmpty()) { article.add().height(8f).row(); continue }
+            if (line.separator) {
+                article.add(ImageGetter.getWhiteDot().apply { color = Color(1f, 1f, 1f, .1f) }).height(1f).padTop(8f).padBottom(8f).row()
+                continue
+            }
+            if (currentCategory == CivilopediaCategories.Technology && line.text.startsWith("{Cost}:")) continue
+            val formatted = FormattedLine(line.text, line.link, line.icon, line.extraImage, line.imageSize,
+                size = 16, indent = line.indent, color = if (line.header > 0) "#ffffff" else "#b7cde0",
+                starred = line.starred, centered = line.centered, iconCrossed = line.iconCrossed)
+            val linked = line.linkType != FormattedLine.LinkType.None
+            val content = formatted.render(if (linked) 337f else 365f, FormattedLine.IconDisplay.NoLink)
+            val row = Table().apply {
+                if (linked) { background = portraitPanel(Color(1f, 1f, 1f, .07f), 14f); pad(8f, 14f, 8f, 14f) }
+                add(content).growX().left()
+                if (linked) {
+                    touchable = Touchable.enabled
+                    onClick {
+                        if (line.linkType == FormattedLine.LinkType.Internal) selectLink(line.link)
+                        else com.badlogic.gdx.Gdx.net.openURI(line.link)
+                    }
+                }
+            }
+            article.add(row).width(365f).minHeight(if (linked) 48f else 0f).padBottom(6f).row()
+        }
+        return article
     }
 
     private fun portraitArt(category: CivilopediaCategories, name: String, size: Float): Actor? {
