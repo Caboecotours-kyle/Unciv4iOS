@@ -12,6 +12,7 @@ import com.unciv.logic.trade.TradeOffersList
 import com.unciv.models.ruleset.tile.ResourceSupplyList
 import com.unciv.models.translations.tr
 import com.unciv.ui.components.extensions.disable
+import com.unciv.ui.components.fonts.Fonts
 import com.unciv.ui.components.input.onClick
 import com.unciv.ui.components.widgets.ExpanderTab
 import com.unciv.ui.images.IconTextButton
@@ -105,6 +106,13 @@ class OffersListScroll(
                         iconCell.size(30f)
                     label.setAlignment(Align.center)
                     labelCell.pad(5f).grow()
+                    if (portraitTray) {
+                        clearChildren()
+                        label.wrap = true
+                        label.setFontScale(14f / Fonts.ORIGINAL_FONT_SIZE)
+                        if (tradeIcon != null) add(tradeIcon).size(24f).padBottom(2f).row()
+                        add(label).width(88f).growY()
+                    }
                 }
 
                 val amountPerClick =
@@ -134,7 +142,7 @@ class OffersListScroll(
 
                 if (portraitTray) {
                     val destination = expanderTabs[offerType]?.innerTable ?: table
-                    destination.add(tradeButton).width(108f).height(72f)
+                    destination.add(tradeButton).width(108f).height(96f)
                     trayColumn++
                     if (trayColumn == 3) { destination.row(); trayColumn = 0 }
                 } else {
