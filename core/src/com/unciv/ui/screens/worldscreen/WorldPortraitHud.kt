@@ -5,8 +5,14 @@ import com.unciv.ui.screens.basescreen.portraitCanvasBounds
 import com.badlogic.gdx.Gdx
 import com.badlogic.gdx.graphics.Pixmap
 import com.badlogic.gdx.graphics.Texture
+import com.badlogic.gdx.graphics.g2d.Batch
 import com.badlogic.gdx.graphics.g2d.TextureRegion
 import com.badlogic.gdx.graphics.g2d.NinePatch
+import com.badlogic.gdx.math.Rectangle
+import com.badlogic.gdx.scenes.scene2d.InputEvent
+import com.badlogic.gdx.scenes.scene2d.InputListener
+import com.badlogic.gdx.scenes.scene2d.actions.Actions
+import com.badlogic.gdx.scenes.scene2d.utils.ActorGestureListener
 import com.badlogic.gdx.scenes.scene2d.utils.NinePatchDrawable
 import com.badlogic.gdx.scenes.scene2d.ui.Image
 import com.badlogic.gdx.graphics.Color
@@ -15,13 +21,24 @@ import com.badlogic.gdx.scenes.scene2d.Group
 import com.badlogic.gdx.scenes.scene2d.Touchable
 import com.badlogic.gdx.scenes.scene2d.ui.Table
 import com.badlogic.gdx.utils.Align
+import com.unciv.logic.map.mapunit.MapUnit
+import com.unciv.models.UncivSound
+import com.unciv.models.UnitAction
 import com.unciv.models.UnitActionType
+import com.unciv.models.UpgradeUnitAction
 import com.unciv.models.translations.tr
 import com.unciv.ui.components.extensions.toLabel
+import com.unciv.ui.components.input.KeyCharAndCode
 import com.unciv.ui.components.input.activate
+import com.unciv.ui.components.input.keyShortcuts
+import com.unciv.ui.components.input.onActivation
 import com.unciv.ui.components.input.onClick
+import com.unciv.ui.components.input.onLongPress
+import com.unciv.ui.components.input.onRightClick
+import com.unciv.ui.components.widgets.AutoScrollPane
 import com.unciv.ui.images.ImageGetter
 import com.unciv.ui.popups.Popup
+import com.unciv.ui.popups.UnitUpgradeMenu
 import com.unciv.ui.screens.diplomacyscreen.DiplomacyScreen
 import com.unciv.ui.screens.overviewscreen.EmpireOverviewCategories
 import com.unciv.ui.screens.pickerscreens.ReligionPathScreen
@@ -33,6 +50,7 @@ import com.unciv.ui.screens.worldscreen.status.NextTurnAction
 import com.unciv.ui.screens.worldscreen.unit.actions.UnitActions
 import com.unciv.ui.screens.worldscreen.unit.actions.UnitActionsTable
 import kotlin.math.cos
+import kotlin.math.min
 import kotlin.math.roundToInt
 import kotlin.math.sin
 import kotlin.math.sqrt
@@ -93,7 +111,57 @@ internal class WorldPortraitHud(
         if (ImageGetter.imageExists(path)) path else "OtherIcons/Star")
 
     private class Disc(val shadowColor: Color) : Table()
-    private class ArcAction(val image: Actor, val title: String, val enabled: Boolean, val activate: () -> Unit)
+    /** [note] is the side effect shown while held; [chip] stays visible (attack damage). */
+    private class ArcAction(val image: Actor, val title: String, val enabled: Boolean,
+        val note: String? = null, val chip: String? = null, val activate: () -> Unit)
+
+    private var callout: Actor? = null
+    private var calloutOwner: Actor? = null
+
+    private fun hideCallout(owner: Actor? = calloutOwner) {
+        if (owner !== calloutOwner) return
+        callout?.remove()
+        callout = null
+        calloutOwner = null
+    }
+
+    /** Holding shows the translated name; releasing only hides it, so reading never acts.
+     *  Disabled controls explain themselves as soon as they are touched. */
+    private fun holdToRead(target: Actor, title: String, note: String?, enabled: Boolean = true) {
+        val show = { showCallout(target, title, if (enabled) note else "Unavailable".tr()) }
+        if (enabled) target.onLongPress(UncivSound.Silent) { show() }
+        target.addListener(object : InputListener() {
+            override fun touchDown(event: InputEvent?, x: Float, y: Float, pointer: Int, button: Int): Boolean {
+                if (!enabled) show()
+                return true
+            }
+            override fun touchUp(event: InputEvent?, x: Float, y: Float, pointer: Int, button: Int) = hideCallout(target)
+        })
+    }
+
+    private fun showCallout(target: Actor, title: String, note: String?) {
+        hideCallout()
+        val box = Table().apply {
+            background = panel(12)
+            touchable = Touchable.disabled
+            for ((text, color, size) in listOfNotNull(Triple(title, Color.WHITE, 16), note?.let { Triple(it, Color.valueOf("b7cde0"), 13) })) {
+                val label = text.toLabel(color, size)
+                val labelWidth = min(label.prefWidth + 1f, 220f)
+                label.wrap = true
+                add(label).width(labelWidth).left().row()
+            }
+            pad(8f, 12f, 8f, 12f)
+            pack()
+        }
+        box.setPosition((target.x + target.width / 2f - box.width / 2f).coerceIn(8f, 385f - box.width),
+            (target.y + target.height + 12f).coerceAtMost(height - box.height - 8f))
+        addActor(box)
+        callout = box
+        calloutOwner = target
+    }
+
+    private fun nextUnitNote(type: UnitActionType) =
+        if (type.isSkippingToNextUnit && world.game.settings.autoUnitCycle) "Next unit".tr() else null
 
     private fun disc(image: Actor, size: Float, color: Color = white, caption: String? = null): Table {
         val table = Disc(if (color == yellow) Color.valueOf("c9951c") else if (color == white) Color.valueOf("b9cadb") else Color.valueOf("0b1826"))
@@ -125,6 +193,7 @@ internal class WorldPortraitHud(
     fun dispose() { scrimTexture.dispose(); statTexture.dispose(); panelTextures.forEach { it.dispose() } }
 
     fun refresh() {
+        hideCallout()
         clearChildren()
         val safe = world.safeAreaBoundsInWorld()
         val canvas = world.portraitCanvasBounds()
@@ -179,6 +248,8 @@ internal class WorldPortraitHud(
             if (skip != null && unit != null) unitActions.activateAction(skip, unit)
             else world.nextTurnButton.activate()
         }
+        if (skip != null) holdToRead(anchor, skip.title.tr(), nextUnitNote(skip.type))
+        else holdToRead(anchor, world.nextTurnButton.label.text.toString(), null, !world.nextTurnButton.isDisabled)
         place(anchor, 277f, bottom, 96f, 96f)
         val dueUnits = world.selectedGameView.civView.dueUnitsCount()
         val pendingChoices = NextTurnAction.entries.count {
@@ -197,11 +268,7 @@ internal class WorldPortraitHud(
 
         if (unit != null && unitView != null) {
             val tag = Table().apply { background = panel(); pad(10f) }
-            val portrait = Table().apply {
-                background = ImageGetter.getCircleDrawable().tint(civ.nation.getOuterColor())
-                add(ImageGetter.getUnitIcon(unit.baseUnit, Color.WHITE)).size(30f)
-            }
-            tag.add(portrait).size(46f).padRight(12f)
+            tag.add(unitPortrait(unit, 30f)).size(46f).padRight(12f)
             val text = Table()
             text.add(world.bottomUnitTable.nameLabelText.toLabel(Color.WHITE, 18)).left().row()
             val base = unit.baseUnit
@@ -231,15 +298,16 @@ internal class WorldPortraitHud(
 
             val arcActions = mutableListOf<ArcAction>()
             battle.portraitAttackButton?.let { attack ->
-                arcActions.add(ArcAction(icon("OtherIcons/Crosshair"),
-                    attack.text.toString() + (battle.portraitDamagePreview?.let { "\n$it" } ?: ""),
-                    !attack.isDisabled) { attack.activate() })
+                val damage = battle.portraitDamagePreview
+                arcActions.add(ArcAction(icon("OtherIcons/CrosshairB"), attack.text.toString(),
+                    !attack.isDisabled, damage, damage) { attack.activate() })
             }
             for (action in actions.filter { it.type != UnitActionType.Skip }.take(3 - arcActions.size)) {
                 val image = "UnitActionIcons/${action.type.name}"
                 arcActions.add(ArcAction(if (ImageGetter.imageExists(image)) icon(image) else action.getIcon(30f),
-                    action.title.tr(), action.action != null) { unitActions.activateAction(action, unit) })
+                    action.title.tr(), action.action != null, nextUnitNote(action.type)) { unitActions.activateAction(action, unit) })
             }
+            // Label-free icons on the approved arc: names appear only while a disc is held.
             for ((index, action) in arcActions.take(3).withIndex()) {
                 val angle = Math.toRadians((200 + index * 26).toDouble())
                 val x = 325f + 182f * cos(angle).toFloat() - 33f
@@ -248,40 +316,27 @@ internal class WorldPortraitHud(
                     if (index == 0 && action.enabled) yellow else white)
                 if (!action.enabled) button.color.a = .45f
                 else button.onClick { action.activate() }
+                holdToRead(button, action.title, action.note, action.enabled)
                 place(button, x, y, 66f, 66f)
-                val label = Table().apply {
-                    background = panel(11)
-                    val text = action.title.tr().toLabel(Color.WHITE, 14)
-                    val available = if (index < 2) (x - 18f).coerceAtMost(120f) else 104f
-                    val textWidth = (text.prefWidth + 1f).coerceAtMost(available - 20f)
-                    text.wrap = true
-                    add(text).width(textWidth).pad(6f, 10f, 6f, 10f)
-                    pack()
+                if (action.chip != null) {
+                    val chip = Table().apply {
+                        background = panel(10).tint(Color.valueOf("e0524a"))
+                        touchable = Touchable.disabled
+                        add(action.chip.toLabel(Color.WHITE, 13)).pad(3f, 8f, 3f, 8f)
+                        pack()
+                    }
+                    place(chip, x + 33f - chip.width / 2f, y - chip.height - 4f, chip.width, chip.height)
                 }
-                if (index < 2) place(label, (x - label.width - 10f).coerceAtLeast(8f), y + 17f, label.width, label.height)
-                else place(label, x + 33f - label.width / 2, y - label.height - 9f, label.width, label.height)
             }
             if (actions.isNotEmpty()) {
                 val angle = Math.toRadians(278.0)
                 val x = 325f + 182f * cos(angle).toFloat() - 33f
                 val y = bottom + 48f - 182f * sin(angle).toFloat() - 33f
                 val more = disc(icon("UnitActionIcons/ShowMore"), 66f)
-                more.onClick {
-                    val popup = Popup(world)
-                    if (battle.portraitAttackButton != null) {
-                        popup.addButton("Combat details") { popup.close(); battle.isVisible = true; battle.toFront() }.row()
-                    }
-                    actions.forEach { popup.add(unitActions.getUnitActionButton(unit, it) { popup.close() }).growX().minHeight(48f).row() }
-                    popup.addCloseButton()
-                    popup.open()
-                }
+                val primary = arcActions.firstOrNull()?.takeIf { it.enabled }?.title
+                more.onClick { MoreSheet(unit, actions, primary).present() }
+                holdToRead(more, "Show more".tr(), null)
                 place(more, x, y, 66f, 66f)
-                val label = Table().apply {
-                    background = panel(11)
-                    add("More".tr().toLabel(Color.WHITE, 14)).pad(6f, 11f, 6f, 11f)
-                    pack()
-                }
-                place(label, x + 33f - label.width / 2f, y - label.height - 9f, label.width, label.height)
             }
         } else {
             val leader = "LeaderIcons/${civ.nation.leaderName}"
@@ -316,6 +371,169 @@ internal class WorldPortraitHud(
                     onClick { if (index == 0) world.mapHolder.zoomIn() else world.mapHolder.zoomOut() }
                 }
                 place(control, 10f, zoomY - (index + 1) * 56f, 56f, 52f)
+            }
+        }
+    }
+
+    /** Same colors as the unit's map flag: outer color disc, inner color icon (Greece reads blue on white). */
+    private fun unitPortrait(unit: MapUnit, iconSize: Float) = Table().apply {
+        val nation = unit.civ.nation
+        background = ImageGetter.getCircleDrawable().tint(nation.getOuterColor())
+        add(ImageGetter.getUnitIcon(unit.baseUnit, nation.getInnerColor())).size(iconSize)
+    }
+
+    /** The More drawer: every unit action, Skip and combat details included, as the accepted navy bottom sheet.
+     *  Actions run after the sheet closes so their own confirmations (e.g. Disband) can open. */
+    private inner class MoreSheet(unit: MapUnit, actions: List<UnitAction>, primary: String?) :
+        Popup(world, Scrollability.None, 1f) {
+        private val p = world.safeAreaBoundsInWorld().width / 393f
+        private val canvasY = world.portraitCanvasBounds().y
+        private val sheet = Color.valueOf("122536")
+        private val muted = Color.valueOf("b7cde0")
+        private val danger = Color.valueOf("ffb1aa")
+        private val dangerDisc = Color(224f / 255f, 82f / 255f, 74f / 255f, .2f)
+        private val line = Color(1f, 1f, 1f, .12f)
+        private val fill = ImageGetter.getWhiteDotDrawable()
+        private fun pt(value: Float) = value * p
+        private fun font(size: Int) = (size * p).roundToInt()
+
+        init {
+            background = fill.tint(Color(10f / 255f, 22f / 255f, 34f / 255f, .35f))
+            innerTable.background = panel(pt(28f).roundToInt()).tint(sheet)
+            innerTable.pad(0f).defaults().pad(0f)
+            getCell(innerTable)?.expand()?.bottom()?.growX()
+            clickBehindToClose = true
+
+            val header = Table()
+            header.touchable = Touchable.enabled
+            header.add(Table().apply { background = panel(max(1, pt(2.5f).roundToInt())).tint(Color(1f, 1f, 1f, .3f)) })
+                .size(pt(44f), pt(5f)).colspan(3).padTop(pt(8f)).row()
+            header.add(unitPortrait(unit, pt(30f))).size(pt(48f)).pad(pt(8f), pt(16f), pt(8f), pt(12f))
+            header.add(world.bottomUnitTable.nameLabelText.toLabel(Color.WHITE, font(21))).expandX().left()
+            header.add(Table().apply {
+                touchable = Touchable.enabled
+                add(ImageGetter.getImage("OtherIcons/Close").apply { color = muted }).size(pt(18f))
+                onClick { close() }
+            }).size(pt(48f)).padRight(pt(8f))
+            header.addListener(swipeToClose())
+            add(header).growX().row()
+
+            val list = Table()
+            fun addRow(image: Actor, title: String, enabled: Boolean, chip: String?, tone: Color, current: Boolean,
+                    sound: UncivSound, run: () -> Unit): Table {
+                val isDanger = tone === dangerDisc
+                if (list.cells.size > 0) list.add(Image(fill).apply { color = line }).height(max(1f, pt(1f))).growX().row()
+                val row = Table()
+                row.touchable = Touchable.enabled
+                image.color = if (isDanger) danger else ink
+                row.add(Table().apply { background = ImageGetter.getCircleDrawable().tint(tone); add(image).size(pt(26f)) })
+                    .size(pt(48f)).padRight(pt(14f))
+                val text = Table()
+                val nameColor = if (isDanger) danger else if (current) yellow else Color.WHITE
+                text.add(title.toLabel(nameColor, font(17)).apply { wrap = true }).growX().row()
+                if (chip != null) text.add(Table().apply {
+                    background = panel(pt(10f).roundToInt()).tint(Color(1f, 1f, 1f, .08f))
+                    add(chip.toLabel(muted, font(13))).pad(pt(4f), pt(9f), pt(4f), pt(9f))
+                }).left().padTop(pt(5f))
+                row.add(text).growX()
+                row.pad(pt(8f), pt(6f), pt(8f), pt(6f))
+                if (!enabled) row.color.a = .45f
+                else row.onClick(sound) { close(); run() }
+                list.add(row).growX().minHeight(pt(64f)).row()
+                return row
+            }
+
+            battle.portraitAttackButton?.let { attack ->
+                val title = attack.text.toString()
+                val enabled = !attack.isDisabled
+                addRow(icon("OtherIcons/CrosshairB"), title, enabled,
+                    if (enabled) battle.portraitDamagePreview else "Unavailable".tr(),
+                    if (title == primary) yellow else white, false, UncivSound.Silent) { attack.activate() }
+                addRow(icon("OtherIcons/Search"), "Combat details".tr(), true, null, white, false, UncivSound.Click) {
+                    battle.isVisible = true
+                    battle.toFront()
+                }
+            }
+            for (action in actions) {
+                val image = "UnitActionIcons/${action.type.name}"
+                val enabled = action.action != null
+                val title = action.title.tr()
+                val tone = if (action.type == UnitActionType.DisbandUnit) dangerDisc else if (title == primary) yellow else white
+                val row = addRow(if (ImageGetter.imageExists(image)) icon(image) else action.getIcon(pt(26f)), title, enabled,
+                    if (enabled) null else "Unavailable".tr(), tone, action.isCurrentAction, action.uncivSound) {
+                    unitActions.activateAction(action, unit)
+                }
+                // Same upgrade details menu the landscape action button offers, reachable even when disabled.
+                if (action is UpgradeUnitAction) {
+                    val details = { UnitUpgradeMenu(world.stage, row, unit, action, enabled, true) { close(); world.shouldUpdate = true } }
+                    row.onRightClick { details() }
+                    if (!enabled) row.onClick { details() }
+                }
+            }
+            val pane = AutoScrollPane(list).apply {
+                setOverscroll(false, false)
+                setScrollingDisabled(true, false)
+            }
+
+            val bottomGap = pt((34f - (world.safeAreaBoundsInWorld().y - canvasY) / p).coerceAtLeast(12f))
+            val footer = Table()
+            footer.add(Table().apply {
+                touchable = Touchable.enabled
+                background = panel(pt(18f).roundToInt()).tint(Color(1f, 1f, 1f, .09f))
+                add("Close".tr().toLabel(Color.WHITE, font(17)))
+                onActivation { close() }
+                keyShortcuts.add(KeyCharAndCode.BACK)
+            }).growX().height(pt(52f)).pad(pt(10f), pt(14f), bottomGap, pt(14f))
+
+            // Size wrapped rows at their real width, then cap the list so the sheet stays within 64% of the phone.
+            list.width = world.safeAreaBoundsInWorld().width - pt(24f)
+            list.validate()
+            list.invalidate()
+            val maxList = world.portraitCanvasBounds().height * .64f - header.prefHeight - footer.prefHeight
+            add(pane).growX().height(min(list.prefHeight, maxList.coerceAtLeast(pt(64f)))).padLeft(pt(12f)).padRight(pt(12f)).row()
+            add(Image(fill).apply { color = line }).height(max(1f, pt(1f))).growX().row()
+            add(footer).growX()
+        }
+
+        fun present() {
+            open()
+            fit()
+        }
+
+        /** Full safe width, pinned to the bottom; the scroll list keeps its own drags. */
+        private fun fit() {
+            val safe = world.safeAreaBoundsInWorld()
+            pad(0f).padLeft(safe.x).padBottom(safe.y).padRight(world.stage.width - safe.x - safe.width)
+            invalidate()
+        }
+
+        override fun onVisibleAreaChanged(visibleArea: Rectangle) = fit()
+
+        override fun drawBackground(batch: Batch, parentAlpha: Float, x: Float, y: Float) {
+            super.drawBackground(batch, parentAlpha, x, y)
+            // Carry the sheet under the home indicator and square off its bottom corners.
+            val from = min(canvasY - y, innerTable.y)
+            val fillHeight = innerTable.y + pt(28f) - from
+            if (fillHeight <= 0f) return
+            batch.setColor(sheet.r, sheet.g, sheet.b, parentAlpha)
+            fill.draw(batch, x + innerTable.x, y + from, innerTable.width, fillHeight)
+        }
+
+        /** Dragging the header down follows the finger; past 72pt it closes, otherwise it springs back. */
+        private fun swipeToClose() = object : ActorGestureListener() {
+            private var start = 0f
+            private var drag = 0f
+            override fun touchDown(event: InputEvent?, x: Float, y: Float, pointer: Int, button: Int) {
+                start = innerTable.y
+                drag = 0f
+            }
+            override fun pan(event: InputEvent?, x: Float, y: Float, deltaX: Float, deltaY: Float) {
+                drag = (drag - deltaY).coerceAtLeast(0f)
+                innerTable.y = start - drag
+            }
+            override fun panStop(event: InputEvent?, x: Float, y: Float, pointer: Int, button: Int) {
+                if (drag > pt(72f)) close()
+                else innerTable.addAction(Actions.moveTo(innerTable.x, start, .15f))
             }
         }
     }
