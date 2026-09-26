@@ -44,6 +44,7 @@ import com.unciv.utils.Concurrency
 import com.unciv.view.CityView
 import com.unciv.view.CivView
 import com.unciv.view.TileView
+import java.util.concurrent.atomic.AtomicInteger
 import kotlin.math.max
 
 class CityScreen(
@@ -72,6 +73,9 @@ class CityScreen(
     /** Portrait: one panel at a time, picked from a tab bar in thumb reach (DESIGN.md city sheet) */
     private val portraitTabBar = Table()
     private var portraitView: CityPortraitView? = null
+    /** Newest portrait list request; an older background gather must not overwrite a newer one */
+    private val portraitDataVersion = AtomicInteger()
+    private var disposed = false
     internal val portraitStatIcons = PortraitStatIcons()
 
     private val viewingCiv: CivView = cityView.gameView.civView
@@ -147,7 +151,7 @@ class CityScreen(
         set(value) { constructionsTable.selectedQueueEntry = value }
     /** Cached city.expansion.chooseNewTileToOwn() */
     // val should be OK as buying tiles is what changes this, and that would re-create the whole CityScreen
-    private val nextTileToOwn = cityView.chooseNewTileToOwn()
+    internal val nextTileToOwn = cityView.chooseNewTileToOwn()
 
     private var cityAmbiencePlayer: CityAmbiencePlayer?  = ambiencePlayer ?: CityAmbiencePlayer(cityView)
 
@@ -189,6 +193,8 @@ class CityScreen(
 
         cityView.updateCityStats()
         updateSync() // NOT async since that gives a "visual flash" when entering the city
+        // Portrait lists show Loading until their first background gather lands
+        if (portraitView != null) updateAsync(recalculateStats = false)
 
         globalShortcuts.add(KeyboardBinding.PreviousCity) { page(-1) }
         globalShortcuts.add(KeyboardBinding.NextCity) { page(1) }
@@ -217,11 +223,21 @@ class CityScreen(
     override fun getCivilopediaRuleset() = cityView.getRuleset()
 
     /** Async */
-    internal fun updateAsync() {
+    internal fun updateAsync(recalculateStats: Boolean = true) {
+        val version = portraitDataVersion.incrementAndGet()
         Concurrency.run {
             // Recalculate Stats
-            cityView.updateCityStats()
-            Concurrency.runOnGLThread { updateSync() }
+            if (recalculateStats) cityView.updateCityStats()
+            // Portrait Build and Buy lists: rejections and turns gathered here like the landscape list, skipped once a newer update is queued
+            val constructions = if (version == portraitDataVersion.get()) portraitView?.gatherConstructions() else null
+            Concurrency.runOnGLThread {
+                if (portraitView != null) {
+                    // A replaced screen or a superseded gather must not rebuild the sheet (disposed icons, stale rows)
+                    if (disposed || version != portraitDataVersion.get()) return@runOnGLThread
+                    portraitView?.constructions = constructions
+                }
+                updateSync()
+            }
         }
     }
     
@@ -237,8 +253,9 @@ class CityScreen(
             selectedConstructionTable.isVisible = false
             exitCityButton.isVisible = false
             razeCityButtonHolder.isVisible = false
-            portraitView?.refresh()
+            // Tile states first: the portrait Tiles tab reads them
             updateTileGroups()
+            portraitView?.refresh()
             return
         }
         if (isPortrait()) {
@@ -543,6 +560,14 @@ class CityScreen(
         }
     }
 
+    /** Portrait Tiles tab: the map's tile states, so the list offers exactly what tapping the map offers */
+    internal fun tileStates(): Map<TileView, CityTileState> = tileGroups.associate { it.tileView to it.tileState }
+
+    /** Portrait Tiles tab: the same work / stop working toggle as the map's worked icon */
+    internal fun toggleTileWorked(tile: TileView) {
+        tileGroups.firstOrNull { it.tileView == tile }?.let { tileWorkedIconOnClick(it) }
+    }
+
     /** Ask whether user wants to buy [selectedTile] for gold.
      *
      * Used from onClick and keyboard dispatch, thus only minimal parameters are passed,
@@ -696,9 +721,16 @@ class CityScreen(
 
     // Don't use passOnCityAmbiencePlayer here - continuing play on the replacement screen would be nice,
     // but the rapid firing of several resize events will get that un-synced, they would no longer stop on leaving.
-    override fun recreate(): BaseScreen = CityScreen(cityView, selectedConstruction, selectedTile)
+    override fun recreate(): BaseScreen {
+        // Portrait keeps its open row, drill-in, scroll and last lists across resize
+        val portraitState = portraitView?.state()
+        return CityScreen(cityView, selectedConstruction, selectedTile).also { screen ->
+            portraitState?.let { screen.portraitView?.restore(it) }
+        }
+    }
 
     override fun dispose() {
+        disposed = true
         cityAmbiencePlayer?.dispose()
         fireworks?.dispose()
         portraitStatIcons.dispose()

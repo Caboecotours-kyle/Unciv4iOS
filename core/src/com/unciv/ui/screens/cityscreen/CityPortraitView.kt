@@ -10,23 +10,35 @@ import com.badlogic.gdx.scenes.scene2d.Touchable
 import com.badlogic.gdx.scenes.scene2d.actions.Actions
 import com.badlogic.gdx.scenes.scene2d.ui.Image
 import com.badlogic.gdx.scenes.scene2d.ui.Table
+import com.badlogic.gdx.scenes.scene2d.ui.WidgetGroup
 import com.badlogic.gdx.scenes.scene2d.utils.Drawable
+import com.unciv.Constants
 import com.unciv.models.ruleset.Building
 import com.unciv.models.ruleset.IConstruction
 import com.unciv.models.ruleset.INonPerpetualConstruction
 import com.unciv.models.ruleset.PerpetualConstruction
+import com.unciv.models.ruleset.RejectionReason
+import com.unciv.models.ruleset.RejectionReasonType
+import com.unciv.models.ruleset.unique.UniqueType
+import com.unciv.models.ruleset.unit.BaseUnit
 import com.unciv.logic.city.CityFocus
 import com.unciv.models.stats.Stat
+import com.unciv.models.stats.Stats
 import com.unciv.models.translations.tr
 import com.unciv.ui.components.extensions.toLabel
-import com.unciv.ui.components.extensions.toTextButton
+import com.unciv.ui.components.fonts.Fonts
 import com.unciv.ui.components.input.onClick
 import com.unciv.ui.components.input.onClickSuppressive
+import com.unciv.ui.components.tilegroups.CityTileState
 import com.unciv.ui.components.widgets.AutoScrollPane
+import com.unciv.ui.components.widgets.ColorMarkupLabel
 import com.unciv.ui.images.ImageGetter
 import com.unciv.ui.popups.AnimatedMenuPopup.Companion.addContextMenu
 import com.unciv.ui.popups.CityScreenConstructionMenu
+import com.unciv.ui.popups.ConfirmPopup
+import com.unciv.ui.popups.closeAllPopups
 import com.unciv.ui.screens.basescreen.BaseScreen
+import com.unciv.ui.screens.pickerscreens.CityRenamePopup
 import com.unciv.view.TileView
 import kotlin.math.abs
 import kotlin.math.roundToInt
@@ -46,9 +58,33 @@ internal class CityPortraitView(private val screen: CityScreen, private val shee
         private val INK2 = Color.valueOf("b7cde0")
         private val INK3 = Color.valueOf("8eacc2")
         private val YELLOW = Color.valueOf("ffc93c")
+        private val YELLOW_INK = Color.valueOf("3a2a00")
+        private val NAVY2 = Color.valueOf("1c3249")
+        private val NAVY_INK = Color.valueOf("132435")
+        private val LINE = Color(1f, 1f, 1f, .12f)
+        private val OFF = Color(1f, 1f, 1f, .08f)
+        private val CHIP = Color(1f, 1f, 1f, .06f)
+        private val ICON_BG = Color.valueOf("2a4866")
+        private val PROD = Color.valueOf("ff9a3c")
+        private val FOOD_GREEN = Color.valueOf("9ff08a")
+        private val RED = Color.valueOf("ffb1aa")
+        private val FAITH = Color.valueOf("f3ecd2")
+        private val FAITH_INK = Color.valueOf("4a3f1c")
         private fun bg(color: Color): Drawable = BaseScreen.skinStrings.getUiBackground(
             "", BaseScreen.skinStrings.roundedEdgeRectangleShape, color)
     }
+
+    /** One construction row as the landscape list shows it */
+    internal class ConstructionRow(val construction: IConstruction, val turns: String, val rejection: RejectionReason?,
+                                   val stats: Stats?, val resources: List<Pair<String, Int>>)
+    internal class BuyOption(val stat: Stat, val cost: Int, val allowed: Boolean)
+    internal class BuyRow(val construction: INonPerpetualConstruction, val percentDone: Int,
+                          val options: List<BuyOption>, val blocked: Boolean)
+    /** The Build and Buy lists: too slow for the GL thread, so [CityScreen.updateAsync] gathers them like the landscape list */
+    internal class Constructions(val categories: List<Pair<String, List<ConstructionRow>>>, val buyable: List<BuyRow>)
+    /** What the sheet shows beyond the CityScreen selection, handed to the re-created screen on resize */
+    internal class State(val row: String?, val queueEntry: Int, val detailOpen: Boolean, val cityDetailsOpen: Boolean,
+                         val tileDetailOpen: Boolean, val scrollY: Float, val constructions: Constructions?)
 
     private val city = screen.cityView
     private val contentWidth = sheetWidth - 24f
@@ -66,8 +102,13 @@ internal class CityPortraitView(private val screen: CityScreen, private val shee
     private val constructionDetails = ConstructionInfoTable(screen)
     private val tileDetails = CityScreenTileTable(screen)
     private val buyButtons = BuyButtonFactory(screen)
-    private var detailOpen = screen.selectedConstruction != null
+    private var detailOpen = false
     private var cityDetailsOpen = false
+    private var tileDetailOpen = false
+    /** The list row whose actions are expanded; keys carry the construction name so a changed queue never matches */
+    private var selectedRow: String? = null
+    /** Latest background gather; null until the first one lands */
+    internal var constructions: Constructions? = null
 
     init {
         background = bg(NAVY)
@@ -145,8 +186,26 @@ internal class CityPortraitView(private val screen: CityScreen, private val shee
     fun showTile(tile: TileView) {
         selectedTab = Tab.Tiles
         detailOpen = false
+        tileDetailOpen = false
         screen.selectTile(tile)
         refresh()
+    }
+
+    fun state() = State(selectedRow, screen.selectedQueueEntry, detailOpen, cityDetailsOpen, tileDetailOpen,
+        scroll.scrollY, constructions)
+
+    /** Resize re-creates the screen with the same selection; this puts the rest of the sheet back */
+    fun restore(state: State) {
+        selectedRow = state.row
+        screen.selectedQueueEntry = state.queueEntry
+        detailOpen = state.detailOpen
+        cityDetailsOpen = state.cityDetailsOpen
+        tileDetailOpen = state.tileDetailOpen
+        if (constructions == null) constructions = state.constructions
+        refresh()
+        validate()
+        scroll.scrollY = state.scrollY
+        scroll.updateVisualScroll()
     }
 
     fun refresh() {
@@ -235,10 +294,12 @@ internal class CityPortraitView(private val screen: CityScreen, private val shee
                     .size(25f).padTop(6f).row()
                 add(tab.label.toLabel(if (active) Color.WHITE else INK3, 12)).padTop(2f)
                 onClick {
-                    if (selectedTab == tab && !detailOpen) return@onClick
+                    if (selectedTab == tab && !detailOpen && !cityDetailsOpen && !tileDetailOpen) return@onClick
                     selectedTab = tab
                     detailOpen = false
                     cityDetailsOpen = false
+                    tileDetailOpen = false
+                    selectedRow = null
                     scroll.scrollY = 0f
                     refresh()
                 }
@@ -251,224 +312,617 @@ internal class CityPortraitView(private val screen: CityScreen, private val shee
         content.add(text.toLabel(INK3, 14).apply { wrap = true }).padTop(15f).padBottom(6f).row()
     }
 
+    private fun text(text: String, color: Color = Color.WHITE, size: Int = 16) =
+        text.toLabel(color, size, hideIcons = true).apply { setEllipsis(true) }
+
+    private fun line() = Image(ImageGetter.getWhiteDotDrawable().tint(LINE))
+
+    private fun amount(value: Float) = if (value == value.toInt().toFloat()) value.toInt().tr() else "%.1f".format(value)
+
+    /** Small yield icons with values, the way the mock rows show stats */
+    private fun statLine(stats: Stats, color: Color = INK2): Table = Table().left().apply {
+        for ((stat, value) in stats) {
+            add(screen.portraitStatIcons.image(stat.name)).size(16f).padRight(2f)
+            add(amount(value).toLabel(color, 13)).padRight(8f)
+        }
+    }
+
+    private fun tag(text: String, color: Color): Table = Table().apply {
+        background = bg(color.cpy().apply { a = .16f })
+        add(text.toLabel(color, 12, hideIcons = true)).pad(3f, 8f, 3f, 8f)
+    }
+
+    /** 48pt tall action; [fill] null draws the quiet mini style */
+    private fun pill(text: String, fill: Color? = null, ink: Color = Color.WHITE, enabled: Boolean = true,
+                     action: () -> Unit): Table = Table().apply {
+        background = bg(if (!enabled || fill == null) OFF else fill)
+        add(text.toLabel(if (enabled) ink else INK3, 15)).pad(0f, 14f, 0f, 14f)
+        if (enabled) {
+            touchable = Touchable.enabled
+            onClickSuppressive { action() }
+        }
+    }
+
+    /** Actions under a selected row, one line per group so nothing runs off the sheet */
+    private fun strip(vararg lines: List<Actor>) {
+        val strip = Table().left()
+        for (actors in lines.filter { it.isNotEmpty() }) {
+            val line = Table().left()
+            for (actor in actors) line.add(actor).height(48f).padRight(8f)
+            strip.add(line).left().padBottom(8f).row()
+        }
+        content.add(strip).width(contentWidth - 56f).padLeft(56f).left().row()
+    }
+
+    /** A 66pt list row: icon, title, detail lines, optional trailing actor, bottom rule. */
+    private fun listRow(selected: Boolean, icon: Actor, title: String, titleColor: Color = Color.WHITE,
+                        trailing: Actor? = null, details: Table.() -> Unit = {}, onTap: (() -> Unit)?): Table {
+        val row = Table().apply {
+            if (selected) background = bg(YELLOW.cpy().apply { a = .08f })
+            pad(8f, 4f, 8f, 4f)
+        }
+        row.add(icon).size(46f).padRight(10f)
+        val info = Table().left()
+        info.add(text(title, titleColor, 17)).minWidth(0f).growX().left().row()
+        info.details()
+        row.add(info).minWidth(0f).growX().left()
+        if (trailing != null) row.add(trailing).padLeft(8f)
+        if (onTap != null) {
+            row.touchable = Touchable.enabled
+            row.onClick { onTap() }
+        }
+        content.add(row).minHeight(66f).row()
+        return row
+    }
+
+    private fun rule() = content.add(line()).height(1f).row()
+
+    private fun iconBox(actor: Actor) = Table().apply {
+        background = bg(ICON_BG)
+        add(actor).size(32f)
+    }
+
+    /** Tapping the open row closes it; tapping another opens that one and runs [select]. */
+    private fun toggleRow(key: String, select: () -> Unit) {
+        if (selectedRow == key) {
+            selectedRow = null
+            screen.clearSelection()
+            screen.selectedQueueEntry = -1
+        } else {
+            selectedRow = key
+            select()
+        }
+        refresh()
+    }
+
+    private fun openDetails(construction: IConstruction, queueIndex: Int) {
+        screen.selectConstruction(construction)
+        screen.selectedQueueEntry = queueIndex
+        detailOpen = true
+        refresh()
+    }
+
+    private fun turnsText(construction: IConstruction): String {
+        if (construction is PerpetualConstruction) return city.getProductionTooltip(construction).trim()
+        val constructions = city.constructions
+        val turns = constructions.turnsToConstruction(construction.name,
+            construction is Building || !constructions.isBeingConstructedOrEnqueued(construction.name))
+        return if (turns == Int.MAX_VALUE) "∞" else "$turns turns"
+    }
+
+    private fun turnsLabel(row: ConstructionRow) =
+        if (row.construction is PerpetualConstruction) null else text(row.turns, INK2, 13)
+
+    private fun constructionRow(construction: IConstruction, rejection: RejectionReason?): ConstructionRow {
+        // Can hit a comodification while the GL thread changes the city; landscape retries once too
+        val turns = try { turnsText(construction) } catch (_: Exception) { turnsText(construction) }
+        val resources = city.getResourceRequirementsPerTurn(construction).entries +
+            city.getStockpiledResourceRequirements(construction).entries
+        return ConstructionRow(construction, turns, rejection, (construction as? Building)?.let { city.getBuildingStats(it) },
+            resources.map { it.key to it.value })
+    }
+
+    /** Runs off the GL thread from [CityScreen.updateAsync]: the landscape list's filter, categories and rejections */
+    internal fun gatherConstructions(): Constructions {
+        if (screen.isSpying) return Constructions(emptyList(), emptyList())
+        val constructions = city.constructions
+        val displayed = (city.getRuleset().units.values.asSequence() + city.getRuleset().buildings.values.asSequence())
+            .filter { constructions.shouldBeDisplayed(it) }.toList()
+        val rejections = displayed.associateWith { entry ->
+            constructions.getRejectionReasons(entry).filter { it.isImportantRejection() }
+                .minByOrNull { it.getRejectionPrecedence() }
+        }
+        val shown = rejections.filterNot { (entry, rejection) ->
+            entry is Building && rejection?.type == RejectionReasonType.RequiresBuildingInThisCity
+                && rejections.keys.any {
+                    it is Building && (it.name == entry.requiredBuilding || it.replaces == entry.requiredBuilding
+                        || it.hasTagUnique(entry.requiredBuilding!!, city.getState()))
+                }
+        }
+        val rejectionOf = shown.mapKeys { it.key.name }
+        val disabled = city.getDisabledConstructions()
+        val perpetual = PerpetualConstruction.perpetualConstructionsMap.values.filter { constructions.shouldBeDisplayed(it) }
+        val categories = listOf<Pair<String, List<IConstruction>>>(
+            "Units" to shown.keys.filter { it is BaseUnit && it.name !in disabled },
+            "Buildings" to shown.keys.filter { it is Building && !it.isAnyWonder() && it.name !in disabled },
+            "Wonders" to shown.keys.filter { it is Building && it.isWonder && it.name !in disabled },
+            "National Wonders" to shown.keys.filter { it is Building && it.isNationalWonder && it.name !in disabled },
+            "Other" to perpetual.filter { it.name !in disabled },
+            "Disabled" to (shown.keys + perpetual).filter { it.name in disabled },
+        ).map { (category, entries) -> category to entries.map { constructionRow(it, rejectionOf[it.name]) } }
+
+        val buyable = if (!screen.canChangeState) emptyList() else displayed
+            .filter { city.canBePurchasedWithAnyStat(it) }
+            .sortedWith(compareBy({ it !is BaseUnit }, { it.name }))
+            .map {
+                val cost = city.getConstructionProductionCost(it).coerceAtLeast(1)
+                BuyRow(it, constructions.getWorkDone(it.name) * 100 / cost, buyOptions(it),
+                    canBuyHere() && constructions.isConstructionPurchaseBlockedByUnit(it))
+            }
+        return Constructions(categories, buyable)
+    }
+
+    /** Same visibility gate as the landscape construction panel's buy buttons */
+    private fun canBuyHere() = screen.canChangeState &&
+        (!city.isPuppet() || city.hasMatchingUnique(UniqueType.MayBuyConstructionsInPuppets))
+
+    /** The currencies the landscape buy buttons show, with their enable rule */
+    private fun buyOptions(construction: IConstruction, stats: Collection<Stat> = Stat.statsUsableToBuy): List<BuyOption> {
+        if (construction !is INonPerpetualConstruction || !canBuyHere()) return emptyList()
+        return stats.filter { city.canBePurchasedWithStat(construction, it) }.map { stat ->
+            val cost = city.constructions.getStatBuyCost(construction, stat)!!
+            BuyOption(stat, cost, city.constructions.isConstructionPurchaseAllowed(construction, stat, cost))
+        }
+    }
+
+    /** One pill per buy option, with the landscape confirm path */
+    private fun buyPills(construction: IConstruction, queueIndex: Int,
+                         options: List<BuyOption> = buyOptions(construction)): List<Actor> {
+        if (construction !is INonPerpetualConstruction) return emptyList()
+        return options.map { option ->
+            val fill = if (option.stat == Stat.Faith) FAITH else YELLOW
+            val ink = if (option.stat == Stat.Faith) FAITH_INK else YELLOW_INK
+            pill("${option.cost.tr()}${option.stat.character}", fill, ink, option.allowed) {
+                buy(construction, option.stat, queueIndex)
+            }
+        }
+    }
+
+    private fun blockedHint(construction: IConstruction): List<Actor> =
+        if (construction is INonPerpetualConstruction && canBuyHere()
+            && city.constructions.isConstructionPurchaseBlockedByUnit(construction))
+            listOf("Move unit out of city first".toLabel(RED, 13))
+        else emptyList()
+
+    /** Mirrors BuyButtonFactory's click: CreatesOneImprovement buildings pick or reuse their tile first */
+    private fun buy(construction: INonPerpetualConstruction, stat: Stat, queueIndex: Int) {
+        if (!screen.canChangeState) return
+        screen.selectConstruction(construction)
+        screen.selectedQueueEntry = queueIndex
+        if (construction is Building && construction.hasCreateOneImprovementUnique()) {
+            if (queueIndex < 0) return screen.startPickTileForCreatesOneImprovement(construction, stat, true)
+            val improvement = city.getImprovementToCreate(construction) ?: return
+            return buyButtons.askToBuyConstruction(construction, stat,
+                city.constructions.getTileForImprovement(improvement.name))
+        }
+        buyButtons.askToBuyConstruction(construction, stat)
+    }
+
+    private fun constructionMenu(row: Table, construction: IConstruction) {
+        if (screen.canCityBeChanged()) row.addContextMenu {
+            CityScreenConstructionMenu(screen.stage, row, city, construction) { screen.updateAsync() }
+        }
+    }
+
     private fun buildTab() {
         if (screen.isSpying) {
             section("Construction is hidden while spying")
             return
         }
-        val queue = city.constructions.constructionQueue
-        val current = queue.firstOrNull()?.let { city.constructions.getConstruction(it) }
-        if (current != null) {
-            val card = constructionRow(current, current = true) {
-                screen.selectConstruction(current)
-                screen.selectedQueueEntry = 0
-                detailOpen = true
-                refresh()
-            }
-            content.add(card).height(78f).row()
-        } else {
-            content.add("Pick a construction".toLabel(fontSize = 18)).left().pad(12f).row()
-        }
+        val constructions = city.constructions
+        val queue = constructions.constructionQueue
+        val current = queue.firstOrNull()?.let { constructions.getConstruction(it) }
+        if (current != null) currentCard(current)
+        else content.add(text("Pick a construction", size = 18)).left().pad(12f).row()
         if (queue.size > 1) {
             section("Up next")
-            queue.drop(1).forEachIndexed { index, name ->
-                val construction = city.constructions.getConstruction(name)
-                content.add(constructionRow(construction) {
-                    screen.selectConstruction(construction)
-                    screen.selectedQueueEntry = index + 1
-                    detailOpen = true
-                    refresh()
-                }).height(66f).padBottom(4f).row()
-            }
+            queue.forEachIndexed { index, name -> if (index > 0) queueRow(index, constructions.getConstruction(name)) }
         }
-        section("Can build")
-        val available = (city.getRuleset().units.values.asSequence() +
-            city.getRuleset().buildings.values.asSequence() +
-            PerpetualConstruction.perpetualConstructionsMap.values.asSequence())
-            .filter { city.constructions.shouldBeDisplayed(it) }
-            .sortedWith(compareBy({ !city.constructions.isBuildable(it) }, { it.name }))
-        for (construction in available) {
-            val row = constructionRow(construction) {
-                if (screen.selectedConstruction == construction && city.constructions.canAddToQueue(construction)) {
-                    screen.queueConstruction(construction)
-                    screen.updateAsync()
-                } else {
-                    screen.selectConstruction(construction)
-                    detailOpen = true
-                    refresh()
-                }
+        availableConstructions()
+    }
+
+    private fun currentCard(construction: IConstruction) {
+        val key = "q-0-${construction.name}"
+        val card = Table().apply {
+            background = bg(NAVY2)
+            pad(14f)
+            touchable = Touchable.enabled
+            onClick { toggleRow(key) { screen.selectConstruction(construction); screen.selectedQueueEntry = 0 } }
+        }
+        card.add(ImageGetter.getConstructionPortrait(construction.name, 52f)).size(52f).padRight(12f)
+        val info = Table().left()
+        info.add(text(construction.name, size = 18)).minWidth(0f).growX().left().row()
+        info.add(text(turnsText(construction), INK2, 13)).minWidth(0f).growX().left().padTop(3f)
+        card.add(info).minWidth(0f).growX().left()
+        buyPills(construction, 0, buyOptions(construction, listOf(Stat.Gold))).firstOrNull()?.let { card.add(it).height(48f).padLeft(8f) }
+        if (construction is INonPerpetualConstruction) {
+            val cost = city.getConstructionProductionCost(construction).coerceAtLeast(1)
+            val done = city.constructions.getWorkDone(construction.name)
+            card.row()
+            val progress = Table()
+            progress.add(ImageGetter.ProgressBar(contentWidth - 28f, 9f, false)
+                .setBackground(Color.WHITE.cpy().apply { a = .12f })
+                .setProgress(PROD, (done.toFloat() / cost).coerceIn(0f, 1f))).left().row()
+            progress.add("$done/$cost${Fonts.production}".toLabel(INK3, 12)).left().padTop(4f)
+            card.add(progress).colspan(card.columns).left().padTop(12f)
+        }
+        content.add(card).padTop(4f).row()
+        if (selectedRow == key) {
+            val otherPills = buyPills(construction, 0, buyOptions(construction, Stat.statsUsableToBuy - Stat.Gold))
+            strip(queueControls(0, construction), otherPills + detailsButton(construction, 0), blockedHint(construction))
+        }
+        constructionMenu(card, construction)
+    }
+
+    private fun queueRow(index: Int, construction: IConstruction) {
+        val key = "q-$index-${construction.name}"
+        val facts = constructionRow(construction, null)
+        val row = listRow(selectedRow == key, ImageGetter.getConstructionPortrait(construction.name, 46f),
+            construction.name, trailing = turnsLabel(facts),
+            details = { constructionFacts(facts) }) {
+            toggleRow(key) { screen.selectConstruction(construction); screen.selectedQueueEntry = index }
+        }
+        if (selectedRow == key)
+            strip(queueControls(index, construction),
+                buyPills(construction, index) + detailsButton(construction, index), blockedHint(construction))
+        rule()
+        constructionMenu(row, construction)
+    }
+
+    /** Landscape queue arrows and stop button: same commands, same reassign afterwards */
+    private fun queueControls(index: Int, construction: IConstruction): List<Actor> {
+        if (!screen.canCityBeChanged()) return emptyList()
+        val queue = city.constructions.constructionQueue
+        fun stillAt() = queue.getOrNull(index) == construction.name
+        fun move(movePriority: (Int) -> Int?) {
+            if (!stillAt()) return
+            val newIndex = movePriority(index) ?: return
+            screen.selectConstruction(construction)
+            screen.selectedQueueEntry = newIndex
+            selectedRow = "q-$newIndex-${construction.name}"
+            city.tryReassignPopulation()
+            screen.updateAsync()
+        }
+        val controls = ArrayList<Actor>()
+        if (index > 0) controls += pill("Move up") { move(city::tryRaisePriority) }
+        if (index < queue.lastIndex) controls += pill("Move down") { move(city::tryLowerPriority) }
+        controls += pill("Remove", ink = RED) {
+            if (stillAt() && city.tryRemoveFromQueue(index, false)) city.tryReassignPopulation()
+            // Like landscape: select the entry that moved up, or the new last one
+            val next = index.coerceAtMost(queue.lastIndex)
+            if (next >= 0) {
+                screen.selectConstructionFromQueue(next)
+                screen.selectedQueueEntry = next
+                selectedRow = "q-$next-${queue[next]}"
+            } else {
+                selectedRow = null
+                screen.clearSelection()
+                screen.selectedQueueEntry = -1
             }
-            content.add(row).height(66f).padBottom(4f).row()
+            screen.updateAsync()
+        }
+        return controls
+    }
+
+    private fun detailsButton(construction: IConstruction, queueIndex: Int): Actor =
+        pill("Details") { openDetails(construction, queueIndex) }
+
+    /** Stat line, wonder tag, resource needs and the landscape's most important rejection */
+    private fun Table.constructionFacts(row: ConstructionRow) {
+        val construction = row.construction
+        val rejection = row.rejection
+        if (construction is PerpetualConstruction) {
+            add(text(row.turns, INK2, 13)).minWidth(0f).growX().left().padTop(3f).row()
+            return
+        }
+        val line = Table().left()
+        if (row.stats != null) line.add(statLine(row.stats))
+        if (construction is BaseUnit) {
+            val stats = Table().left()
+            for ((icon, value) in listOf("Strength" to construction.strength,
+                "Ranged" to construction.rangedStrength, "Movement" to construction.movement)) {
+                if (value == 0) continue
+                stats.add(screen.portraitStatIcons.image(icon)).size(16f).padRight(2f)
+                stats.add(value.tr().toLabel(INK2, 13)).padRight(8f)
+            }
+            line.add(stats)
+        }
+        if (construction is Building && construction.isWonder) line.add(tag("World wonder", YELLOW)).padLeft(4f)
+        if (construction is Building && construction.isNationalWonder) line.add(tag("National wonder", YELLOW)).padLeft(4f)
+        val resourceColor = if (rejection?.type == RejectionReasonType.ConsumesResources) RED else INK2
+        for ((resource, amount) in row.resources) {
+            line.add(amount.tr().toLabel(resourceColor, 13)).padLeft(6f)
+            line.add(ImageGetter.getResourcePortrait(resource, 15f)).padLeft(2f)
+        }
+        add(line).left().padTop(3f).row()
+        if (rejection != null && rejection.type != RejectionReasonType.ConsumesResources)
+            add(ColorMarkupLabel(rejection.errorMessage, RED, fontSize = 13).apply { wrap = true })
+                .minWidth(0f).growX().left().padTop(3f).row()
+    }
+
+    /** The landscape "available constructions" list, from the latest background gather */
+    private fun availableConstructions() {
+        val data = constructions ?: return section(Constants.loading)
+        for ((category, rows) in data.categories) {
+            if (rows.isEmpty()) continue
+            section(category)
+            for (row in rows) availableRow(row)
         }
     }
 
-    private fun constructionRow(construction: IConstruction, current: Boolean = false, built: Boolean = false,
-                                onSelect: () -> Unit): Table {
-        val row = Table().apply {
-            background = bg(if (current) Color.valueOf("2b485d") else CARD)
-            pad(7f)
-            touchable = Touchable.enabled
-            onClick { onSelect() }
+    private fun availableRow(facts: ConstructionRow) {
+        val construction = facts.construction
+        val key = "c-${construction.name}"
+        val icon = ImageGetter.getConstructionPortrait(construction.name, 46f)
+        if (facts.rejection != null) icon.color.a = .5f
+        val row = listRow(selectedRow == key, icon, construction.name, if (facts.rejection == null) Color.WHITE else RED,
+            trailing = turnsLabel(facts),
+            details = { constructionFacts(facts) }) {
+            toggleRow(key) { screen.selectConstruction(construction); screen.selectedQueueEntry = -1 }
         }
-        row.add(ImageGetter.getConstructionPortrait(construction.name, 42f)).size(44f).padRight(10f)
-        val details = Table().left()
-        details.add(construction.name.toLabel(fontSize = 17, hideIcons = true)).left().row()
-        val turns = if (built) "Built" else if (construction is PerpetualConstruction) city.getProductionTooltip(construction)
-            else city.constructions.turnsToConstruction(construction.name).let { if (it == Int.MAX_VALUE) "∞ turns" else "$it turns" }
-        details.add(turns.toLabel(INK2, 13)).left().padTop(3f).row()
-        if (current && construction is INonPerpetualConstruction) {
-            val cost = city.getConstructionProductionCost(construction).coerceAtLeast(1)
-            val progress = city.constructions.getWorkDone(construction.name).toFloat() / cost
-            details.add(ImageGetter.ProgressBar(145f, 6f, false)
-                .setBackground(Color.WHITE.cpy().apply { a = .16f })
-                .setProgress(YELLOW, progress.coerceIn(0f, 1f)))
-                .left().padTop(7f)
-        }
-        row.add(details).growX().left()
-        if (current && construction is INonPerpetualConstruction) {
-            val price = city.constructions.getStatBuyCost(construction, Stat.Gold)
-            if (price != null && city.constructions.isConstructionPurchaseAllowed(construction, Stat.Gold, price)) {
-                val buy = "$price".toTextButton().apply {
-                    color = YELLOW
-                    onClickSuppressive {
-                        screen.selectConstruction(construction)
-                        buyButtons.askToBuyConstruction(construction, Stat.Gold)
-                    }
-                }
-                row.add(buy).minWidth(58f).height(48f)
-            }
-        } else if (!current && selectedTab == Tab.Build && city.constructions.canAddToQueue(construction)) {
-            val add = "+".toTextButton()
-            add.onClickSuppressive {
+        if (selectedRow == key) {
+            val addToQueue = if (canQueue(construction)) listOf(pill("Add to queue", YELLOW, YELLOW_INK) {
                 screen.queueConstruction(construction)
+                selectedRow = null
                 screen.updateAsync()
-            }
-            row.add(add).size(48f)
+            }) else emptyList()
+            strip(addToQueue, buyPills(construction, -1) + detailsButton(construction, -1), blockedHint(construction))
         }
-        if (screen.canCityBeChanged()) row.addContextMenu {
-            CityScreenConstructionMenu(screen.stage, row, city, construction) { screen.updateAsync() }
-        }
-        return row
+        rule()
+        constructionMenu(row, construction)
     }
+
+    /** CityConstructionsTable.cannotAddConstructionToQueue, which queueConstruction checks again */
+    private fun canQueue(construction: IConstruction): Boolean {
+        val constructions = city.constructions
+        return !constructions.isQueueFull() && screen.canChangeState && !city.isPuppet()
+            && constructions.isBuildable(construction)
+            && !(construction is PerpetualConstruction && constructions.isBeingConstructedOrEnqueued(construction.name))
+    }
+
+    /** Drill-ins share one back pill; it returns to the tab list where the sheet left it */
+    private fun back(label: String, onBack: () -> Unit) {
+        content.add(pill("‹  $label") { onBack(); refresh() }).left().height(48f).row()
+    }
+
+    /** A legacy drill-in widget at its own layout, shrunk to the sheet when it is wider */
+    private inner class Fitted(private val actor: Table) : WidgetGroup() {
+        init { addActor(actor) }
+        private val fit get() = (contentWidth / actor.prefWidth).coerceAtMost(1f)
+        override fun getPrefWidth() = actor.prefWidth * fit
+        override fun getPrefHeight() = actor.prefHeight * fit
+        override fun layout() {
+            actor.isTransform = fit < 1f
+            actor.setScale(fit)
+            actor.setBounds((width - actor.prefWidth * fit) / 2f, 0f, actor.prefWidth, actor.prefHeight)
+        }
+    }
+
+    private fun drillIn(actor: Table) = content.add(Fitted(actor)).padTop(12f).row()
 
     private fun constructionDetail() {
         val construction = screen.selectedConstruction ?: return
-        val back = "‹  ${selectedTab.label}".toTextButton()
-        back.onClick { detailOpen = false; screen.selectedQueueEntry = -1; refresh() }
-        content.add(back).left().height(48f).row()
+        back(selectedTab.label) { detailOpen = false }
         constructionDetails.update(construction)
-        content.add(constructionDetails).center().padTop(12f).row()
-        val index = screen.selectedQueueEntry
-        if (index >= 0 && screen.canCityBeChanged()) {
-            fun selectedIndex() = screen.selectedQueueEntry.takeIf {
-                city.constructions.constructionQueue.getOrNull(it) == construction.name
-            }
-            val actions = Table()
-            if (index > 0) actions.add("Move up".toTextButton().onClick {
-                val selected = selectedIndex() ?: return@onClick
-                screen.selectedQueueEntry = city.tryRaisePriority(selected) ?: return@onClick
-                refresh()
-                screen.updateAsync()
-            }).height(48f).pad(4f)
-            if (index < city.constructions.constructionQueue.lastIndex) actions.add("Move down".toTextButton().onClick {
-                val selected = selectedIndex() ?: return@onClick
-                screen.selectedQueueEntry = city.tryLowerPriority(selected) ?: return@onClick
-                refresh()
-                screen.updateAsync()
-            }).height(48f).pad(4f)
-            actions.add("Remove".toTextButton().onClick {
-                val selected = selectedIndex() ?: return@onClick
-                if (!city.tryRemoveFromQueue(selected, automatic = false)) return@onClick
-                screen.selectedQueueEntry = -1
-                detailOpen = false
-                refresh()
-                screen.updateAsync()
-            }).height(48f).pad(4f)
-            content.add(actions).padTop(12f).row()
-        }
+        drillIn(constructionDetails)
     }
 
     private fun buildingsTab() {
+        if (cityDetailsOpen) {
+            back(Tab.Buildings.label) { cityDetailsOpen = false }
+            val stats = CityStatsTable(screen)
+            // Its own list scrolls inside; give it the sheet's visible height rather than a fixed box
+            stats.update((scroll.height - 72f).coerceAtLeast(340f))
+            drillIn(stats)
+            return
+        }
         section("Built in ${city.name}")
         for (building in city.getBuiltBuildings().sortedBy { it.name }) {
-            content.add(constructionRow(building, built = true) {
-                screen.selectConstruction(building)
-                detailOpen = true
-                refresh()
-            }).height(66f).padBottom(4f).row()
+            val key = "b-${building.name}"
+            val free = screen.hasFreeBuilding(building)
+            listRow(selectedRow == key, ImageGetter.getConstructionPortrait(building.name, 46f), building.name,
+                details = {
+                    val line = Table().left()
+                    line.add(statLine(city.getBuildingStats(building)))
+                    if (building.isWonder) line.add(tag("World wonder", YELLOW)).padLeft(4f)
+                    if (building.isNationalWonder) line.add(tag("National wonder", YELLOW)).padLeft(4f)
+                    if (free) line.add(tag("Free", INK2)).padLeft(4f)
+                    add(line).left().padTop(3f)
+                }) { toggleRow(key) { screen.selectConstruction(building); screen.selectedQueueEntry = -1 } }
+            if (selectedRow == key) strip(sellButton(building, free) + detailsButton(building, -1))
+            rule()
         }
-        section("City details")
-        if (cityDetailsOpen) {
-            content.add("‹  Buildings".toTextButton().onClick {
-                cityDetailsOpen = false
-                refresh()
-            }).height(48f).row()
-            section(city.name)
-            val stats = CityStatsTable(screen)
-            stats.update(340f)
-            content.add(stats).center().row()
-        } else {
-            content.add("Stats, religion and management".toTextButton().onClick {
-                cityDetailsOpen = true
-                scroll.scrollY = 0f
-                refresh()
-            }).height(52f).row()
+
+        section("City")
+        listRow(false, iconBox(ImageGetter.getImage("OtherIcons/Search")), "City details",
+            trailing = "›".toLabel(INK3, 24), details = {
+                add(text("Stats, religion, resources", INK2, 13)).minWidth(0f).growX().left().padTop(3f)
+            }) {
+            cityDetailsOpen = true
+            scroll.scrollY = 0f
+            refresh()
         }
-        val actions = Table()
-        actions.add("Previous city".toTextButton().onClick { screen.page(-1) }).height(48f).pad(3f)
-        actions.add("Next city".toTextButton().onClick { screen.page(1) }).height(48f).pad(3f)
-        content.add(actions).padTop(10f).row()
+        rule()
         if (screen.canChangeState) {
-            val cityAction = when {
-                city.isPuppet() -> "Annex city" to { city.tryAnnexCity() }
-                city.isBeingRazed() -> "Stop razing city" to { city.trySetRazing(false) }
-                city.canBeDestroyed() -> "Raze city" to { city.trySetRazing(true) }
-                else -> null
+            listRow(false, iconBox(ImageGetter.getImage("OtherIcons/Pencil")), "Rename city",
+                trailing = "›".toLabel(INK3, 24)) {
+                CityRenamePopup(screen, city) { screen.game.replaceCurrentScreen { CityScreen(screen.cityView) } }
             }
-            if (cityAction != null) content.add(cityAction.first.toTextButton().onClick {
-                cityAction.second()
+            rule()
+        }
+        val cities = screen.viewableCities
+        if (cities.size > 1) {
+            val index = cities.indexOfFirst { it == city }
+            val previous = cities[(index - 1 + cities.size) % cities.size]
+            val next = cities[(index + 1) % cities.size]
+            val paging = Table().left()
+            paging.add(pill("‹  ${previous.name}") { screen.page(-1) }).height(48f).padRight(8f)
+            paging.add(pill("${next.name}  ›") { screen.page(1) }).height(48f)
+            content.add(paging).left().padTop(12f).row()
+        }
+        content.add(cityAction()).left().height(48f).padTop(12f).row()
+    }
+
+    /** ConstructionInfoTable's sell button: same gates, same confirm popup, same command */
+    private fun sellButton(building: Building, free: Boolean): List<Actor> {
+        if (!building.isSellable()) return emptyList()
+        val amount = city.getGoldForSellingBuilding(building.name)
+        val sellText = "{Sell} $amount " + Fonts.gold
+        val enabled = !free && !city.isPuppet() && screen.canChangeState &&
+            (!city.hasSoldBuildingThisTurn() || city.isGodModeEnabled())
+        return listOf(pill(sellText, YELLOW, YELLOW_INK, enabled) {
+            screen.closeAllPopups()
+            ConfirmPopup(screen, "Are you sure you want to sell this [${building.name}]?", sellText,
+                restoreDefault = { screen.updateAsync() }) {
+                city.trySellBuilding(building)
+                selectedRow = null
+                screen.clearSelection()
                 screen.updateAsync()
-            }).height(48f).padTop(8f).row()
+            }.open()
+        })
+    }
+
+    /** The landscape annex / raze / stop razing button: same choice, greyed out where landscape disables it */
+    private fun cityAction(): Actor {
+        val canAnnex = !city.viewingCiv().hasUnique(UniqueType.MayNotAnnexCities)
+        return when {
+            city.isPuppet() && canAnnex -> pill("Annex city", YELLOW, YELLOW_INK, screen.canChangeState) {
+                city.tryAnnexCity()
+                screen.updateAsync()
+            }
+            !city.isBeingRazed() -> pill("Raze city", ink = RED,
+                enabled = screen.canChangeState && city.canBeDestroyed() && canAnnex) {
+                city.trySetRazing(true)
+                screen.updateAsync()
+            }
+            else -> pill("Stop razing city", enabled = screen.canChangeState) {
+                city.trySetRazing(false)
+                screen.updateAsync()
+            }
+        }
+    }
+
+    private fun tileName(tile: TileView): String =
+        (listOf(tile.baseTerrain) + tile.terrainFeatures + listOfNotNull(tile.getViewableResource(city.viewingCiv())?.name))
+            .joinToString(", ") { it.tr(hideIcons = true) }
+
+    private fun tileIcon(tile: TileView): Actor {
+        val resource = tile.getViewableResource(city.viewingCiv())
+        val improvement = tile.getShownImprovement()
+        return when {
+            tile.isCityCenter() -> iconBox(ImageGetter.getImage("TileIcons/CityCenter"))
+            resource != null -> ImageGetter.getResourcePortrait(resource.name, 46f)
+            improvement != null -> ImageGetter.getImprovementPortrait(improvement, 46f)
+            else -> iconBox(ImageGetter.getImage("OtherIcons/Hexagon").apply { color = tile.getBaseTerrain().getColor() })
+        }
+    }
+
+    private fun tileTags(tile: TileView, state: CityTileState): Table = Table().left().apply {
+        when {
+            city.isWorked(tile) -> add(tag(if (tile.isLocked()) "Locked" else "Worked", FOOD_GREEN))
+            tile.isCityCenter() && city.isOwnedTile(tile) -> add(tag("City center", INK2))
+            state == CityTileState.BLOCKADED -> add(tag("Blockaded", RED))
+        }
+        if (city.canBuyTile(tile)) {
+            val cost = city.getGoldCostOfTile(tile)
+            val affordable = city.viewingCiv().hasStatToBuy(Stat.Gold, cost)
+            add(tag("${cost.tr()}${Fonts.gold}", if (affordable) YELLOW else RED)).padLeft(4f)
         }
     }
 
     private fun tilesTab() {
-        val selected = screen.selectedTile
-        if (selected != null) {
-            tileDetails.update(selected)
-            content.add(tileDetails).center().padBottom(8f).row()
+        if (tileDetailOpen && screen.selectedTile != null) {
+            back(Tab.Tiles.label) { tileDetailOpen = false }
+            tileDetails.update(screen.selectedTile)
+            drillIn(tileDetails)
+            return
         }
-        section("City tiles")
-        for (tile in city.getTiles().sortedBy { it.position().toString() }) {
-            val name = listOfNotNull(tile.getViewableResource(city.viewingCiv())?.name, tile.baseTerrain)
-                .joinToString(" · ")
-            val row = Table().apply {
-                background = bg(CARD)
-                touchable = Touchable.enabled
-                pad(8f)
-                add(name.toLabel(fontSize = 16, hideIcons = true)).growX().left()
-                add((if (city.isWorked(tile)) "Worked" else if (city.canBuyTile(tile)) "Buy" else "View")
-                    .toLabel(INK2, 13))
-                onClick { showTile(tile) }
+        val states = screen.tileStates()
+        val selected = screen.selectedTile
+        if (selected != null) tileCard(selected, states[selected] ?: CityTileState.NONE)
+        else section("Tap a tile on the map or below")
+
+        val tiles = states.keys.filter { city.isOwnedTile(it) || city.canBuyTile(it) }
+        val owned = tiles.count { city.isOwnedTile(it) }
+        section("City tiles · ${tiles.count { city.isWorked(it) }} of $owned worked")
+        val sorted = tiles.sortedWith(compareBy<TileView>(
+            { !it.isCityCenter() }, { !city.isWorked(it) }, { states[it] != CityTileState.WORKABLE },
+            { !city.isOwnedTile(it) }, { if (city.canBuyTile(it)) city.getGoldCostOfTile(it) else 0 }))
+        for (tile in sorted) {
+            listRow(tile == selected, tileIcon(tile), tileName(tile), details = {
+                add(statLine(tile.getTileStats(city.viewingCiv(), city))).left().padTop(3f).row()
+            }, trailing = tileTags(tile, states[tile] ?: CityTileState.NONE)) {
+                if (tile == selected) screen.clearSelection() else screen.selectTile(tile)
+                scroll.scrollY = 0f
+                refresh()
             }
-            content.add(row).height(54f).padBottom(4f).row()
+            rule()
         }
     }
 
+    /** The selected tile inline: what the legacy tile table shows, with the map's worker toggle and buy */
+    private fun tileCard(tile: TileView, state: CityTileState) {
+        val card = Table().apply {
+            background = bg(NAVY2)
+            pad(14f)
+        }
+        card.add(tileIcon(tile)).size(52f).padRight(12f)
+        val info = Table().left()
+        info.add(text(tileName(tile), size = 18)).minWidth(0f).growX().left().row()
+        info.add(statLine(tile.getTileStats(city.viewingCiv(), city), Color.WHITE)).left().padTop(4f).row()
+        info.add(tileTags(tile, state)).left().padTop(4f)
+        card.add(info).minWidth(0f).growX().left().row()
+
+        val actions = Table().left()
+        if (state == CityTileState.WORKABLE && screen.canChangeState && !city.isPuppet()) {
+            val assign = !tile.providesYield()
+            val enabled = !assign || city.getFreePopulation() > 0
+            actions.add(pill(if (assign) "Assign citizen" else "Unassign", if (assign) YELLOW else null,
+                if (assign) YELLOW_INK else Color.WHITE, enabled) { screen.toggleTileWorked(tile) })
+                .height(48f).padRight(8f)
+        }
+        if (city.isWorked(tile)) {
+            val locked = tile.isLocked()
+            actions.add(pill(if (locked) "Unlock" else "Lock", enabled = screen.canChangeState) {
+                if (locked) city.tryUnlockTile(tile) else city.tryLockTile(tile)
+                screen.updateAsync()
+            }).height(48f).padRight(8f)
+        }
+        if (city.canBuyTile(tile)) {
+            val cost = city.getGoldCostOfTile(tile)
+            actions.add(pill("Buy for [$cost] gold", YELLOW, YELLOW_INK,
+                screen.canChangeState && city.viewingCiv().hasStatToBuy(Stat.Gold, cost)) { screen.askToBuyTile(tile) })
+                .height(48f).padRight(8f)
+        }
+        actions.add(pill("Details") { tileDetailOpen = true; refresh() }).height(48f)
+        card.add(actions).colspan(2).left().padTop(12f)
+        content.add(card).padTop(4f).row()
+    }
+
     private fun citizensTab() {
-        section("${city.getFreePopulation()} unassigned of ${city.getPopulationCount()}")
-        val controls = Table()
-        controls.add(actionCard("Reset citizens") {
-            city.tryReassignPopulation(resetLocked = true)
-            screen.updateAsync()
-        }).width((contentWidth - 8f) / 2f).height(52f).padRight(4f)
-        controls.add(actionCard("Avoid growth", city.avoidGrowth) {
-            city.tryToggleAvoidGrowth()
-            screen.updateAsync()
-        }).width((contentWidth - 8f) / 2f).height(52f).padLeft(4f)
-        content.add(controls).row()
+        val canChange = screen.canCityBeChanged()
+        listRow(false, iconBox(ImageGetter.getConstructionPortrait("Worker", 32f)),
+            "${city.getPopulationCount()} citizens",
+            trailing = pill("Reset", enabled = canChange) {
+                city.tryReassignPopulation(resetLocked = true)
+                screen.updateAsync()
+            }, details = {
+                add(text("${city.getFreePopulation()} unassigned", INK2, 13)).minWidth(0f).growX().left().padTop(3f)
+            }, onTap = null)
+        rule()
+
         section("Citizen focus")
-        val focusGrid = Table()
+        val focusGrid = Table().left()
         var count = 0
         for (focus in CityFocus.entries) {
             if (!focus.tableEnabled || focus == CityFocus.FaithFocus && !city.viewingCiv().isReligionEnabled()) continue
@@ -482,52 +936,86 @@ internal class CityPortraitView(private val screen: CityScreen, private val shee
                 CityFocus.ProductionGrowthFocus -> "Prod + Food"
                 else -> icon?.name ?: focus.label
             }
-            focusGrid.add(actionCard(label, city.getCityFocus() == focus, icon = icon) {
-                city.trySetCityFocus(focus)
-                screen.updateAsync()
-            }).minWidth(0f).width((contentWidth - 16f) / 2f).height(52f).pad(4f)
-            if (++count % 2 == 0) focusGrid.row()
-        }
-        content.add(focusGrid).row()
-        if (city.getMaxSpecialists().isNotEmpty()) {
-            section("Specialists")
-            content.add(actionCard(if (city.manualSpecialists) "Manual specialists" else "Auto specialists",
-                city.manualSpecialists) {
-                if (city.manualSpecialists) city.tryDisableManualSpecialists() else city.tryEnableManualSpecialists()
-                screen.updateAsync()
-            }).height(52f).row()
-            for ((name, max) in city.getMaxSpecialists().asSequence().sortedBy { it.key }) {
-                val assigned = city.getNewSpecialists()[name]
-                val row = Table().apply {
-                    background = bg(CARD)
-                    pad(5f)
-                    add("$name  $assigned/$max".toLabel(fontSize = 16, hideIcons = true)).growX().left()
-                    add(actionCard("−", enabled = assigned > 0) {
-                        city.tryUnassignSpecialist(name)
-                        screen.updateAsync()
-                    }).size(48f).padRight(5f)
-                    add(actionCard("+", enabled = assigned < max && city.getFreePopulation() > 0) {
-                        city.tryAssignSpecialist(name)
-                        screen.updateAsync()
-                    }).size(48f)
+            val active = city.getCityFocus() == focus
+            val chip = Table().apply {
+                background = bg(if (active) Color.WHITE else CHIP)
+                if (icon != null) add(screen.portraitStatIcons.image(icon.name)).size(20f).padRight(6f)
+                add(label.toLabel(if (active) NAVY_INK else if (canChange) Color.WHITE else INK3, 14, hideIcons = true))
+                if (canChange) {
+                    touchable = Touchable.enabled
+                    onClick { city.trySetCityFocus(focus); screen.updateAsync() }
                 }
-                content.add(row).height(62f).padBottom(6f).row()
             }
+            val cell = focusGrid.add(chip).minWidth(0f).width((contentWidth - 16f) / 3f).height(48f).padBottom(8f)
+            if (count % 3 != 2) cell.padRight(8f)
+            if (++count % 3 == 0) focusGrid.row()
         }
-        section("Tap city tiles on the map or use the Tiles tab to assign workers")
+        content.add(focusGrid).left().row()
+
+        listRow(false, iconBox(screen.portraitStatIcons.image("Food")), "Avoid growth",
+            trailing = toggle(city.avoidGrowth, canChange) { city.tryToggleAvoidGrowth(); screen.updateAsync() },
+            details = {
+                add(text("Keep food from adding citizens", INK2, 13)).minWidth(0f).growX().left().padTop(3f)
+            }, onTap = null)
+        rule()
+
+        val specialists = city.getMaxSpecialists().asSequence().sortedBy { it.key }
+            .filter { city.getRuleset().specialists.containsKey(it.key) }.toList()
+        if (specialists.isEmpty()) return
+        section("Specialists")
+        if (canChange) {
+            val segment = Table().apply { background = bg(CHIP) }
+            for ((label, manual) in listOf("Manual" to true, "Auto" to false)) {
+                val on = city.manualSpecialists == manual
+                segment.add(Table().apply {
+                    if (on) background = bg(Color.WHITE)
+                    add(label.toLabel(if (on) NAVY_INK else INK2, 14))
+                    touchable = Touchable.enabled
+                    onClick {
+                        if (on) return@onClick
+                        if (manual) city.tryEnableManualSpecialists() else city.tryDisableManualSpecialists()
+                        screen.updateAsync()
+                    }
+                }).width(90f).height(40f).pad(4f)
+            }
+            content.add(segment).left().padBottom(6f).row()
+        }
+        for ((name, max) in specialists) {
+            val assigned = city.getNewSpecialists()[name]
+            val specialist = city.getRuleset().specialists[name]!!
+            val stepper = Table()
+            if (screen.canChangeState) {
+                val canRemove = assigned > 0 && !city.isPuppet()
+                val canAdd = assigned < max && !city.isPuppet() && city.getFreePopulation() > 0
+                stepper.add(pill("−", enabled = canRemove) {
+                    city.tryUnassignSpecialist(name)
+                    screen.updateAsync()
+                }).size(48f).padRight(6f)
+                stepper.add(pill("+", enabled = canAdd) {
+                    city.tryAssignSpecialist(name)
+                    screen.updateAsync()
+                }).size(48f)
+            }
+            listRow(false, iconBox(ImageGetter.getSpecialistIcon(specialist.colorObject)), name, trailing = stepper,
+                details = {
+                    val line = Table().left()
+                    line.add("$assigned / $max".toLabel(INK2, 13)).padRight(8f)
+                    line.add(statLine(city.getStatsOfSpecialist(name)))
+                    add(line).left().padTop(3f)
+                }, onTap = null)
+            rule()
+        }
     }
 
-    private fun actionCard(text: String, selected: Boolean = false, enabled: Boolean = screen.canCityBeChanged(),
-                           icon: Stat? = null,
-                           action: () -> Unit): Table = Table().apply {
-        background = bg(if (selected) YELLOW else CARD)
-        touchable = if (enabled) Touchable.enabled else Touchable.disabled
-        if (icon != null) add(screen.portraitStatIcons.image(icon.name)).size(26f).padRight(7f)
-        add(text.toLabel(if (selected) Color.valueOf("2b320e") else if (enabled) Color.WHITE else INK3,
-            15, hideIcons = true).apply {
-            if (icon != null) setText(text.tr(hideIcons = true, hideStats = true))
-        }).center().pad(5f)
-        if (enabled) onClick { action() }
+    private fun toggle(on: Boolean, enabled: Boolean, action: () -> Unit): Table = Table().apply {
+        background = bg(if (on) YELLOW else CHIP)
+        val knob = Image(ImageGetter.getCircleDrawable()).apply { color = if (on) YELLOW_INK else INK3 }
+        // 56x32 track with the knob on the right when on
+        add(knob).size(24f).pad(4f, if (on) 28f else 4f, 4f, if (on) 4f else 28f)
+        if (enabled) {
+            touchable = Touchable.enabled
+            onClick { action() }
+        }
     }
 
     private fun buyTab() {
@@ -535,22 +1023,34 @@ internal class CityPortraitView(private val screen: CityScreen, private val shee
             section("Purchases are unavailable")
             return
         }
-        section("Choose something to buy")
-        val buyable = (city.getRuleset().units.values.asSequence() + city.getRuleset().buildings.values.asSequence())
-            .filter { city.constructions.shouldBeDisplayed(it) && city.canBePurchasedWithAnyStat(it) }
-            .sortedBy { it.name }
-        for (construction in buyable) {
-            content.add(constructionRow(construction) {
-                screen.selectConstruction(construction)
-                detailOpen = true
-                refresh()
-            }).height(66f).padBottom(4f).row()
+        section("Buy now")
+        val data = constructions
+        if (data == null) section(Constants.loading)
+        else for (row in data.buyable) {
+            val construction = row.construction
+            val pills = Table()
+            for (buyPill in buyPills(construction, -1, row.options)) pills.add(buyPill).height(48f).padLeft(6f)
+            listRow(false, ImageGetter.getConstructionPortrait(construction.name, 46f), construction.name,
+                trailing = pills, details = {
+                    if (row.percentDone > 0) add(text("In progress, ${row.percentDone}%", INK2, 13)).left().padTop(3f).row()
+                    if (row.blocked) add("Move unit out of city first".toLabel(RED, 13)).left().padTop(3f).row()
+                }) { openDetails(construction, -1) }
+            rule()
         }
-        val tile = city.chooseNewTileToOwn()
+        val tile = screen.nextTileToOwn
         if (tile != null) {
             section("Expand the city")
-            content.add("Buy a tile".toTextButton().onClick { screen.askToBuyTile(tile) })
-                .height(48f).row()
+            listRow(false, iconBox(ImageGetter.getImage("OtherIcons/HexagonOutline")), "Buy a tile",
+                trailing = "›".toLabel(INK3, 24), details = {
+                    add(text("From [${city.getGoldCostOfTile(tile)}] gold", INK2, 13)).left().padTop(3f)
+                }) {
+                selectedTab = Tab.Tiles
+                tileDetailOpen = false
+                screen.selectTile(tile)
+                scroll.scrollY = 0f
+                refresh()
+            }
+            rule()
         }
     }
 }
