@@ -1,8 +1,18 @@
 package com.unciv.ui.screens.worldscreen
 
+import com.badlogic.gdx.Gdx
 import com.badlogic.gdx.graphics.Color
+import com.badlogic.gdx.graphics.Texture
+import com.badlogic.gdx.graphics.Texture.TextureFilter
+import com.badlogic.gdx.graphics.g2d.TextureRegion
+import com.badlogic.gdx.scenes.scene2d.Touchable
+import com.badlogic.gdx.scenes.scene2d.actions.Actions
+import com.badlogic.gdx.scenes.scene2d.ui.Image
 import com.badlogic.gdx.scenes.scene2d.ui.ScrollPane
 import com.badlogic.gdx.scenes.scene2d.ui.Table
+import com.badlogic.gdx.scenes.scene2d.utils.TextureRegionDrawable
+import com.badlogic.gdx.math.Interpolation
+import com.badlogic.gdx.utils.Scaling
 import com.unciv.Constants
 import com.unciv.UncivGame
 import com.unciv.logic.battle.BattleUnitCapture
@@ -27,11 +37,15 @@ import com.unciv.ui.components.extensions.disable
 import com.unciv.ui.components.extensions.pad
 import com.unciv.ui.components.extensions.toLabel
 import com.unciv.ui.components.extensions.toTextButton
+import com.unciv.ui.components.input.onClick
 import com.unciv.ui.components.input.KeyboardBinding
 import com.unciv.ui.components.input.keyShortcuts
 import com.unciv.ui.components.input.onActivation
 import com.unciv.ui.images.ImageGetter
 import com.unciv.ui.popups.Popup
+import com.unciv.ui.screens.basescreen.BaseScreen
+import com.unciv.ui.screens.basescreen.portraitCanvasBounds
+import com.unciv.ui.screens.cityscreen.CityScreen
 import com.unciv.ui.screens.diplomacyscreen.LeaderIntroTable
 import com.unciv.ui.screens.victoryscreen.VictoryScreen
 import yairm210.purity.annotations.Readonly
@@ -63,6 +77,8 @@ class AlertPopup(
     private val worldScreen: WorldScreen,
     private val popupAlert: PopupAlert
 ): Popup(worldScreen) {
+
+    private var wonderSceneTexture: Texture? = null
     
     companion object {
         private const val SEPARATOR_LINE_TO_TEXT_PADDING = 25f
@@ -522,6 +538,13 @@ class AlertPopup(
 
     private fun addWonderBuilt() {
         val wonder = gameInfo.ruleset.buildings[popupAlert.value]!!
+        val png = Gdx.files.internal("ExtraImages/WonderScenes/${wonder.name}.png")
+        val scene = if (png.exists()) png else Gdx.files.internal("ExtraImages/WonderScenes/${wonder.name}.jpg")
+        if (stageHeight > stageWidth) {
+            addPortraitWonderBuilt(wonder, scene)
+            music.chooseTrack(wonder.name, MusicMood.Wonder, MusicTrackChooserFlags.setSpecific)
+            return
+        }
         addGoodSizedLabel(wonder.name)
         addSeparator().padBottom(10f)
         if(ImageGetter.wonderImageExists(wonder.name)) {    // Wonder Graphic exists
@@ -556,6 +579,129 @@ class AlertPopup(
         add(centerTable).row()
         addCloseButton()
         music.chooseTrack(wonder.name, MusicMood.Wonder, MusicTrackChooserFlags.setSpecific)
+    }
+
+    private fun addPortraitWonderBuilt(wonder: com.unciv.models.ruleset.Building, scene: com.badlogic.gdx.files.FileHandle) {
+        background = null
+        innerTable.background = null
+        clickBehindToClose = false
+        val canvas = worldScreen.portraitCanvasBounds()
+        val logicalWidth = 393f
+        val scale = stageWidth / logicalWidth
+        if (scene.exists() || ImageGetter.wonderImageExists(wonder.name)) {
+            val picture = if (scene.exists()) {
+                val texture = Texture(scene)
+                wonderSceneTexture = texture
+                texture.setFilter(TextureFilter.Linear, TextureFilter.Linear)
+                Image(TextureRegionDrawable(TextureRegion(texture)))
+            } else ImageGetter.getWonderImage(wonder.name)
+            picture.setScaling(Scaling.fill)
+            picture.touchable = Touchable.disabled
+            picture.setBounds(canvas.x, canvas.y, canvas.width, canvas.height)
+            picture.setOrigin(picture.width / 2f, picture.height / 2f)
+            picture.setScale(1.22f)
+            picture.addAction(Actions.scaleTo(1f, 1f, 2.6f, Interpolation.pow3Out))
+            addActorAt(0, picture)
+        } else {
+            val backdrop = Image(ImageGetter.getWhiteDotDrawable()).apply {
+                color = Color.valueOf("142c40")
+                touchable = Touchable.disabled
+                setBounds(canvas.x, canvas.y, canvas.width, canvas.height)
+            }
+            addActorAt(0, backdrop)
+            val halo = ImageGetter.getCircle().apply {
+                color = Color(1f, .76f, .39f, .16f)
+                touchable = Touchable.disabled
+                setBounds(canvas.x + canvas.width * .05f, canvas.y + canvas.height * .35f,
+                    canvas.width * .9f, canvas.width * .9f)
+            }
+            addActor(halo)
+            val landmark = ImageGetter.getConstructionPortrait(wonder.name, 220f).apply {
+                touchable = Touchable.disabled
+                setPosition(canvas.x + (canvas.width - width) / 2f, canvas.y + canvas.height * .57f)
+                setOrigin(width / 2f, height / 2f)
+                setScale(.82f)
+                addAction(Actions.scaleTo(1f, 1f, 2.6f, Interpolation.pow3Out))
+            }
+            addActor(landmark)
+        }
+
+        val flash = Image(ImageGetter.getWhiteDotDrawable()).apply {
+            color = Color.valueOf("fff8e1")
+            touchable = Touchable.disabled
+            setBounds(canvas.x, canvas.y, canvas.width, canvas.height)
+            addAction(Actions.alpha(0f, 1.1f))
+        }
+        addActorAt(1, flash)
+        repeat(12) { index ->
+            val sparkle = "✦".toLabel(Color.valueOf("fff6c9"), 20).apply {
+                touchable = Touchable.disabled
+                setPosition(canvas.x + canvas.width * ((index * 37 + 11) % 96) / 100f,
+                    canvas.y + canvas.height * (1f - ((index * 53) % 58 + 8) / 100f))
+                color.a = 0f
+                addAction(Actions.forever(Actions.sequence(
+                    Actions.delay((index * .37f) % 2.6f),
+                    Actions.alpha(.9f, .55f), Actions.alpha(0f, .85f), Actions.delay(1.2f)
+                )))
+            }
+            addActor(sparkle)
+        }
+
+        val builtCity = viewingCiv.cities.firstOrNull { it.cityConstructions.isBuilt(wonder.name) }
+        val card = Table().apply {
+            background = BaseScreen.skinStrings.getUiBackground("",
+                BaseScreen.skinStrings.roundedEdgeRectangleShape,
+                Color(16f / 255f, 31f / 255f, 47f / 255f, .92f))
+            pad(20f, 18f, 16f, 18f)
+            add(wonder.name.toLabel(Color.valueOf("ffd97a"), 32, hideIcons = true)).left().row()
+            val builtText = if (builtCity == null) "Completed on turn ${gameInfo.turns}"
+                else "Built in ${builtCity.name} on turn ${gameInfo.turns}"
+            add(builtText.toLabel(Color.valueOf("b7cde0"), 14)).left().padTop(2f).row()
+            val effects = Table()
+            effects.add(wonder.getShortDescription().toLabel(Color.WHITE, 14).apply { wrap = true })
+                .width(logicalWidth - 80f).left()
+            add(effects).left().padTop(13f).row()
+            add("World wonder".toLabel(Color.valueOf("ffd97a"), 13)).left().padTop(4f).row()
+            if (wonder.quote.isNotEmpty()) {
+                add(wonder.quote.toLabel(Color.valueOf("9db7ca"), 13).apply { wrap = true })
+                    .width(logicalWidth - 60f).left().padTop(12f).row()
+            }
+            val continueButton = Table().apply {
+                background = BaseScreen.skinStrings.getUiBackground("",
+                    BaseScreen.skinStrings.roundedEdgeRectangleShape, Color.valueOf("ffc93c"))
+                touchable = Touchable.enabled
+                add("Continue".toLabel(Color.valueOf("322800"), 18)).center()
+                onClick { close() }
+            }
+            add(continueButton).growX().height(56f).padTop(16f).row()
+            if (builtCity != null) {
+                val viewCity = Table().apply {
+                    background = BaseScreen.skinStrings.getUiBackground("",
+                        BaseScreen.skinStrings.roundedEdgeRectangleShape, Color.valueOf("344250"))
+                    touchable = Touchable.enabled
+                    add("View ${builtCity.name}".toLabel(fontSize = 16)).center()
+                    onClick {
+                        close()
+                        worldScreen.game.pushScreen { CityScreen(worldScreen.selectedGameView.getCityView(builtCity)) }
+                    }
+                }
+                add(viewCity).growX().height(48f).padTop(8f).row()
+            }
+        }
+        card.isTransform = true
+        card.pack()
+        card.setScale(scale)
+        val safeBottom = worldScreen.safeAreaBoundsInWorld().y
+        card.setPosition((stageWidth - card.width * scale) / 2f,
+            maxOf(canvas.y + 30f * scale, safeBottom))
+        card.touchable = Touchable.enabled
+        card.color.a = 0f
+        card.moveBy(0f, -60f)
+        card.addAction(Actions.sequence(Actions.delay(.9f), Actions.parallel(
+            Actions.fadeIn(.7f, Interpolation.pow3Out),
+            Actions.moveBy(0f, 60f, .7f, Interpolation.pow3Out)
+        )))
+        addActor(card)
     }
 
     //endregion
@@ -686,5 +832,7 @@ class AlertPopup(
         viewingCiv.popupAlerts.remove(popupAlert)
         worldScreen.shouldUpdate = true
         super.close()
+        wonderSceneTexture?.dispose()
+        wonderSceneTexture = null
     }
 }
