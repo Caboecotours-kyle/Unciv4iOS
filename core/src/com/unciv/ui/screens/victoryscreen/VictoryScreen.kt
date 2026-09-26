@@ -29,6 +29,7 @@ import com.unciv.ui.screens.basescreen.RecreateOnResize
 import com.unciv.ui.screens.newgamescreen.NewGameScreen
 import com.unciv.ui.screens.pickerscreens.PickerScreen
 import com.unciv.ui.screens.worldscreen.WorldScreen
+import com.unciv.ui.components.widgets.AutoScrollPane as ScrollPane
 import yairm210.purity.annotations.Readonly
 import java.util.EnumSet
 
@@ -190,16 +191,24 @@ class VictoryScreen(
                 tintColor = Color.valueOf("#102033"))
             defaults().pad(8f)
         }
-        moment.add(ImageGetter.getNationPortrait(winner.nation, 205f))
-            .size(215f).padTop(72f).row()
+        val viewResults = "View results".toTextButton()
+        viewResults.onClick { moment.remove() }
+        moment.add(viewResults).width(128f).height(48f).expandX().right().row()
+        val portraitSize = (stage.height * 0.31f).coerceIn(160f, stage.width - 96f)
+        moment.add(ImageGetter.getNationPortrait(winner.nation, portraitSize - 10f))
+            .size(portraitSize).padTop(12f).row()
+        if (victoryData != null)
+            moment.add(ImageGetter.getVictoryTypeIcon(victoryData.victoryType, 44f))
+                .size(44f).row()
         moment.add(title.toLabel(fontColor = if (won) Color.GOLD else Color.WHITE,
             fontSize = 30).apply { wrap = true; setAlignment(Align.center) })
             .width(stage.width - 36f).row()
         moment.add(winner.nation.getLeaderDisplayName().toLabel().apply {
             setAlignment(Align.center)
         }).row()
-        moment.add(body.toLabel().apply { wrap = true; setAlignment(Align.center) })
-            .width(stage.width - 44f).maxHeight(150f).row()
+        val bodyLabel = body.toLabel().apply { wrap = true; setAlignment(Align.center) }
+        moment.add(ScrollPane(bodyLabel)).width(stage.width - 44f)
+            .height((stage.height * 0.16f).coerceAtMost(150f)).row()
         moment.add().expandY().row()
 
         val newGame = "Start new game".toTextButton().apply { color = Color.GOLD }
