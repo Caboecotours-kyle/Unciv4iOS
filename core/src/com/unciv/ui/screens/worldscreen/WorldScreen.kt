@@ -517,7 +517,7 @@ class WorldScreen(
         }
 
         updateGameplayButtons()
-        if (isPortrait() && uiEnabled) layoutPortraitHud()
+        if (uiEnabled) { if (isPortrait()) layoutPortraitHud() else restoreLandscapeHud() }
 
         // Portrait: notifications use the band between the unit card on top and the thumb controls below
         val coveredNotificationsTop = if (isPortrait()) stage.height - minOf(bottomUnitTable.y, bottomTileInfoTable.y)
@@ -554,6 +554,13 @@ class WorldScreen(
         bottomTileInfoTable.isVisible = bottomUnitTable.selectedUnit == null && bottomUnitTable.selectedCity == null
         bottomTileInfoTable.setPosition(right - bottomTileInfoTable.width, topBar.y - bottomTileInfoTable.height)
         chatButton.updatePosition()
+    }
+
+    /** Undoes what [layoutPortraitHud] changed that the landscape code never sets itself, for a phone rotated back. */
+    private fun restoreLandscapeHud() {
+        bottomUnitTable.y = 0f
+        minimapWrapper.isVisible = true
+        bottomTileInfoTable.isVisible = true
     }
 
     @Readonly

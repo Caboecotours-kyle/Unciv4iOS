@@ -46,10 +46,10 @@ class UnitActionsTable(val worldScreen: WorldScreen) : Table() {
         private const val padBetweenButtons = 2f
     }
 
-    init {
-        // Portrait right-aligns the stack so it sits under the right thumb
-        if (worldScreen.isPortrait()) defaults().right().padRight(padBetweenButtons).padBottom(padBetweenButtons)
-        else defaults().left().padLeft(padBetweenButtons).padBottom(padBetweenButtons)
+    /** Portrait right-aligns the stack so it sits under the right thumb; re-read on every update so rotation follows */
+    private fun alignForOrientation() {
+        if (worldScreen.isPortrait()) defaults().right().padLeft(0f).padRight(padBetweenButtons).padBottom(padBetweenButtons)
+        else defaults().left().padRight(0f).padLeft(padBetweenButtons).padBottom(padBetweenButtons)
     }
 
     fun changePage(delta: Int, unit: MapUnit) {
@@ -68,6 +68,7 @@ class UnitActionsTable(val worldScreen: WorldScreen) : Table() {
         }
 
         clear()
+        alignForOrientation()
         keyShortcuts.clear()
         if (unit == null) return
         if (!worldScreen.canChangeState) return // No actions when it's not your turn or spectator!
