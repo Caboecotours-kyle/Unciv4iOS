@@ -296,7 +296,7 @@ internal class WorldPortraitHud(
         }
         if (unit == null) {
             val notes = disc(icon("OtherIcons/Notifications"), 54f, navy)
-            notes.onClick { world.openEmpireOverview(EmpireOverviewCategories.Notifications) }
+            notes.onClick { PortraitNotificationDigest(world) }
             place(notes, 325f, bottom + 140f, 54f, 54f)
         }
         val zoom = disc(icon("OtherIcons/Search"), 56f, navy)
