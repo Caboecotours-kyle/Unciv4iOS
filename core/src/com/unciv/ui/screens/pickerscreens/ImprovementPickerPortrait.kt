@@ -31,6 +31,7 @@ import kotlin.math.roundToInt
  * The portrait, one-handed [ImprovementPickerScreen] (mock `mocks/portrait-options-proposal.html`):
  * cards grouped by what can be ordered now, the current order with its cancel on top, and the selected card with
  * Details and its action pinned at the bottom. Locked cards can be inspected but never ordered.
+ * Every tap target is at least [TOUCH] logical, which stays 48pt after the view's 320/393 scale on the narrowest phone.
  *
  * Eligibility, problems and ordering stay in [ImprovementPickerScreen]; this view only shows them and calls back.
  */
@@ -53,8 +54,8 @@ internal class ImprovementPickerPortrait(
 
     init {
         val body = Table().top()
-        body.pad(2f, 12f, 16f, 12f)
-        body.add(ownerRow()).left().padBottom(4f).row()
+        body.pad(0f, 12f, 16f, 12f)
+        body.add(ownerRow()).left().row()
         if (cancelOption != null) body.add(currentOrder(cancelOption)).width(listWidth).padTop(6f).padBottom(4f).row()
         val available = cardOptions.filter { it.canOrder }
         val locked = cardOptions.filter { !it.canOrder }
@@ -90,12 +91,11 @@ internal class ImprovementPickerPortrait(
     }
 
     private fun header() = Table().apply {
-        pad(4f, 16f, 8f, 10f)
+        pad(0f, 16f, 2f, 4f)
         add("Pick improvement".toLabel(fontSize = 22)).growX().left()
         val close = ImageGetter.getImage("OtherIcons/Close").apply { setSize(18f, 18f) }
             .surroundWithCircle(48f, false, CHIP)
-        close.onClick { screen.game.popScreen() }
-        add(close).size(48f)
+        add(hitArea(close, (TOUCH - 48f) / 2, (TOUCH - 48f) / 2) { screen.game.popScreen() })
     }
 
     //region Body
@@ -114,20 +114,28 @@ internal class ImprovementPickerPortrait(
             chips += chip(city.name, ImageGetter.getImage("OtherIcons/Cities").apply { setSize(20f, 20f) }) {
                 screen.openOwnerCity()
             }
-        return flow(chips, listWidth, 8f)
+        // The chips' own hit slop spaces the rows
+        return flow(chips, listWidth, 8f, rowGap = 0f)
     }
 
-    private fun chip(text: String, icon: Actor, action: () -> Unit) = Table().apply {
-        background = rounded(CHIP_BLUE, BaseScreen.skinStrings.roundedEdgeRectangleShape)
-        touchable = Touchable.enabled
-        pad(0f, 14f, 0f, 16f)
-        add(icon).size(22f).padRight(8f)
+    private fun chip(text: String, icon: Actor, action: () -> Unit): Actor {
+        val visual = Table()
+        visual.background = rounded(CHIP_BLUE, BaseScreen.skinStrings.roundedEdgeRectangleShape)
+        visual.pad(0f, 14f, 0f, 16f)
+        visual.add(icon).size(22f).padRight(8f)
         val label = text.toLabel(Color.WHITE, 15, hideIcons = true)
         val maxText = listWidth - 60f
         if (label.prefWidth > maxText) {
             label.wrap = true
-            add(label).width(maxText).minHeight(48f)
-        } else add(label).minHeight(48f)
+            visual.add(label).width(maxText).minHeight(48f)
+        } else visual.add(label).minHeight(48f)
+        return hitArea(visual, 0f, (TOUCH - 48f) / 2, action)
+    }
+
+    /** A tappable parent adding invisible hit area around [visual], so it is drawn as designed but tapped at [TOUCH] */
+    private fun hitArea(visual: Actor, padX: Float, padY: Float, action: () -> Unit) = Table().apply {
+        touchable = Touchable.enabled
+        add(visual).pad(padY, padX, padY, padX)
         onClick(action)
     }
 
@@ -281,7 +289,7 @@ internal class ImprovementPickerPortrait(
         val icon = if (queued) ImageGetter.getImage("OtherIcons/ExclamationMark").apply { color = WARN }
             else ImageGetter.getImage("OtherIcons/LockSmall").apply { color = INK2 }
         add(icon).size(16f).padRight(10f)
-        add(wrapped(text, if (queued) WARN_INK else Color.WHITE, 15, footerWidth - 90f)).width(footerWidth - 90f).left().minHeight(48f)
+        add(wrapped(text, if (queued) WARN_INK else Color.WHITE, 15, footerWidth - 90f)).width(footerWidth - 90f).left().minHeight(TOUCH)
         if (!link.isNullOrEmpty()) {
             touchable = Touchable.enabled
             add("›".toLabel(INK2, 22)).padLeft(8f)
@@ -347,7 +355,7 @@ internal class ImprovementPickerPortrait(
         touchable = Touchable.enabled
         pad(4f, 18f, 4f, 18f)
         add(text.toLabel(ink, 18, Align.center, hideIcons = true).apply { wrap = true })
-            .growX().minHeight(48f)
+            .growX().minHeight(TOUCH - 8f)
     }
 
     /** A wrapping label already sized to [width], so its height is right before the first layout */
@@ -359,14 +367,14 @@ internal class ImprovementPickerPortrait(
         }
 
     /** Lays [items] out left to right, wrapping into rows no wider than [width] */
-    private fun flow(items: List<Actor>, width: Float, gap: Float = 6f): Table {
+    private fun flow(items: List<Actor>, width: Float, gap: Float = 6f, rowGap: Float = gap): Table {
         val table = Table().left()
         var row = Table()
         var used = 0f
         for (item in items) {
             val itemWidth = (item as? Layout)?.prefWidth ?: item.width
             if (used > 0f && used + gap + itemWidth > width) {
-                table.add(row).left().padBottom(gap).row()
+                table.add(row).left().padBottom(rowGap).row()
                 row = Table()
                 used = 0f
             }
@@ -384,6 +392,8 @@ internal class ImprovementPickerPortrait(
     //endregion
 
     companion object {
+        /** 60 logical is 48pt at the 320/393 portrait scale, DESIGN.md's minimum touch target */
+        const val TOUCH = 60f
         const val DETAILS_WIDTH = 78f
         const val DETAILS_BUTTON_WIDTH = 112f
 
