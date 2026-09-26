@@ -139,6 +139,20 @@ class NotificationsScroll(
      */
     override fun getMouseWheelX() = 0f
 
+    private var usingPortraitHud = false
+
+    /** Portrait's digest button replaces the map's legacy scrolling list and restore control. */
+    internal fun usePortraitHud(portrait: Boolean) {
+        if (portrait) {
+            isVisible = false
+            restoreButton.isVisible = false
+        } else if (usingPortraitHud) {
+            isVisible = userSetting != UserSetting.Disabled
+            restoreButton.isVisible = true
+        }
+        usingPortraitHud = portrait
+    }
+
     /** Access to hidden "state" - writing it will ensure this is fully visible or hidden and the
      *  restore button shown as needed - with animation. */
     @Suppress("MemberVisibilityCanBePrivate")  // API for future use

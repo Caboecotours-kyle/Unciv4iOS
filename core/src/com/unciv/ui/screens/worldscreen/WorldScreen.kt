@@ -157,6 +157,7 @@ class WorldScreen(
     internal val techPolicyAndDiplomacy = TechPolicyDiplomacyButtons(this)
     internal val chatButton = ChatButton(this)
     private val unitActionsTable = UnitActionsTable(this)
+    private val portraitHud by lazy { WorldPortraitHud(this, unitActionsTable, battleTable) }
     /** Bottom left widget holding information about a selected unit or city */
     internal val bottomUnitTable = UnitTable(this)
     private val battleTable = BattleTable(this)
@@ -214,6 +215,8 @@ class WorldScreen(
         battleTable.width = stage.width / 3
         battleTable.x = stage.width / 3
         stage.addActor(battleTable)
+        stage.addActor(portraitHud)
+        portraitHud.isVisible = false
 
         val tileToCenterOn: HexCoord =
                 when {
@@ -269,6 +272,7 @@ class WorldScreen(
         resizeDeferTimer?.cancel()
         events.stopReceiving()
         statusButtons.dispose()
+        portraitHud.dispose()
         super.dispose()
     }
 
@@ -364,7 +368,11 @@ class WorldScreen(
         notificationsScroll.isVisible = uiEnabled
         minimapWrapper.isVisible = uiEnabled
         bottomUnitTable.isVisible = uiEnabled
-        if (uiEnabled) battleTable.update() else battleTable.isVisible = false
+        portraitHud.isVisible = uiEnabled && isPortrait()
+        if (uiEnabled) {
+            battleTable.update()
+            if (isPortrait()) layoutPortraitHud()
+        } else battleTable.isVisible = false
     }
 
     private fun addKeyboardListener() {
@@ -528,6 +536,7 @@ class WorldScreen(
             else (bottomTileInfoTable.height + bottomTileInfoTable.y)
 //                (if (game.settings.showMinimap) minimapWrapper.height else 0f)
         notificationsScroll.update(viewingCiv.notifications, coveredNotificationsTop, coveredNotificationsBottom)
+        notificationsScroll.usePortraitHud(isPortrait())
 
         val posZoomFromRight = if (game.settings.showMinimap) minimapWrapper.width
         else bottomTileInfoTable.width
@@ -538,27 +547,36 @@ class WorldScreen(
         )
     }
 
-    /**
-     * Portrait, one-handed layout (DESIGN.md): stats on top with unit info under them, tech and civ lower left,
-     * Next bottom-right with the unit's actions stacked above it. Tile info and the minimap stay out of the map's way.
-     */
+    /** The mock's portrait HUD has its own point-sized controls; the old widgets retain landscape behavior. */
     private fun layoutPortraitHud() {
-        val safeArea = safeAreaBoundsInWorld()
-        val right = safeArea.x + safeArea.width
-        statusButtons.setPosition(right - statusButtons.width - 10f, safeArea.y + 10f)
-        // Next takes the bottom row; tech and civ sit one row up on the left, mirroring the unit actions on the right
-        techPolicyAndDiplomacy.setPosition(safeArea.x + 10f, statusButtons.y + statusButtons.height + 10f)
-        unitActionsTable.x = right - unitActionsTable.width - 8f
-        bottomUnitTable.setPosition(safeArea.x, topBar.y - bottomUnitTable.height)
+        topBar.isVisible = false
+        statusButtons.isVisible = false
+        techPolicyAndDiplomacy.isVisible = false
+        unitActionsTable.isVisible = false
+        bottomUnitTable.isVisible = false
         minimapWrapper.isVisible = false
         zoomController.isVisible = false
         bottomTileInfoTable.isVisible = bottomUnitTable.selectedUnit == null && bottomUnitTable.selectedCity == null
-        bottomTileInfoTable.setPosition(right - bottomTileInfoTable.width, topBar.y - bottomTileInfoTable.height)
+        portraitHud.isVisible = true
+        portraitHud.refresh()
+        if (bottomUnitTable.selectedUnit != null && battleTable.portraitAttackButton != null) battleTable.isVisible = false
+        val safe = safeAreaBoundsInWorld()
+        bottomTileInfoTable.setPosition(safe.x + safe.width - bottomTileInfoTable.width,
+            portraitHud.tutorialTop - bottomTileInfoTable.height)
+        if (tutorialTaskTable.isVisible) {
+            tutorialTaskTable.y = portraitHud.tutorialTop - tutorialTaskTable.height
+            tutorialTaskTable.toFront()
+        }
         chatButton.updatePosition()
     }
 
-    /** Undoes what [layoutPortraitHud] changed that the landscape code never sets itself, for a phone rotated back. */
     private fun restoreLandscapeHud() {
+        portraitHud.isVisible = false
+        topBar.isVisible = true
+        statusButtons.isVisible = true
+        techPolicyAndDiplomacy.isVisible = true
+        unitActionsTable.isVisible = true
+        bottomUnitTable.isVisible = true
         bottomUnitTable.y = 0f
         minimapWrapper.isVisible = true
         bottomTileInfoTable.isVisible = true

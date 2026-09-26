@@ -116,18 +116,6 @@ class UnitActionsTable(val worldScreen: WorldScreen) : Table() {
         // actually show the buttons of the currentPage
         for (unitAction in pageActionBuckets[currentPage]) {
             val button = getUnitActionButton(unit, unitAction)
-            if (unitAction is UpgradeUnitAction) {
-                // This is bound even when the button is disabled, but Actor.activate in ActivationExtensions will block any activation for disabled actors...
-                // But the menu is built to be useful even when you can't upgrade - so **hack** it to get the handler through.
-                // Works because our disable() extension also changes style, and because the normal click is ignored due to unitAction.action being null.
-                button.isDisabled = false
-                button.touchable = Touchable.enabled
-                button.addContextMenu {
-                    UnitUpgradeMenu(worldScreen.stage, button, unit, unitAction, enable = unitAction.action != null, callbackAfterAnimation = true) {
-                        worldScreen.shouldUpdate = true
-                    }
-                }
-            }
             add(button).colspan(2).row()
         }
 
@@ -173,7 +161,7 @@ class UnitActionsTable(val worldScreen: WorldScreen) : Table() {
         buttonsPerPage = (availableHeight / buttonHeight).toInt().coerceIn(minButtonsPerPage, maxButtonsPerPage)
     }
 
-    private fun getUnitActionButton(unit: MapUnit, unitAction: UnitAction): Button {
+    internal fun getUnitActionButton(unit: MapUnit, unitAction: UnitAction, afterAction: (() -> Unit)? = null): Button {
         val icon = unitAction.getIcon()
         // If peripheral keyboard not detected, hotkeys will not be displayed
         val binding = unitAction.type.binding
@@ -192,13 +180,27 @@ class UnitActionsTable(val worldScreen: WorldScreen) : Table() {
         } else {
             actionButton.onActivation(unitAction.uncivSound, binding) {
                 activateAction(unitAction, unit)
+                afterAction?.invoke()
+            }
+        }
+
+        if (unitAction is UpgradeUnitAction) {
+            // This is bound even when the button is disabled, but Actor.activate in ActivationExtensions will block any activation for disabled actors...
+            // But the menu is built to be useful even when you can't upgrade - so **hack** it to get the handler through.
+            // Works because our disable() extension also changes style, and because the normal click is ignored due to unitAction.action being null.
+            actionButton.isDisabled = false
+            actionButton.touchable = Touchable.enabled
+            actionButton.addContextMenu {
+                UnitUpgradeMenu(worldScreen.stage, actionButton, unit, unitAction, enable = unitAction.action != null, callbackAfterAnimation = true) {
+                    worldScreen.shouldUpdate = true
+                }
             }
         }
 
         return actionButton
     }
 
-    private fun activateAction(unitAction: UnitAction, unit: MapUnit) {
+    internal fun activateAction(unitAction: UnitAction, unit: MapUnit) {
         unitAction.action!!.invoke()
         worldScreen.shouldUpdate = true
         // We keep the unit action/selection overlay from the previous unit open even when already selecting another unit
