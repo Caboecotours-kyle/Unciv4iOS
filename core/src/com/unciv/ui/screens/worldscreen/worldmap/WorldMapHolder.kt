@@ -157,6 +157,7 @@ class WorldMapHolder @JvmOverloads constructor(
         if (requested == currentTileSetStrings.mapVerticalScale) return
         val center = getMapCenter()
         removeUnitActionOverlay()
+        stopUnitMotion()
         addTiles()
         restoreMapCenter(center)
         worldScreen.shouldUpdate = true
