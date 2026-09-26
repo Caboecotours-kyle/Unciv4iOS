@@ -191,6 +191,10 @@ class VictoryScreenTracks(worldScreen: WorldScreen, stageWidth: Float) : Table(B
                     val owners = civ.gameInfo.civilizations.filter { it.isMajorCiv() &&
                         (it == playerCiv || !playerCiv.shouldHideCivCount() || playerCiv.knows(it)) }
                     for (owner in owners) {
+                        if (owner != playerCiv && !playerCiv.knows(owner)) {
+                            steps += Step("Unknown", false, icon = { ImageGetter.getRandomNationPortrait(27f * scale) })
+                            continue
+                        }
                         val capital = capitals.firstOrNull { it.foundingCivObject == owner }
                         steps += Step(owner.civName, capital?.civ == civ || capital == null && owner.isDefeated(), icon = {
                             ImageGetter.getNationPortrait(owner.nation, 27f * scale)
