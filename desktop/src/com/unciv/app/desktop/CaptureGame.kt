@@ -76,9 +76,11 @@ class CaptureGame(
             }
         }
         // count frames from the first world frame on, including frames spent on a screen opened over it
-        if (current is WorldScreen && worldFrames == 0 && open != null) openScreen(current)
+        if (current is WorldScreen && worldFrames == 0 && open == "found") {
+            foundCapital(current); current.shouldUpdate = true
+        } else if (current is WorldScreen && worldFrames == 0 && open != null) openScreen(current)
         if (current is WorldScreen || worldFrames > 0) worldFrames++
-        if (worldFrames >= 120 && (open == null || current !is WorldScreen)) {
+        if (worldFrames >= 120 && (open == null || open == "found" || current !is WorldScreen)) {
             if (current is WorldScreen) current.closeAllPopups()
             if (++settledFrames < 30) return // let the opened screen lay out and animate in
             capture()
@@ -87,6 +89,12 @@ class CaptureGame(
     }
 
     private var settledFrames = 0
+
+    /** Founds the capital where the first settler stands, as a player would on turn one. */
+    private fun foundCapital(world: WorldScreen) = world.gameInfo.getCurrentPlayerCivilization().let { civ ->
+        val settler = civ.units.getCivUnits().first { it.isCivilian() }
+        civ.addCity(settler.getTile().position, settler)
+    }
 
     private fun openScreen(world: WorldScreen) {
         val civ = world.gameInfo.getCurrentPlayerCivilization()
@@ -99,12 +107,7 @@ class CaptureGame(
             "victory" -> pushScreen { VictoryScreen(world) }
             "newgame" -> pushScreen { NewGameScreen() }
             "menu" -> replaceCurrentScreen { MainMenuScreen() }
-            "city" -> {
-                // found the capital where the first settler stands, then open it
-                val settler = civ.units.getCivUnits().first { it.isCivilian() }
-                val city = civ.addCity(settler.getTile().position, settler)
-                pushScreen { CityScreen(world.selectedGameView.getCityView(city)) }
-            }
+            "city" -> pushScreen { CityScreen(world.selectedGameView.getCityView(foundCapital(world))) }
             else -> error("unknown --open=$open")
         }
     }

@@ -111,11 +111,7 @@ class TechPolicyDiplomacyButtons(val worldScreen: WorldScreen) : Table(BaseScree
         if (game.gameInfo!!.isEspionageEnabled())
             updateEspionageButton()
         pack()
-        if (worldScreen.isPortrait()) {
-            // Portrait keeps tech and civ buttons in the bottom-left thumb corner
-            val safeArea = worldScreen.safeAreaBoundsInWorld()
-            setPosition(safeArea.x + 10f, safeArea.y + 10f)
-        } else setPosition(10f, worldScreen.topBar.y - height - 15f)
+        setPosition(10f, worldScreen.topBar.y - height - 15f) // portrait: WorldScreen.layoutPortraitHud moves it
         return result
     }
 

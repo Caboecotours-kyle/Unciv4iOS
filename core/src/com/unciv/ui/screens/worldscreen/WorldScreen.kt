@@ -534,13 +534,15 @@ class WorldScreen(
     }
 
     /**
-     * Portrait, one-handed layout (DESIGN.md): stats on top with unit info under them, tech and civ bottom-left,
+     * Portrait, one-handed layout (DESIGN.md): stats on top with unit info under them, tech and civ lower left,
      * Next bottom-right with the unit's actions stacked above it. Tile info and the minimap stay out of the map's way.
      */
     private fun layoutPortraitHud() {
         val safeArea = safeAreaBoundsInWorld()
         val right = safeArea.x + safeArea.width
         statusButtons.setPosition(right - statusButtons.width - 10f, safeArea.y + 10f)
+        // Next takes the bottom row; tech and civ sit one row up on the left, mirroring the unit actions on the right
+        techPolicyAndDiplomacy.setPosition(safeArea.x + 10f, statusButtons.y + statusButtons.height + 10f)
         unitActionsTable.x = right - unitActionsTable.width - 8f
         bottomUnitTable.setPosition(safeArea.x, topBar.y - bottomUnitTable.height)
         minimapWrapper.isVisible = false
