@@ -956,7 +956,11 @@ internal class CityPortraitView(private val screen: CityScreen, private val shee
                 // CityExpansionManager credits culture.toInt() each turn, so fractional income cannot start a countdown.
                 val culturePerTurn = city.getCurrentCityStats().culture.toInt()
                 val remaining = city.getCultureToNextTile() - city.getCultureStored()
-                val turns = if (culturePerTurn > 0) ceil(remaining.toDouble() / culturePerTurn).toInt().coerceAtLeast(1) else null
+                val turns = when {
+                    remaining <= culturePerTurn -> 1
+                    culturePerTurn > 0 -> ceil(remaining.toDouble() / culturePerTurn).toInt()
+                    else -> null
+                }
                 val explored = city.viewingCiv().hasExplored(next)
                 val tileLabel = if (explored) tileName(next) else "Unexplored tile"
                 val progress = "${city.getCultureStored()} / ${city.getCultureToNextTile()} culture"
