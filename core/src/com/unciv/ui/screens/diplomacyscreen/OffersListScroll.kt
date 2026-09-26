@@ -145,6 +145,8 @@ class OffersListScroll(
                     cell.row()
                 }
             }
+            // Expanded offer types have their own table; the next type starts a fresh row.
+            if (portraitTray && expanderTabs.containsKey(offerType)) trayColumn = 0
         }
         actor = table
     }

@@ -67,13 +67,10 @@ class OfferColumnsTable(
 
         if (screen.isPortrait()) {
             val pileWidth = screen.stage.width - 44f
-            add("Our trade offer".tr()).left().row()
-            add(ourOffersTable).width(pileWidth).height(116f).row()
-            add("[${theirCiv.civName}]'s trade offer".tr()).left().row()
-            add(theirOffersTable).width(pileWidth).height(116f).row()
-
             val tray = Table()
             val tabs = Table()
+            val ourPile = "Our trade offer".toTextButton()
+            val theirPile = "[${theirCiv.civName}]'s trade offer".toTextButton()
             val ourTab = "Our items".toTextButton()
             val theirTab = "[${theirCiv.civName}]'s items".toTextButton()
             var ourItemsActive = true
@@ -81,13 +78,23 @@ class OfferColumnsTable(
                 tray.clear()
                 tray.add(if (ourItemsActive) ourAvailableOffersTable else theirAvailableOffersTable)
                     .width(pileWidth).height(188f)
+                ourPile.color = if (ourItemsActive) com.badlogic.gdx.graphics.Color.GOLD
+                    else com.badlogic.gdx.graphics.Color.LIGHT_GRAY
+                theirPile.color = if (ourItemsActive) com.badlogic.gdx.graphics.Color.LIGHT_GRAY
+                    else com.badlogic.gdx.graphics.Color.GOLD
                 ourTab.color = if (ourItemsActive) com.badlogic.gdx.graphics.Color.WHITE
                     else com.badlogic.gdx.graphics.Color.LIGHT_GRAY
                 theirTab.color = if (ourItemsActive) com.badlogic.gdx.graphics.Color.LIGHT_GRAY
                     else com.badlogic.gdx.graphics.Color.WHITE
             }
+            ourPile.onClick { ourItemsActive = true; showTray() }
+            theirPile.onClick { ourItemsActive = false; showTray() }
             ourTab.onClick { ourItemsActive = true; showTray() }
             theirTab.onClick { ourItemsActive = false; showTray() }
+            add(ourPile).width(pileWidth).height(48f).row()
+            add(ourOffersTable).width(pileWidth).height(116f).row()
+            add(theirPile).width(pileWidth).height(48f).row()
+            add(theirOffersTable).width(pileWidth).height(116f).row()
             tabs.add(ourTab).width(pileWidth / 2).height(48f)
             tabs.add(theirTab).width(pileWidth / 2).height(48f)
             add(tabs).padTop(12f).row()
