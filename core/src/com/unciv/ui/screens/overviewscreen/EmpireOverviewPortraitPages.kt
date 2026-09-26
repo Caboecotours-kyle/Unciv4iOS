@@ -241,28 +241,38 @@ internal class CitiesPortraitPage(
 
         val info = Table()
         val nameLine = Table()
-        nameLine.add(city.name.toLabel(Color.WHITE, 17, hideIcons = true)).left()
+        nameLine.add(city.name.toLabel(Color.WHITE, 17, hideIcons = true).apply { wrap = true })
+            .width(195f).left()
         if (city.isCapital()) nameLine.add(ImageGetter.getImage("OtherIcons/Star").apply { color = YELLOW }).size(14f).padLeft(6f)
         CityOverviewTabColumn.Status.getEntryActor(city, 26f, overviewScreen)?.let { nameLine.add(it).padLeft(6f) }
         if (showReligion)
             CityOverviewTabColumn.Religion.getEntryActor(city, 26f, overviewScreen)?.let { nameLine.add(it).padLeft(6f) }
         info.add(nameLine).left().row()
 
-        val yieldLine = Table()
-        for (stat in yields) {
-            val value = CityOverviewTabColumn.valueOf(stat.name).getEntryValue(city)
-            yieldLine.add(iconValue(icons.image(stat.name), value.tr(), if (value < 0) NEG else INK2)).padRight(9f)
+        for (lineStats in yields.chunked(2)) {
+            val yieldLine = Table()
+            for (stat in lineStats) {
+                val value = CityOverviewTabColumn.valueOf(stat.name).getEntryValue(city)
+                yieldLine.add(iconValue(icons.image(stat.name), value.tr(), if (value < 0) NEG else INK2))
+                    .padRight(9f)
+            }
+            info.add(yieldLine).left().padTop(3f).row()
         }
-        info.add(yieldLine).left().padTop(3f).row()
 
         val construction = (CityOverviewTabColumn.Construction.getEntryActor(city, 0f, overviewScreen) as? Label)
             ?.text?.toString()?.split('\n')?.map { it.trim() }?.filter { it.isNotEmpty() }?.joinToString("  ")
-        if (!construction.isNullOrEmpty()) info.add(wrapped(construction, INK3, 14)).growX().padTop(2f).row()
+        if (!construction.isNullOrEmpty()) info.add(wrapped(construction, INK3, 14)).width(275f).padTop(2f).row()
         main.add(info).growX()
         row.add(main).growX()
 
         if (sortColumn !in shownInRow)
-            sortColumn.getEntryActor(city, 28f, overviewScreen)?.let { row.add(it).right().padLeft(8f) }
+            sortColumn.getEntryActor(city, 28f, overviewScreen)?.let {
+                row.row()
+                row.add(Table().apply {
+                    add(label(columnName(sortColumn), INK3, 13, hideIcons = true)).left().expandX()
+                    add(it).right()
+                }).growX().padTop(4f)
+            }
         row.row()
 
         val strip = mutableListOf<Actor>()
@@ -277,18 +287,20 @@ internal class CitiesPortraitPage(
                 overviewScreen.select(EmpireOverviewCategories.Units, unit.id.toString())
             }
         }
-        if (strip.isNotEmpty()) row.add(chipRow(strip)).colspan(2).growX().padTop(6f)
+        if (strip.isNotEmpty()) row.add(chipRow(strip)).growX().padTop(6f)
         return row
     }
 
     private fun totals(cities: List<City>, sortColumn: ISortableGridContentProvider<City, EmpireOverviewScreen>) = card().apply {
-        val line = Table()
-        line.add(label("Total", INK2, 15)).left().expandX()
-        for (stat in yields) {
-            val sum = cities.sumOf { CityOverviewTabColumn.valueOf(stat.name).getEntryValue(it) }
-            line.add(iconValue(icons.image(stat.name), sum.tr(), colorOf(sum))).padLeft(8f)
+        add(label("Total", INK2, 15)).left().row()
+        for (lineStats in yields.chunked(2)) {
+            val line = Table()
+            for (stat in lineStats) {
+                val sum = cities.sumOf { CityOverviewTabColumn.valueOf(stat.name).getEntryValue(it) }
+                line.add(iconValue(icons.image(stat.name), sum.tr(), colorOf(sum))).padRight(12f)
+            }
+            add(line).left().padTop(4f).row()
         }
-        add(line).growX().row()
         if (sortColumn !in shownInRow && Stat.safeValueOf((sortColumn as? CityOverviewTabColumn)?.name ?: "") !in yields) {
             val total = sortColumn.getTotalsActor(cities) ?: return@apply
             val extra = Table()
@@ -365,15 +377,21 @@ internal class StatsPortraitPage(
         val statMap = viewingPlayer.getStatMapForNextTurn()
         val happiness = viewingPlayer.getHappinessBreakdown()
 
-        val summary = Table()
+        val summaryValues = mutableListOf<Actor>()
         val shown = listOfNotNull(Stat.Gold, Stat.Science, Stat.Culture, if (isReligionEnabled) Stat.Faith else null)
         for (stat in shown) {
             val total = statMap.values.sumOf { it[stat].toDouble() }.roundToInt()
-            summary.add(iconValue(icons.image(stat.name), signed(total), colorOf(total), 20f)).expandX()
+            summaryValues += iconValue(icons.image(stat.name), signed(total), colorOf(total), 20f)
         }
         val happy = happiness.values.sum().roundToInt()
-        summary.add(iconValue(icons.image("Happiness"), happy.tr(), colorOf(happy), 20f)).expandX()
-        summaryBody.add(card().apply { add(summary).growX().minHeight(36f) }).growX().row()
+        summaryValues += iconValue(icons.image("Happiness"), happy.tr(), colorOf(happy), 20f)
+        summaryBody.add(card().apply {
+            for (lineValues in summaryValues.chunked(3)) {
+                val line = Table()
+                for (value in lineValues) line.add(value).expandX().left()
+                add(line).growX().minHeight(36f).row()
+            }
+        }).growX().row()
         summaryBody.add(breakdown(icons.image("Happiness"), "Happiness", happiness.map { it.key to it.value })).growX().padTop(10f).row()
         if (unhappinessUniques.isNotEmpty()) summaryBody.add(unhappinessCard()).growX().padTop(10f).row()
 
@@ -390,7 +408,7 @@ internal class StatsPortraitPage(
 
     private fun cardHead(icon: Actor, title: String) = Table().apply {
         add(icon).size(22f).padRight(8f)
-        add(label(title, Color.WHITE, 18)).left().expandX()
+        add(label(title, Color.WHITE, 18, hideIcons = true)).left().expandX()
     }
 
     private fun statCard(stat: Stat, statMap: com.unciv.models.stats.StatMap) =
@@ -574,7 +592,24 @@ internal class UnitsPortraitPage(
                 blink(row)
             }
         }
+        if (units.isNotEmpty()) add(unitTotals(units)).growX().padTop(10f).row()
         pendingSelection = null
+    }
+
+    private fun unitTotals(units: List<MapUnitView>) = card().apply {
+        val promotable = units.count { it.getPromotions().canBePromoted() }
+        val upgradeable = units.count { UnitActionsUpgrade.getUpgradeActionAnywhere(it.getUnit()).any() }
+        val hurt = units.count { it.unitHealth < 100 }
+        val xp = units.sumOf { it.getPromotions().XP }
+        val counts = Table()
+        counts.add(label("Total [${units.size}]", Color.WHITE, 16)).left().expandX()
+        counts.add(iconValue(ImageGetter.getImage("OtherIcons/Star"), promotable.tr(), YELLOW)).padLeft(10f)
+        counts.add(iconValue(ImageGetter.getImage("OtherIcons/Increase"), upgradeable.tr(), INK2)).padLeft(10f)
+        add(counts).growX().row()
+        val details = Table()
+        details.add(label("[$hurt] hurt", if (hurt > 0) NEG else INK2, 14)).left().expandX()
+        details.add(label("XP [$xp]", INK2, 14)).right()
+        add(details).growX().padTop(4f)
     }
 
     private fun supplyCard() = card().apply {
@@ -625,19 +660,24 @@ internal class UnitsPortraitPage(
         val idle = unit.isIdle()
         main.add(UnitIconGroup(unit, 40f).apply { if (!idle) color.a = .5f }).size(40f).padRight(10f)
         val info = Table()
-        info.add(unit.displayName().toLabel(if (idle) Color.WHITE else INK2, 17, hideIcons = true)).left().row()
-        val numbers = Table()
-        UnitOverviewTabColumn.Strength.getEntryString(unit)?.let { numbers.add(iconValue(icons.image("Strength"), it)).padRight(9f) }
-        UnitOverviewTabColumn.RangedStrength.getEntryString(unit)?.let { numbers.add(iconValue(icons.image("Ranged"), it)).padRight(9f) }
-        numbers.add(iconValue(icons.image("Movement"), unit.getMovementString())).padRight(9f)
-        UnitOverviewTabColumn.Health.getEntryString(unit)?.let { numbers.add(label("${Fonts.health} $it", NEG, 14)).padRight(9f) }
-        UnitOverviewTabColumn.XP.getEntryString(unit)?.takeIf { it.isNotEmpty() }?.let { numbers.add(label("XP $it", INK2, 14)) }
-        info.add(numbers).left().padTop(3f).row()
-        UnitOverviewTabColumn.Action.getEntryString(unit)?.let { info.add(wrapped(it, INK3, 14)).growX().padTop(2f).row() }
-        main.add(info).growX()
+        info.add(unit.displayName().toLabel(if (idle) Color.WHITE else INK2, 17, hideIcons = true).apply { wrap = true })
+            .width(235f).left().row()
+        val numbers = mutableListOf<Actor>()
+        UnitOverviewTabColumn.Strength.getEntryString(unit)?.let { numbers += iconValue(icons.image("Strength"), it) }
+        UnitOverviewTabColumn.RangedStrength.getEntryString(unit)?.let { numbers += iconValue(icons.image("Ranged"), it) }
+        numbers += iconValue(icons.image("Movement"), unit.getMovementString())
+        UnitOverviewTabColumn.Health.getEntryString(unit)?.let { numbers += label("${Fonts.health} $it", NEG, 14) }
+        UnitOverviewTabColumn.XP.getEntryString(unit)?.takeIf { it.isNotEmpty() }?.let { numbers += label("XP $it", INK2, 14) }
+        for (lineValues in numbers.chunked(2)) {
+            val line = Table()
+            for (value in lineValues) line.add(value).padRight(12f)
+            info.add(line).left().padTop(3f).row()
+        }
+        UnitOverviewTabColumn.Action.getEntryString(unit)?.let { info.add(wrapped(it, INK3, 14)).width(235f).padTop(2f).row() }
+        main.add(info).width(235f)
         row.add(main).growX()
 
-        val rename = ImageGetter.getImage("OtherIcons/Pencil").apply { color = INK2 }
+        val rename = ImageGetter.getImage("OtherIcons/Pencil").apply { color = INK2; setSize(18f, 18f) }
             .surroundWithCircle(40f, resizeActor = false, color = CHIP)
         row.add(target(rename) { UnitRenamePopup(overviewScreen, unit.getUnit()) { afterChange(unit) } }).size(48f).padLeft(6f)
         row.row()

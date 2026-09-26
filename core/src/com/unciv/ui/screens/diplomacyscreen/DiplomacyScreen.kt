@@ -221,10 +221,21 @@ class DiplomacyScreen(
         header.touchable = Touchable.enabled
         sheet.addListener(SwipeDownToClose(sheet, header) { game.popScreen() })
         if (knownCivs.isEmpty()) {
-            val guidance = "Explore the map to meet other civilizations and city-states.".toLabel(ink2, 17, Align.center)
-            guidance.wrap = true
-            sheet.add(guidance).width(portraitWidth - 64f).expand().top().padTop(40f)
-        } else sheet.add(leftSideScroll).grow()
+            val guidance = Table().apply {
+                background = skinStrings.getUiBackground("DiplomacyScreen/PortraitEmpty",
+                    skinStrings.roundedEdgeRectangleShape, Color.valueOf("1c3249"))
+                pad(16f)
+                val icon = ImageGetter.getImage("OtherIcons/Diplomacy")
+                add(icon).size(48f).padRight(14f)
+                val copy = Table()
+                copy.add("Meet another civilization!".toLabel(Color.WHITE, 16, hideIcons = true)).left().row()
+                copy.add("Explore the map until you encounter another civilization!".toLabel(ink2, 14, hideIcons = true)
+                    .apply { wrap = true }).width(portraitWidth - 124f).left().padTop(4f)
+                add(copy).growX()
+            }
+            sheet.add(guidance).width(portraitWidth - 28f).padTop(10f).row()
+        }
+        sheet.add(leftSideScroll).grow()
         portraitHolder.add(sheet).grow().padTop(sheetTopGap)
     }
 
@@ -236,7 +247,7 @@ class DiplomacyScreen(
             if (majors > 0) "$majors " + (if (majors == 1) "civilization" else "civilizations") else null,
             if (cityStates > 0) "$cityStates " + (if (cityStates == 1) "city-state" else "city-states") else null
         )
-        val subtitle = if (met.isEmpty()) "No civilizations met yet" else met.joinToString(" and ") + " met"
+        val subtitle = if (met.isEmpty()) "Nobody met yet" else met.joinToString(" and ") + " met"
         val titles = Table()
         titles.add("Diplomacy".toLabel(fontSize = 23)).left().row()
         titles.add(subtitle.toLabel(ink2, 14)).left().padTop(1f)
@@ -280,6 +291,25 @@ class DiplomacyScreen(
     internal fun updateLeftSideTable(selectCiv: Civilization?) {
         leftSideTable.clear()
         leftSideTable.add().padBottom(closeButtonPad).row()  // no default pad, and make distance of first civ to top same as for the close button
+
+        if (isPortrait() && !viewingCiv.isSpectator()) {
+            leftSideTable.add("Everyone you have met".toLabel(ink2, 14, hideIcons = true))
+                .left().pad(8f, 16f, 6f, 16f).row()
+            val ownRow = Table().apply {
+                background = skinStrings.getUiBackground("DiplomacyScreen/PortraitOwnRow",
+                    skinStrings.roundedEdgeRectangleShape, Color.valueOf("1c3249"))
+                pad(10f)
+                add(ImageGetter.getNationPortrait(viewingCiv.nation, 46f)).size(46f).padRight(12f)
+                val text = Table()
+                text.add(viewingCiv.nation.leaderName.toLabel(Color.WHITE, 17, hideIcons = true)
+                    .apply { wrap = true }).width(portraitWidth - 116f).left().row()
+                text.add("${viewingCiv.civName}, you  ·  Score ${viewingCiv.calculateTotalScore().toInt()}"
+                    .toLabel(ink2, 14, hideIcons = true).apply { wrap = true })
+                    .width(portraitWidth - 116f).left().padTop(2f)
+                add(text).growX()
+            }
+            leftSideTable.add(ownRow).growX().pad(0f, 14f, 8f, 14f).row()
+        }
 
         var selectCivY = 0f
 

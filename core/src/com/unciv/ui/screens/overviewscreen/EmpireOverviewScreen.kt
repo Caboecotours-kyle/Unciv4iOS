@@ -1,12 +1,16 @@
 package com.unciv.ui.screens.overviewscreen
 
 import com.badlogic.gdx.graphics.Color
+import com.badlogic.gdx.scenes.scene2d.Touchable
+import com.badlogic.gdx.scenes.scene2d.ui.Table
 import com.unciv.Constants
 import com.unciv.GUI
 import com.unciv.logic.civilization.Notification
 import com.unciv.ui.components.extensions.getCloseButton
+import com.unciv.ui.components.input.onActivation
 import com.unciv.ui.components.input.KeyboardBinding
 import com.unciv.ui.components.widgets.TabbedPager
+import com.unciv.ui.components.widgets.AutoScrollPane
 import com.unciv.ui.images.ImageGetter
 import com.unciv.ui.images.PortraitStatIcons
 import com.unciv.ui.screens.basescreen.BaseScreen
@@ -16,6 +20,7 @@ import com.unciv.ui.screens.pickerscreens.PortraitMapBackdrop
 import com.unciv.ui.screens.pickerscreens.portraitChromeGaps
 import com.unciv.ui.screens.overviewscreen.EmpireOverviewCategories.EmpireOverviewTabState
 import com.unciv.view.CivView
+import kotlin.math.roundToInt
 
 class EmpireOverviewScreen(
     private var viewingPlayer: CivView,
@@ -40,6 +45,7 @@ class EmpireOverviewScreen(
     internal var portraitSheet: EmpireOverviewPortraitSheet? = null
         private set
     private var portraitBackdrop: PortraitMapBackdrop? = null
+    private var portraitStatStrip: Table? = null
     internal val portraitStatIcons = PortraitStatIcons()
     private val portraitStates = HashMap<EmpireOverviewCategories, EmpireOverviewTabState>()
 
@@ -113,6 +119,16 @@ class EmpireOverviewScreen(
         val width = OverviewPortraitStyle.WIDTH
         val scale = safe.width / width
         val (topGap, bottomGap) = portraitChromeGaps(width)
+        portraitStatStrip = Table().apply {
+            isTransform = true
+            background = OverviewPortraitStyle.bg(Color.valueOf("101f2fe6"))
+            pad(5f)
+            setBounds(safe.x + 10f * scale,
+                safe.y + safe.height - (topGap + 58f) * scale, width - 20f, 58f)
+            setScale(scale)
+            this@EmpireOverviewScreen.stage.addActor(this)
+        }
+        refreshPortraitStatStrip()
         // The sheet runs under the home indicator; its rail keeps the targets above it
         val bottomInset = (safe.y - canvas.y).coerceAtLeast(0f) / scale
         val top = safe.y + safe.height - (topGap + 64f) * scale
@@ -132,6 +148,42 @@ class EmpireOverviewScreen(
         }
         if (category == selectCategory && selection.isNotEmpty()) select(category, selection)
         else sheet.show(category)
+    }
+
+    /** The world HUD is not in this screen's stage, so keep its visible stat values above the sheet. */
+    internal fun refreshPortraitStatStrip() {
+        val strip = portraitStatStrip ?: return
+        val civ = viewingPlayer.getCiv()
+        val stats = civ.stats.statsForNextTurn
+        strip.clearChildren()
+        val values = Table()
+        fun signed(value: Int) = if (value >= 0) "+$value" else value.toString()
+        fun stat(name: String, value: String, secondary: String? = null, category: EmpireOverviewCategories? = null) {
+            val cell = Table()
+            cell.add(portraitStatIcons.image(name)).size(18f).padRight(3f)
+            cell.add(OverviewPortraitStyle.label(value, size = 16))
+            if (secondary != null)
+                cell.add(OverviewPortraitStyle.label(secondary, OverviewPortraitStyle.INK2, 12)).padLeft(2f)
+            if (category != null && portraitStates[category] == EmpireOverviewTabState.Normal) {
+                cell.touchable = Touchable.enabled
+                cell.onActivation { select(category, "") }
+            }
+            values.add(cell).minWidth(48f).height(48f).expandX().fillX()
+        }
+        stat("Gold", civ.gold.toString(), signed(stats.gold.roundToInt()), EmpireOverviewCategories.Stats)
+        stat("Science", signed(stats.science.roundToInt()))
+        stat("Culture", civ.policies.storedCulture.toString(), "/${civ.policies.getCultureNeededForNextPolicy()}")
+        stat("Happiness", civ.getHappiness().toString(), category = EmpireOverviewCategories.Resources)
+        if (civ.gameInfo.isReligionEnabled()) stat("Faith", civ.religionManager.storedFaith.toString())
+        val turn = Table()
+        turn.add(OverviewPortraitStyle.label("T${civ.gameInfo.turns}", size = 15))
+        turn.add(ImageGetter.getImage("OtherIcons/MenuIcon").apply { color = OverviewPortraitStyle.INK2 })
+            .size(16f).padLeft(4f)
+        values.add(turn).minWidth(54f).height(48f)
+        strip.add(AutoScrollPane(values).apply {
+            setScrollingDisabled(false, true)
+            setOverscroll(false, false)
+        }).grow()
     }
 
     internal fun getPortraitPage(category: EmpireOverviewCategories): PortraitOverviewPage {
@@ -197,6 +249,7 @@ class EmpireOverviewScreen(
             // Portrait pages rebuild from the model, e.g. after a rename, promotion or a visit to a city
             val category = sheet.active ?: return
             (pageObjects[category] as? PortraitOverviewPage)?.refresh()
+            refreshPortraitStatStrip()
             return
         }
         val tabbedPager = tabbedPager ?: return

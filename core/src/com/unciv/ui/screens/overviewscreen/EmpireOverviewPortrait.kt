@@ -46,8 +46,8 @@ internal object OverviewPortraitStyle {
     fun bg(color: Color): Drawable = BaseScreen.skinStrings.getUiBackground(
         "", BaseScreen.skinStrings.roundedEdgeRectangleShape, color)
 
-    fun label(text: String, color: Color = Color.WHITE, size: Int = 16, align: Int = Align.left) =
-        text.toLabel(color, size, align)
+    fun label(text: String, color: Color = Color.WHITE, size: Int = 16, align: Int = Align.left, hideIcons: Boolean = false) =
+        text.toLabel(color, size, align, hideIcons)
 
     fun wrapped(text: String, color: Color = Color.WHITE, size: Int = 16, align: Int = Align.left) =
         label(text, color, size, align).apply { wrap = true }
@@ -85,7 +85,7 @@ internal object OverviewPortraitStyle {
         touchable = Touchable.enabled
         pad(0f, 13f, 0f, 13f)
         if (icon != null) add(icon).size(18f).padRight(6f)
-        add(label(text, if (on) NAVY else INK2, 14))
+        add(label(text, if (on) NAVY else INK2, 14, hideIcons = icon != null))
         onActivation { action() }
     }
 
@@ -265,6 +265,7 @@ internal class EmpireOverviewPortraitSheet(
         content.add(page).width(OverviewPortraitStyle.CONTENT).pad(4f, OverviewPortraitStyle.PAD, 40f, OverviewPortraitStyle.PAD).top()
         page.update()
         updateHeader(category, page)
+        screen.refreshPortraitStatStrip()
         restoreScroll(page.scrollMemory)
         keepRailButtonVisible(category)
     }
@@ -290,6 +291,7 @@ internal class EmpireOverviewPortraitSheet(
         val y = scroll.scrollY
         page.update()
         updateHeader(category, page)
+        screen.refreshPortraitStatStrip()
         restoreScroll(y)
     }
 
