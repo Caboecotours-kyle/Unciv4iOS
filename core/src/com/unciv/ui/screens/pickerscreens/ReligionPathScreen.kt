@@ -205,15 +205,23 @@ class ReligionPathScreen(
 
     private fun step(title: String, note: String, icon: String, done: Boolean, available: Boolean,
                      progress: Pair<Int, Int>?, width: Float, action: () -> Unit): Table {
-        val row = Table().top().left().apply { touchable = Touchable.enabled; padBottom(18f) }
-        val disc = Table().apply { background = rounded(if (done) DONE else if (available) Color.WHITE else LOCKED); touchable = Touchable.disabled }
+        val row = object : Table() {
+            override fun drawBackground(batch: Batch, parentAlpha: Float, x: Float, y: Float) {
+                super.drawBackground(batch, parentAlpha, x, y)
+                if (title != "Enhance") solid(if (done) DONE else LINE).draw(batch, x + 24f, y - 4f, 4f, (height - 48f).coerceAtLeast(0f))
+            }
+        }.top().left().apply { touchable = Touchable.enabled; padBottom(18f) }
+        val disc = Table().apply {
+            background = ImageGetter.getCircleDrawable().tint(if (done) DONE else if (available) Color.WHITE else LOCKED)
+            touchable = Touchable.disabled
+        }
         val picture = ImageGetter.getImage(icon).apply { color = if (done) Color.WHITE else if (available) SHEET else INK3 }
         disc.add(picture).size(30f)
         row.add(disc).size(52f).top().padRight(12f)
         val right = Table().left()
         right.add(title.toLabel(if (available || done) Color.WHITE else INK2, 18)).left().row()
         right.add(note.toLabel(INK2, 14)).left().padTop(4f).row()
-        if (progress != null && progress.second > 0) right.add(progressBar(progress.first, progress.second, width - 96f, FAITH)).height(9f).padTop(9f).left()
+        if (progress != null && progress.second > 0) right.add(progressBar(progress.first, progress.second, width - 96f, FAITH)).width(width - 96f).height(9f).padTop(9f).left()
         row.add(right).growX().top().row()
         row.onClick(action)
         return row
@@ -237,7 +245,7 @@ class ReligionPathScreen(
         }
         val actionable = state == ReligionState.FoundingReligion || state == ReligionState.EnhancingReligion ||
             manager.canFoundOrExpandPantheon() || prophetForFounding() != null || prophetForEnhancing() != null
-        val action = button(actionText, if (actionable) YELLOW_INK else INK2, if (actionable) YELLOW else CHIP, width - 114f, 60f, 17)
+        val action = button(actionText, if (actionable) YELLOW else CHIP, if (actionable) YELLOW_INK else INK2, width - 114f, 60f, 17)
         if (actionable) action.onClick {
             when {
                 state == ReligionState.FoundingReligion -> openBeliefPicker(true)
@@ -529,7 +537,7 @@ class ReligionPathScreen(
     private fun focusOn(tile: com.unciv.logic.map.HexCoord) { map?.setCenterPosition(tile, immediately = true, selectUnit = false) }
 
     private fun progressBar(value: Int, goal: Int, width: Float, color: Color): Table {
-        val bar = Table().apply { background = rounded(CHIP) }
+        val bar = Table().apply { background = solid(CHIP) }
         bar.add(Image(solid(color))).width(width * (value.toFloat() / goal.coerceAtLeast(1)).coerceIn(0f, 1f)).height(9f).left()
         return bar
     }

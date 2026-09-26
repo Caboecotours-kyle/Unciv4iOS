@@ -24,6 +24,7 @@ import com.unciv.ui.images.ImageGetter
 import com.unciv.ui.popups.Popup
 import com.unciv.ui.screens.diplomacyscreen.DiplomacyScreen
 import com.unciv.ui.screens.overviewscreen.EmpireOverviewCategories
+import com.unciv.ui.screens.pickerscreens.ReligionPathScreen
 import com.unciv.ui.screens.pickerscreens.PolicyPickerScreen
 import com.unciv.ui.screens.pickerscreens.TechPickerScreen
 import com.unciv.ui.screens.worldscreen.bottombar.BattleTable
@@ -159,7 +160,7 @@ internal class WorldPortraitHud(
         }
         stat("Happiness", civ.getHappiness().toString()) { world.openEmpireOverview(EmpireOverviewCategories.Resources) }
         if (world.gameInfo.isReligionEnabled())
-            stat("Faith", civ.religionManager.storedFaith.toString()) { world.openEmpireOverview(EmpireOverviewCategories.Religion) }
+            stat("Faith", civ.religionManager.storedFaith.toString()) { world.game.pushScreen { ReligionPathScreen(civ, world) } }
         val menu = Table().apply {
             touchable = Touchable.enabled
             add("T${world.gameInfo.turns}".toLabel(Color.WHITE, 15))
