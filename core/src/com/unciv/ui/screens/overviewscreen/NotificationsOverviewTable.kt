@@ -59,7 +59,7 @@ class NotificationsOverviewTable(
     private val expanders = mutableMapOf<Int, ExpanderTab>()
     private val selectItems = mutableListOf<SelectItem>()
     private var selectWidth = 0f
-    private val selectBox: SelectBox<SelectItem>
+    private val selectBox: SelectBox<SelectItem>?
 
     companion object {
         private const val iconSize = 20f
@@ -79,7 +79,7 @@ class NotificationsOverviewTable(
         persistableData.lastCount = currentNotificationCount
         persistableData.lastTurn = gameInfo.turns
 
-        selectBox = getSelectBox()
+        selectBox = if (portrait) null else getSelectBox()
 
         add().row()
 
@@ -91,26 +91,26 @@ class NotificationsOverviewTable(
             pager.setPageScrollY(index, persistableData.scrollY!!)
         super.activated(index, caption, pager)
         if (portrait) return
-        selectBox.remove()
-        selectBox.setPosition(stageWidth - 10f, overviewScreen.centerAreaHeight, Align.topRight)
-        selectBox.color.a = 0f
-        overviewScreen.stage.addActor(selectBox)
+        val box = selectBox ?: return
+        box.remove()
+        box.setPosition(stageWidth - 10f, overviewScreen.centerAreaHeight, Align.topRight)
+        box.color.a = 0f
+        overviewScreen.stage.addActor(box)
         // `activated` can be called too soon, and `selectBox` ends up at the bottom of z-order
         Concurrency.run {
             delay(10.milliseconds)
             launchOnGLThread {
-                selectBox.zIndex = Int.MAX_VALUE
-                selectBox.addAction(Actions.fadeIn(0.2f))
+                box.zIndex = Int.MAX_VALUE
+                box.addAction(Actions.fadeIn(0.2f))
             }
         }
     }
 
     override fun deactivated(index: Int, caption: String, pager: TabbedPager) {
-        if (portrait) return
         persistableData.scrollY = pager.getPageScrollY(index)
         persistableData.closedTurns.clear()
         expanders.filterNot { it.value.isOpen }.mapTo(persistableData.closedTurns) { it.key }
-        selectBox.remove()
+        selectBox?.remove()
     }
 
     private fun generateNotificationTable() {
@@ -122,13 +122,19 @@ class NotificationsOverviewTable(
         val notifications = viewingPlayer.getCiv().notifications
         val width = stageWidth - 40f
         val header = Table()
-        header.add("This turn".toLabel(fontSize = 28)).left().expandX()
-        header.add("${notifications.size} events".toLabel()).right()
+        val title = "This turn".toLabel(fontSize = 28)
+        val count = "${notifications.size} events".toLabel()
+        header.add(title).left().expandX()
+        header.add(count).right()
         add(header).width(width).row()
 
         val rows = Table()
         fun showCategory(selected: NotificationCategory?) {
             rows.clear()
+            if (notifications.isEmpty()) {
+                rows.add("No events this turn".toLabel()).width(width).padTop(24f).row()
+                return
+            }
             for (category in NotificationCategory.entries) {
                 if (selected != null && category != selected) continue
                 val matches = notifications.withIndex().filter { it.value.category == category }
@@ -142,39 +148,81 @@ class NotificationsOverviewTable(
         val filters = Table()
         val all = "All".toTextButton()
         all.onClick { showCategory(null) }
-        filters.add(all).minHeight(48f).padRight(5f)
+        filters.add(all).minSize(48f, 48f).padRight(5f)
         for (category in NotificationCategory.entries) {
             if (notifications.none { it.category == category }) continue
             val chip = category.name.toTextButton()
             chip.onClick { showCategory(category) }
             filters.add(chip).minHeight(48f).padRight(5f)
         }
-        add(ScrollPane(filters)).width(width).height(54f).row()
+        val nowContent = Table()
+        nowContent.add(ScrollPane(filters)).width(width).height(54f).row()
         showCategory(null)
-        add(rows).width(width).row()
+        nowContent.add(rows).width(width).row()
+
+        val earlierContent = Table()
+        if (notificationLog.isEmpty())
+            earlierContent.add("No earlier notifications".toLabel()).width(width).padTop(24f).row()
+        val content = Table()
+        val now = "Now".toTextButton()
+        val earlier = "Earlier".toTextButton()
+        var historyLoaded = false
+        fun showNow() {
+            title.setText("This turn")
+            count.setText("${notifications.size} events")
+            now.color = Color.WHITE
+            earlier.color = Color.LIGHT_GRAY
+            content.clear()
+            content.add(nowContent).width(width).row()
+        }
+        fun showEarlier() {
+            title.setText("Earlier")
+            count.setText("")
+            now.color = Color.LIGHT_GRAY
+            earlier.color = Color.WHITE
+            content.clear()
+            content.add(earlierContent).width(width).row()
+            if (!historyLoaded) {
+                historyLoaded = true
+                addNotificationLogTurnsAsync(notificationLog.asReversed().iterator(), earlierContent)
+            }
+        }
+        now.onClick { showNow() }
+        earlier.onClick { showEarlier() }
+        val modes = Table()
+        modes.add(now).width(width / 2).height(48f)
+        modes.add(earlier).width(width / 2).height(48f)
+        add(modes).width(width).row()
+        add(content).width(width).row()
+        showNow()
     }
 
     /** Adds one past-turn table per call, each scheduled only once the previous one is done -
      *  building all of them up front on the same frame caused ANRs.
      *  If we still see ANRs from notifications overview we may need to do a category at a time
      *  which will be annoying :( */
-    private fun addNotificationLogTurnsAsync(iterator: Iterator<Civilization.NotificationsLog>) {
+    private fun addNotificationLogTurnsAsync(
+        iterator: Iterator<Civilization.NotificationsLog>, target: Table = this
+    ) {
         if (!iterator.hasNext()) return
         val turnNotifications = iterator.next()
         Concurrency.runOnGLThread {
-            add(oneTurnTable(turnNotifications.turn, turnNotifications.notifications, doHighlight = false)).row()
-            refreshSelectBoxItems()
+            val cell = target.add(oneTurnTable(turnNotifications.turn, turnNotifications.notifications, doHighlight = false))
+            if (portrait) cell.width(stageWidth - 40f)
+            cell.row()
+            if (!portrait) refreshSelectBoxItems()
             // Lwjgl3Application loop() shows that adding runnables from within a runnable,
             // causes it to run on the next loop - e.g. after render and handling input
             // And if inputs are handled, no ANR :)
-            addNotificationLogTurnsAsync(iterator) 
+            addNotificationLogTurnsAsync(iterator, target)
         }
     }
 
     private fun refreshSelectBoxItems() {
-        selectBox.items = selectItems.toGdxArray()
+        val box = selectBox ?: return
+        box.items = selectItems.toGdxArray()
         val bgWidth = skin[SelectBox.SelectBoxStyle::class.java].background.run { leftWidth + rightWidth }
-        selectBox.width = selectWidth + bgWidth + 10f
+        box.width = selectWidth + bgWidth + 10f
     }
 
     private fun oneTurnTable(turn: Int, notifications: List<Notification>, doHighlight: Boolean): Table {
@@ -219,7 +267,7 @@ class NotificationsOverviewTable(
 
     private fun getCategoryTable(category: Notification.NotificationCategory) = Table().apply {
         val categoryLabel = category.name.toLabel()
-        val lineLength = (notificationWidth - 6f - categoryLabel.prefWidth) / 2
+        val lineLength = ((if (portrait) stageWidth - 40f else notificationWidth) - 6f - categoryLabel.prefWidth) / 2
         add(ImageGetter.getWhiteDot()).minHeight(2f).width(lineLength)
         add(categoryLabel).pad(3f)
         add(ImageGetter.getWhiteDot()).minHeight(2f).width(lineLength)
