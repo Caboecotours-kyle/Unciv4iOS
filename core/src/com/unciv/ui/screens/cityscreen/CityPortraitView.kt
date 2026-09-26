@@ -9,10 +9,12 @@ import com.badlogic.gdx.scenes.scene2d.InputListener
 import com.badlogic.gdx.scenes.scene2d.Touchable
 import com.badlogic.gdx.scenes.scene2d.actions.Actions
 import com.badlogic.gdx.scenes.scene2d.ui.Image
+import com.badlogic.gdx.scenes.scene2d.ui.Label
 import com.badlogic.gdx.scenes.scene2d.ui.Table
 import com.badlogic.gdx.scenes.scene2d.ui.WidgetGroup
 import com.badlogic.gdx.scenes.scene2d.utils.Drawable
 import com.badlogic.gdx.scenes.scene2d.utils.Layout
+import com.badlogic.gdx.utils.Align
 import com.unciv.Constants
 import com.unciv.models.ruleset.Building
 import com.unciv.models.ruleset.IConstruction
@@ -42,6 +44,7 @@ import com.unciv.ui.screens.basescreen.BaseScreen
 import com.unciv.ui.screens.pickerscreens.CityRenamePopup
 import com.unciv.view.TileView
 import kotlin.math.abs
+import kotlin.math.ceil
 import kotlin.math.roundToInt
 
 /** The five city jobs in a map-backed sheet. The existing city widgets remain available as drill-ins. */
@@ -85,7 +88,8 @@ internal class CityPortraitView(private val screen: CityScreen, private val shee
     internal class Constructions(val categories: List<Pair<String, List<ConstructionRow>>>, val buyable: List<BuyRow>)
     /** What the sheet shows beyond the CityScreen selection, handed to the re-created screen on resize */
     internal class State(val row: String?, val queueEntry: Int, val detailOpen: Boolean, val cityDetailsOpen: Boolean,
-                         val tileDetailOpen: Boolean, val scrollY: Float, val constructions: Constructions?)
+                         val tileDetailOpen: Boolean, val scrollY: Float, val constructions: Constructions?, val collapsed: Boolean,
+                         val peekScrollY: Float, val peekTab: Tab)
 
     private val city = screen.cityView
     private val contentWidth = sheetWidth - 24f
@@ -106,6 +110,12 @@ internal class CityPortraitView(private val screen: CityScreen, private val shee
     private var detailOpen = false
     private var cityDetailsOpen = false
     private var tileDetailOpen = false
+    private var collapsed = false
+    private var expandedY = 0f
+    private var expandedYInitialized = false
+    private val peekHeight = 64f
+    private var peekScrollY = 0f
+    private var peekTab = selectedTab
     /** The list row whose actions are expanded; keys carry the construction name so a changed queue never matches */
     private var selectedRow: String? = null
     /** Latest background gather; null until the first one lands */
@@ -113,6 +123,7 @@ internal class CityPortraitView(private val screen: CityScreen, private val shee
 
     init {
         background = bg(NAVY)
+        touchable = Touchable.enabled
         defaults().minWidth(0f).width(sheetWidth)
         constructionDetails.background = bg(CARD)
         tileDetails.background = bg(CARD)
@@ -128,11 +139,11 @@ internal class CityPortraitView(private val screen: CityScreen, private val shee
         add(yields).growX().row()
         add(scroll).grow().prefHeight(0f).row()
         add(tabs).growX().height(72f)
-        addListener(SwipeDownToClose())
+        addListener(SwipeCitySheet())
     }
 
-    /** Dragging the handle or heading down moves the sheet with the finger; past [threshold] it closes like ×. */
-    private inner class SwipeDownToClose : InputListener() {
+    /** A header swipe reveals the map; the same sheet, tab and selection remain ready below it. */
+    private inner class SwipeCitySheet : InputListener() {
         private val slop = 10f
         private val threshold = 80f
         private var startX = 0f
@@ -142,8 +153,13 @@ internal class CityPortraitView(private val screen: CityScreen, private val shee
         private var dragging = false
 
         override fun touchDown(event: InputEvent, x: Float, y: Float, pointer: Int, button: Int): Boolean {
-            if (tracking) { restore(); return false }
-            if (pointer != 0 || button != 0 || y < heading.y || hasActions()) return false
+            if (tracking) { snapBack(); return false }
+            if (pointer != 0 || button != 0 || y < heading.y) return false
+            if (!expandedYInitialized) {
+                expandedY = this@CityPortraitView.y
+                expandedYInitialized = true
+            }
+            clearActions()
             startX = event.stageX
             startY = event.stageY
             restY = this@CityPortraitView.y
@@ -154,37 +170,71 @@ internal class CityPortraitView(private val screen: CityScreen, private val shee
 
         override fun touchDragged(event: InputEvent, x: Float, y: Float, pointer: Int) {
             if (!tracking || pointer != 0) return
-            if (Gdx.input.isTouched(1)) { restore(); return }
+            if (Gdx.input.isTouched(1)) { snapBack(); return }
             val dx = event.stageX - startX
-            val down = startY - event.stageY
+            val travel = (if (collapsed) event.stageY - startY else startY - event.stageY)
             if (!dragging) {
                 val slopStage = slop * scaleY
-                if (abs(dx) > slopStage && abs(dx) >= down) { tracking = false; return }
-                if (down <= slopStage || down < abs(dx)) return
+                if (abs(dx) > slopStage && abs(dx) >= travel) { snapBack(); return }
+                if (travel <= slopStage || travel < abs(dx)) return
                 dragging = true
                 // The drag owns this touch now: no title or × activation on release
                 event.stage.cancelTouchFocusExcept(this, this@CityPortraitView)
             }
-            this@CityPortraitView.y = restY - down.coerceAtLeast(0f)
+            this@CityPortraitView.y = if (collapsed) (restY + travel.coerceAtLeast(0f)).coerceAtMost(expandedY)
+                else restY - travel.coerceAtLeast(0f)
         }
 
         override fun touchUp(event: InputEvent, x: Float, y: Float, pointer: Int, button: Int) {
             if (!tracking || pointer != 0) return
-            val closes = dragging && !event.isTouchFocusCancel && !Gdx.input.isTouched(1) && startY - event.stageY >= threshold * scaleY
-            if (!closes) { restore(); return }
+            val travel = (if (collapsed) event.stageY - startY else startY - event.stageY)
+            if (event.isTouchFocusCancel || Gdx.input.isTouched(1)) {
+                snapBack()
+                return
+            }
             tracking = false
-            touchable = Touchable.disabled
-            addAction(Actions.sequence(
-                Actions.moveTo(this@CityPortraitView.x, restY - height * scaleY, .15f, Interpolation.fastSlow),
-                Actions.run { screen.exit() }))
+            if (collapsed && (!dragging || travel >= threshold * scaleY)) expand()
+            else if (!collapsed && dragging && travel >= threshold * scaleY) collapse()
+            else snapBack()
         }
 
-        private fun restore() {
-            if (dragging && this@CityPortraitView.y != restY)
-                addAction(Actions.moveTo(this@CityPortraitView.x, restY, .12f, Interpolation.fastSlow))
+        private fun snapBack() {
+            val targetY = if (collapsed) collapsedY() else expandedY
+            if (this@CityPortraitView.y != targetY)
+                addAction(Actions.moveTo(this@CityPortraitView.x, targetY, .12f, Interpolation.fastSlow))
             tracking = false
             dragging = false
         }
+    }
+
+    private fun collapsedY() = expandedY - (height - peekHeight) * scaleY
+
+    private fun refreshForPeek() {
+        val savedScroll = scroll.scrollY
+        refresh()
+        validate()
+        scroll.scrollY = savedScroll
+        scroll.updateVisualScroll()
+    }
+
+    private fun collapse() {
+        peekScrollY = scroll.scrollY
+        peekTab = selectedTab
+        collapsed = true
+        refreshForPeek()
+        screen.setMapPeekCollapsed(true)
+        addAction(Actions.moveTo(x, collapsedY(), .15f, Interpolation.fastSlow))
+    }
+
+    private fun expand() {
+        collapsed = false
+        refreshForPeek()
+        if (selectedTab == peekTab) {
+            scroll.scrollY = peekScrollY
+            scroll.updateVisualScroll()
+        }
+        screen.setMapPeekCollapsed(false)
+        addAction(Actions.moveTo(x, expandedY, .15f, Interpolation.fastSlow))
     }
 
     fun showTile(tile: TileView) {
@@ -196,7 +246,7 @@ internal class CityPortraitView(private val screen: CityScreen, private val shee
     }
 
     fun state() = State(selectedRow, screen.selectedQueueEntry, detailOpen, cityDetailsOpen, tileDetailOpen,
-        scroll.scrollY, constructions)
+        scroll.scrollY, constructions, collapsed, peekScrollY, peekTab)
 
     /** Resize re-creates the screen with the same selection; this puts the rest of the sheet back */
     fun restore(state: State) {
@@ -206,14 +256,26 @@ internal class CityPortraitView(private val screen: CityScreen, private val shee
         cityDetailsOpen = state.cityDetailsOpen
         tileDetailOpen = state.tileDetailOpen
         if (constructions == null) constructions = state.constructions
+        expandedY = y
+        expandedYInitialized = true
+        collapsed = state.collapsed
+        peekScrollY = state.peekScrollY
+        peekTab = state.peekTab
         refresh()
         validate()
+        if (collapsed) {
+            y = collapsedY()
+            screen.setMapPeekCollapsed(true)
+        }
         scroll.scrollY = state.scrollY
         scroll.updateVisualScroll()
     }
 
     fun refresh() {
         val oldScroll = scroll.scrollY
+        yields.isVisible = !collapsed
+        scroll.isVisible = !collapsed
+        tabs.isVisible = !collapsed
         drawHeading()
         drawYields()
         drawTabs()
@@ -235,6 +297,13 @@ internal class CityPortraitView(private val screen: CityScreen, private val shee
 
     private fun drawHeading() {
         heading.clear()
+        if (collapsed) {
+            heading.pad(0f, 16f, 0f, 16f)
+            heading.add(city.name.toLabel(fontSize = 20, hideIcons = true).apply { setEllipsis(true) })
+                .minWidth(0f).growX().left().height(48f)
+            heading.add("Swipe up".toLabel(INK2, 13)).right()
+            return
+        }
         heading.pad(7f, 14f, 7f, 14f)
         val titleWidth = sheetWidth - 14f * 2f - 48f * 2f - 9f
         val population = Table().apply {
@@ -855,6 +924,8 @@ internal class CityPortraitView(private val screen: CityScreen, private val shee
             city.isWorked(tile) -> add(tag(if (tile.isLocked()) "Locked" else "Worked", FOOD_GREEN))
             tile.isCityCenter() && city.isOwnedTile(tile) -> add(tag("City center", INK2))
             state == CityTileState.BLOCKADED -> add(tag("Blockaded", RED))
+            !screen.isSpying && city.isOwnedTile(tile) && state == CityTileState.WORKABLE ->
+                add(tag("Unworked", INK2))
         }
         if (city.canBuyTile(tile)) {
             val cost = city.getGoldCostOfTile(tile)
@@ -874,6 +945,34 @@ internal class CityPortraitView(private val screen: CityScreen, private val shee
         val selected = screen.selectedTile
         if (selected != null) tileCard(selected, states[selected] ?: CityTileState.NONE)
         else section("Tap a tile on the map or below")
+
+        if (!screen.isSpying && city.isOwnedByViewer()) {
+            section("Border expansion")
+            val next = screen.nextTileToOwn
+            if (next == null) {
+                listRow(false, iconBox(ImageGetter.getImage("OtherIcons/HexagonOutline")), "No eligible tile", onTap = null)
+                rule()
+            } else {
+                // CityExpansionManager credits culture.toInt() each turn, so fractional income cannot start a countdown.
+                val culturePerTurn = city.getCurrentCityStats().culture.toInt()
+                val remaining = city.getCultureToNextTile() - city.getCultureStored()
+                val turns = when {
+                    remaining <= culturePerTurn -> 1
+                    culturePerTurn > 0 -> ceil(remaining.toDouble() / culturePerTurn).toInt()
+                    else -> null
+                }
+                val explored = city.viewingCiv().hasExplored(next)
+                val tileLabel = if (explored) tileName(next) else "Unexplored tile"
+                val progress = "${city.getCultureStored()} / ${city.getCultureToNextTile()} culture"
+                listRow(false, iconBox(ImageGetter.getImage("OtherIcons/HexagonOutline")), "Next border tile",
+                    trailing = (turns?.let { "[$it] turns" } ?: "Paused").toLabel(if (turns == null) INK2 else YELLOW, 13),
+                    details = {
+                        add(text(tileLabel, INK2, 13)).left().row()
+                        add(text("$progress · +$culturePerTurn per turn", INK3, 12)).left().padTop(2f)
+                    }, onTap = if (explored) ({ screen.selectTile(next); scroll.scrollY = 0f; refresh() }) else null)
+                rule()
+            }
+        }
 
         val tiles = states.keys.filter { city.isOwnedTile(it) || city.canBuyTile(it) }
         val owned = tiles.count { city.isOwnedTile(it) }
@@ -962,8 +1061,14 @@ internal class CityPortraitView(private val screen: CityScreen, private val shee
             val active = city.getCityFocus() == focus
             val chip = Table().apply {
                 background = bg(if (active) Color.WHITE else CHIP)
+                pad(0f, 6f, 0f, 6f)
                 if (icon != null) add(screen.portraitStatIcons.image(icon.name)).size(20f).padRight(6f)
-                add(label.toLabel(if (active) NAVY_INK else if (canChange) Color.WHITE else INK3, 14, hideIcons = true))
+                add(Label(label.tr(hideIcons = true, hideStats = true), BaseScreen.skin).apply {
+                    color = if (active) NAVY_INK else if (canChange) Color.WHITE else INK3
+                    setFontScale(14f / Fonts.ORIGINAL_FONT_SIZE)
+                    if (icon == null) setAlignment(Align.center)
+                    wrap = true
+                }).minWidth(0f).growX()
                 if (canChange) {
                     touchable = Touchable.enabled
                     onClick { city.trySetCityFocus(focus); screen.updateAsync() }

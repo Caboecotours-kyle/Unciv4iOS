@@ -1,5 +1,6 @@
 package com.unciv.ui.components.tilegroups.layers
 
+import com.badlogic.gdx.graphics.Color
 import com.badlogic.gdx.scenes.scene2d.ui.Image
 import com.badlogic.gdx.math.Vector2
 import com.unciv.ui.images.ImageGetter
@@ -160,30 +161,57 @@ class TileLayerBorders(tileGroup: TileGroup, size: Float) : TileLayer(tileGroup,
         reset()
         portraitKey = key
         if (owner == null) return
+        val outerColor = owner.getOuterColor()
+        // Light outer colors, such as Greece's white, disappear on snow and clouds.
+        val outlineColor = if (minOf(outerColor.r, outerColor.g, outerColor.b) >= 0.9f)
+            owner.getInnerColor() else outerColor
         val tint = getGroundImage(strings.hexagon).setHexagonSize()
-        tint.color = owner.getOuterColor().cpy().apply { a = 0.12f }
+        tint.color = outlineColor.cpy().apply { a = 0.12f }
         addOwnedActor(tint)
         portraitImages.add(tint)
         val radius = MapProjection.TILE_RADIUS * 0.93f
+        val insetRatio = 1f - radius / MapProjection.TILE_RADIUS
+        val tileMapView = tileView.getTileMap()
+        val tilePosition = tileView.position()
         for (neighbor in neighbors) {
-            val direction = tileView.getTileMap().getNeighborTilePositionAsWorldCoords(tileView, neighbor).nor()
+            // The cached clock vector points back from the neighbor; do not normalize it in place.
+            val direction = Vector2(tileMapView.getNeighborTilePositionAsWorldCoords(tileView, neighbor)).scl(-1f).nor()
             val midpoint = Vector2(direction).scl(radius * MapProjection.COS_30)
             val tangent = Vector2(-direction.y, direction.x).scl(radius / 2f)
             val from = strings.projection.project(Vector2(midpoint).add(tangent))
             val to = strings.projection.project(Vector2(midpoint).sub(tangent))
-            val delta = to.sub(from)
             val thickness = if (tileGroup.strategicView) 7f else 3.2f * 40f / 31f
-            val line = ImageGetter.getWhiteDot().apply {
-                setSize(delta.len(), thickness)
-                setOrigin(0f, thickness / 2f)
-                setPosition(tileX + tileGroup.groundCenterX + from.x,
-                    tileY + tileGroup.groundCenterY + from.y - thickness / 2f)
-                rotation = atan2(delta.y, delta.x) * 180f / PI.toFloat()
-                color = owner.getOuterColor()
+            addPortraitLine(from, to, thickness, outlineColor)
+
+            // Adjacent owned tiles inset toward different centers; bridge their shared vertex.
+            for (shared in arrayOf(tileMapView.getLeftSharedNeighbor(tileView, neighbor),
+                    tileMapView.getRightSharedNeighbor(tileView, neighbor))) {
+                if (shared?.getOwner() != owner) continue
+                val sharedPosition = shared.position()
+                if (tilePosition.x > sharedPosition.x ||
+                    tilePosition.x == sharedPosition.x && tilePosition.y > sharedPosition.y) continue
+                val sharedCenter = strings.projection.project(Vector2(
+                    tileMapView.getNeighborTilePositionAsWorldCoords(tileView, shared))
+                    .scl(-MapProjection.TILE_RADIUS))
+                val endpoint = if (from.dst2(sharedCenter) < to.dst2(sharedCenter)) from else to
+                addPortraitLine(endpoint, Vector2(endpoint).mulAdd(sharedCenter, insetRatio),
+                    thickness, outlineColor)
             }
-            addOwnedActor(line)
-            portraitImages.add(line)
         }
+    }
+
+    private fun addPortraitLine(from: Vector2, to: Vector2, thickness: Float, color: Color) {
+        val delta = Vector2(to).sub(from)
+        val line = ImageGetter.getWhiteDot().apply {
+            setSize(delta.len(), thickness)
+            setOrigin(0f, thickness / 2f)
+            setPosition(tileX + tileGroup.groundCenterX + from.x,
+                tileY + tileGroup.groundCenterY + from.y - thickness / 2f)
+            rotation = atan2(delta.y, delta.x) * 180f / PI.toFloat()
+            this.color = color
+        }
+        addOwnedActor(line)
+        portraitImages.add(line)
     }
 
     override fun doUpdate(viewingCiv: CivView?) {

@@ -110,6 +110,10 @@ internal class WorldPortraitHud(
     private fun icon(path: String): Actor = ImageGetter.getImage(
         if (ImageGetter.imageExists(path)) path else "OtherIcons/Star")
 
+    private fun moreGlyph(): Actor = Table().apply {
+        repeat(3) { index -> add(ImageGetter.getCircle(ink)).size(5f).padRight(if (index < 2) 4f else 0f) }
+    }
+
     private class Disc(val shadowColor: Color) : Table()
     /** [note] is the side effect shown while held; [chip] stays visible (attack damage); [tag] names the disc for tutorial rings. */
     private class ArcAction(val image: Actor, val title: String, val enabled: Boolean,
@@ -163,12 +167,13 @@ internal class WorldPortraitHud(
     private fun nextUnitNote(type: UnitActionType) =
         if (type.isSkippingToNextUnit && world.game.settings.autoUnitCycle) "Next unit".tr() else null
 
-    private fun disc(image: Actor, size: Float, color: Color = white, caption: String? = null): Table {
+    private fun disc(image: Actor, size: Float, color: Color = white, caption: String? = null,
+                     iconSize: Float = if (size >= 90f) 34f else 30f): Table {
         val table = Disc(if (color == yellow) Color.valueOf("c9951c") else if (color == white) Color.valueOf("b9cadb") else Color.valueOf("0b1826"))
         table.touchable = Touchable.enabled
         table.background = ImageGetter.getCircleDrawable().tint(color)
         image.color = if (color == white || color == yellow) ink else Color.WHITE
-        table.add(image).size(if (size >= 90f) 34f else 30f)
+        table.add(image).size(iconSize)
         if (caption != null) {
             table.row()
             table.add(caption.tr().toLabel(if (color == yellow) ink else Color.WHITE, 15)).padTop(2f)
@@ -177,11 +182,11 @@ internal class WorldPortraitHud(
         return table
     }
 
-    private fun place(actor: Actor, x: Float, y: Float, width: Float, height: Float) {
+    private fun place(actor: Actor, x: Float, y: Float, width: Float, height: Float, shadowOffset: Float = 5f) {
         if (actor is Disc) {
             val shadow = ImageGetter.getCircle(actor.shadowColor)
             shadow.touchable = Touchable.disabled
-            shadow.setBounds(x, y - 5f, width, height)
+            shadow.setBounds(x, y - shadowOffset, width, height)
             addActor(shadow)
         }
         actor.setBounds(x, y, width, height)
@@ -189,6 +194,14 @@ internal class WorldPortraitHud(
     }
 
     private fun signed(value: Int) = if (value >= 0) "+$value" else value.toString()
+
+    /** Four 54pt discs fit on one 110pt arc beside Skip without crossing the 393pt canvas edge. */
+    private fun actionArcPosition(index: Int, count: Int, bottom: Float): Pair<Float, Float> {
+        val step = when (count) { 4 -> 34f; 3 -> 41f; else -> 50f }
+        val angle = Math.toRadians((180f - index * step).toDouble())
+        return Pair(325f + 110f * cos(angle).toFloat() - 27f,
+            bottom + 48f + 110f * sin(angle).toFloat() - 27f)
+    }
 
     fun dispose() { scrimTexture.dispose(); statTexture.dispose(); panelTextures.forEach { it.dispose() } }
 
@@ -306,23 +319,22 @@ internal class WorldPortraitHud(
             }
             for (action in actions.filter { it.type != UnitActionType.Skip }.take(3 - arcActions.size)) {
                 val image = "UnitActionIcons/${action.type.name}"
-                arcActions.add(ArcAction(if (ImageGetter.imageExists(image)) icon(image) else action.getIcon(30f),
+                arcActions.add(ArcAction(if (ImageGetter.imageExists(image)) icon(image) else action.getIcon(28f),
                     action.title.tr(), action.action != null, nextUnitNote(action.type), tag = "portrait-action-${action.type.name}") {
                     unitActions.activateAction(action, unit)
                 })
             }
-            // Label-free icons on the approved arc: names appear only while a disc is held.
+            // One close arc from Skip. Names still appear only while a disc is held.
+            val actionCount = min(3, arcActions.size) + if (actions.isNotEmpty()) 1 else 0
             for ((index, action) in arcActions.take(3).withIndex()) {
-                val angle = Math.toRadians((200 + index * 26).toDouble())
-                val x = 325f + 182f * cos(angle).toFloat() - 33f
-                val y = bottom + 48f - 182f * sin(angle).toFloat() - 33f
-                val button = disc(action.image, 66f,
-                    if (index == 0 && action.enabled) yellow else white)
+                val (x, y) = actionArcPosition(index, actionCount, bottom)
+                val button = disc(action.image, 54f,
+                    if (index == 0 && action.enabled) yellow else white, iconSize = 28f)
                 button.name = action.tag
                 if (!action.enabled) button.color.a = .45f
                 else button.onClick { action.activate() }
                 holdToRead(button, action.title, action.note, action.enabled)
-                place(button, x, y, 66f, 66f)
+                place(button, x, y, 54f, 54f, shadowOffset = 3f)
                 if (action.chip != null) {
                     val chip = Table().apply {
                         background = panel(10).tint(Color.valueOf("e0524a"))
@@ -330,19 +342,17 @@ internal class WorldPortraitHud(
                         add(action.chip.toLabel(Color.WHITE, 13)).pad(3f, 8f, 3f, 8f)
                         pack()
                     }
-                    place(chip, x + 33f - chip.width / 2f, y - chip.height - 4f, chip.width, chip.height)
+                    place(chip, x + 27f - chip.width / 2f, y - chip.height - 4f, chip.width, chip.height)
                 }
             }
             if (actions.isNotEmpty()) {
-                val angle = Math.toRadians(278.0)
-                val x = 325f + 182f * cos(angle).toFloat() - 33f
-                val y = bottom + 48f - 182f * sin(angle).toFloat() - 33f
-                val more = disc(icon("UnitActionIcons/ShowMore"), 66f)
+                val (x, y) = actionArcPosition(min(3, arcActions.size), actionCount, bottom)
+                val more = disc(moreGlyph(), 54f, iconSize = 28f)
                 more.name = "portrait-more"
                 val primary = arcActions.firstOrNull()?.takeIf { it.enabled }?.title
                 more.onClick { MoreSheet(unit, actions, primary).present() }
                 holdToRead(more, "Show more".tr(), null)
-                place(more, x, y, 66f, 66f)
+                place(more, x, y, 54f, 54f, shadowOffset = 3f)
             }
         } else {
             val leader = "LeaderIcons/${civ.nation.leaderName}"

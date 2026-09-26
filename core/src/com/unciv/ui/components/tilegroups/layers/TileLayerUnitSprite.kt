@@ -12,6 +12,7 @@ import com.unciv.ui.images.ImageGetter
 class UnitSpriteSlot {
     val spriteGroup = NonTransformGroup()
     var currentImageLocation = ""
+    var unitId = -1
 }
 
 class TileLayerUnitSprite(tileGroup: TileGroup, size: Float) : TileLayer(tileGroup, size) {
@@ -34,7 +35,8 @@ class TileLayerUnitSprite(tileGroup: TileGroup, size: Float) : TileLayer(tileGro
         }
 
         if (currentSlot == null && location == "") return null // No-op - had none, has none
-        if (currentSlot?.currentImageLocation == "$nationName$location") return currentSlot // No-op - had, has
+        if (currentSlot?.currentImageLocation == "$nationName$location" && currentSlot.unitId == unitView?.id)
+            return currentSlot // No-op - same unit and art
 
         if (location == "" || !ImageGetter.imageExists(location)){
             currentSlot?.spriteGroup?.let { removeOwnedActor(it) }
@@ -50,9 +52,10 @@ class TileLayerUnitSprite(tileGroup: TileGroup, size: Float) : TileLayer(tileGro
             addOwnedActor(spriteGroup)
         }
         slot.currentImageLocation = "$nationName$location"
+        slot.unitId = unitView!!.id
         slot.spriteGroup.clear()
 
-        val civView = unitView!!.civ()
+        val civView = unitView.civ()
         val inner = civView.getInnerColor()
         val outer = civView.getOuterColor()
         val teamColor = if (TileSetCache.getCurrent().config.vividUnitTeamColor && saturation(outer) > saturation(inner)) outer else inner

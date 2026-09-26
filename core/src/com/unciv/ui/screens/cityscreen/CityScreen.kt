@@ -13,6 +13,7 @@ import com.unciv.models.ruleset.IConstruction
 import com.unciv.models.ruleset.tile.TileImprovement
 import com.unciv.models.ruleset.unique.UniqueType
 import com.unciv.models.stats.Stat
+import com.unciv.models.tilesets.TileSetCache
 import com.unciv.models.translations.tr
 import com.unciv.ui.audio.CityAmbiencePlayer
 import com.unciv.ui.audio.SoundPlayer
@@ -56,6 +57,10 @@ class CityScreen(
      *  will instantiate a new CityAmbiencePlayer and start playing. */
     ambiencePlayer: CityAmbiencePlayer? = null
 ): BaseScreen(), RecreateOnResize {
+    override val backgroundColor: Color get() = if (isPortrait())
+        TileSetCache.getCurrent().config.mapBackgroundColor ?: clearColor
+    else clearColor
+
     companion object {
         /** Distance from stage edges to floating widgets */
         const val posFromEdge = 5f
@@ -73,6 +78,7 @@ class CityScreen(
     /** Portrait: one panel at a time, picked from a tab bar in thumb reach (DESIGN.md city sheet) */
     private val portraitTabBar = Table()
     private var portraitView: CityPortraitView? = null
+    private var pendingPortraitState: CityPortraitView.State? = null
     /** Newest portrait list request; an older background gather must not overwrite a newer one */
     private val portraitDataVersion = AtomicInteger()
     private var disposed = false
@@ -128,6 +134,8 @@ class CityScreen(
 
     /** The ScrollPane for the background map view of the city surroundings */
     private val mapScrollPane = CityMapHolder()
+    private var mapPeekShifted = false
+    private var mapPeekScrollDelta = 0f
 
     /** Support for [UniqueType.CreatesOneImprovement] - need user to pick a tile */
     class PickTileForImprovementData (
@@ -323,6 +331,27 @@ class CityScreen(
         }
     }
 
+    /** Shift the existing camera framing with the sheet, then undo only that shift on restore. */
+    internal fun setMapPeekCollapsed(collapsed: Boolean) {
+        if (!isPortrait() || collapsed == mapPeekShifted) return
+        mapPeekShifted = collapsed
+        if ((mapScrollPane.actor as TileGroupMap<*>).mapVerticalScale == 1f) return
+        mapScrollPane.validate()
+        val before = mapScrollPane.scrollY
+        if (collapsed) {
+            val safe = safeAreaBoundsInWorld()
+            val defaultCenterY = safe.y + safe.height - 125f * safe.width / 393f
+            val inspectionCenterY = (defaultCenterY + safe.y + safe.height / 2f) / 2f
+            mapScrollPane.scrollY = before + (inspectionCenterY - defaultCenterY) / mapScrollPane.scaleY
+            mapPeekScrollDelta = mapScrollPane.scrollY - before
+        } else {
+            mapScrollPane.scrollY = before - mapPeekScrollDelta
+            mapPeekScrollDelta = 0f
+        }
+        mapScrollPane.updateVisualScroll()
+        mapScrollPane.updateCulling()
+    }
+
     private fun buildPortraitTabBar() {
         portraitTabBar.defaults().height(portraitBarHeight).padRight(6f)
         for (tab in PortraitTab.entries) {
@@ -406,6 +435,7 @@ class CityScreen(
             }
         }
 
+        val portrait = isPortrait()
         for (tileGroup in tileGroups) {
             tileGroup.update(cityView.viewingCiv())
             tileGroup.layerMisc.removeHexOutline()
@@ -416,13 +446,15 @@ class CityScreen(
 
             when {
                 tileGroup.tileView == nextTileToOwn ->
-                    tileGroup.layerMisc.addHexOutline(colorFromRGB(200, 20, 220))
+                    tileGroup.layerMisc.addHexOutline(if (portrait) Color.valueOf("ffc93c") else colorFromRGB(200, 20, 220))
                 /** Support for [UniqueType.CreatesOneImprovement] */
                 tileGroup.tileView == selectedQueueEntryTargetTile ->
                     tileGroup.layerMisc.addHexOutline(Color.BROWN)
                 pickTileData != null && cityView.isOwnedTile(tileGroup.tileView) && cityView.isInRange(tileGroup.tileView) ->
                     getPickImprovementColor(tileGroup.tileView).run {
                         tileGroup.layerMisc.addHexOutline(first.cpy().apply { this.a = second }) }
+                portrait && tileGroup.tileView == selectedTile ->
+                    tileGroup.layerMisc.addHexOutline(Color.WHITE)
             }
 
             if (fireworks != null && tileGroup.tileView.position() == cityView.location)
@@ -501,7 +533,7 @@ class CityScreen(
         val tileSetStrings = TileSetStrings(cityView.getRuleset(), game.settings)
         val cityTileGroups = cityView.centerTile().getVisibleTilesInDistance(viewRange)
                 .filter { viewingCiv.hasExplored(it) }
-                .map { CityTileGroup(cityView, it, tileSetStrings, false, isSpying) }
+                .map { CityTileGroup(cityView, it, tileSetStrings, false, isSpying, isPortrait()) }
 
         for (tileGroup in cityTileGroups) {
             tileGroup.onClick { tileGroupOnClick(tileGroup) }
@@ -672,6 +704,7 @@ class CityScreen(
         selectedQueueEntryTargetTile = null
         pickTileData = null
         selectedTile = newTile
+        if (isPortrait()) updateTileGroups()
     }
     fun clearSelection() = selectTile(null)
 
@@ -723,9 +756,10 @@ class CityScreen(
     // but the rapid firing of several resize events will get that un-synced, they would no longer stop on leaving.
     override fun recreate(): BaseScreen {
         // Portrait keeps its open row, drill-in, scroll and last lists across resize
-        val portraitState = portraitView?.state()
+        val portraitState = portraitView?.state() ?: pendingPortraitState
         return CityScreen(cityView, selectedConstruction, selectedTile).also { screen ->
-            portraitState?.let { screen.portraitView?.restore(it) }
+            if (screen.portraitView == null) screen.pendingPortraitState = portraitState
+            else portraitState?.let { screen.portraitView?.restore(it) }
         }
     }
 

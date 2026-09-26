@@ -1,9 +1,11 @@
 package com.unciv.ui.screens.worldscreen.bottombar
 
+import com.badlogic.gdx.Gdx
 import com.badlogic.gdx.graphics.Color
 import com.badlogic.gdx.math.Interpolation
 import com.badlogic.gdx.math.Vector2
 import com.badlogic.gdx.scenes.scene2d.Actor
+import com.badlogic.gdx.scenes.scene2d.Group
 import com.badlogic.gdx.scenes.scene2d.actions.Actions
 import com.badlogic.gdx.scenes.scene2d.actions.FloatAction
 import com.badlogic.gdx.scenes.scene2d.actions.RelativeTemporalAction
@@ -20,6 +22,7 @@ import com.unciv.ui.components.tilegroups.TileSetStrings
 import com.unciv.ui.components.widgets.ShadowedLabel
 import com.unciv.ui.images.ImageGetter
 import com.unciv.ui.screens.worldscreen.WorldScreen
+import com.unciv.ui.screens.worldscreen.worldmap.UnitSpritePose
 import com.unciv.utils.Concurrency
 import com.unciv.view.CombatantView
 import com.unciv.view.MapUnitCombatantView
@@ -44,14 +47,74 @@ object BattleTableHelpers {
 
     class FlashRedAction(
         start: Float, end: Float,
-        private val actorsToOriginalColors: Map<Actor, Color>
+        private val actorsToOriginalColors: Map<Actor, Color>,
+        private val flashColor: Color = Color.RED,
     ) : FloatAction(start, end, flashRedDuration, Interpolation.sine) {
         private fun updateRedPercent(percent: Float) {
             for ((actor, color) in actorsToOriginalColors)
-                actor.color = color.cpy().lerp(Color.RED, start + percent * (end - start))
+                actor.color = color.cpy().lerp(flashColor, start + percent * (end - start))
         }
 
         override fun update(percent: Float) = updateRedPercent(percent)
+    }
+
+    /** Stage actions render even though the map's sprite layer intentionally does not act. */
+    private class RenderedSequenceAction : SequenceAction() {
+        var onFinished: (() -> Unit)? = null
+        override fun act(delta: Float): Boolean = super.act(delta).also { finished ->
+            Gdx.graphics.requestRendering()
+            if (finished) {
+                val callback = onFinished
+                onFinished = null
+                callback?.invoke()
+            }
+        }
+    }
+
+    private class PortraitCombatSnapshot(actors: Iterable<Actor>) {
+        private data class Rest(val actor: Actor, val parent: Group?, val x: Float, val y: Float,
+                                val scaleX: Float, val scaleY: Float, val rotation: Float, val color: Color)
+        private val rest = actors.distinct().map {
+            Rest(it, it.parent, it.x, it.y, it.scaleX, it.scaleY, it.rotation, it.color.cpy())
+        }
+        fun restore() {
+            for (item in rest) {
+                if (item.actor.parent !== item.parent) continue
+                item.actor.setPosition(item.x, item.y)
+                item.actor.setScale(item.scaleX, item.scaleY)
+                item.actor.rotation = item.rotation
+                item.actor.color = item.color.cpy()
+            }
+        }
+    }
+
+    private class PortraitAttackPoseAction(actors: List<Image>, private val ranged: Boolean,
+                                           private val returning: Boolean) : TemporalAction(moveActorsDuration) {
+        private val poses = actors.groupBy { it.parent }.values.map { UnitSpritePose(it) }
+
+        override fun update(percent: Float) {
+            val wave = kotlin.math.sin((percent * Math.PI).toFloat())
+            val rotation = when {
+                ranged && !returning -> -5f * wave
+                ranged -> 5f * wave
+                !returning -> 13f * (percent - 0.35f)
+                else -> 8.5f * (1f - percent)
+            }
+            val scaleX = if (ranged) 1f - 0.04f * wave else 1f + 0.06f * wave
+            val scaleY = if (ranged) 1f + 0.03f * wave else 1f - 0.07f * wave
+            for (pose in poses) pose.apply(scaleX, scaleY, rotation)
+        }
+
+        override fun end() { for (pose in poses) pose.restorePose() }
+    }
+
+    private class PortraitHitPoseAction(actors: List<Image>) : TemporalAction(moveActorsDuration * 2f) {
+        private val poses = actors.groupBy { it.parent }.values.map { UnitSpritePose(it) }
+        override fun update(percent: Float) {
+            val recoil = (1f - percent) * kotlin.math.sin((percent * Math.PI * 2).toFloat())
+            for (pose in poses) pose.apply(1f + 0.06f * recoil, 1f - 0.10f * recoil, 6f * recoil)
+        }
+        override fun end() { for (pose in poses) pose.restorePose() }
     }
 
 
@@ -76,6 +139,7 @@ object BattleTableHelpers {
         defenderActors: List<Actor>,
         private val currentTileSetStrings: TileSetStrings
     ): SequenceAction() {
+        private val activeFrames = ArrayList<Image>()
         init {
             if (defenderActors.any()) {
                 val attackAnimationLocation = getAttackAnimationLocation()
@@ -87,13 +151,22 @@ object BattleTableHelpers {
                         val defenderParentGroup = defenderActors.first().parent
                         addAction(Actions.run {
                             defenderParentGroup.addActor(image)
+                            activeFrames.add(image)
                         })
                         addAction(Actions.delay(attackAnimationFrameDuration))
-                        addAction(Actions.removeActor(image))
+                        addAction(Actions.run {
+                            image.remove()
+                            activeFrames.remove(image)
+                        })
                         i++
                     }
                 }
             }
+        }
+
+        fun cancel() {
+            for (image in activeFrames) image.remove()
+            activeFrames.clear()
         }
 
         private fun getAttackAnimationLocation(): String? {
@@ -114,7 +187,9 @@ object BattleTableHelpers {
 
 
     /** The animation for the Damage labels */
-    private class DamageLabelAnimation(actor: WidgetGroup) : TemporalAction(damageLabelDuration) {
+    private class DamageLabelAnimation(actor: WidgetGroup, private val portrait: Boolean,
+                                       private val onFinished: () -> Unit) :
+        TemporalAction(if (portrait) 0.75f else damageLabelDuration) {
         val startX = actor.x
         val startY = actor.y
 
@@ -137,10 +212,12 @@ object BattleTableHelpers {
 
         override fun update(percent: Float) {
             actor.color.a = Interpolation.fade.apply(1f - percent)
-            actor.setPosition(startX, startY + percent * damageLabelDisplacement)
+            actor.setPosition(startX, startY + percent * if (portrait) 32f else damageLabelDisplacement)
+            if (portrait) Gdx.graphics.requestRendering()
         }
         override fun end() {
             actor.remove()
+            onFinished()
         }
     }
 
@@ -157,9 +234,12 @@ object BattleTableHelpers {
         attacker: CombatantView, damageToAttacker: Int,
         defender: CombatantView, damageToDefender: Int
     ) {
+        val portrait = mapHolder.currentTileSetStrings.projection.tilted
+        if (portrait) mapHolder.preparePortraitCombat()
+        val defenderStillEnemy = defender.getCivInfo() != attacker.getCivInfo()
         fun getMapActorsForCombatant(combatant: CombatantView): Sequence<Actor> =
             sequence {
-                val tileGroup = mapHolder.tileGroups[combatant.getTile()]!!
+                val tileGroup = mapHolder.tileGroups[combatant.getTile()] ?: return@sequence
                 if (combatant.isCity()) {
                     val icon = tileGroup.layerImprovement.improvementIcon
                     if (icon != null) yield (icon)
@@ -172,58 +252,122 @@ object BattleTableHelpers {
 
         val actorsToFlashRed =
                 sequence {
-                    if (damageToDefender != 0) yieldAll(getMapActorsForCombatant(defender))
+                    if (damageToDefender != 0 && (!portrait || defenderStillEnemy && !defender.isDefeated()))
+                        yieldAll(getMapActorsForCombatant(defender))
                     if (damageToAttacker != 0) yieldAll(getMapActorsForCombatant(attacker))
                 }.associateWith { it.color.cpy() }
 
         val actorsToMove = getMapActorsForCombatant(attacker).toList()
+        val ranged = attacker.isRanged()
+        val defenderActors = if (portrait && damageToDefender != 0 && defenderStillEnemy &&
+            defender is MapUnitCombatantView && !defender.isDefeated())
+            getMapActorsForCombatant(defender).toList() else emptyList()
 
         val attackVectorHexCoords = defender.getTile().position().minus(attacker.getTile().position())
         val attackVectorWorldCoords = mapHolder.currentTileSetStrings.projection.project(HexMath.hex2WorldCoords(attackVectorHexCoords))
             .nor()  // normalize vector to length of "1"
-            .scl(moveActorsDisplacement)
+            .scl(if (!portrait) moveActorsDisplacement else if (attacker.isCity()) 0f
+                else if (ranged) 3.5f else 14f)
 
         val attackerGroup = mapHolder.tileGroups[attacker.getTile()]!!
         val defenderGroup = mapHolder.tileGroups[defender.getTile()]!!
         val hideDefenderDamage = defender.isDefeated() &&
                 attacker.getTile().position() == defender.getTile().position()
 
-        stage.addAction(
-            Actions.sequence(
+        val sequence = if (portrait) RenderedSequenceAction() else Actions.sequence()
+        val portraitSequence = sequence as? RenderedSequenceAction
+        val labels = ArrayList<WidgetGroup>()
+        val snapshot = if (portrait) PortraitCombatSnapshot(actorsToMove + defenderActors + actorsToFlashRed.keys) else null
+        var sequenceFinished = false
+        lateinit var cancelCombat: () -> Unit
+        fun completeCombat() {
+            if (!portrait || !sequenceFinished || labels.isNotEmpty()) return
+            snapshot?.restore()
+            mapHolder.finishPortraitCombat(cancelCombat)
+        }
+        fun addDamageLabel(damage: Int, target: Actor) {
+            createDamageLabel(damage, target, portrait) { label ->
+                labels.remove(label)
+                completeCombat()
+            }?.let { labels.add(it) }
+        }
+        val attackerFrames = AttackAnimationAction(attacker,
+            if (damageToDefender != 0 && (!portrait || defenderStillEnemy && !defender.isDefeated()))
+                getMapActorsForCombatant(defender).toList() else listOf(),
+            mapHolder.currentTileSetStrings)
+        val defenderFrames = AttackAnimationAction(defender,
+            if (damageToAttacker != 0) getMapActorsForCombatant(attacker).toList() else listOf(),
+            mapHolder.currentTileSetStrings)
+        sequence.addAction(
+            Actions.parallel(
                 MoveActorsAction(actorsToMove, attackVectorWorldCoords),
+                *if (portrait && attacker is MapUnitCombatantView)
+                    arrayOf(PortraitAttackPoseAction(actorsToMove.filterIsInstance<Image>(), ranged, false))
+                else emptyArray()
+            )
+        )
+        sequence.addAction(
                 Actions.run {
-                    createDamageLabel(damageToAttacker, attackerGroup)
+                    addDamageLabel(damageToAttacker, attackerGroup)
                     if (!hideDefenderDamage)
-                        createDamageLabel(damageToDefender, defenderGroup)
-                },
+                        addDamageLabel(damageToDefender, defenderGroup)
+                }
+        )
+        sequence.addAction(
                 Actions.parallel( // While the unit is moving back to its normal position, we flash the damages on both units
                     MoveActorsAction(actorsToMove, attackVectorWorldCoords.cpy().scl(-1f)),
-                    AttackAnimationAction(attacker,
-                        if (damageToDefender != 0) getMapActorsForCombatant(defender).toList() else listOf(),
-                        mapHolder.currentTileSetStrings
-                    ),
-                    AttackAnimationAction(
-                        defender,
-                        if (damageToAttacker != 0) getMapActorsForCombatant(attacker).toList() else listOf(),
-                        mapHolder.currentTileSetStrings
-                    ),
+                    *if (portrait && attacker is MapUnitCombatantView)
+                        arrayOf(PortraitAttackPoseAction(actorsToMove.filterIsInstance<Image>(), ranged, true))
+                    else emptyArray(),
+                    *if (portrait && defenderActors.isNotEmpty())
+                        arrayOf(
+                            Actions.sequence(
+                                MoveActorsAction(defenderActors, attackVectorWorldCoords.cpy().nor().scl(5f)),
+                                MoveActorsAction(defenderActors, attackVectorWorldCoords.cpy().nor().scl(-5f)),
+                            ),
+                            PortraitHitPoseAction(defenderActors.filterIsInstance<Image>()),
+                        )
+                    else emptyArray(),
+                    attackerFrames,
+                    defenderFrames,
                     Actions.sequence(
-                        FlashRedAction(0f,1f, actorsToFlashRed),
-                        FlashRedAction(1f,0f, actorsToFlashRed)
+                        FlashRedAction(0f,1f, actorsToFlashRed, if (portrait) Color.WHITE else Color.RED),
+                        FlashRedAction(1f,0f, actorsToFlashRed, if (portrait) Color.WHITE else Color.RED)
                     )
                 )
-        ))
+        )
+        if (portrait) {
+            cancelCombat = {
+                portraitSequence?.onFinished = null
+                stage.root.removeAction(sequence)
+                for (label in labels) label.remove()
+                labels.clear()
+                attackerFrames.cancel()
+                defenderFrames.cancel()
+                snapshot?.restore()
+                mapHolder.finishPortraitCombat(cancelCombat)
+            }
+            portraitSequence?.onFinished = {
+                sequenceFinished = true
+                completeCombat()
+            }
+            mapHolder.beginPortraitCombat(cancelCombat)
+        }
+        stage.addAction(sequence)
+        if (portrait) Gdx.graphics.requestRendering()
     }
 
-    private fun createDamageLabel(damage: Int, target: Actor) {
-        if (damage == 0) return
+    private fun createDamageLabel(damage: Int, target: Actor, portrait: Boolean,
+                                  onFinished: (WidgetGroup) -> Unit): WidgetGroup? {
+        if (damage == 0) return null
 
-        val container = ShadowedLabel((-damage).tr(), damageLabelFontSize, Color.RED)
+        val container = ShadowedLabel((-damage).tr(), if (portrait) 22 else damageLabelFontSize, Color.RED)
         val targetRight = target.run { localToStageCoordinates(Vector2(width, height * 0.5f)) }
         container.setPosition(targetRight.x, targetRight.y, Align.center)
         target.stage.addActor(container)
 
-        container.addAction(DamageLabelAnimation(container))
+        container.addAction(DamageLabelAnimation(container, portrait) { onFinished(container) })
+        return container
     }
 
     fun getHealthBar(maxHealth: Int, currentHealth: Int, maxRemainingHealth: Int, minRemainingHealth: Int, forDefender: Boolean = false): Table {

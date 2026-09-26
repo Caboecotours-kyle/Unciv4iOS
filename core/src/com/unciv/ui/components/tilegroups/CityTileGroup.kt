@@ -2,6 +2,8 @@ package com.unciv.ui.components.tilegroups
 
 import com.badlogic.gdx.graphics.Color
 import com.badlogic.gdx.scenes.scene2d.Actor
+import com.badlogic.gdx.scenes.scene2d.Touchable
+import com.badlogic.gdx.scenes.scene2d.ui.Table
 import com.badlogic.gdx.utils.Align
 import com.unciv.UncivGame
 import com.unciv.view.CityView
@@ -23,9 +25,15 @@ enum class CityTileState {
     BLOCKADED
 }
 
-class CityTileGroup(val cityView: CityView, tileView: TileView, tileSetStrings: TileSetStrings, private val nightMode: Boolean, private val isSpying: Boolean = false) : TileGroup(tileView, tileSetStrings) {
+class CityTileGroup(val cityView: CityView, tileView: TileView, tileSetStrings: TileSetStrings, private val nightMode: Boolean, private val isSpying: Boolean = false, private val portraitMode: Boolean = false) : TileGroup(tileView, tileSetStrings) {
 
     var tileState = CityTileState.NONE
+
+    private fun portraitMarker(glyph: String, backgroundColor: String): Actor = Table().apply {
+        background = ImageGetter.getCircleDrawable().tint(Color.valueOf(backgroundColor))
+        touchable = Touchable.enabled
+        add(ImageGetter.getImage(glyph).apply { color = Color.WHITE }).size(16f)
+    }
 
     override fun update(viewingCiv: CivView?) {
         super.update(cityView.viewingCiv())
@@ -107,7 +115,8 @@ class CityTileGroup(val cityView: CityView, tileView: TileView, tileSetStrings: 
 
             // Locked
             tileView.isLocked() -> {
-                icon = ImageGetter.getImage("TileIcons/Locked")
+                icon = if (portraitMode && !isSpying) portraitMarker("OtherIcons/LockSmall", "8b6b14")
+                    else ImageGetter.getImage("TileIcons/Locked")
                 tileState = CityTileState.WORKABLE
                 setUndimmed()
                 layerYield.dimYields(false)
@@ -115,7 +124,8 @@ class CityTileGroup(val cityView: CityView, tileView: TileView, tileSetStrings: 
 
             // Worked
             tileView.isWorked() -> {
-                icon = ImageGetter.getImage("TileIcons/Worked")
+                icon = if (portraitMode && !isSpying) portraitMarker("OtherIcons/Checkmark", "286d36")
+                    else ImageGetter.getImage("TileIcons/Worked")
                 tileState = CityTileState.WORKABLE
                 setUndimmed()
                 layerYield.dimYields(false)
@@ -129,7 +139,8 @@ class CityTileGroup(val cityView: CityView, tileView: TileView, tileSetStrings: 
 
             // Not-worked
             else -> {
-                icon = ImageGetter.getImage("TileIcons/NotWorked")
+                icon = if (portraitMode && !isSpying) portraitMarker("OtherIcons/HexagonOutline", "132435")
+                    else ImageGetter.getImage("TileIcons/NotWorked")
                 tileState = CityTileState.WORKABLE
                 setUndimmed()
                 layerYield.dimYields(true)
