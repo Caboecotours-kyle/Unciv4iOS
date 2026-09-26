@@ -735,7 +735,7 @@ open class TabbedPager(
         val gap = headerPadding * 0.5f
         val decoration = wrapDecoration
         var row = Table().left()
-        var rowLimit = wrapHeaderWidth - (decoration?.width?.plus(2 * headerPadding) ?: 0f)
+        var rowLimit = wrapHeaderWidth - gap - (decoration?.width?.plus(2 * headerPadding) ?: 0f)
         var rowWidth = 0f
         fun endRow() {
             if (decoration != null && header.cells.isEmpty)
@@ -748,7 +748,7 @@ open class TabbedPager(
                 endRow()
                 row = Table().left()
                 rowWidth = 0f
-                rowLimit = wrapHeaderWidth
+                rowLimit = wrapHeaderWidth - gap
             }
             row.add(page.button).pad(gap * 0.5f, gap, gap * 0.5f, gap)
             rowWidth += buttonWidth
