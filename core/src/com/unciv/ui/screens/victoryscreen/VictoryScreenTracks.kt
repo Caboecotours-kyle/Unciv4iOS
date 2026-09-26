@@ -78,8 +78,11 @@ class VictoryScreenTracks(worldScreen: WorldScreen) : Table(BaseScreen.skin) {
             track.addActor(segment)
         }
 
+        // unmet rivals stay anonymous, and uncounted when the game hides how many civs there are
+        val hideCivCount = playerCiv.shouldHideCivCount()
         val rivals = playerCiv.gameInfo.civilizations.filter {
             it != playerCiv && it.isMajorCiv() && !it.isDefeated() && victory in it.victoryManager.getAvailableVictories()
+                && (!hideCivCount || playerCiv.knows(it))
         }
         val dotsAtStep = HashMap<Int, Int>()
         for (rival in rivals) {
