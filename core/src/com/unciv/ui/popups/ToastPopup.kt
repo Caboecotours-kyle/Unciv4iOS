@@ -35,7 +35,7 @@ class ToastPopup (message: String, stageToShowOn: Stage, val time: Long = 2000) 
         add(ColorMarkupLabel(message).apply {
             wrap = true
             setAlignment(Align.center)
-        }).width(stageToShowOn.width / 2)
+        }).width(goodTextWidth)
 
         open(force = stageToShowOn.actors.none { it is ToastPopup })
 

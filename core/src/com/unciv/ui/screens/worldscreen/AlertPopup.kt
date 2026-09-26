@@ -484,10 +484,15 @@ class AlertPopup(
         addGoodSizedLabel(tech.name)
         addSeparator().padBottom(SEPARATOR_LINE_TO_TEXT_PADDING)
         val centerTable = Table()
-        centerTable.add(tech.quote.toLabel().apply { wrap = true }).width(stageWidth / 3)
-        centerTable.add(ImageGetter.getTechIconPortrait(tech.name, 100f)).pad(20f)
+        val portrait = stageHeight > stageWidth
+        // portrait stacks icon, quote and description in one column; landscape keeps three columns
+        val columnWidth = if (portrait) goodTextWidth else stageWidth / 3
+        if (portrait) centerTable.add(ImageGetter.getTechIconPortrait(tech.name, 100f)).pad(10f).row()
+        centerTable.add(tech.quote.toLabel().apply { wrap = true }).width(columnWidth)
+        if (portrait) centerTable.row()
+        else centerTable.add(ImageGetter.getTechIconPortrait(tech.name, 100f)).pad(20f)
         val descriptionScroll = ScrollPane(tech.getDescription(viewingCiv).toLabel().apply { wrap = true })
-        centerTable.add(descriptionScroll).width(stageWidth / 3).maxHeight(stageHeight / 2)
+        centerTable.add(descriptionScroll).width(columnWidth).maxHeight(stageHeight / if (portrait) 3 else 2).padTop(if (portrait) 10f else 0f)
         add(centerTable).row()
         addCloseButton()
         music.chooseTrack(tech.name, MusicMood.Researched, MusicTrackChooserFlags.setSpecific)
@@ -537,11 +542,13 @@ class AlertPopup(
         }
 
         val centerTable = Table()
-        val centerTableColumnWidth = stageWidth / if (wonder.quote.isEmpty()) 2 else 3
+        val portrait = stageHeight > stageWidth
+        val centerTableColumnWidth = if (portrait) goodTextWidth else stageWidth / if (wonder.quote.isEmpty()) 2 else 3
         if (wonder.quote.isNotEmpty()) {
             centerTable.add(wonder.quote.toLabel().apply { wrap = true })
                 .width(centerTableColumnWidth)
                 .pad(10f)
+            if (portrait) centerTable.row() // quote above the effect, one column
         }
         centerTable.add(wonder.getShortDescription().toLabel().apply { wrap = true })
             .width(centerTableColumnWidth)

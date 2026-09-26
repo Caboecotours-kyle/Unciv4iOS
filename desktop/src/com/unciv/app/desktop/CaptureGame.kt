@@ -27,6 +27,9 @@ import com.unciv.ui.screens.pickerscreens.ReligiousBeliefsPickerScreen
 import com.unciv.ui.screens.pickerscreens.TechPickerScreen
 import com.unciv.ui.screens.victoryscreen.VictoryScreen
 import com.unciv.ui.screens.worldscreen.WorldScreen
+import com.unciv.ui.screens.worldscreen.AlertPopup
+import com.unciv.logic.civilization.AlertType
+import com.unciv.logic.civilization.PopupAlert
 import com.unciv.ui.screens.worldscreen.mainmenu.WorldScreenMenuPopup
 import com.unciv.utils.Concurrency
 import com.unciv.utils.DebugUtils
@@ -85,7 +88,7 @@ class CaptureGame(
             foundCapital(current); current.shouldUpdate = true
         } else if (current is WorldScreen && worldFrames == 0 && open != null) openScreen(current)
         if (current is WorldScreen || worldFrames > 0) worldFrames++
-        val popupOpened = open == "gamemenu" || open == "options"
+        val popupOpened = open == "gamemenu" || open == "options" || open?.startsWith("alert-") == true
         if (worldFrames >= 120 && (open == null || open == "found" || popupOpened || current !is WorldScreen)) {
             if (current is WorldScreen && !popupOpened) current.closeAllPopups()
             if (++settledFrames < 30) return // let the opened screen lay out and animate in
@@ -95,6 +98,18 @@ class CaptureGame(
     }
 
     private var settledFrames = 0
+
+    private fun showAlert(world: WorldScreen, type: AlertType) {
+        val civ = world.gameInfo.getCurrentPlayerCivilization()
+        val other = civ.diplomacyFunctions.getKnownCivsSorted().firstOrNull { it.isMajorCiv() }?.civName ?: civ.civName
+        val value = when (type) {
+            AlertType.TechResearched -> "Writing"
+            AlertType.WonderBuilt -> "The Great Library"
+            AlertType.StartIntro -> ""
+            else -> other
+        }
+        AlertPopup(world, PopupAlert(type, value)).open(force = true)
+    }
 
     /** Founds the capital where the first settler stands, as a player would on turn one. */
     private fun foundCapital(world: WorldScreen) = world.gameInfo.getCurrentPlayerCivilization().let { civ ->
@@ -127,7 +142,9 @@ class CaptureGame(
             "gamemenu" -> WorldScreenMenuPopup(world).open(force = true)
             "options" -> world.openOptionsPopup()
             "city" -> pushScreen { CityScreen(world.selectedGameView.getCityView(foundCapital(world))) }
-            else -> error("unknown --open=$open")
+            // alert-<Type>: an alert popup as the game would raise it (with --reveal so other civs are met)
+            else -> if (open!!.startsWith("alert-")) showAlert(world, AlertType.valueOf(open.removePrefix("alert-")))
+                else error("unknown --open=$open")
         }
     }
 
