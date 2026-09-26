@@ -27,6 +27,7 @@ import com.unciv.ui.screens.pickerscreens.ReligiousBeliefsPickerScreen
 import com.unciv.ui.screens.pickerscreens.TechPickerScreen
 import com.unciv.ui.screens.victoryscreen.VictoryScreen
 import com.unciv.ui.screens.worldscreen.WorldScreen
+import com.unciv.ui.screens.worldscreen.mainmenu.WorldScreenMenuPopup
 import com.unciv.utils.Concurrency
 import com.unciv.utils.DebugUtils
 import java.io.File
@@ -84,8 +85,9 @@ class CaptureGame(
             foundCapital(current); current.shouldUpdate = true
         } else if (current is WorldScreen && worldFrames == 0 && open != null) openScreen(current)
         if (current is WorldScreen || worldFrames > 0) worldFrames++
-        if (worldFrames >= 120 && (open == null || open == "found" || current !is WorldScreen)) {
-            if (current is WorldScreen) current.closeAllPopups()
+        val popupOpened = open == "gamemenu" || open == "options"
+        if (worldFrames >= 120 && (open == null || open == "found" || popupOpened || current !is WorldScreen)) {
+            if (current is WorldScreen && !popupOpened) current.closeAllPopups()
             if (++settledFrames < 30) return // let the opened screen lay out and animate in
             capture()
             Gdx.app.exit()
@@ -122,6 +124,8 @@ class CaptureGame(
                 ReligiousBeliefsPickerScreen(civ, Counter<BeliefType>().apply { add(BeliefType.Founder, 1); add(BeliefType.Follower, 1) }, true)
             }
             "menu" -> replaceCurrentScreen { MainMenuScreen() }
+            "gamemenu" -> WorldScreenMenuPopup(world).open(force = true)
+            "options" -> world.openOptionsPopup()
             "city" -> pushScreen { CityScreen(world.selectedGameView.getCityView(foundCapital(world))) }
             else -> error("unknown --open=$open")
         }
