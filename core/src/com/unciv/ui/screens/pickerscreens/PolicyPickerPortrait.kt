@@ -214,9 +214,9 @@ internal class PolicyPickerPortrait(
         titles.add(policy.name.toLabel(fontSize = 18, hideIcons = true)).left().row()
         titles.add((if (policy is PolicyBranch) "${policy.era} era branch" else policy.branch.name).toLabel(INK2, 13)).left()
         head.add(titles).growX().left()
-        val close = button("×", Color.WHITE, CHIP, 44f, 44f)
+        val close = button("×", Color.WHITE, CHIP, 48f, 48f)
         close.onClick { selected = null; refresh() }
-        head.add(close).size(44f)
+        head.add(close).size(48f)
         tray.add(head).growX().row()
         val effects = policy.uniqueObjects.filterNot { it.isHiddenToUsers() }.joinToString("\n") { "★  ${it.getDisplayText().tr()}" }
         if (effects.isNotEmpty()) {

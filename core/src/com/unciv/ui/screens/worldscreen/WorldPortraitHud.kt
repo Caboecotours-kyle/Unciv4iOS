@@ -150,7 +150,7 @@ internal class WorldPortraitHud(
             cell.add(value.toLabel(Color.WHITE, 16))
             if (secondary != null) cell.add(secondary.toLabel(Color.valueOf("b7cde0"), 12)).padLeft(2f)
             cell.onClick(action)
-            strip.add(cell).height(44f).expandX().fillX()
+            strip.add(cell).minWidth(48f).height(48f).expandX().fillX()
         }
         stat("Gold", civ.gold.toString(), signed(stats.gold.roundToInt())) { world.openEmpireOverview(EmpireOverviewCategories.Stats) }
         stat("Science", signed(stats.science.roundToInt())) { world.game.pushScreen { TechPickerScreen(civ) } }
@@ -167,8 +167,8 @@ internal class WorldPortraitHud(
             add(icon("OtherIcons/MenuIcon")).size(16f).padLeft(4f)
             onClick { WorldScreenMenuPopup(world) }
         }
-        strip.add(menu).minWidth(54f).height(44f)
-        place(strip, 10f, top - 50f, 373f, 50f)
+        strip.add(menu).minWidth(54f).height(48f)
+        place(strip, 10f, top - 58f, 373f, 58f)
 
         val actions = if (unit != null && world.canChangeState)
             UnitActions.getUnitActions(unit).sortedWith(compareBy<com.unciv.models.UnitAction> { UnitActions.getActionDefaultPage(unit, it.type) }.thenByDescending { it.useFrequency }).toList() else emptyList()
@@ -225,7 +225,7 @@ internal class WorldPortraitHud(
                 touchable = Touchable.enabled
                 onClick { world.bottomUnitTable.selectUnit(); world.shouldUpdate = true }
             }
-            tag.add(close).size(44f)
+            tag.add(close).size(48f)
             place(tag, 10f, top - 126f, 373f, 68f)
             tutorialTop = (top - 134f) * scale + safe.y
 
