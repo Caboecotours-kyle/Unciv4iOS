@@ -77,7 +77,11 @@ open class TabbedPager(
     private val headerPadding: Float = 10f,
     separatorColor: Color = Color.CLEAR,
     private val shortcutScreen: BaseScreen? = null,
-    capacity: Int = 4
+    capacity: Int = 4,
+    /** If positive, header buttons wrap into rows no wider than this instead of scrolling sideways,
+     *  so every page stays in view on a narrow (portrait) screen. A fixed [decorateHeader] actor then ends
+     *  the first row; non-fixed decorations are not supported. */
+    private val wrapHeaderWidth: Float = 0f
 ) : Table() {
 
     private var dimW: DimensionMeasurement
@@ -95,6 +99,8 @@ open class TabbedPager(
     val headerScroll = LinkedScrollPane(horizontalOnly = true, header)
     protected var headerHeight = 0f
     private val headerDecorationRightCell: Cell<Actor?>
+    private var headerCell: Cell<LinkedScrollPane>? = null  // null only while init measures the header
+    private var wrapDecoration: Actor? = null
 
     private val fixedContentScroll = LinkedScrollPane(horizontalOnly = true)
     private val fixedContentScrollCell: Cell<ScrollPane>
@@ -322,7 +328,7 @@ open class TabbedPager(
         header.defaults().pad(headerPadding, headerPadding * 0.5f)
         // Measure header height, most likely its final value
         removePage(addPage("Dummy"))
-        add(headerScroll).growX().minHeight(headerHeight)
+        headerCell = add(headerScroll).growX().minHeight(headerHeight)
         headerDecorationRightCell = add().pad(0f)
         row()
         if (separatorColor != Color.CLEAR)
@@ -515,6 +521,12 @@ open class TabbedPager(
     fun removePage(index: Int): Boolean {
         if (index !in 0 until pages.size) return false
         if (index == activePage) selectPage(-1)
+        if (wrapHeaderWidth > 0f) {
+            pages.removeAt(index)
+            if (index < activePage) activePage--
+            wrapHeader()
+            return true
+        }
         val page = pages.removeAt(index)
         val cell = header.getCell(page.button).clearActor()
         header.cells.removeValue(cell, true)
@@ -648,6 +660,10 @@ open class TabbedPager(
      *  @param fixed If `true` [actor] is outside the header ScrollPane and thus always shown.
      */
     fun decorateHeader(actor: Actor, leftSide: Boolean = false, fixed: Boolean = true) {
+        if (wrapHeaderWidth > 0f && fixed) {
+            wrapDecoration = actor
+            return wrapHeader()
+        }
         if (fixed) headerDecorationRightCell.pad(headerPadding).setActor(actor)
         else insertHeaderCellAt(if (leftSide) 0 else -1).setActor(actor)
         invalidate()
@@ -680,6 +696,14 @@ open class TabbedPager(
     }
 
     private fun addAndShowPage(page: PageState, insertBefore: Int): Int {
+        if (wrapHeaderWidth > 0f) {
+            val newIndex = if (insertBefore in 0 until pages.size) insertBefore else pages.size
+            pages.add(newIndex, page)
+            if (newIndex <= activePage && activePage >= 0) activePage++
+            wrapHeader()
+            measureContent(page)
+            return newIndex
+        }
         // Update pages array and header table
         val newIndex: Int
         val buttonCell: Cell<Button>
@@ -702,6 +726,38 @@ open class TabbedPager(
         measureContent(page)
 
         return newIndex
+    }
+
+    /** Lay the header buttons out in rows that fit [wrapHeaderWidth], then grow the header to show them all */
+    private fun wrapHeader() {
+        header.clear()
+        header.left()
+        val gap = headerPadding * 0.5f
+        val decoration = wrapDecoration
+        var row = Table().left()
+        var rowLimit = wrapHeaderWidth - (decoration?.width?.plus(2 * headerPadding) ?: 0f)
+        var rowWidth = 0f
+        fun endRow() {
+            if (decoration != null && header.cells.isEmpty)
+                row.add(decoration).expandX().right().top().pad(gap * 0.5f, headerPadding, 0f, headerPadding)
+            header.add(row).growX().pad(0f).row()
+        }
+        for (page in pages) {
+            val buttonWidth = page.button.prefWidth + 2 * gap
+            if (rowWidth > 0f && rowWidth + buttonWidth > rowLimit) {
+                endRow()
+                row = Table().left()
+                rowWidth = 0f
+                rowLimit = wrapHeaderWidth
+            }
+            row.add(page.button).pad(gap * 0.5f, gap, gap * 0.5f, gap)
+            rowWidth += buttonWidth
+        }
+        endRow()
+        header.pad(gap, gap, gap, 0f)
+        headerHeight = header.prefHeight
+        headerCell?.minHeight(headerHeight)
+        invalidateHierarchy()
     }
 
     private fun insertHeaderCellAt(insertBefore: Int): Cell<Actor?> {
