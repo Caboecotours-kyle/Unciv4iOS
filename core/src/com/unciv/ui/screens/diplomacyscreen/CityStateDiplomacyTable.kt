@@ -227,7 +227,7 @@ class CityStateDiplomacyTable(private val diplomacyScreen: DiplomacyScreen) {
         val actionHolder = Table()
         var selectedAction = false
         var selectedFrame: Table? = null
-        fun select(delta: Int, label: String, enabled: Boolean = true, action: () -> Unit) {
+        fun select(delta: Int, label: String, enabled: Boolean, previewText: String?, action: () -> Unit) {
             val result = current + delta
             preview.group.isVisible = delta != 0
             preview.value = result
@@ -238,9 +238,8 @@ class CityStateDiplomacyTable(private val diplomacyScreen: DiplomacyScreen) {
                 .filter { it.otherCiv.isMajorCiv() && !it.otherCiv.isDefeated() }
                 .maxByOrNull { if (it.otherCiv == viewingCiv) manager.getInfluence() + delta else it.getInfluence() }
                 ?.otherCiv
-            summary.setText(if (delta == 0) "Influence rests at ${manager.getCityStateInfluenceRestingPoint().toInt() + 10} after a pledge"
-                else "You would reach $result${if (result >= 60 && projectedAlly == viewingCiv) ": Ally" else if (result >= 30) ": Friend" else ""}" +
-                    (if (lead != null && result > lead) ", ${result - lead} ahead of your closest rival" else ""))
+            summary.setText(previewText ?: ("You would reach $result${if (result >= 60 && projectedAlly == viewingCiv) ": Ally" else if (result >= 30) ": Friend" else ""}" +
+                    (if (lead != null && result > lead) ", ${result - lead} ahead of your closest rival" else "")))
             actionHolder.clear()
             val button = label.toTextButton()
             button.onClick(action)
@@ -249,7 +248,7 @@ class CityStateDiplomacyTable(private val diplomacyScreen: DiplomacyScreen) {
             actionHolder.add(button).growX().height(56f * scale)
         }
         fun row(title: String, detail: String, delta: Int, enabled: Boolean = true,
-                icon: String? = null, action: () -> Unit) {
+                icon: String? = null, previewText: String? = null, action: () -> Unit) {
             val frame = Table().apply { pad(2f * scale) }
             val inside = Table().apply {
                 background = BaseScreen.skinStrings.getUiBackground("DiplomacyScreen/Way",
@@ -286,7 +285,7 @@ class CityStateDiplomacyTable(private val diplomacyScreen: DiplomacyScreen) {
                 frame.background = BaseScreen.skinStrings.getUiBackground("DiplomacyScreen/SelectedWay",
                     BaseScreen.skinStrings.roundedEdgeRectangleMidShape, Color.GOLD)
                 selectedFrame = frame
-                select(delta, title, enabled, action)
+                select(delta, title, enabled, previewText, action)
             }
             frame.onClick { choose() }
             actions.add(frame).width(actionWidth).height(70f * scale).row()
@@ -315,7 +314,8 @@ class CityStateDiplomacyTable(private val diplomacyScreen: DiplomacyScreen) {
             val enabled = !diplomacyScreen.isNotPlayersTurn() &&
                 otherCiv.cityStateFunctions.otherCivCanPledgeProtection(viewingCiv)
             val restingPoint = manager.getCityStateInfluenceRestingPoint().toInt() + 10
-            row("Pledge to protect", "Influence will rest at [$restingPoint]", 0, enabled, "pledge") {
+            row("Pledge to protect", "Influence will rest at [$restingPoint]", 0, enabled, "pledge",
+                "Influence rests at $restingPoint after a pledge") {
                 ConfirmPopup(diplomacyScreen, "Declare Protection of [${otherCiv.civName}]?", "Pledge to protect", true) {
                     otherCiv.cityStateFunctions.addProtectorCiv(viewingCiv)
                     diplomacyScreen.updateLeftSideTable(otherCiv)
@@ -323,8 +323,10 @@ class CityStateDiplomacyTable(private val diplomacyScreen: DiplomacyScreen) {
                 }.open()
             }
         } else {
+            val restingPoint = manager.getCityStateInfluenceRestingPoint().toInt() - 10
             row("Revoke protection", "End your pledge to protect", 0,
-                !diplomacyScreen.isNotPlayersTurn() && otherCiv.cityStateFunctions.otherCivCanWithdrawProtection(viewingCiv), "pledge") {
+                !diplomacyScreen.isNotPlayersTurn() && otherCiv.cityStateFunctions.otherCivCanWithdrawProtection(viewingCiv), "pledge",
+                "Influence rests at $restingPoint after revoking protection") {
                 ConfirmPopup(diplomacyScreen, "Revoke protection for [${otherCiv.civName}]?", "Revoke Protection") {
                     otherCiv.cityStateFunctions.removeProtectorCiv(viewingCiv)
                     diplomacyScreen.updateLeftSideTable(otherCiv)
