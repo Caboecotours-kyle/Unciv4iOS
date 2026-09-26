@@ -2,6 +2,7 @@ package com.unciv.ui.screens.victoryscreen
 
 import com.badlogic.gdx.Gdx
 import com.badlogic.gdx.graphics.Color
+import com.badlogic.gdx.scenes.scene2d.ui.Label
 import com.badlogic.gdx.scenes.scene2d.ui.Table
 import com.badlogic.gdx.scenes.scene2d.ui.VerticalGroup
 import com.badlogic.gdx.utils.Align
@@ -37,7 +38,10 @@ class VictoryScreen(
     private val music get() = UncivGame.Current.musicController
     private val gameInfo = worldScreen.gameInfo
     private val playerCiv = worldScreen.selectedGameView.civView.getCiv()
-    private val tabs = TabbedPager(separatorColor = Color.WHITE, shortcutScreen = this)
+    /** Portrait wraps the tabs into rows, shows victory tracks, and moves the game info to the bottom bar */
+    private val portrait = isPortrait()
+    private val tabs = TabbedPager(separatorColor = Color.WHITE, shortcutScreen = this,
+        wrapHeaderWidth = if (portrait) stage.width else 0f)
 
     internal class CivWithStat(val civ: Civilization, val value: Int) {
         constructor(civ: Civilization, category: RankingType) : this(civ, civ.getStatForRanking(category))
@@ -49,7 +53,8 @@ class VictoryScreen(
         val allowAsSecret: Boolean = false
     ) {
         OurStatus('O', caption = "Our status") {
-            override fun getContent(parent: VictoryScreen) = VictoryScreenOurVictory(parent.worldScreen)
+            override fun getContent(parent: VictoryScreen) =
+                if (parent.portrait) VictoryScreenTracks(parent.worldScreen) else VictoryScreenOurVictory(parent.worldScreen)
             override fun isHidden(playerCiv: Civilization) = playerCiv.isSpectator()
         },
         Global('G', caption = "Global status") {
@@ -147,7 +152,10 @@ class VictoryScreen(
         }
         val difficultyLabel = "{Difficulty}: {${gameInfo.difficulty}}".toLabel()
         val neededSpace = topRightPanel.width.coerceAtLeast(difficultyLabel.width) * 2 + tabs.getHeaderPrefWidth()
-        if (neededSpace > stage.width) {
+        if (portrait) {
+            val info = listOf(difficultyLabel, *topRightPanel.children.toArray()).joinToString("\n") { (it as Label).text }
+            descriptionLabel.setText(listOf(descriptionLabel.text.toString(), info).filter { it.isNotEmpty() }.joinToString("\n\n"))
+        } else if (neededSpace > stage.width) {
             // Let additions take part in TabbedPager's header scrolling
             tabs.decorateHeader(difficultyLabel, leftSide = true, fixed = false)
             tabs.decorateHeader(topRightPanel, leftSide = false, fixed = false)
