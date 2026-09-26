@@ -22,7 +22,6 @@ import com.unciv.ui.components.input.onClick
 import com.unciv.ui.components.input.onClickSuppressive
 import com.unciv.ui.components.widgets.AutoScrollPane
 import com.unciv.ui.images.ImageGetter
-import com.unciv.ui.popups.ConfirmPopup
 import com.unciv.ui.screens.basescreen.BaseScreen
 import com.unciv.ui.screens.pickerscreens.ImprovementPickerScreen.ImprovementOption
 import kotlin.math.roundToInt
@@ -51,6 +50,8 @@ internal class ImprovementPickerPortrait(
     private val cards = HashMap<String, Card>()
     private val footer = Table()
     private var selected: ImprovementOption? = null
+    /** Replacing an existing improvement asks in the footer first */
+    private var confirmingReplace = false
 
     init {
         val body = Table().top()
@@ -85,6 +86,7 @@ internal class ImprovementPickerPortrait(
     /** Picks a card for the footer; ordering only ever happens from the footer's action */
     fun select(option: ImprovementOption) {
         selected = option
+        confirmingReplace = false
         screen.selectPortrait(option.improvement)
         for ((name, card) in cards) card.setPicked(name == option.improvement.name)
         rebuildFooter()
@@ -233,6 +235,18 @@ internal class ImprovementPickerPortrait(
             footer.add(solutionRow(solution, link, queued = option.canOrder)).width(footerWidth).padBottom(8f).row()
 
         val actions = Table()
+        if (confirmingReplace) {
+            footer.add(wrapped("Replace [${option.replaces}] with [${option.improvement.name}]?", Color.WHITE, 17, footerWidth))
+                .width(footerWidth).padBottom(10f).row()
+            val cancel = bigButton(Constants.cancel, CHIP_BLUE, Color.WHITE)
+            cancel.onClick { confirmingReplace = false; rebuildFooter() }
+            val replace = bigButton("Replace", YELLOW, YELLOW_INK)
+            replace.onClick { if (option.canOrder && selected === option && GUI.isMyTurn()) place(option) }
+            actions.add(cancel).width(DETAILS_BUTTON_WIDTH).padRight(10f)
+            actions.add(replace).growX()
+            footer.add(actions).width(footerWidth).padTop(2f)
+            return
+        }
         val details = bigButton("Details", CHIP_BLUE, Color.WHITE)
         details.onClick { screen.openCivilopedia(option.improvement.makeLink()) }
         val primary = primaryAction(option)
@@ -266,14 +280,17 @@ internal class ImprovementPickerPortrait(
 
     private fun order(option: ImprovementOption) {
         if (!option.canOrder || selected !== option) return
-        val report = option.report
-        val run = {
-            if (report.isEmpty()) screen.accept(option.improvement)
-            else screen.accept(report.removalImprovement, option.improvement)
+        if (option.replaces == null || option.inProgress) place(option)
+        else {
+            confirmingReplace = true
+            rebuildFooter()
         }
-        if (option.replaces == null || option.inProgress) run()
-        else ConfirmPopup(screen, "Replace [${option.replaces}] with [${option.improvement.name}]?", "Replace",
-            isConfirmPositive = true, action = run).open()
+    }
+
+    private fun place(option: ImprovementOption) {
+        val report = option.report
+        if (report.isEmpty()) screen.accept(option.improvement)
+        else screen.accept(report.removalImprovement, option.improvement)
     }
 
     private fun note(text: String, icon: Actor?) = Table().apply {
