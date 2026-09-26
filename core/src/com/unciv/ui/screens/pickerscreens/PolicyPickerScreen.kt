@@ -273,50 +273,40 @@ class PolicyPickerScreen(
         portraitBranch = selectedBranch?.name ?: portraitBranch?.takeIf { it in branches }
             ?: branches.values.firstOrNull { policies.isAdopted(it.name) && !policies.isAdopted(it.policies.last().name) }?.name
             ?: branches.values.firstOrNull { it.isPickable(viewingCiv, canChangeState) }?.name
-            ?: branches.keys.first()
+            ?: branches.keys.firstOrNull()
 
-        // the branch is laid out at its landscape size; scale it up to the phone's width
-        val branchGroup = BranchGroup(branches[portraitBranch]!!)
-        branchGroup.pack()
-        val scale = ((stage.width - 30f) / branchGroup.width).coerceIn(1f, 2f)
-        branchGroup.isTransform = true
-        branchGroup.setScale(scale)
-        val holder = Group().apply { setSize(branchGroup.width * scale, branchGroup.height * scale); addActor(branchGroup) }
-        topTable.top()
-        topTable.add(holder).padTop(20f)
-
-        val rail = Table().apply { defaults().pad(4f).height(48f) }
-        for (branch in branches.values) {
-            val adopted = policies.isAdopted(branch.name)
-            val button = branch.name.tr(hideIcons = true).toTextButton()
-            button.color = when {
-                branch.name == portraitBranch -> Color.GOLD
-                adopted -> PolicyColors.BranchBGAdopted.color.cpy().lerp(Color.WHITE, 0.4f)
-                else -> Color.WHITE
-            }
-            // open the branch itself: recreate() would carry over a selected policy, which wins over the rail's branch
-            button.onClick { game.replaceCurrentScreen { PolicyPickerScreen(viewingCiv, canChangeState, branch.name) } }
-            rail.add(button)
-        }
-        val railScroll = AutoScrollPane(rail).apply { setScrollingDisabled(false, true) }
-
-        // the branch rail goes on top of the portrait bottom bar (description, then Close and Adopt)
-        val bottomActors = bottomTable.cells.map { it.actor } // clearChildren resets the cells, so keep the actors
-        bottomTable.clearChildren()
-        bottomTable.add(railScroll).colspan(2).growX().row()
-        for ((i, actor) in bottomActors.withIndex()) {
-            val added = bottomTable.add(actor).pad(10f)
-            if (i == 0) added.colspan(2).growX().pad(0f).row() else if (i == 2) added.expandX().right()
-        }
-
-        splitPane.pack()
-        (select?.let { policyNameToButton[it] })?.let { pickPolicy(it) }
-        // scroll the rail so the chosen branch is visible
-        railScroll.layout()
-        val railIndex = branches.keys.indexOf(portraitBranch)
-        if (railIndex in 0 until rail.children.size)
-            rail.children[railIndex].let { railScroll.scrollTo(it.x, 0f, it.width, it.height) }
+        pickerPane.remove()
+        val safeArea = safeAreaBoundsInWorld()
+        val topGap = (56f - (stage.height - safeArea.y - safeArea.height)).coerceAtLeast(0f)
+        stage.addActor(PortraitMapBackdrop(viewingCiv).apply {
+            setBounds(safeArea.x, safeArea.y, safeArea.width, safeArea.height)
+        })
+        val view = PolicyPickerPortrait(this, safeArea.width, branches, portraitBranch, select)
+        view.setBounds(safeArea.x, safeArea.y, safeArea.width, safeArea.height - topGap)
+        stage.addActor(view)
     }
+
+    internal fun adoptPortrait(policy: Policy) {
+        if (!policy.isPickable(viewingCiv, canChangeState)) return
+        if (policy is PolicyBranch) {
+            ConfirmPopup(this, "Are you sure you want to adopt [${policy.name}]?", "Adopt", true, action = {
+                if (policy.isPickable(viewingCiv, canChangeState)) {
+                    viewingCiv.policies.adopt(policy)
+                    game.replaceCurrentScreen { recreate() }
+                }
+            }).open(force = true)
+            return
+        }
+        Concurrency.run {
+            InputDisabling.withInputDisabled { viewingCiv.policies.adopt(policy) }
+            Concurrency.runOnGLThread {
+                if (game.screen !is PolicyPickerScreen) game.popScreen()
+                else game.replaceCurrentScreen { recreate() }
+            }
+        }
+    }
+
+    internal fun rememberPortraitBranch(name: String) { portraitBranch = name }
 
     private fun pickPolicy(button: PolicyButton) {
 
