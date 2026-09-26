@@ -653,10 +653,12 @@ class AlertPopup(
                 BaseScreen.skinStrings.roundedEdgeRectangleShape,
                 Color(16f / 255f, 31f / 255f, 47f / 255f, .92f))
             pad(20f, 18f, 16f, 18f)
-            add(wonder.name.toLabel(Color.valueOf("ffd97a"), 32, hideIcons = true)).left().row()
+            add(wonder.name.toLabel(Color.valueOf("ffd97a"), 32, hideIcons = true).apply { wrap = true })
+                .width(logicalWidth - 60f).left().row()
             val builtText = if (builtCity == null) "Completed on turn ${gameInfo.turns}"
                 else "Built in ${builtCity.name} on turn ${gameInfo.turns}"
-            add(builtText.toLabel(Color.valueOf("b7cde0"), 14)).left().padTop(2f).row()
+            add(builtText.toLabel(Color.valueOf("b7cde0"), 14).apply { wrap = true })
+                .width(logicalWidth - 60f).left().padTop(2f).row()
             val effects = Table()
             effects.add(wonder.getShortDescription().toLabel(Color.WHITE, 14).apply { wrap = true })
                 .width(logicalWidth - 80f).left()
@@ -679,7 +681,7 @@ class AlertPopup(
                     background = BaseScreen.skinStrings.getUiBackground("",
                         BaseScreen.skinStrings.roundedEdgeRectangleShape, Color.valueOf("344250"))
                     touchable = Touchable.enabled
-                    add("View ${builtCity.name}".toLabel(fontSize = 16)).center()
+                    add("View ${builtCity.name}".toLabel(fontSize = 16).apply { wrap = true }).growX().center()
                     onClick {
                         close()
                         worldScreen.game.pushScreen { CityScreen(worldScreen.selectedGameView.getCityView(builtCity)) }
