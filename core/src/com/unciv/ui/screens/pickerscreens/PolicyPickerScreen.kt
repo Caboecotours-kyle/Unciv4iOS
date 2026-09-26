@@ -299,13 +299,14 @@ class PolicyPickerScreen(
         }
         val railScroll = AutoScrollPane(rail).apply { setScrollingDisabled(false, true) }
 
-        // rebuild the bottom bar with the rail on its own row above Close / description / Adopt
-        val bottomCells = bottomTable.children.toList()
+        // the branch rail goes on top of the portrait bottom bar (description, then Close and Adopt)
+        val bottomActors = bottomTable.cells.map { it.actor } // clearChildren resets the cells, so keep the actors
         bottomTable.clearChildren()
-        bottomTable.add(railScroll).colspan(bottomCells.size).growX().row()
-        for (actor in bottomCells) bottomTable.add(actor).pad(10f)
-        bottomTable.cells.last().right()
-        bottomTable.cells[1].grow()
+        bottomTable.add(railScroll).colspan(2).growX().row()
+        for ((i, actor) in bottomActors.withIndex()) {
+            val added = bottomTable.add(actor).pad(10f)
+            if (i == 0) added.colspan(2).growX().pad(0f).row() else if (i == 2) added.expandX().right()
+        }
 
         splitPane.pack()
         (select?.let { policyNameToButton[it] })?.let { pickPolicy(it) }

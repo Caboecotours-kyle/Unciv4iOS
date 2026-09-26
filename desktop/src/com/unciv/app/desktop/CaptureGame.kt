@@ -22,7 +22,11 @@ import com.unciv.ui.screens.overviewscreen.EmpireOverviewScreen
 import com.unciv.models.Counter
 import com.unciv.models.ruleset.BeliefType
 import com.unciv.ui.screens.pickerscreens.PantheonPickerScreen
+import com.unciv.ui.screens.pickerscreens.DiplomaticVotePickerScreen
+import com.unciv.ui.screens.pickerscreens.GreatPersonPickerScreen
+import com.unciv.ui.screens.pickerscreens.ImprovementPickerScreen
 import com.unciv.ui.screens.pickerscreens.PolicyPickerScreen
+import com.unciv.ui.screens.pickerscreens.PromotionPickerScreen
 import com.unciv.ui.screens.pickerscreens.ReligiousBeliefsPickerScreen
 import com.unciv.ui.screens.pickerscreens.TechPickerScreen
 import com.unciv.ui.screens.victoryscreen.VictoryScreen
@@ -141,6 +145,16 @@ class CaptureGame(
             "menu" -> replaceCurrentScreen { MainMenuScreen() }
             "gamemenu" -> WorldScreenMenuPopup(world).open(force = true)
             "options" -> world.openOptionsPopup()
+            "promotion" -> pushScreen { PromotionPickerScreen(civ.units.getCivUnits().first { it.isMilitary() }) }
+            "greatperson" -> pushScreen { GreatPersonPickerScreen(world, civ) }
+            "improvement" -> {
+                // a worker on the capital's neighbour, choosing what to build there
+                val city = foundCapital(world)
+                val worker = civ.units.addUnit("Worker", city)!!
+                val tile = city.getCenterTile().neighbors.first { it.isLand && !it.isImpassible() }
+                pushScreen { ImprovementPickerScreen(tile, worker) {} }
+            }
+            "vote" -> pushScreen { DiplomaticVotePickerScreen(civ) }
             "city" -> pushScreen { CityScreen(world.selectedGameView.getCityView(foundCapital(world))) }
             // alert-<Type>: an alert popup as the game would raise it (with --reveal so other civs are met)
             else -> if (open!!.startsWith("alert-")) showAlert(world, AlertType.valueOf(open.removePrefix("alert-")))

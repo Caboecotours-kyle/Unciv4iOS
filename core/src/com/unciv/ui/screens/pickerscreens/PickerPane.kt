@@ -31,8 +31,8 @@ class PickerPane(
     /** A button on the lower right of [bottomTable] you can use for a "OK"-type action, starts disabled */
     val rightSideButton = "".toTextButton()
 
-    private val screenSplit = 0.85f
-    private val maxBottomTableHeight = 150f     // about 7 lines of normal text
+    private var screenSplit = 0.85f
+    private var maxBottomTableHeight = 150f     // about 7 lines of normal text
 
     /**
      * The table displaying the choices from which to pick (usually).
@@ -69,6 +69,19 @@ class PickerPane(
         super.layout()
         bottomTable.height = bottomTable.height.coerceAtMost(maxBottomTableHeight)
         splitPane.splitAmount = (scrollPane.height / (scrollPane.height + bottomTable.height)).coerceAtLeast(screenSplit)
+    }
+
+    /**
+     * Portrait: the description gets its own full-width row, with Close and the action button beneath it in thumb
+     * reach, instead of being squeezed into a narrow column between them.
+     */
+    fun usePortraitBottomBar() {
+        bottomTable.clearChildren()
+        bottomTable.add(descriptionScroll).colspan(2).growX().maxHeight(maxBottomTableHeight).row()
+        bottomTable.add(closeButton).pad(10f).left()
+        bottomTable.add(rightSideGroup).pad(10f).expandX().right()
+        maxBottomTableHeight = 260f
+        screenSplit = 0.72f // two rows, plus any extra row a screen adds, need more than 15% of a phone's height
     }
 
     /** Enables the [rightSideButton]. See [pick] for a way to set the text. */
