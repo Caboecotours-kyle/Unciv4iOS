@@ -421,9 +421,8 @@ class CityStatsTable(private val cityScreen: CityScreen,
                 val yields = cityView.getBuildingStats(building).joinToString("  ") {
                     "${it.value.toInt()}${it.key.character}"
                 }
-                val assigned = cityView.getNewSpecialists()
                 val specialists = building.newSpecialists().asSequence().joinToString("  ") {
-                    "${it.key.tr(hideIcons = true)} ${assigned[it.key]}/${it.value}"
+                    "${it.value} ${it.key.tr(hideIcons = true)} ${if (it.value == 1) "slot" else "slots"}"
                 }
                 val row = Table().apply { background = portraitBackground(Color(1f, 1f, 1f, .06f)); pad(8f, 10f, 8f, 10f) }
                 row.add(ImageGetter.getConstructionPortrait(building.name, 50f)).size(50f).padRight(10f)

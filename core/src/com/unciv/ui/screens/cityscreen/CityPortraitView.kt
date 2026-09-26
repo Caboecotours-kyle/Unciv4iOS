@@ -116,6 +116,9 @@ internal class CityPortraitView(private val screen: CityScreen, private val shee
         defaults().minWidth(0f).width(sheetWidth)
         constructionDetails.background = bg(CARD)
         tileDetails.background = bg(CARD)
+        // The inner cards already supply padding within their 369pt width.
+        constructionDetails.pad(0f)
+        tileDetails.pad(0f)
         val handle = Table().apply { add(Image(ImageGetter.getWhiteDotDrawable().tint(INK3))).size(36f, 4f) }
         // Handle and heading together are the drag zone, so the 12pt handle row stays as drawn
         handle.touchable = Touchable.enabled
