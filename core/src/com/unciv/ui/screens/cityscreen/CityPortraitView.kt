@@ -294,19 +294,28 @@ internal class CityPortraitView(private val screen: CityScreen, private val shee
         content.add(constructionDetails).center().padTop(12f).row()
         val index = screen.selectedQueueEntry
         if (index >= 0 && screen.canCityBeChanged()) {
+            fun selectedIndex() = screen.selectedQueueEntry.takeIf {
+                city.constructions.constructionQueue.getOrNull(it) == construction.name
+            }
             val actions = Table()
             if (index > 0) actions.add("Move up".toTextButton().onClick {
-                city.tryRaisePriority(index)
+                val selected = selectedIndex() ?: return@onClick
+                screen.selectedQueueEntry = city.tryRaisePriority(selected) ?: return@onClick
+                refresh()
                 screen.updateAsync()
             }).height(48f).pad(4f)
             if (index < city.constructions.constructionQueue.lastIndex) actions.add("Move down".toTextButton().onClick {
-                city.tryLowerPriority(index)
+                val selected = selectedIndex() ?: return@onClick
+                screen.selectedQueueEntry = city.tryLowerPriority(selected) ?: return@onClick
+                refresh()
                 screen.updateAsync()
             }).height(48f).pad(4f)
             actions.add("Remove".toTextButton().onClick {
-                city.tryRemoveFromQueue(index, automatic = false)
+                val selected = selectedIndex() ?: return@onClick
+                if (!city.tryRemoveFromQueue(selected, automatic = false)) return@onClick
                 screen.selectedQueueEntry = -1
                 detailOpen = false
+                refresh()
                 screen.updateAsync()
             }).height(48f).pad(4f)
             content.add(actions).padTop(12f).row()
