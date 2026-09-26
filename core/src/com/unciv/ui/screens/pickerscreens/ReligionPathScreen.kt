@@ -23,7 +23,6 @@ import com.unciv.ui.components.extensions.toLabel
 import com.unciv.ui.components.input.KeyCharAndCode
 import com.unciv.ui.components.input.onClick
 import com.unciv.ui.components.widgets.AutoScrollPane
-import com.unciv.ui.components.tilegroups.WorldTileGroup
 import com.unciv.ui.images.ImageGetter
 import com.unciv.ui.screens.basescreen.portraitCanvasBounds
 import com.unciv.ui.screens.basescreen.BaseScreen
@@ -297,8 +296,12 @@ class ReligionPathScreen(
         val bounds = safeAreaBoundsInWorld()
         val (_, bottomGap) = portraitChromeGaps()
         val drawing = (stage.viewport as SafeAreaViewport).drawingBounds
-        val mapHolder = WorldMapHolder(worldScreen, viewingCiv.gameInfo.tileMap)
+        val mapHolder = WorldMapHolder(worldScreen, viewingCiv.gameInfo.tileMap, gameplayInput = false)
         map = mapHolder
+        stage.addActor(Image(solid(Color.valueOf("eef5fb"))).apply {
+            setBounds(drawing.x, drawing.y, drawing.width, drawing.height)
+            touchable = Touchable.disabled
+        })
         stage.addActor(mapHolder)
         mapHolder.addTiles()
         mapHolder.setBounds(drawing.x, drawing.y, drawing.width, drawing.height)
@@ -317,9 +320,6 @@ class ReligionPathScreen(
             tile.layerCityButton.isVisible = false
         }
         val mapGroup = mapHolder.actor as Group
-        mapGroup.addActorAt(0, FogBackdrop(mapHolder.tileGroups.values.filter {
-            !viewingCiv.hasExplored(it.tileView.getTile())
-        }).apply { setBounds(0f, 0f, mapGroup.width, mapGroup.height) })
         // The lens is read-only. Its own city markers get touch handling after map layers are disabled.
         for (child in mapGroup.children) child.touchable = Touchable.disabled
         mapHolder.addActorToTileGroupMap(Image(solid(Color(0.06f, 0.13f, 0.19f, .3f))).apply {
@@ -342,15 +342,15 @@ class ReligionPathScreen(
             if (city.getCenterTile().aerialDistanceTo(destination.getCenterTile()) > 10) continue
             val from = byCity[city.location.toHexCoord()] ?: continue
             val to = byCity[destination.location.toHexCoord()] ?: continue
-            lines.addLink(city.name, destination.name, from.x + from.width / 2f, from.y + from.height / 2f,
-                to.x + to.width / 2f, to.y + to.height / 2f, emptyList(), emptyList())
+            lines.addLink(city.name, destination.name, from.x + from.groundCenterX, from.y + from.groundCenterY,
+                to.x + to.groundCenterX, to.y + to.groundCenterY, emptyList(), emptyList())
             lines.links.last().apply { color = religionColor(religion); dashed = true; width = 3f }
         }
         mapHolder.addActorToTileGroupMap(lines)
         for (city in cities) {
             val group = byCity[city.location.toHexCoord()] ?: continue
             val marker = cityMarker(city)
-            marker.setPosition(group.x + group.width / 2f - marker.width / 2f, group.y + group.height / 2f - 39f)
+            marker.setPosition(group.x + group.groundCenterX - marker.width / 2f, group.y + group.groundCenterY - 39f)
             mapHolder.addActorToTileGroupMap(marker)
         }
         val overlay = WidgetGroup().apply {
@@ -567,27 +567,6 @@ class ReligionPathScreen(
         setSize(width, height)
     }
 
-    /** Filled unknown tiles keep the lens framed without exposing terrain the player has not seen. */
-    private class FogBackdrop(private val tiles: List<WorldTileGroup>) : Actor() {
-        private val hex = ImageGetter.getDrawable("OtherIcons/Hexagon").region
-        override fun draw(batch: Batch, parentAlpha: Float) {
-            val old = batch.color.cpy()
-            val visible = parent?.cullingArea
-            batch.setColor(FOG.r, FOG.g, FOG.b, parentAlpha)
-            for (tile in tiles) {
-                val w = tile.hexagonImageWidth
-                val h = w * hex.regionHeight / hex.regionWidth * tile.mapVerticalScale
-                val x = tile.x + tile.hexagonImagePosition.first
-                val y = tile.y + tile.groundCenterY +
-                    (tile.hexagonImagePosition.second - tile.groundCenterY) * tile.mapVerticalScale
-                if (visible != null && (x + w < visible.x || x > visible.x + visible.width ||
-                        y + h < visible.y || y > visible.y + visible.height)) continue
-                batch.draw(hex, x, y, w, h)
-            }
-            batch.color = old
-        }
-    }
-
     /** A ring drawn in follower-count shares around each discovered city, including residents with no religion. */
     private class FollowerRing(private val population: Int, private val followers: List<Pair<Color, Int>>) : Actor() {
         private val dot = ImageGetter.getWhiteDotDrawable().region
@@ -626,7 +605,6 @@ class ReligionPathScreen(
         val DONE = Color.valueOf("2f7fe0")
         val LOCKED = Color.valueOf("1f3850")
         val NO_RELIGION = Color.valueOf("5d7690")
-        val FOG = Color.valueOf("aebcca")
         val LINE = Color(1f, 1f, 1f, .12f)
         fun solid(color: Color): Drawable = ImageGetter.getWhiteDotDrawable().tint(color)
         fun rounded(color: Color, shape: String = BaseScreen.skinStrings.roundedEdgeRectangleMidShape): Drawable =
