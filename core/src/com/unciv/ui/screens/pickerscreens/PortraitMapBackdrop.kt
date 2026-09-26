@@ -6,8 +6,6 @@ import com.badlogic.gdx.Gdx
 import com.badlogic.gdx.scenes.scene2d.Actor
 import com.badlogic.gdx.scenes.scene2d.Touchable
 import com.unciv.logic.civilization.Civilization
-import com.unciv.logic.map.HexMath
-import com.unciv.ui.images.ImageGetter
 import com.unciv.ui.screens.basescreen.BaseScreen
 import com.unciv.ui.screens.basescreen.SafeAreaViewport
 import com.unciv.utils.Display
@@ -26,37 +24,50 @@ internal fun BaseScreen.portraitChromeGaps(): Pair<Float, Float> {
     return (56f - topInset).coerceAtLeast(0f) to (30f - bottomInset).coerceAtLeast(0f)
 }
 
-/** A small, static piece of the actual explored map behind the translucent portrait sheets. */
-internal class PortraitMapBackdrop(private val civ: Civilization) : Actor() {
-    private data class Hex(val x: Float, val y: Float, val color: Color)
-    private val region = ImageGetter.getDrawable("OtherIcons/Hexagon").region
-    private val hexes: List<Hex>
+/** Captures the player's rendered map once, without HUD actors or extra map copies. */
+internal class PortraitMapBackdrop(civ: Civilization) : Actor(), com.badlogic.gdx.utils.Disposable {
+    private var buffer: com.badlogic.gdx.graphics.glutils.FrameBuffer? = null
+    private var region: com.badlogic.gdx.graphics.g2d.TextureRegion? = null
 
     init {
         touchable = Touchable.disabled
-        val centerTile = civ.getCapital()?.getCenterTile() ?: civ.cities.firstOrNull()?.getCenterTile()
-            ?: civ.units.getCivUnits().firstOrNull()?.getTile()
-            ?: civ.gameInfo.tileMap.values.firstOrNull { civ.hasExplored(it) }
-            ?: civ.gameInfo.tileMap.values.firstOrNull()
-        val center = centerTile?.let { HexMath.hex2WorldCoords(it.position) }
-        hexes = if (center == null) emptyList() else civ.gameInfo.tileMap.values.mapNotNull { tile ->
-            val p = HexMath.hex2WorldCoords(tile.position)
-            val x = (p.x - center.x) * 34f
-            val y = (p.y - center.y) * 34f
-            if (x < -400f || x > 400f || y < -600f || y > 600f) null
-            else Hex(x, y, if (civ.hasExplored(tile)) tile.getBaseTerrain().getColor().cpy() else Color.valueOf("aebcca"))
+        val world = com.unciv.UncivGame.Current.worldScreen
+        if (world != null && world.gameInfo === civ.gameInfo) {
+            val viewport = com.badlogic.gdx.utils.BufferUtils.newIntBuffer(4)
+            Gdx.gl.glGetIntegerv(com.badlogic.gdx.graphics.GL20.GL_VIEWPORT, viewport)
+            val actors = world.stage.actors.toList()
+            val visibility = actors.map { it.isVisible }
+            val snapshot = com.badlogic.gdx.graphics.glutils.FrameBuffer(com.badlogic.gdx.graphics.Pixmap.Format.RGBA8888,
+                Gdx.graphics.backBufferWidth, Gdx.graphics.backBufferHeight, false)
+            try {
+                snapshot.begin()
+                Gdx.gl.glClearColor(.07f, .14f, .21f, 1f)
+                Gdx.gl.glClear(com.badlogic.gdx.graphics.GL20.GL_COLOR_BUFFER_BIT)
+                actors.forEach { it.isVisible = it === world.mapHolder }
+                world.stage.viewport.apply()
+                world.stage.draw()
+                buffer = snapshot
+                region = com.badlogic.gdx.graphics.g2d.TextureRegion(snapshot.colorBufferTexture).apply { flip(false, true) }
+            } finally {
+                actors.forEachIndexed { index, actor -> actor.isVisible = visibility[index] }
+                snapshot.end()
+                Gdx.gl.glViewport(viewport.get(0), viewport.get(1), viewport.get(2), viewport.get(3))
+                if (buffer == null) snapshot.dispose()
+            }
         }
     }
 
     override fun draw(batch: Batch, parentAlpha: Float) {
-        val old = batch.color.cpy()
-        for (hex in hexes) {
-            val tint = hex.color.cpy().lerp(Color.valueOf("132435"), .32f)
-            batch.setColor(tint.r, tint.g, tint.b, parentAlpha)
-            // HexMath's adjacent centers are 51px apart horizontally and 29.4px vertically
-            // at this scale. A flat-top 68 × 58.9 hex meets its neighbors without gaps.
-            batch.draw(region, x + width / 2f + hex.x - 34f, y + height / 2f + hex.y - 29.45f, 68f, 58.9f)
-        }
-        batch.color = old
+        val image = region ?: return
+        val old = batch.packedColor
+        batch.setColor(.68f, .68f, .68f, parentAlpha)
+        batch.draw(image, x, y, width, height)
+        batch.packedColor = old
+    }
+
+    override fun dispose() {
+        buffer?.dispose()
+        buffer = null
+        region = null
     }
 }

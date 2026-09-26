@@ -36,6 +36,7 @@ import com.unciv.ui.components.widgets.BorderedTable
 import com.unciv.ui.components.widgets.ColorMarkupLabel
 import com.unciv.ui.images.ImageGetter
 import com.unciv.ui.popups.ConfirmPopup
+import com.unciv.ui.screens.basescreen.portraitCanvasBounds
 import com.unciv.ui.screens.basescreen.BaseScreen
 import com.unciv.ui.screens.basescreen.RecreateOnResize
 import com.unciv.utils.Concurrency
@@ -278,9 +279,9 @@ class PolicyPickerScreen(
         pickerPane.remove()
         val safeArea = safeAreaBoundsInWorld()
         val (topGap, bottomGap) = portraitChromeGaps()
-        val drawing = (stage.viewport as com.unciv.ui.screens.basescreen.SafeAreaViewport).drawingBounds
         stage.addActor(PortraitMapBackdrop(viewingCiv).apply {
-            setBounds(drawing.x, drawing.y, drawing.width, drawing.height)
+            val canvas = portraitCanvasBounds()
+            setBounds(canvas.x, canvas.y, canvas.width, canvas.height)
         })
         val view = PolicyPickerPortrait(this, safeArea.width, branches, portraitBranch, select, bottomGap)
         view.setBounds(safeArea.x, safeArea.y, safeArea.width, safeArea.height - topGap)
@@ -737,6 +738,11 @@ class PolicyPickerScreen(
             }
         }
 
+    }
+
+    override fun dispose() {
+        stage.actors.filterIsInstance<PortraitMapBackdrop>().forEach { it.dispose() }
+        super.dispose()
     }
 
     override fun recreate(): BaseScreen {

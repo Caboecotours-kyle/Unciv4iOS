@@ -25,6 +25,7 @@ import com.unciv.ui.components.input.onClick
 import com.unciv.ui.components.widgets.AutoScrollPane
 import com.unciv.ui.components.tilegroups.WorldTileGroup
 import com.unciv.ui.images.ImageGetter
+import com.unciv.ui.screens.basescreen.portraitCanvasBounds
 import com.unciv.ui.screens.basescreen.BaseScreen
 import com.unciv.ui.screens.basescreen.RecreateOnResize
 import com.unciv.ui.screens.basescreen.SafeAreaViewport
@@ -60,9 +61,15 @@ class ReligionPathScreen(
         shown = true
     }
 
+    override fun dispose() {
+        stage.actors.filterIsInstance<PortraitMapBackdrop>().forEach { it.dispose() }
+        super.dispose()
+    }
+
     override fun recreate(): BaseScreen = ReligionPathScreen(viewingCiv, worldScreen, lens)
 
     private fun rebuild() {
+        stage.actors.filterIsInstance<PortraitMapBackdrop>().forEach { it.dispose() }
         stage.root.clearChildren()
         map = null
         if (lens) buildLens() else buildPath()
@@ -71,9 +78,9 @@ class ReligionPathScreen(
     private fun buildPath() {
         val bounds = safeAreaBoundsInWorld()
         val (topGap, bottomGap) = portraitChromeGaps()
-        val drawing = (stage.viewport as SafeAreaViewport).drawingBounds
         stage.addActor(PortraitMapBackdrop(viewingCiv).apply {
-            setBounds(drawing.x, drawing.y, drawing.width, drawing.height)
+            val canvas = portraitCanvasBounds()
+            setBounds(canvas.x, canvas.y, canvas.width, canvas.height)
         })
         val root = Table().apply {
             background = rounded(SHEET.cpy().apply { a = .9f }, BaseScreen.skinStrings.roundedTopEdgeRectangleSmallShape)
@@ -537,7 +544,7 @@ class ReligionPathScreen(
     private fun focusOn(tile: com.unciv.logic.map.HexCoord) { map?.setCenterPosition(tile, immediately = true, selectUnit = false) }
 
     private fun progressBar(value: Int, goal: Int, width: Float, color: Color): Table {
-        val bar = Table().apply { background = solid(CHIP) }
+        val bar = Table().left().apply { background = solid(CHIP) }
         bar.add(Image(solid(color))).width(width * (value.toFloat() / goal.coerceAtLeast(1)).coerceIn(0f, 1f)).height(9f).left()
         return bar
     }
