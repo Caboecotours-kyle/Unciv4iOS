@@ -87,7 +87,7 @@ class VictoryScreenTracks(worldScreen: WorldScreen) : Table(BaseScreen.skin) {
         val dotsAtStep = HashMap<Int, Int>()
         for (rival in rivals) {
             val step = rival.victoryManager.amountMilestonesCompleted(victory)
-            val stacked = dotsAtStep.getOrDefault(step, 0)
+            val stacked = dotsAtStep[step] ?: 0 // getOrDefault is missing on the iOS runtime
             dotsAtStep[step] = stacked + 1
             val dot = getRivalDot(rival)
             val x = (step.toFloat() / segments * trackWidth - dotSize / 2 + stacked * dotSize * 0.6f)
