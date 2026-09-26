@@ -270,7 +270,13 @@ class WorldScreen(
         shouldUpdate = true
     }
 
+    override fun hide() {
+        mapHolder.stopUnitMotion()
+        super.hide()
+    }
+
     override fun dispose() {
+        mapHolder.stopUnitMotion()
         resizeDeferTimer?.cancel()
         events.stopReceiving()
         statusButtons.dispose()

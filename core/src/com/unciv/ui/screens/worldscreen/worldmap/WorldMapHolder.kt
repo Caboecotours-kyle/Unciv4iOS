@@ -5,6 +5,8 @@ import com.badlogic.gdx.Gdx
 import com.badlogic.gdx.graphics.Color
 import com.badlogic.gdx.graphics.g2d.Batch
 import com.badlogic.gdx.scenes.scene2d.actions.Actions
+import com.badlogic.gdx.scenes.scene2d.actions.TemporalAction
+import com.badlogic.gdx.scenes.scene2d.ui.Image
 import com.badlogic.gdx.scenes.scene2d.ui.Table
 import com.badlogic.gdx.utils.Align
 import com.badlogic.gdx.math.Interpolation
@@ -33,6 +35,9 @@ import com.unciv.ui.components.tilegroups.TileGroup
 import com.unciv.ui.components.tilegroups.TileGroupMap
 import com.unciv.ui.components.tilegroups.TileSetStrings
 import com.unciv.ui.components.tilegroups.WorldTileGroup
+import com.unciv.ui.components.tilegroups.layers.TileLayerUnitSprite
+import com.unciv.ui.components.tilegroups.layers.UnitSpriteSlot
+import com.unciv.ui.images.ImageGetter
 import com.unciv.ui.components.tilegroups.citybutton.CityButton
 import com.unciv.ui.components.widgets.UnitIconGroup
 import com.unciv.ui.components.widgets.ZoomableScrollPane
@@ -47,6 +52,8 @@ import com.unciv.utils.Concurrency
 import com.unciv.utils.Log
 import com.unciv.utils.launchOnGLThread
 import kotlin.math.max
+import kotlin.math.min
+import kotlin.math.sin
 
 
 class WorldMapHolder @JvmOverloads constructor(
@@ -76,6 +83,23 @@ class WorldMapHolder @JvmOverloads constructor(
     private var didDragUnit = false
     private var dragPreviewBusy = false
     private var dragGeneration = 0
+    private var idleUnitId = -1
+    private var idleSlot: UnitSpriteSlot? = null
+    private var idlePose: UnitSpritePose? = null
+    private var idleAction: Action? = null
+    private val movingUnits = HashMap<Int, MovingUnit>()
+    private val landingDust = HashSet<Image>()
+    private val portraitCombatCancels = HashSet<() -> Unit>()
+
+    private class MovingUnit(
+        val id: Int,
+        val civName: String,
+        val actor: Group,
+    ) {
+        var pose: UnitSpritePose? = null
+        var hiddenSlot: UnitSpriteSlot? = null
+        var hiddenLayer: TileLayerUnitSprite? = null
+    }
 
     init {
         if (Gdx.app.type == Application.ApplicationType.Desktop) this.setFlingTime(0f)
@@ -607,6 +631,10 @@ class WorldMapHolder @JvmOverloads constructor(
         targetTileView: TileView,
         pathToTile: List<TileView>
     ) {
+        if (currentTileSetStrings.projection.tilted) {
+            animatePortraitMovement(previousTileView, selectedUnit, targetTileView, pathToTile)
+            return
+        }
         val tileGroup = tileGroups[previousTileView]!!
 
         // Steal the current sprites to our new group
@@ -646,6 +674,250 @@ class WorldMapHolder @JvmOverloads constructor(
                 Actions.removeActor(),
             )
         )
+    }
+
+    /** A selected sprite breathes twice on the default battery-saving setting. */
+    internal fun updateSelectedUnitBreathing() {
+        if (!currentTileSetStrings.projection.tilted || !::tileGroupMap.isInitialized) {
+            stopBreathing()
+            return
+        }
+        val unit = worldScreen.bottomUnitTable.selectedUnit
+        val layer = unit?.let { tileGroups[it.getTile()]?.layerUnitArt }
+        if (unit == null || layer == null) {
+            stopBreathing()
+            return
+        }
+        val slot = layer.getSpriteSlot(unit)
+        if (slot == null || slot.unitId != unit.id || unit.hasDisappeared() ||
+            !layer.isVisible || !slot.spriteGroup.isVisible || slot.spriteGroup.stage !== worldScreen.stage ||
+            movingUnits.containsKey(unit.id) || portraitCombatCancels.isNotEmpty()
+        ) {
+            stopBreathing()
+            return
+        }
+        if (idleUnitId == unit.id && idleSlot === slot && idleAction != null) return
+        stopBreathing()
+
+        val pose = UnitSpritePose(slot.spriteGroup.children.filterIsInstance<Image>())
+        if (!pose.isAttachedTo(slot.spriteGroup)) return
+        idleUnitId = unit.id
+        idleSlot = slot
+        idlePose = pose
+        val action = object : Action() {
+            private var elapsed = 0f
+            override fun act(delta: Float): Boolean {
+                if (idleSlot !== slot || slot.unitId != unit.id || unit.hasDisappeared() ||
+                    movingUnits.containsKey(unit.id) || !layer.isVisible || !slot.spriteGroup.isVisible ||
+                    !pose.isAttachedTo(slot.spriteGroup)
+                ) {
+                    stopBreathing()
+                    return true
+                }
+                elapsed += delta
+                val wave = sin(elapsed * (Math.PI * 2.0 / 1.5)).toFloat()
+                pose.apply(1f - 0.012f * wave, 1f + 0.022f * wave)
+                if (!UncivGame.Current.settings.continuousRendering && elapsed >= 3f) {
+                    stopBreathing()
+                    return true
+                }
+                if (!Gdx.graphics.isContinuousRendering) Gdx.graphics.requestRendering()
+                return false
+            }
+        }
+        idleAction = action
+        worldScreen.stage.root.addAction(action)
+        Gdx.graphics.requestRendering()
+    }
+
+    private fun stopBreathing() {
+        idleAction?.let { worldScreen.stage.root.removeAction(it) }
+        idlePose?.restorePose()
+        idleAction = null
+        idlePose = null
+        idleSlot = null
+        idleUnitId = -1
+    }
+
+    /** Called when the world screen hides or is disposed, so no old motion resumes on return. */
+    internal fun stopUnitMotion() {
+        stopBreathing()
+        for (moving in movingUnits.values.toList()) finishPortraitMove(moving)
+        for (puff in landingDust) puff.remove()
+        landingDust.clear()
+        cancelPortraitCombat()
+    }
+
+    internal fun preparePortraitCombat() {
+        cancelPortraitCombat()
+        stopBreathing()
+    }
+
+    internal fun beginPortraitCombat(cancel: () -> Unit) {
+        portraitCombatCancels.add(cancel)
+    }
+
+    internal fun finishPortraitCombat(cancel: () -> Unit) {
+        portraitCombatCancels.remove(cancel)
+        worldScreen.shouldUpdate = true
+        Gdx.graphics.requestRendering()
+    }
+
+    private fun cancelPortraitCombat() {
+        val active = portraitCombatCancels.toList()
+        portraitCombatCancels.clear()
+        for (cancel in active) cancel()
+    }
+
+    private fun revealPortraitMoveTarget(moving: MovingUnit) {
+        val slot = moving.hiddenSlot
+        val layer = moving.hiddenLayer
+        if (slot != null && layer != null && slot.unitId == moving.id && layer.isVisible &&
+            !layer.tileGroup.strategicView && slot.spriteGroup.parent != null
+        ) slot.spriteGroup.isVisible = true
+        moving.hiddenSlot = null
+        moving.hiddenLayer = null
+    }
+
+    private fun finishPortraitMove(moving: MovingUnit) {
+        if (movingUnits[moving.id] !== moving) return
+        movingUnits.remove(moving.id)
+        moving.actor.clearActions()
+        moving.pose?.let { it.restorePose(); it.restorePosition() }
+        moving.actor.remove()
+        revealPortraitMoveTarget(moving)
+        worldScreen.shouldUpdate = true
+        Gdx.graphics.requestRendering()
+    }
+
+    private fun animatePortraitMovement(
+        previousTileView: TileView,
+        unit: MapUnitView,
+        targetTileView: TileView,
+        pathToTile: List<TileView>,
+    ) {
+        if (pathToTile.isEmpty() || unit.hasDisappeared()) return
+        cancelPortraitCombat()
+        stopBreathing()
+        val previous = movingUnits[unit.id]
+        val moving = if (previous != null && previous.civName == unit.civName) {
+            previous.actor.clearActions()
+            previous.pose?.let { it.restorePose(); it.restorePosition() }
+            revealPortraitMoveTarget(previous)
+            previous
+        } else {
+            if (previous != null) finishPortraitMove(previous)
+            val tileGroup = tileGroups[previousTileView] ?: return
+            val slot = tileGroup.layerUnitArt.getSpriteSlot(unit) ?: return
+            if (slot.unitId != unit.id || !tileGroup.layerUnitArt.isVisible || !slot.spriteGroup.isVisible) return
+            val actor = Group().apply {
+                setPosition(tileGroup.x, tileGroup.y)
+                touchable = Touchable.disabled
+            }
+            for (image in slot.spriteGroup.children.toList()) actor.addActor(image)
+            tileGroupMap.addActor(actor)
+            MovingUnit(unit.id, unit.civName, actor).also { movingUnits[unit.id] = it }
+        }
+
+        val destination = tileGroups[targetTileView] ?: run { finishPortraitMove(moving); return }
+        val sequence = Actions.sequence()
+        sequence.addAction(Actions.run {
+            if (movingUnits[unit.id] !== moving) return@run
+            val layer = destination.layerUnitArt
+            val slot = layer.getSpriteSlot(unit)
+            if (slot == null || slot.unitId != unit.id || !layer.isVisible || destination.strategicView ||
+                unit.hasDisappeared() || unit.civName != moving.civName
+            ) {
+                finishPortraitMove(moving)
+                return@run
+            }
+            slot.spriteGroup.isVisible = false
+            moving.hiddenSlot = slot
+            moving.hiddenLayer = layer
+        })
+        val hopDuration = min(0.5f, 1.2f / pathToTile.size)
+        for (tileView in pathToTile) {
+            val tileGroup = tileGroups[tileView] ?: continue
+            sequence.addAction(object : TemporalAction(hopDuration) {
+                private var startX = 0f
+                private var startY = 0f
+                private lateinit var pose: UnitSpritePose
+
+                override fun begin() {
+                    startX = moving.actor.x
+                    startY = moving.actor.y
+                    pose = UnitSpritePose(moving.actor.children.filterIsInstance<Image>())
+                    moving.pose = pose
+                }
+
+                override fun act(delta: Float): Boolean {
+                    if (movingUnits[unit.id] !== moving || unit.hasDisappeared() ||
+                        unit.civName != moving.civName || destination.strategicView ||
+                        !moving.hiddenLayer.orFalseVisible()
+                    ) {
+                        finishPortraitMove(moving)
+                        return true
+                    }
+                    return super.act(delta)
+                }
+
+                override fun update(percent: Float) {
+                    val travel = Interpolation.smooth.apply(percent)
+                    moving.actor.setPosition(startX + (tileGroup.x - startX) * travel,
+                        startY + (tileGroup.y - startY) * travel)
+                    val crouch = when {
+                        percent < 0.18f -> percent / 0.18f
+                        percent > 0.82f -> sin(((percent - 0.82f) / 0.18f * Math.PI).toFloat())
+                        else -> 0f
+                    }
+                    val airborne = if (percent in 0.18f..0.82f)
+                        sin(((percent - 0.18f) / 0.64f * Math.PI).toFloat()) else 0f
+                    val lean = if (tileGroup.x >= startX) -1f else 1f
+                    pose.apply(1f + 0.10f * crouch - 0.035f * airborne,
+                        1f - 0.15f * crouch + 0.07f * airborne,
+                        lean * 5f * airborne, tileGroup.width * 0.20f * airborne)
+                    Gdx.graphics.requestRendering()
+                }
+
+                override fun end() {
+                    pose.restorePose()
+                    pose.restorePosition()
+                    if (movingUnits[unit.id] === moving) addLandingDust(tileGroup)
+                }
+            })
+        }
+        sequence.addAction(Actions.run { finishPortraitMove(moving) })
+        moving.actor.addAction(sequence)
+        Gdx.graphics.requestRendering()
+    }
+
+    private fun TileLayerUnitSprite?.orFalseVisible() = this?.isVisible == true
+
+    private fun addLandingDust(tileGroup: TileGroup) {
+        val groundX = tileGroup.x + tileGroup.groundCenterX
+        val groundY = tileGroup.y + tileGroup.groundCenterY - 2f
+        for (side in listOf(-1f, 1f)) {
+            val puff = ImageGetter.getWhiteDot().apply {
+                setSize(4f, 4f)
+                setPosition(groundX - 2f, groundY - 2f)
+                color = Color.valueOf("e9dfc4")
+                touchable = Touchable.disabled
+            }
+            tileGroupMap.addActor(puff)
+            landingDust.add(puff)
+            puff.addAction(object : TemporalAction(0.28f) {
+                override fun update(percent: Float) {
+                    puff.setPosition(groundX - 2f + side * 14f * percent, groundY - 2f + 4f * percent)
+                    puff.color.a = 1f - percent
+                    Gdx.graphics.requestRendering()
+                }
+                override fun end() {
+                    puff.remove()
+                    landingDust.remove(puff)
+                }
+            })
+        }
+        Gdx.graphics.requestRendering()
     }
 
     internal fun swapMoveUnitToTargetTile(selectedUnitView: MapUnitView, targetTileView: TileView) {

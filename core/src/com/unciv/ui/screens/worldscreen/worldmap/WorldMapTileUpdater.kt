@@ -49,6 +49,7 @@ object WorldMapTileUpdater {
         tileGroups[selectedTile]?.layerOverlay?.showHighlight(Color.WHITE)
 
         zoom(scaleX) // zoom to current scale, to set the size of the city buttons after "next turn"
+        updateSelectedUnitBreathing()
     }
 
     private fun WorldMapHolder.updateTilesForSelectedUnit(unitView: MapUnitView) {
