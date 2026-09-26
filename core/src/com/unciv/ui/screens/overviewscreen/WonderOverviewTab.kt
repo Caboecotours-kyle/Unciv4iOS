@@ -29,19 +29,23 @@ class WonderOverviewTab(
     private val fixedContent = Table()
     override fun getFixedContent() = fixedContent
 
+    /** Portrait fits the phone width: tighter cells and wrapped wonder names */
+    private val portrait = overviewScreen.isPortrait()
+    private val cellPad = if (portrait) 5f else 10f
+
     init {
         fixedContent.apply {
-            defaults().pad(10f).align(Align.center)
+            defaults().pad(cellPad).align(Align.center)
             add()
             add("Name".toLabel())
             add("Status".toLabel())
             add("Location".toLabel())
-            add().minWidth(30f)
+            add().minWidth(if (portrait) 0f else 30f)
             row()
         }
 
         top()
-        defaults().pad(10f).align(Align.center)
+        defaults().pad(cellPad).align(Align.center)
         repeat(5) {
             add() // dummies so equalizeColumns can work because the first grid cell is colspan(5)
         }
@@ -71,9 +75,14 @@ class WonderOverviewTab(
                 overviewScreen.openCivilopedia(wonder.makeLink())
             }
             // Terrain image padding is a bit unpredictable, they need ~5f more. Ensure equal line spacing on name, not image:
-            add(image).pad(0f, 10f, 0f, 10f)
+            add(image).pad(0f, cellPad, 0f, cellPad)
 
-            add(wonder.getNameColumn().toLabel(hideIcons = true)).pad(15f, 10f, 15f, 10f)
+            val nameLabel = wonder.getNameColumn().toLabel(hideIcons = true)
+            if (portrait) {
+                nameLabel.wrap = true
+                nameLabel.setAlignment(Align.center)
+                add(nameLabel).width(150f).pad(10f, cellPad, 10f, cellPad)
+            } else add(nameLabel).pad(15f, 10f, 15f, 10f)
             add(wonder.getStatusColumn().toLabel())
             val locationText = wonder.getLocationColumn()
             if (locationText.isNotEmpty()) {

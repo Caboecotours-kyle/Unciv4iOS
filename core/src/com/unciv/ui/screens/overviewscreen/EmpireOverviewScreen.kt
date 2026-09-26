@@ -1,6 +1,7 @@
 package com.unciv.ui.screens.overviewscreen
 
 import com.badlogic.gdx.graphics.Color
+import com.badlogic.gdx.utils.Align
 import com.unciv.Constants
 import com.unciv.GUI
 import com.unciv.logic.civilization.Notification
@@ -20,7 +21,11 @@ class EmpireOverviewScreen(
 ) : BaseScreen(), RecreateOnResize {
     // 50 normal button height + 2*10 topTable padding + 2 Separator + 2*5 centerTable padding
     // Since a resize recreates this screen this should be fine as a val
-    internal val centerAreaHeight = stage.height - 82f
+    internal var centerAreaHeight = stage.height - 82f
+        private set
+
+    /** Portrait wraps the tab buttons into rows so every tab is in view */
+    private val portrait = isPortrait()
 
     private val tabbedPager: TabbedPager
     private val pageObjects = HashMap<EmpireOverviewCategories, EmpireOverviewTab>()
@@ -42,7 +47,8 @@ class EmpireOverviewScreen(
             stage.width, stage.width,
             centerAreaHeight, centerAreaHeight,
             separatorColor = Color.WHITE,
-            capacity = EmpireOverviewCategories.entries.size)
+            capacity = EmpireOverviewCategories.entries.size,
+            wrapHeaderWidth = if (portrait) stage.width else 0f)
 
         for (category in EmpireOverviewCategories.entries) {
             val tabState = category.testState(viewingPlayer)
@@ -57,7 +63,8 @@ class EmpireOverviewScreen(
                 icon, iconSize,
                 disabled = tabState != EmpireOverviewTabState.Normal,
                 shortcutKey = category.shortcutKey,
-                scrollAlign = category.scrollAlign
+                // wide tables start at their first column rather than centered past both edges
+                scrollAlign = if (portrait) Align.topLeft else category.scrollAlign
             )
             if (category == selectCategory) {
                 tabbedPager.selectPage(index)
@@ -68,6 +75,13 @@ class EmpireOverviewScreen(
 
         val closeButton = getCloseButton { game.popScreen() }
         tabbedPager.decorateHeader(closeButton)
+        if (portrait) {
+            // header rows plus separator and padding, where the landscape estimate above assumes one row
+            centerAreaHeight = stage.height - tabbedPager.minHeight - 12f
+            // the remembered tab can be disabled (no cities yet): open the first one that works
+            if (tabbedPager.activePage < 0)
+                (0 until tabbedPager.pageCount()).firstOrNull { tabbedPager.selectPage(it) }
+        }
 
         tabbedPager.setFillParent(true)
         stage.addActor(tabbedPager)
