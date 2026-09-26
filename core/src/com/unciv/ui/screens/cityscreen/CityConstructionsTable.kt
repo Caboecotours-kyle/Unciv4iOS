@@ -90,6 +90,10 @@ class CityConstructionsTable(private val cityScreen: CityScreen) {
 
     private val highlightColor = Color.GREEN.darken(0.4f)
 
+    /** Stage height kept free above the queue and below the list; portrait uses it for the city header and tab bar. */
+    var reservedTop = 0f
+    var reservedBottom = 0f
+
     /** Gets or sets visibility of [both widgets][CityConstructionsTable] */
     var isVisible: Boolean
         get() = upperTable.isVisible
@@ -161,9 +165,10 @@ class CityConstructionsTable(private val cityScreen: CityScreen) {
         updateConstructionQueue()
         upperTable.pack()
         // Need to reposition when height changes as setPosition's alignment does not persist, it's just a readability shortcut to calculate bottomLeft
-        upperTable.setPosition(posFromEdge, stageHeight - posFromEdge, Align.topLeft)
+        upperTable.setPosition(posFromEdge, stageHeight - posFromEdge - reservedTop, Align.topLeft)
+        lowerTable.setPosition(posFromEdge, posFromEdge + reservedBottom, Align.bottomLeft)
         lowerTableScrollCell.maxHeight(
-            (stageHeight - upperTable.height - 2 * posFromEdge).coerceAtLeast(20f)
+            (stageHeight - upperTable.height - 2 * posFromEdge - reservedTop - reservedBottom).coerceAtLeast(20f)
         )
         constructionsQueueTable.adjustContextMenuIndicators()
     }
@@ -797,7 +802,7 @@ class CityConstructionsTable(private val cityScreen: CityScreen) {
         list: ArrayList<Table>,
         prefWidth: Float,
         toggleKey: KeyboardBinding,
-        startsOutOpened: Boolean = !cityScreen.isCrampedPortrait()
+        startsOutOpened: Boolean = true // portrait shows this list alone on its own tab, so it has the room
     ) {
         if (list.isEmpty()) return
 

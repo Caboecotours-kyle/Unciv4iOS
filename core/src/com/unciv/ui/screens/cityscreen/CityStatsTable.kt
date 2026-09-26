@@ -52,7 +52,7 @@ class CityStatsTable(private val cityScreen: CityScreen) : Table() {
         )
 
         expander = ExpanderTab("",
-            startsOutOpened = !cityScreen.isCrampedPortrait(),
+            startsOutOpened = true, // portrait shows city stats alone on their own tab
             persistenceID = "CityStatsTable",
             defaultPad = 7f,
             headerPad = if (cityScreen.isCrampedPortrait()) 7f else 6f,

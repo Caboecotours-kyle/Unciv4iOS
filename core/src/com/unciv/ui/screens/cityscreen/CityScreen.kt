@@ -59,7 +59,16 @@ class CityScreen(
 
         /** Size of the decoration icons shown besides the raze button */
         const val wltkIconSize = 40f
+
+        /** Portrait panel shown above the tab bar; kept across the frequent CityScreen re-creations */
+        private var portraitTab = PortraitTab.Build
+        private const val portraitBarHeight = 56f
     }
+
+    private enum class PortraitTab(val label: String) { Build("Build"), City("City") }
+
+    /** Portrait: one panel at a time, picked from a tab bar in thumb reach (DESIGN.md city sheet) */
+    private val portraitTabBar = Table()
 
     private val viewingCiv: CivView = cityView.gameView.civView
 
@@ -160,6 +169,7 @@ class CityScreen(
         stage.addActor(tileTable)
         stage.addActor(cityPickerTable)  // add late so it's top in Z-order and doesn't get covered in cramped portrait
         stage.addActor(exitCityButton)
+        if (isPortrait()) buildPortraitTabBar()
 
         cityView.updateCityStats()
         updateSync() // NOT async since that gives a "visual flash" when entering the city
@@ -189,7 +199,13 @@ class CityScreen(
     }
     
     internal fun updateSync(){
-        constructionsTable.isVisible = !isSpying
+        if (isPortrait()) {
+            // room for the city name above and the tab bar below; the picker must be filled before it can be measured
+            cityPickerTable.update()
+            constructionsTable.reservedTop = cityPickerTable.packIfNeeded().height + 2 * posFromEdge
+            constructionsTable.reservedBottom = portraitBarHeight + 2 * posFromEdge
+        }
+        constructionsTable.isVisible = !isSpying && (!isPortrait() || portraitTab == PortraitTab.Build)
         constructionsTable.update(selectedConstruction)
         updateWithoutConstructionAndMap()
 
@@ -228,6 +244,52 @@ class CityScreen(
         // Top center: Annex/Raze button
         updateAnnexAndRazeCityButton()
 
+        if (isPortrait()) layoutPortrait()
+    }
+
+    private fun buildPortraitTabBar() {
+        portraitTabBar.defaults().height(portraitBarHeight).padRight(6f)
+        for (tab in PortraitTab.entries) {
+            val button = tab.label.toTextButton()
+            if (tab == portraitTab) button.color = Color.GOLD
+            button.onClick {
+                portraitTab = tab
+                game.replaceCurrentScreen { CityScreen(cityView, selectedConstruction, selectedTile, passOnCityAmbiencePlayer()) }
+            }
+            portraitTabBar.add(button).minWidth(96f)
+        }
+        stage.addActor(portraitTabBar)
+    }
+
+    /** Portrait layout: city name on top, the chosen panel in between, tabs and Exit along the bottom edge. */
+    private fun layoutPortrait() {
+        val safe = safeAreaBoundsInWorld()
+        val left = safe.x + posFromEdge
+        val right = safe.x + safe.width - posFromEdge
+        val bottom = safe.y + posFromEdge
+        val top = safe.y + safe.height - posFromEdge
+
+        portraitTabBar.pack()
+        portraitTabBar.setPosition(left, bottom)
+        exitCityButton.height = portraitBarHeight
+        exitCityButton.setPosition(right, bottom, Align.bottomRight)
+        val barTop = bottom + portraitBarHeight
+
+        cityPickerTable.setPosition(safe.x + safe.width / 2, top, Align.top)
+        val panelTop = cityPickerTable.y - posFromEdge
+
+        val showCity = portraitTab == PortraitTab.City
+        cityStatsTable.isVisible = showCity
+        if (showCity) {
+            cityStatsTable.update(panelTop - barTop - 2 * posFromEdge)
+            cityStatsTable.setPosition(safe.x + safe.width / 2, panelTop, Align.top)
+        }
+        razeCityButtonHolder.isVisible = showCity
+        razeCityButtonHolder.setPosition(left, barTop + posFromEdge)
+
+        // selected tile or construction details float right above the tab bar
+        tileTable.setPosition(right, barTop + posFromEdge, Align.bottomRight)
+        selectedConstructionTable.setPosition(right, barTop + posFromEdge, Align.bottomRight)
     }
 
     private fun updateCityStats() {
