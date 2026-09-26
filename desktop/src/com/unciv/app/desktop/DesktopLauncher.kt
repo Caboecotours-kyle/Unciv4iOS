@@ -148,7 +148,7 @@ internal object DesktopLauncher {
         val captureFile = arg.find { it.startsWith("--capture=") }?.substringAfter("=")?.let { File(it) }
         if (captureFile != null) {
             config.setInitialVisible(false)
-            config.setWindowedMode(786, 1704) // matches CaptureGame PHONE_W x PHONE_H
+            config.setWindowedMode(PHONE_W, PHONE_H)
         }
         val game = if (captureFile != null) CaptureGame(config, customDataDir, captureFile, "--reveal" in arg,
                 arg.find { it.startsWith("--open=") }?.substringAfter("="))
