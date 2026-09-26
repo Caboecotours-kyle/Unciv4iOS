@@ -317,8 +317,11 @@ class LoadGameScreen : LoadOrSaveScreen(saveButtonFontSize = loadGameContentFont
                 game.loadGame(loadedGame, callFromLoadScreen = true)
             } catch (notAPlayer: UncivShowableException) {
                 launchOnGLThread {
-                    val (message) = getLoadExceptionMessage(notAPlayer)
-                    loadingPopup.reuseWith(message, true)
+                    if (PortraitDialog.isPortrait(stage) && isCorruptSave(notAPlayer)) loadingPopup.close()
+                    else {
+                        val (message) = getLoadExceptionMessage(notAPlayer)
+                        loadingPopup.reuseWith(message, true)
+                    }
                     handleLoadGameException(notAPlayer)
                 }
             } catch (ex: Exception) {
@@ -422,17 +425,15 @@ class LoadGameScreen : LoadOrSaveScreen(saveButtonFontSize = loadGameContentFont
 
     private fun handleLoadGameException(ex: Exception, primaryText: String = "Could not load game!") {
         val isUserFixable = handleException(ex, primaryText)
-        if (!isUserFixable) {
-            if (PortraitDialog.isPortrait(stage) && isCorruptSave(ex)) showCorruptSaveCard(ex, primaryText)
-            else {
-                val cantLoadGamePopup = Popup(this@LoadGameScreen)
-                cantLoadGamePopup.addGoodSizedLabel("It looks like your saved game can't be loaded!").row()
-                cantLoadGamePopup.addGoodSizedLabel("If you could copy your game data (\"Copy saved game to clipboard\" - ").row()
-                cantLoadGamePopup.addGoodSizedLabel("  paste it into a new GitHub issue)").row()
-                cantLoadGamePopup.addGoodSizedLabel("I could maybe help you figure out what went wrong, since this isn't supposed to happen!").row()
-                cantLoadGamePopup.addCloseButton()
-                cantLoadGamePopup.open()
-            }
+        if (PortraitDialog.isPortrait(stage) && isCorruptSave(ex)) showCorruptSaveCard(ex, primaryText)
+        else if (!isUserFixable) {
+            val cantLoadGamePopup = Popup(this@LoadGameScreen)
+            cantLoadGamePopup.addGoodSizedLabel("It looks like your saved game can't be loaded!").row()
+            cantLoadGamePopup.addGoodSizedLabel("If you could copy your game data (\"Copy saved game to clipboard\" - ").row()
+            cantLoadGamePopup.addGoodSizedLabel("  paste it into a new GitHub issue)").row()
+            cantLoadGamePopup.addGoodSizedLabel("I could maybe help you figure out what went wrong, since this isn't supposed to happen!").row()
+            cantLoadGamePopup.addCloseButton()
+            cantLoadGamePopup.open()
         }
 
         if ((ex is MissingModsException || ex is MissingNationException)
@@ -449,8 +450,9 @@ class LoadGameScreen : LoadOrSaveScreen(saveButtonFontSize = loadGameContentFont
         }
     }
 
-    /** Mirror the cause unwrapping in getLoadExceptionMessage so only its corrupt-data case gets this card. */
+    /** Match the two corrupt-data cases used by the loader without changing handleException's classification. */
     private fun isCorruptSave(ex: Exception): Boolean {
+        if (ex is UncivShowableException && ex.message == "The file data seems to be corrupted.") return true
         var cause: Throwable = ex
         while (cause.cause != null && cause is GdxRuntimeException) cause = cause.cause!!
         return cause is SerializationException
