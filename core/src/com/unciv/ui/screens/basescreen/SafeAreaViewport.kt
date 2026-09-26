@@ -53,14 +53,15 @@ class SafeAreaViewport(
     override fun apply(centerCamera: Boolean) {
         val safe = insets.applyTo(displayWidth, displayHeight)
         if (safe.width <= 0 || safe.height <= 0) return
-        if (!edgeToEdge) {
+        // Portrait backgrounds fill the phone while the default layout keeps controls in the safe area.
+        if (!edgeToEdge && displayWidth >= displayHeight) {
             drawingBounds.set(0f, 0f, worldWidth, worldHeight)
             setScreenBounds(safe.x, safe.y, safe.width, safe.height)
             super.apply(centerCamera)
             return
         }
 
-        if (useFullScreenLayout) {
+        if (edgeToEdge && useFullScreenLayout) {
             drawingBounds.set(0f, 0f, worldWidth, worldHeight)
             setScreenBounds(0, 0, displayWidth, displayHeight)
             super.apply(centerCamera)
