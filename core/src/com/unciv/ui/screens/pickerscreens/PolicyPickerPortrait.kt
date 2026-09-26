@@ -68,7 +68,7 @@ internal class PolicyPickerPortrait(
             background = rounded(PANEL)
             pad(10f, 14f, 10f, 14f)
         }
-        card.add(ImageGetter.getImage("StatIcons/Culture")).size(30f).padRight(12f)
+        card.add(screen.portraitStats.image("Culture")).size(30f).padRight(12f)
         val middle = Table().left()
         middle.add("$stored / $needed".toLabel(fontSize = 18)).left().row()
         val bar = Table().apply { background = rounded(CHIP); add(Image(solid(if (ready) YELLOW else CULTURE))).width((widthOnScreen - 170f) * (stored.toFloat() / needed.coerceAtLeast(1)).coerceIn(0f, 1f)).height(8f).left() }

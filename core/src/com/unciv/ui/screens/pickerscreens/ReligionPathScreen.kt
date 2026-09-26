@@ -41,6 +41,7 @@ class ReligionPathScreen(
     private val worldScreen: WorldScreen,
     startOnMap: Boolean = false,
 ) : BaseScreen(), RecreateOnResize {
+    private val portraitStats = com.unciv.ui.images.PortraitStatIcons()
     private val manager = viewingCiv.religionManager
     private var worldTab = false
     private var lens = startOnMap
@@ -61,6 +62,7 @@ class ReligionPathScreen(
     }
 
     override fun dispose() {
+        portraitStats.dispose()
         stage.actors.filterIsInstance<PortraitMapBackdrop>().forEach { it.dispose() }
         super.dispose()
     }
@@ -112,7 +114,7 @@ class ReligionPathScreen(
         pad(9f, 16f, 4f, 16f)
         add("Religion".toLabel(fontSize = 24)).left()
         val faith = Table()
-        faith.add(ImageGetter.getImage("StatIcons/Faith")).size(20f).padRight(4f)
+        faith.add(portraitStats.image("Faith")).size(20f).padRight(4f)
         faith.add(manager.storedFaith.toString().toLabel(fontSize = 17))
         val perTurn = viewingCiv.stats.statsForNextTurn.faith
         faith.add(" +${perTurn.toInt()}".toLabel(INK2, 13))
@@ -375,11 +377,12 @@ class ReligionPathScreen(
             "Faith" to manager.storedFaith.toString(),
         )
         for ((icon, value) in values) {
-            stats.add(ImageGetter.getImage("StatIcons/$icon")).size(17f).padRight(3f)
-            stats.add(value.toLabel(fontSize = 13)).padRight(7f)
+            val cell = Table()
+            cell.add(portraitStats.image(icon)).size(18f).padRight(3f)
+            cell.add(value.toLabel(fontSize = 16))
+            stats.add(cell).growX().height(44f)
         }
-        stats.pack()
-        stats.setBounds(10f, bounds.height - topGap - 48f, bounds.width - 20f, 48f)
+        stats.setBounds(10f, bounds.height - (topGap - 2f).coerceAtLeast(4f) - 50f, bounds.width - 20f, 50f)
         overlay.addActor(stats)
         val legend = Table().top().left()
         legend.pad(8f)
@@ -429,7 +432,7 @@ class ReligionPathScreen(
         val city = selectedCity?.takeIf { viewingCiv.hasExplored(it.getCenterTile()) }
         if (city == null) {
             val status = Table().left()
-            status.add(ImageGetter.getImage("StatIcons/Faith")).size(30f).padRight(10f)
+            status.add(portraitStats.image("Faith")).size(30f).padRight(10f)
             val label = when {
                 manager.religionState == ReligionState.FoundingReligion -> "Choose a religion"
                 prophetForFounding() != null -> "Great Prophet ready"

@@ -168,6 +168,7 @@ class PolicyPickerScreen(
         const val iconSize = 50f
     }
 
+    internal val portraitStats = com.unciv.ui.images.PortraitStatIcons()
     private val policyNameToButton = HashMap<String, PolicyButton>()
     private var selectedPolicyButton: PolicyButton? = null
 
@@ -744,6 +745,7 @@ class PolicyPickerScreen(
     }
 
     override fun dispose() {
+        portraitStats.dispose()
         stage.actors.filterIsInstance<PortraitMapBackdrop>().forEach { it.dispose() }
         super.dispose()
     }
