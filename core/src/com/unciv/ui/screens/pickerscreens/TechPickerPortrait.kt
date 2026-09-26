@@ -81,6 +81,7 @@ internal class TechPickerPortrait(
 
     /** Re-reads selection and queue from [screen]; called after every change there */
     fun refresh() {
+        if (pickedGoal?.tech != screen.selectedTech) pickedGoal = null
         rebuildTabs()
         if (showTree) {
             val treeView = tree ?: TreeView().also { tree = it }
