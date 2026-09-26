@@ -6,6 +6,7 @@ import com.unciv.Constants
 import com.unciv.logic.trade.TradeOfferType
 import com.unciv.models.translations.tr
 import com.unciv.ui.components.extensions.isEnabled
+import com.unciv.ui.components.extensions.toLabel
 import com.unciv.ui.components.extensions.toTextButton
 import com.unciv.ui.components.input.onClick
 import com.unciv.ui.screens.basescreen.BaseScreen
@@ -18,6 +19,7 @@ class TradeTable(
     diplomacyScreen: DiplomacyScreen
 ): Table(BaseScreen.skin) {
     internal val tradeView = civ.getTradeView(otherCivilization)
+    private val portrait = diplomacyScreen.isPortrait()
     internal val offerColumnsTable = OfferColumnsTable(tradeView, diplomacyScreen, civ, otherCivilization) { onChange() }
     // This is so that after a trade has been traded, we can switch out the offersToDisplay to start anew - this is the easiest way
     private val offerColumnsTableWrapper = Table()
@@ -31,12 +33,27 @@ class TradeTable(
     }
 
     init {
+        val scale = if (portrait) 1f else diplomacyScreen.stage.width / 393f
+        if (portrait) top()
         if (diplomacyScreen.isPortrait()) {
-            add(LeaderIntroTable(otherCivilization.getCiv())).left().pad(8f).row()
-            offerButton.color = Color.GOLD
+            val leader = Table()
+            val leaderArt = diplomacyScreen.getPortraitLeaderArt(otherCivilization.getCiv())
+                ?: com.unciv.ui.images.ImageGetter.getNationPortrait(otherCivilization.getCiv().nation, 52f * scale)
+            leader.add(leaderArt).size(52f * scale).padRight(10f * scale)
+            val names = Table()
+            names.add(otherCivilization.getCiv().getLeaderDisplayName().toLabel(Color.WHITE,
+                (19f * scale).toInt())).left().row()
+            val relationship = otherCivilization.getCiv().getDiplomacyManager(civ.getCiv())?.relationshipLevel()?.name ?: ""
+            names.add("${otherCivilization.civName} · $relationship".toLabel(Color.LIGHT_GRAY,
+                (13f * scale).toInt())).left().row()
+            leader.add(names).growX().left()
+            add(leader).width(diplomacyScreen.portraitWidth - 28f * scale)
+                .height(76f * scale).left().padTop(4f * scale).row()
+            diplomacyScreen.stylePortraitPrimary(offerButton)
         }
         offerColumnsTableWrapper.add(offerColumnsTable)
-        add(offerColumnsTableWrapper).row()
+        add(offerColumnsTableWrapper).width(if (portrait) diplomacyScreen.portraitWidth else offerColumnsTable.prefWidth)
+            .top().row()
 
         val lowerTable = Table().apply { defaults().pad(10f) }
 
@@ -44,7 +61,9 @@ class TradeTable(
             offerColumnsTable.update()
 
         if (tradeView.hasPendingOfferFromUs()) offerButton.setText("Retract offer".tr())
-        else offerButton.apply { isEnabled = false }.setText(offerTradeText.tr())
+        else offerButton.apply {
+            if (portrait) isDisabled = true else isEnabled = false
+        }.setText(offerTradeText.tr())
 
         offerButton.onClick {
             if (tradeView.hasPendingOfferFromUs()) {
@@ -76,19 +95,20 @@ class TradeTable(
             offerButton.setText("Retract offer".tr())
         }
 
-        lowerTable.add(offerButton).height(if (diplomacyScreen.isPortrait()) 56f else offerButton.prefHeight)
-            .width(if (diplomacyScreen.isPortrait()) diplomacyScreen.stage.width - 44f else offerButton.prefWidth)
+        lowerTable.add(offerButton).height(if (portrait) 58f * scale else offerButton.prefHeight)
+            .width(if (portrait) diplomacyScreen.portraitWidth - 28f * scale else offerButton.prefWidth)
 
         lowerTable.pack()
         lowerTable.y = 10f
-        add(lowerTable)
+        add(lowerTable).padBottom(if (portrait) 18f * scale else 0f)
         pack()
     }
 
     private fun onChange() {
         offerColumnsTable.update()
         retractOffer()
-        offerButton.isEnabled = !(tradeView.theirStagedOffers().size == 0 && tradeView.ourStagedOffers().size == 0)
+        val hasOffers = tradeView.theirStagedOffers().isNotEmpty() || tradeView.ourStagedOffers().isNotEmpty()
+        if (portrait) offerButton.isDisabled = !hasOffers else offerButton.isEnabled = hasOffers
     }
 
     fun enableOfferButton(isEnabled: Boolean) {

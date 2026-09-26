@@ -1,10 +1,13 @@
 package com.unciv.ui.screens.diplomacyscreen
 
 import com.badlogic.gdx.graphics.Color
+import com.badlogic.gdx.graphics.Texture
+import com.badlogic.gdx.scenes.scene2d.Actor
 import com.badlogic.gdx.scenes.scene2d.ui.SplitPane
 import com.badlogic.gdx.scenes.scene2d.ui.Table
 import com.badlogic.gdx.scenes.scene2d.ui.TextButton
 import com.badlogic.gdx.utils.Align
+import com.badlogic.gdx.scenes.scene2d.utils.TextureRegionDrawable
 import com.unciv.Constants
 import com.unciv.GUI
 import com.unciv.UncivGame
@@ -35,6 +38,8 @@ import com.unciv.ui.images.ImageGetter
 import com.unciv.ui.popups.ConfirmPopup
 import com.unciv.ui.screens.basescreen.BaseScreen
 import com.unciv.ui.screens.basescreen.RecreateOnResize
+import com.unciv.ui.screens.basescreen.portraitCanvasBounds
+import com.unciv.ui.screens.pickerscreens.PortraitMapBackdrop
 import com.unciv.view.CivView
 import com.unciv.view.ForeignCivView
 import kotlin.math.floor
@@ -66,6 +71,9 @@ class DiplomacyScreen(
 
     internal val viewingCiv: Civilization = viewingCivView.getCiv()
     private val selectCiv: Civilization? = selectCivView?.getCiv()
+    internal val portraitWidth = 393f
+    internal val portraitScale get() = safeAreaBoundsInWorld().width / portraitWidth
+    internal val portraitHeight get() = safeAreaBoundsInWorld().height / portraitScale
 
     private val highlightColor: Color = clearColor.cpy().lerp(skin.getColor("color"), 0.333f)
 
@@ -78,7 +86,8 @@ class DiplomacyScreen(
     private val highlightBackground = skinStrings.getUiBackground("DiplomacyScreen/SelectedCiv", tintColor = highlightColor)
 
     internal val rightSideTable = Table().apply {
-        background = skinStrings.getUiBackground("DiplomacyScreen/RightSide", tintColor = highlightColor)
+        background = skinStrings.getUiBackground("DiplomacyScreen/RightSide",
+            tintColor = if (isPortrait()) Color.valueOf("122536") else highlightColor)
     }
 
     private val splitPane = SplitPaneCenteringLeftSide()
@@ -86,7 +95,39 @@ class DiplomacyScreen(
     /** Portrait replaces the side-by-side split with one full-width page: the civ list, or one civ's details */
     private val portraitHolder = Table()
 
-    private val closeButton = getCloseButton(closeButtonSize) { game.popScreen() }
+    private val closeButton = if (isPortrait()) ImageGetter.getImage("OtherIcons/Close").apply {
+        color = Color.valueOf("142536")
+        setSize(24f, 24f)
+    }.surroundWithCircle(closeButtonSize, resizeActor = false, color = Color.WHITE).apply {
+        onActivation { game.popScreen() }
+        keyShortcuts.add(KeyCharAndCode.BACK)
+    } else getCloseButton(closeButtonSize) { game.popScreen() }
+    private var leaderPortraitTexture: Texture? = null
+    private var portraitBackdrop: PortraitMapBackdrop? = null
+
+    internal fun stylePortraitPrimary(button: TextButton) {
+        val style = TextButton.TextButtonStyle(button.style).apply {
+            up = skinStrings.getUiBackground("DiplomacyScreen/PortraitPrimary",
+                skinStrings.roundedEdgeRectangleMidShape, Color.valueOf("ffc93c"))
+            down = skinStrings.getUiBackground("DiplomacyScreen/PortraitPrimaryDown",
+                skinStrings.roundedEdgeRectangleMidShape, Color.valueOf("eab527"))
+            disabled = skinStrings.getUiBackground("DiplomacyScreen/PortraitPrimaryDisabled",
+                skinStrings.roundedEdgeRectangleMidShape, Color.valueOf("64592e"))
+            fontColor = Color.valueOf("142536")
+            disabledFontColor = Color.valueOf("dfd7ac")
+        }
+        button.style = style
+        button.color = Color.WHITE
+    }
+
+    internal fun getPortraitLeaderArt(civ: Civilization): Actor? {
+        val path = "Leaders/p_${civ.nation.leaderName.substringBefore(' ')}_thumb"
+        val file = ImageGetter.findExternalImage(path) ?: return null
+        leaderPortraitTexture?.dispose()
+        val image = ImageGetter.getExternalImage(file)
+        leaderPortraitTexture = (image.drawable as TextureRegionDrawable).region.texture
+        return image
+    }
 
     internal fun isNotPlayersTurn() = !GUI.isAllowedChangeState()
 
@@ -98,7 +139,16 @@ class DiplomacyScreen(
         updateLeftSideTable(selectCiv)
 
         if (isPortrait()) {
-            portraitHolder.setFillParent(true)
+            val canvas = portraitCanvasBounds()
+            portraitBackdrop = PortraitMapBackdrop(viewingCiv).apply {
+                setBounds(canvas.x, canvas.y, canvas.width, canvas.height)
+                isVisible = false
+                this@DiplomacyScreen.stage.addActor(this)
+            }
+            val safe = safeAreaBoundsInWorld()
+            portraitHolder.setTransform(true)
+            portraitHolder.setBounds(safe.x, safe.y, portraitWidth, portraitHeight)
+            portraitHolder.setScale(portraitScale)
             stage.addActor(portraitHolder)
             showPortraitList()
         } else {
@@ -146,6 +196,7 @@ class DiplomacyScreen(
     }
 
     private fun showPortraitList() {
+        portraitBackdrop?.isVisible = false
         portraitHolder.clear()
         portraitHolder.add(leftSideScroll).grow()
     }
@@ -154,7 +205,12 @@ class DiplomacyScreen(
     private fun showPortraitDetail() {
         if (!isPortrait()) return
         portraitHolder.clear()
-        val back = "Back".toTextButton()
+        val back = "‹  Back".toTextButton()
+        back.style = TextButton.TextButtonStyle(back.style).apply {
+            up = null
+            down = null
+            over = null
+        }
         back.onActivation { showPortraitList() }
         back.keyShortcuts.add(KeyCharAndCode.BACK)
         portraitHolder.add(back).left().pad(closeButtonPad).height(closeButtonSize).row()
@@ -162,7 +218,13 @@ class DiplomacyScreen(
     }
 
     private fun positionCloseButton() {
-        closeButton.setPosition(stage.width - closeButtonPad, stage.height - closeButtonPad, Align.topRight)
+        if (isPortrait()) {
+            val safe = safeAreaBoundsInWorld()
+            closeButton.setScale(portraitScale)
+            closeButton.setPosition(safe.x + safe.width - (closeButtonPad + closeButtonSize) * portraitScale,
+                safe.y + safe.height - (closeButtonPad + closeButtonSize) * portraitScale)
+        } else closeButton.setPosition(stage.width - closeButtonPad,
+            stage.height - closeButtonPad, Align.topRight)
     }
 
     internal fun updateLeftSideTable(selectCiv: Civilization?) {
@@ -238,7 +300,8 @@ class DiplomacyScreen(
 
         if (selectCivY != 0f) {
             leftSideScroll.layout()
-            leftSideScroll.scrollY = selectCivY + (nationIconSize + 2 * nationIconPad - stage.height) / 2
+            leftSideScroll.scrollY = selectCivY + (nationIconSize + 2 * nationIconPad -
+                if (isPortrait()) portraitHeight else stage.height) / 2
             leftSideScroll.updateVisualScroll()
         }
     }
@@ -250,22 +313,28 @@ class DiplomacyScreen(
     }
 
     internal fun updateRightSide(otherCiv: Civilization) {
+        portraitBackdrop?.isVisible = false
         rightSideTable.clear()
         UncivGame.Current.musicController.chooseTrack(otherCiv.civName,
             MusicMood.peaceOrWar(viewingCiv.isAtWarWith(otherCiv)),MusicTrackChooserFlags.setSelectNation)
-        rightSideTable.add(ScrollPane(
-            if (otherCiv.isCityState) CityStateDiplomacyTable(this).getCityStateDiplomacyTable(otherCiv)
+        val content = if (otherCiv.isCityState) CityStateDiplomacyTable(this).getCityStateDiplomacyTable(otherCiv)
             else MajorCivDiplomacyTable(this).getMajorCivDiplomacyTable(otherCiv)
-        )).height(if (isPortrait()) stage.height - closeButtonSize - 2 * closeButtonPad else stage.height) // portrait: leave the Back row
+        val detailHeight = if (isPortrait()) portraitHeight - closeButtonSize - 2 * closeButtonPad else stage.height
+        if (isPortrait() && otherCiv.isCityState)
+            rightSideTable.add(content).width(portraitWidth).height(detailHeight)
+        else rightSideTable.add(ScrollPane(content)).height(detailHeight)
         showPortraitDetail()
     }
 
     //region Major Civ Diplomacy
 
     internal fun setTrade(otherCiv: Civilization): TradeTable {
+        portraitBackdrop?.isVisible = true
         rightSideTable.clear()
         val tradeTable = TradeTable(viewingCivView, viewingCivView.gameView.getForeignCivView(otherCiv), this)
-        rightSideTable.add(tradeTable)
+        if (isPortrait()) rightSideTable.add(tradeTable).width(portraitWidth)
+            .height(portraitHeight - closeButtonSize - 2 * closeButtonPad)
+        else rightSideTable.add(tradeTable)
         showPortraitDetail()
         return tradeTable
     }
@@ -462,4 +531,10 @@ class DiplomacyScreen(
     }
 
     override fun recreate(): BaseScreen = DiplomacyScreen(viewingCivView, selectCivView, selectTrade, showTrade)
+
+    override fun dispose() {
+        leaderPortraitTexture?.dispose()
+        portraitBackdrop?.dispose()
+        super.dispose()
+    }
 }
