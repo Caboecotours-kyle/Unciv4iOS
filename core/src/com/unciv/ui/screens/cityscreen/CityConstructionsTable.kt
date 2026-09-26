@@ -665,7 +665,7 @@ class CityConstructionsTable(private val cityScreen: CityScreen) {
                 || construction is PerpetualConstruction && cityConstructions.isBeingConstructedOrEnqueued(construction.name)
     }
 
-    private fun addConstructionToQueue(construction: IConstruction) {
+    internal fun addConstructionToQueue(construction: IConstruction) {
         // Some evil person decided to double tap real fast - #4977
         if (cannotAddConstructionToQueue(construction))
             return

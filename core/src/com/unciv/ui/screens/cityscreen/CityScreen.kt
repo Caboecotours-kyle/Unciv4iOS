@@ -32,10 +32,12 @@ import com.unciv.ui.components.tilegroups.CityTileState
 import com.unciv.ui.components.tilegroups.TileGroupMap
 import com.unciv.ui.components.tilegroups.TileSetStrings
 import com.unciv.ui.images.ImageGetter
+import com.unciv.ui.images.PortraitStatIcons
 import com.unciv.ui.popups.ConfirmPopup
 import com.unciv.ui.popups.ToastPopup
 import com.unciv.ui.popups.closeAllPopups
 import com.unciv.ui.screens.basescreen.BaseScreen
+import com.unciv.ui.screens.basescreen.portraitCanvasBounds
 import com.unciv.ui.screens.basescreen.RecreateOnResize
 import com.unciv.ui.screens.worldscreen.WorldScreen
 import com.unciv.utils.Concurrency
@@ -69,6 +71,8 @@ class CityScreen(
 
     /** Portrait: one panel at a time, picked from a tab bar in thumb reach (DESIGN.md city sheet) */
     private val portraitTabBar = Table()
+    private var portraitView: CityPortraitView? = null
+    internal val portraitStatIcons = PortraitStatIcons()
 
     private val viewingCiv: CivView = cityView.gameView.civView
 
@@ -169,7 +173,19 @@ class CityScreen(
         stage.addActor(tileTable)
         stage.addActor(cityPickerTable)  // add late so it's top in Z-order and doesn't get covered in cramped portrait
         stage.addActor(exitCityButton)
-        if (isPortrait()) buildPortraitTabBar()
+        if (isPortrait()) {
+            val safe = safeAreaBoundsInWorld()
+            val canvas = portraitCanvasBounds()
+            val logicalWidth = 393f
+            val scale = safe.width / logicalWidth
+            portraitView = CityPortraitView(this, logicalWidth).also {
+                it.isTransform = true
+                it.setBounds(safe.x, safe.y, logicalWidth,
+                    ((canvas.y + canvas.height - safe.y) / scale - 250f).coerceAtLeast(390f))
+                it.setScale(scale)
+                stage.addActor(it)
+            }
+        }
 
         cityView.updateCityStats()
         updateSync() // NOT async since that gives a "visual flash" when entering the city
@@ -181,17 +197,16 @@ class CityScreen(
             if ((actor as TileGroupMap<*>).mapVerticalScale != 1f) {
                 val cityTile = tileGroups.first { it.tileView.position() == cityView.location }
                 val safe = safeAreaBoundsInWorld()
-                val left = safe.x + posFromEdge + if (constructionsTable.isVisible) constructionsTable.getLowerWidth() else 0f
-                val centerX = (left + safe.x + safe.width - posFromEdge) / 2f
-                val centerY = (portraitTabBar.top + cityPickerTable.y) / 2f
+                val centerX = safe.x + safe.width / 2f
+                val centerY = safe.y + safe.height - 125f * safe.width / 393f
                 validate()
                 // Place the city's ground center in the free map area after zoom and safe-area layout.
                 scrollX = cityTile.x + cityTile.groundCenterX + width / 2f - (centerX - x) / scaleX
                 scrollY = maxY - cityTile.y - cityTile.groundCenterY - height / 2f + (centerY - y) / scaleY
             } else {
                 // center scrolling so city center sits more to the bottom right
-                scrollX = (maxX - constructionsTable.getLowerWidth() - posFromEdge) / 2
-                scrollY = (maxY - cityStatsTable.packIfNeeded().height - posFromEdge + cityPickerTable.top) / 2
+                scrollX = maxX / 2
+                scrollY = maxY / 2
             }
             updateVisualScroll()
         }
@@ -212,6 +227,21 @@ class CityScreen(
     
     internal fun updateSync(){
         if (isPortrait()) {
+            constructionsTable.isVisible = false
+            constructionsTable.update(selectedConstruction)
+            tileTable.update(selectedTile)
+            selectedConstructionTable.update(selectedConstruction)
+            cityPickerTable.isVisible = false
+            cityStatsTable.isVisible = false
+            tileTable.isVisible = false
+            selectedConstructionTable.isVisible = false
+            exitCityButton.isVisible = false
+            razeCityButtonHolder.isVisible = false
+            portraitView?.refresh()
+            updateTileGroups()
+            return
+        }
+        if (isPortrait()) {
             // room for the city name above and the tab bar below; the picker must be filled before it can be measured
             cityPickerTable.update()
             constructionsTable.reservedTop = cityPickerTable.packIfNeeded().height + 2 * posFromEdge
@@ -225,6 +255,14 @@ class CityScreen(
     }
 
     internal fun updateWithoutConstructionAndMap() {
+        if (isPortrait() && portraitView != null) {
+            tileTable.update(selectedTile)
+            selectedConstructionTable.update(selectedConstruction)
+            tileTable.isVisible = false
+            selectedConstructionTable.isVisible = false
+            portraitView?.refresh()
+            return
+        }
         // Bottom right: Tile or selected construction info
         tileTable.update(selectedTile)
         tileTable.setPosition(stage.width - posFromEdge, posFromEdge, Align.bottomRight)
@@ -578,7 +616,7 @@ class CityScreen(
             return
         }
 
-        selectTile(tileGroup.tileView)
+        if (isPortrait()) portraitView?.showTile(tileGroup.tileView) else selectTile(tileGroup.tileView)
         updateAsync()
     }
 
@@ -604,13 +642,15 @@ class CityScreen(
         }
         selectedTile = null
     }
-    private fun selectTile(newTile: TileView?) {
+    internal fun selectTile(newTile: TileView?) {
         selectedConstruction = null
         selectedQueueEntryTargetTile = null
         pickTileData = null
         selectedTile = newTile
     }
     fun clearSelection() = selectTile(null)
+
+    internal fun queueConstruction(construction: IConstruction) = constructionsTable.addConstructionToQueue(construction)
 
     fun startPickTileForCreatesOneImprovement(construction: Building, stat: Stat, isBuying: Boolean) {
         val improvement = cityView.getImprovementToCreate(construction) ?: return
@@ -661,6 +701,7 @@ class CityScreen(
     override fun dispose() {
         cityAmbiencePlayer?.dispose()
         fireworks?.dispose()
+        portraitStatIcons.dispose()
         super.dispose()
     }
 
