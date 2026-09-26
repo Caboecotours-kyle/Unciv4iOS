@@ -167,7 +167,8 @@ class NotificationsScroll(
         // scrolls underneath those buttons. Landscape keeps the full-height list with spacers.
         val band = worldScreen.isPortrait()
         val bandBottom = coveredBottom
-        if (band) height = (worldScreen.stage.height - coveredTop - coveredBottom).coerceAtLeast(0f) * inverseScaleFactor
+        height = if (band) (worldScreen.stage.height - coveredTop - coveredBottom).coerceAtLeast(0f) * inverseScaleFactor
+            else worldScreen.stage.height * inverseScaleFactor
         val coveredNotificationsTop = if (band) 0f else coveredTop
         val coveredNotificationsBottom = if (band) 0f else coveredBottom
         getUserSetting()
@@ -207,8 +208,10 @@ class NotificationsScroll(
             val trueActorY = it.actorY + (if (it.table == notificationsTable) 0f else it.table.y)
             val actualBottom = (trueActorY + notificationsTable.y) * scaleFactor
             val actualTop = (trueActorY + it.actorHeight + notificationsTable.y) * scaleFactor
-            val fullyVisible = actualBottom >= coveredNotificationsBottom && actualTop <= stage.height - coveredNotificationsTop
-            val centeredBottom = (stage.height - coveredNotificationsTop + coveredNotificationsBottom - it.actorHeight * scaleFactor) / 2
+            // the visible range is the pane itself in the portrait band, else the stage minus covered margins
+            val visibleTop = if (band) height * scaleFactor else stage.height - coveredNotificationsTop
+            val fullyVisible = actualBottom >= coveredNotificationsBottom && actualTop <= visibleTop
+            val centeredBottom = (visibleTop + coveredNotificationsBottom - it.actorHeight * scaleFactor) / 2
             val centeredScrollY = centeredBottom * inverseScaleFactor - trueActorY + maxY
             if (fullyVisible) previousScrollY else centeredScrollY
         }
