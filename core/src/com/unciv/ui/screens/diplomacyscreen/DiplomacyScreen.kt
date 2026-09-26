@@ -56,6 +56,8 @@ class DiplomacyScreen(
 ): BaseScreen(), RecreateOnResize {
     companion object {
         private const val nationIconSize = 100f
+        /** Portrait list rows put a smaller icon beside the name */
+        private const val portraitIconSize = 60f
         private const val nationIconPad = 10f
         private const val closeButtonSize = 50f
         /** distance of the floating close button from the top and right */
@@ -81,6 +83,9 @@ class DiplomacyScreen(
 
     private val splitPane = SplitPaneCenteringLeftSide()
 
+    /** Portrait replaces the side-by-side split with one full-width page: the civ list, or one civ's details */
+    private val portraitHolder = Table()
+
     private val closeButton = getCloseButton(closeButtonSize) { game.popScreen() }
 
     internal fun isNotPlayersTurn() = !GUI.isAllowedChangeState()
@@ -92,8 +97,14 @@ class DiplomacyScreen(
 
         updateLeftSideTable(selectCiv)
 
-        splitPane.setFillParent(true)
-        stage.addActor(splitPane)
+        if (isPortrait()) {
+            portraitHolder.setFillParent(true)
+            stage.addActor(portraitHolder)
+            showPortraitList()
+        } else {
+            splitPane.setFillParent(true)
+            stage.addActor(splitPane)
+        }
 
         positionCloseButton()
         stage.addActor(closeButton) // This must come after the split pane so it will be above, that the button will be clickable
@@ -134,6 +145,22 @@ class DiplomacyScreen(
         }
     }
 
+    private fun showPortraitList() {
+        portraitHolder.clear()
+        portraitHolder.add(leftSideScroll).grow()
+    }
+
+    /** Portrait: after any right-side content change, show it full width with a way back to the list */
+    private fun showPortraitDetail() {
+        if (!isPortrait()) return
+        portraitHolder.clear()
+        val back = "Back".toTextButton()
+        back.onActivation { showPortraitList() }
+        back.keyShortcuts.add(KeyCharAndCode.BACK)
+        portraitHolder.add(back).left().pad(closeButtonPad).height(closeButtonSize).row()
+        portraitHolder.add(rightSideTable).grow()
+    }
+
     private fun positionCloseButton() {
         closeButton.setPosition(stage.width - closeButtonPad, stage.height - closeButtonPad, Align.topRight)
     }
@@ -149,7 +176,7 @@ class DiplomacyScreen(
                 selectCivY = leftSideTable.prefHeight
             }
 
-            val civIndicator = ImageGetter.getNationPortrait(civ.nation, nationIconSize)
+            val civIndicator = ImageGetter.getNationPortrait(civ.nation, if (isPortrait()) portraitIconSize else nationIconSize)
 
             val diplomacy = civ.getDiplomacyManager(viewingCiv)!!
             val relationLevel = diplomacy.relationshipLevel()
@@ -191,8 +218,14 @@ class DiplomacyScreen(
             // The wrapper serves only to highlight the selected civ better
             val civButton = Table().apply {
                 defaults().pad(nationIconPad)
-                add(civIndicator).row()
-                add(civNameLabel).row()
+                if (isPortrait()) {
+                    // one full-width row per civ: icon beside the name
+                    add(civIndicator)
+                    add(civNameLabel).expandX().left()
+                } else {
+                    add(civIndicator).row()
+                    add(civNameLabel).row()
+                }
                 onClick {
                     updateRightSide(civ)
                     highlightCiv(this)
@@ -223,7 +256,8 @@ class DiplomacyScreen(
         rightSideTable.add(ScrollPane(
             if (otherCiv.isCityState) CityStateDiplomacyTable(this).getCityStateDiplomacyTable(otherCiv)
             else MajorCivDiplomacyTable(this).getMajorCivDiplomacyTable(otherCiv)
-        )).height(stage.height)
+        )).height(if (isPortrait()) stage.height - closeButtonSize - 2 * closeButtonPad else stage.height) // portrait: leave the Back row
+        showPortraitDetail()
     }
 
     //region Major Civ Diplomacy
@@ -232,6 +266,7 @@ class DiplomacyScreen(
         rightSideTable.clear()
         val tradeTable = TradeTable(viewingCivView, viewingCivView.gameView.getForeignCivView(otherCiv), this)
         rightSideTable.add(tradeTable)
+        showPortraitDetail()
         return tradeTable
     }
 
@@ -393,6 +428,7 @@ class DiplomacyScreen(
 
         rightSideTable.clear()
         rightSideTable.add(diplomacyTable)
+        showPortraitDetail()
     }
 
     internal fun getGoToOnMapButton(civilization: Civilization): TextButton {
@@ -415,6 +451,7 @@ class DiplomacyScreen(
     internal fun rightSideLabelWidth() = rightSideWidth() - 40f
 
     private fun rightSideWidth(): Float {
+        if (isPortrait()) return stage.width - 2 * closeButtonPad // the detail page spans the screen
         splitPane.validate() // Ensure rightSideTable is sized
         return rightSideTable.width
     }

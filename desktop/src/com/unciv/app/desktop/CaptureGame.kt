@@ -102,6 +102,12 @@ class CaptureGame(
             "tech" -> pushScreen { TechPickerScreen(civ) }
             "policies" -> pushScreen { PolicyPickerScreen(civ, canChangeState = true) }
             "diplomacy" -> pushScreen { DiplomacyScreen(world.selectedGameView.civView) }
+            "diplomacy-civ", "trade" -> {
+                // first major civ met (needs --reveal at turn one); "trade" opens the trade table with it
+                val other = civ.diplomacyFunctions.getKnownCivsSorted().first { it.isMajorCiv() }
+                pushScreen { DiplomacyScreen(world.selectedGameView.civView, world.selectedGameView.getForeignCivView(other),
+                    showTrade = open == "trade") }
+            }
             "overview" -> pushScreen { EmpireOverviewScreen(world.selectedGameView.civView) }
             "civilopedia" -> pushScreen { CivilopediaScreen(world.gameInfo.ruleset) }
             "victory" -> pushScreen { VictoryScreen(world) }
