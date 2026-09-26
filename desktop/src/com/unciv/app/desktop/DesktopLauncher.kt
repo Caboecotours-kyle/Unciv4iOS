@@ -150,7 +150,8 @@ internal object DesktopLauncher {
             config.setInitialVisible(false)
             config.setWindowedMode(786, 1704) // matches CaptureGame PHONE_W x PHONE_H
         }
-        val game = if (captureFile != null) CaptureGame(config, customDataDir, captureFile, "--reveal" in arg)
+        val game = if (captureFile != null) CaptureGame(config, customDataDir, captureFile, "--reveal" in arg,
+                arg.find { it.startsWith("--open=") }?.substringAfter("="))
             else DesktopGame(config, customDataDir)
 
         // HardenGdxAudio extends Lwjgl3Application, and the Lwjgl3Application constructor runs as long as the game runs

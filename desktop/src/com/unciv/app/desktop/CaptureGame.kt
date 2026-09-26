@@ -14,6 +14,14 @@ import com.unciv.models.ruleset.RulesetCache
 import com.unciv.ui.popups.closeAllPopups
 import com.unciv.ui.screens.LanguagePickerScreen
 import com.unciv.ui.screens.mainmenuscreen.MainMenuScreen
+import com.unciv.ui.screens.cityscreen.CityScreen
+import com.unciv.ui.screens.civilopediascreen.CivilopediaScreen
+import com.unciv.ui.screens.diplomacyscreen.DiplomacyScreen
+import com.unciv.ui.screens.newgamescreen.NewGameScreen
+import com.unciv.ui.screens.overviewscreen.EmpireOverviewScreen
+import com.unciv.ui.screens.pickerscreens.PolicyPickerScreen
+import com.unciv.ui.screens.pickerscreens.TechPickerScreen
+import com.unciv.ui.screens.victoryscreen.VictoryScreen
 import com.unciv.ui.screens.worldscreen.WorldScreen
 import com.unciv.utils.Concurrency
 import com.unciv.utils.DebugUtils
@@ -33,6 +41,8 @@ class CaptureGame(
     customDataDirectory: String?,
     private val outFile: File,
     private val revealMap: Boolean,
+    /** Screen to open over the world map before capturing (tech, city, policies, ...); null captures the map. */
+    private val open: String? = null,
 ) : DesktopGame(config, customDataDirectory) {
 
     private var started = false
@@ -65,11 +75,37 @@ class CaptureGame(
                 loadGame(newGame)
             }
         }
-        if (current is WorldScreen && ++worldFrames == 120) {
-            current.closeAllPopups()
-            current.render(0f)
+        // count frames from the first world frame on, including frames spent on a screen opened over it
+        if (current is WorldScreen && worldFrames == 0 && open != null) openScreen(current)
+        if (current is WorldScreen || worldFrames > 0) worldFrames++
+        if (worldFrames >= 120 && (open == null || current !is WorldScreen)) {
+            if (current is WorldScreen) current.closeAllPopups()
+            if (++settledFrames < 30) return // let the opened screen lay out and animate in
             capture()
             Gdx.app.exit()
+        }
+    }
+
+    private var settledFrames = 0
+
+    private fun openScreen(world: WorldScreen) {
+        val civ = world.gameInfo.getCurrentPlayerCivilization()
+        when (open) {
+            "tech" -> pushScreen { TechPickerScreen(civ) }
+            "policies" -> pushScreen { PolicyPickerScreen(civ, canChangeState = true) }
+            "diplomacy" -> pushScreen { DiplomacyScreen(world.selectedGameView.civView) }
+            "overview" -> pushScreen { EmpireOverviewScreen(world.selectedGameView.civView) }
+            "civilopedia" -> pushScreen { CivilopediaScreen(world.gameInfo.ruleset) }
+            "victory" -> pushScreen { VictoryScreen(world) }
+            "newgame" -> pushScreen { NewGameScreen() }
+            "menu" -> replaceCurrentScreen { MainMenuScreen() }
+            "city" -> {
+                // found the capital where the first settler stands, then open it
+                val settler = civ.units.getCivUnits().first { it.isCivilian() }
+                val city = civ.addCity(settler.getTile().position, settler)
+                pushScreen { CityScreen(world.selectedGameView.getCityView(city)) }
+            }
+            else -> error("unknown --open=$open")
         }
     }
 
