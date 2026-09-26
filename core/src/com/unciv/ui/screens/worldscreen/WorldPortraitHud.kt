@@ -1,5 +1,7 @@
 package com.unciv.ui.screens.worldscreen
 
+import com.unciv.ui.screens.basescreen.portraitCanvasBounds
+
 import com.badlogic.gdx.Gdx
 import com.badlogic.gdx.graphics.Pixmap
 import com.badlogic.gdx.graphics.Texture
@@ -124,17 +126,18 @@ internal class WorldPortraitHud(
     fun refresh() {
         clearChildren()
         val safe = world.safeAreaBoundsInWorld()
+        val canvas = world.portraitCanvasBounds()
         val scale = safe.width / 393f
         setScale(scale)
         setPosition(safe.x, safe.y)
         setSize(393f, safe.height / scale)
-        val topInset = (world.stage.height - safe.y - safe.height) / scale
+        val topInset = (canvas.y + canvas.height - safe.y - safe.height) / scale
         val top = height - (54f - topInset).coerceAtLeast(4f)
-        val bottom = (40f - safe.y / scale).coerceAtLeast(6f)
+        val bottom = (40f - (safe.y - canvas.y) / scale).coerceAtLeast(6f)
         val unitView = world.bottomUnitTable.selectedUnit
         val unit = unitView?.getUnit()
         place(Image(scrimTexture).apply { touchable = Touchable.disabled },
-            0f, -safe.y / scale, 393f, if (unit == null) 250f else 420f)
+            0f, (canvas.y - safe.y) / scale, 393f, if (unit == null) 250f else 420f)
         place(Image(TextureRegion(scrimTexture).apply { flip(false, true) }).apply { touchable = Touchable.disabled },
             0f, height + topInset - 130f, 393f, 130f)
         val civ = world.selectedCiv

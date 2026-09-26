@@ -1,5 +1,7 @@
 ﻿package com.unciv.ui.screens.mainmenuscreen
 
+import com.unciv.ui.screens.basescreen.portraitCanvasBounds
+
 import com.badlogic.gdx.Gdx
 import com.badlogic.gdx.graphics.Color
 import com.badlogic.gdx.graphics.Pixmap
@@ -304,7 +306,7 @@ class MainMenuScreen: BaseScreen(), RecreateOnResize {
     }
 
     private fun initPortraitMenu() {
-        val bounds = (stage.viewport as com.unciv.ui.screens.basescreen.SafeAreaViewport).drawingBounds
+        val bounds = portraitCanvasBounds()
         val unit = bounds.width / 393f
         val texture = Texture(Gdx.files.internal("ExtraImages/MainMenuArmy.png"))
         texture.setFilter(TextureFilter.Linear, TextureFilter.Linear)
@@ -422,7 +424,7 @@ class MainMenuScreen: BaseScreen(), RecreateOnResize {
 
     private fun updatePortraitBackgroundBounds() {
         val background = portraitBackground ?: return
-        val bounds = (stage.viewport as com.unciv.ui.screens.basescreen.SafeAreaViewport).drawingBounds
+        val bounds = portraitCanvasBounds()
         val texture = portraitBackgroundTexture ?: return
         val scale = max(bounds.width / texture.width, bounds.height / texture.height)
         val width = texture.width * scale

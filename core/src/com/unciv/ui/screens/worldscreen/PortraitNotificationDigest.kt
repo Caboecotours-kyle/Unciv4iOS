@@ -1,5 +1,7 @@
 package com.unciv.ui.screens.worldscreen
 
+import com.unciv.ui.screens.basescreen.portraitCanvasBounds
+
 import com.badlogic.gdx.graphics.Color
 import com.badlogic.gdx.graphics.g2d.NinePatch
 import com.badlogic.gdx.scenes.scene2d.Actor
@@ -112,11 +114,12 @@ internal class PortraitNotificationDigest(private val world: WorldScreen) : Grou
     private fun rebuild() {
         clearChildren()
         val safe = world.safeAreaBoundsInWorld()
+        val canvas = world.portraitCanvasBounds()
         val unit = safe.width / 393f
         setScale(unit)
         setPosition(safe.x, safe.y)
         setSize(393f, safe.height / unit)
-        val bottom = (34f - safe.y / unit).coerceAtLeast(8f)
+        val bottom = (34f - (safe.y - canvas.y) / unit).coerceAtLeast(8f)
         val notification = selected
         if (notification != null) {
             val peek = Table().apply {
@@ -190,7 +193,7 @@ internal class PortraitNotificationDigest(private val world: WorldScreen) : Grou
         next.background = rounded(Color.valueOf("ffc93c"), 30f)
         footer.add(next).width(120f).height(60f)
         sheet.add(footer).growX().row()
-        val topInset = (world.stage.height - safe.y - safe.height) / unit
+        val topInset = (canvas.y + canvas.height - safe.y - safe.height) / unit
         val sheetHeight = (height - (330f - topInset)).coerceAtLeast(330f)
         place(sheet, 0f, -safe.y / unit, 393f, sheetHeight + safe.y / unit)
     }

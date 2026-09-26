@@ -1,5 +1,7 @@
 package com.unciv.ui.screens.newgamescreen
 
+import com.unciv.ui.screens.basescreen.portraitCanvasBounds
+
 import com.badlogic.gdx.Gdx
 import com.badlogic.gdx.graphics.Color
 import com.badlogic.gdx.graphics.Pixmap
@@ -27,7 +29,6 @@ import com.unciv.ui.components.extensions.toLabel
 import com.unciv.ui.components.widgets.AutoScrollPane
 import com.unciv.ui.images.ImageGetter
 import com.unciv.ui.popups.Popup
-import com.unciv.ui.screens.basescreen.SafeAreaViewport
 import com.unciv.ui.screens.worldscreen.BackgroundActor
 import com.unciv.ui.components.input.onClick
 import kotlin.math.max
@@ -44,7 +45,7 @@ internal class PortraitNewGameView(
     private val startGame: () -> Unit,
     private val closeScreen: () -> Unit,
 ) : Group(), Disposable {
-    private val drawingBounds = (screen.stage.viewport as SafeAreaViewport).drawingBounds
+    private val drawingBounds = screen.portraitCanvasBounds()
     private val unit = min(drawingBounds.width / 393f, drawingBounds.height / 852f)
     private val inset = (drawingBounds.width - 393f * unit) / 2f
     private val heightInPixels = drawingBounds.height / unit
