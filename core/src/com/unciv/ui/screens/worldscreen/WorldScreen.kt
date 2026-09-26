@@ -172,6 +172,7 @@ class WorldScreen(
         background = skinStrings.getUiBackground("WorldScreen/TutorialTaskTable", tintColor = skinStrings.skinConfig.baseColor.darken(0.5f))
     }
     private var tutorialTaskTableHash = 0
+    private val portraitTutorialTask = PortraitTutorialTask(this)
 
     private var nextTurnUpdateJob: Job? = null
 
@@ -200,6 +201,7 @@ class WorldScreen(
         stage.scrollFocus = mapHolder
         stage.addActor(notificationsScroll)  // very low in z-order, so we're free to let it extend _below_ tile info and minimap if we want
         stage.addActor(tutorialTaskTable)    // behind topBar!
+        stage.addActor(portraitTutorialTask)
         stage.addActor(topBar)
         stage.addActor(statusButtons)
         stage.addActor(techPolicyAndDiplomacy)
@@ -273,6 +275,7 @@ class WorldScreen(
         events.stopReceiving()
         statusButtons.dispose()
         portraitHud.dispose()
+        portraitTutorialTask.dispose()
         super.dispose()
     }
 
@@ -362,7 +365,8 @@ class WorldScreen(
         topBar.isVisible = uiEnabled
         statusButtons.isVisible = uiEnabled
         techPolicyAndDiplomacy.isVisible = uiEnabled
-        tutorialTaskTable.isVisible = uiEnabled
+        tutorialTaskTable.isVisible = uiEnabled && !isPortrait()
+        portraitTutorialTask.isVisible = false
         bottomTileInfoTable.isVisible = uiEnabled
         unitActionsTable.isVisible = uiEnabled
         notificationsScroll.isVisible = uiEnabled
@@ -371,7 +375,10 @@ class WorldScreen(
         portraitHud.isVisible = uiEnabled && isPortrait()
         if (uiEnabled) {
             battleTable.update()
-            if (isPortrait()) layoutPortraitHud()
+            if (isPortrait()) {
+                displayTutorialTaskOnUpdate()
+                layoutPortraitHud()
+            }
         } else battleTable.isVisible = false
     }
 
@@ -569,6 +576,11 @@ class WorldScreen(
             val hudIndex = portraitHud.zIndex
             tutorialTaskTable.zIndex = hudIndex + if (tutorialTaskTable.zIndex < hudIndex) 0 else 1
         }
+        if (portraitTutorialTask.isVisible) {
+            portraitTutorialTask.place(portraitHud.tutorialTop, portraitHud)
+            val hudIndex = portraitHud.zIndex
+            portraitTutorialTask.zIndex = hudIndex + if (portraitTutorialTask.zIndex < hudIndex) 0 else 1
+        }
         chatButton.updatePosition()
     }
 
@@ -636,9 +648,18 @@ class WorldScreen(
             tutorialTaskTable.isVisible = false
             tutorialTaskTable.clear()
             tutorialTaskTableHash = 0
+            portraitTutorialTask.isVisible = false
         }
         if (!game.settings.showTutorials || viewingCiv.isDefeated()) return setInvisible()
         val tutorialTask = getCurrentTutorialTask() ?: return setInvisible()
+
+        if (isPortrait()) {
+            // Phone steps instead of the desktop screenshot card; placed by layoutPortraitHud
+            setInvisible()
+            portraitTutorialTask.isVisible = portraitTutorialTask.show(tutorialTask)
+            return
+        }
+        portraitTutorialTask.isVisible = false
 
         if (!UncivGame.Current.isTutorialTaskCollapsed) {
             val hash = tutorialTask.hashCode()  // Default implementation is OK - we see the same instance or not

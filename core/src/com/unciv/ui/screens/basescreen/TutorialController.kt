@@ -6,8 +6,10 @@ import com.unciv.models.TutorialTrigger
 import com.unciv.ui.components.input.KeyCharAndCode
 import com.unciv.ui.images.ImageGetter
 import com.unciv.ui.popups.Popup
+import com.unciv.ui.popups.PortraitDialog
 import com.unciv.ui.screens.civilopediascreen.ICivilopediaText
 import yairm210.purity.annotations.Readonly
+import kotlin.math.roundToInt
 
 
 class TutorialController(screen: BaseScreen) {
@@ -69,19 +71,27 @@ class TutorialRender(private val screen: BaseScreen) {
     private fun showDialog(tutorialName: String, texts: List<String>, closeAction: () -> Unit) {
         if (texts.isEmpty()) return closeAction()
 
-        val tutorialPopup = Popup(screen)
+        val portrait = PortraitDialog.isPortrait(screen.stage)
+        val tutorialPopup = object : Popup(screen, maxSizePercentage = PortraitDialog.sizePercentage(screen.stage)) {
+            init { if (portrait) PortraitDialog.anchorCard(this, innerTable) }
+        }
         tutorialPopup.name = Constants.tutorialPopupNamePrefix + tutorialName
 
-        val externalImage = ImageGetter.findExternalImage(tutorialName)
+        // Portrait: the text alone in the navy card, no desktop screenshot
+        val externalImage = if (portrait) null else ImageGetter.findExternalImage(tutorialName)
         if (externalImage != null) {
             tutorialPopup.add(ImageGetter.getExternalImage(externalImage)).row()
         }
 
-        tutorialPopup.addGoodSizedLabel(texts[0]).row()
+        tutorialPopup.addGoodSizedLabel(texts[0], if (portrait) (17f * PortraitDialog.scale(screen.stage)).roundToInt() else Constants.defaultFontSize).row()
 
-        tutorialPopup.addCloseButton(additionalKey = KeyCharAndCode.SPACE) {
+        val close = tutorialPopup.addCloseButton(additionalKey = KeyCharAndCode.SPACE) {
             tutorialPopup.remove()
             showDialog(tutorialName, texts.subList(1, texts.size), closeAction)
+        }
+        if (portrait) {
+            PortraitDialog.styleButton(close.actor, PortraitDialog.Kind.Primary)
+            close.growX().height(56f * PortraitDialog.scale(screen.stage))
         }
         tutorialPopup.open()
     }

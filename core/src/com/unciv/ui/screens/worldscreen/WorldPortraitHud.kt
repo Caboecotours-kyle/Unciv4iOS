@@ -111,9 +111,9 @@ internal class WorldPortraitHud(
         if (ImageGetter.imageExists(path)) path else "OtherIcons/Star")
 
     private class Disc(val shadowColor: Color) : Table()
-    /** [note] is the side effect shown while held; [chip] stays visible (attack damage). */
+    /** [note] is the side effect shown while held; [chip] stays visible (attack damage); [tag] names the disc for tutorial rings. */
     private class ArcAction(val image: Actor, val title: String, val enabled: Boolean,
-        val note: String? = null, val chip: String? = null, val activate: () -> Unit)
+        val note: String? = null, val chip: String? = null, val tag: String? = null, val activate: () -> Unit)
 
     private var callout: Actor? = null
     private var calloutOwner: Actor? = null
@@ -214,7 +214,7 @@ internal class WorldPortraitHud(
         val stats = civ.stats.statsForNextTurn
         val strip = Table().apply { background = panel(16); pad(5f) }
         fun stat(name: String, value: String, secondary: String? = null, action: () -> Unit) {
-            val cell = Table().apply { touchable = Touchable.enabled }
+            val cell = Table().apply { touchable = Touchable.enabled; this.name = "portrait-stat-$name" }
             cell.add(statIcon(name)).size(18f).padRight(3f)
             cell.add(value.toLabel(Color.WHITE, 16))
             if (secondary != null) cell.add(secondary.toLabel(Color.valueOf("b7cde0"), 12)).padLeft(2f)
@@ -232,6 +232,7 @@ internal class WorldPortraitHud(
             stat("Faith", civ.religionManager.storedFaith.toString()) { world.game.pushScreen { ReligionPathScreen(civ, world) } }
         val menu = Table().apply {
             touchable = Touchable.enabled
+            name = "portrait-menu"
             add("T${world.gameInfo.turns}".toLabel(Color.WHITE, 15))
             add(icon("OtherIcons/MenuIcon")).size(16f).padLeft(4f)
             onClick { WorldScreenMenuPopup(world) }
@@ -244,6 +245,7 @@ internal class WorldPortraitHud(
         val skip = actions.firstOrNull { it.type == UnitActionType.Skip && it.action != null }
         val anchor = disc(icon(if (skip != null) "UnitActionIcons/Skip" else "OtherIcons/ForwardArrow"), 96f, yellow,
             if (skip != null) "Skip" else "Next")
+        anchor.name = "portrait-next"
         anchor.onClick {
             if (skip != null && unit != null) unitActions.activateAction(skip, unit)
             else world.nextTurnButton.activate()
@@ -305,7 +307,9 @@ internal class WorldPortraitHud(
             for (action in actions.filter { it.type != UnitActionType.Skip }.take(3 - arcActions.size)) {
                 val image = "UnitActionIcons/${action.type.name}"
                 arcActions.add(ArcAction(if (ImageGetter.imageExists(image)) icon(image) else action.getIcon(30f),
-                    action.title.tr(), action.action != null, nextUnitNote(action.type)) { unitActions.activateAction(action, unit) })
+                    action.title.tr(), action.action != null, nextUnitNote(action.type), tag = "portrait-action-${action.type.name}") {
+                    unitActions.activateAction(action, unit)
+                })
             }
             // Label-free icons on the approved arc: names appear only while a disc is held.
             for ((index, action) in arcActions.take(3).withIndex()) {
@@ -314,6 +318,7 @@ internal class WorldPortraitHud(
                 val y = bottom + 48f - 182f * sin(angle).toFloat() - 33f
                 val button = disc(action.image, 66f,
                     if (index == 0 && action.enabled) yellow else white)
+                button.name = action.tag
                 if (!action.enabled) button.color.a = .45f
                 else button.onClick { action.activate() }
                 holdToRead(button, action.title, action.note, action.enabled)
@@ -333,6 +338,7 @@ internal class WorldPortraitHud(
                 val x = 325f + 182f * cos(angle).toFloat() - 33f
                 val y = bottom + 48f - 182f * sin(angle).toFloat() - 33f
                 val more = disc(icon("UnitActionIcons/ShowMore"), 66f)
+                more.name = "portrait-more"
                 val primary = arcActions.firstOrNull()?.takeIf { it.enabled }?.title
                 more.onClick { MoreSheet(unit, actions, primary).present() }
                 holdToRead(more, "Show more".tr(), null)
@@ -347,6 +353,7 @@ internal class WorldPortraitHud(
             if (world.gameInfo.ruleset.technologies.isNotEmpty()) {
                 val tech = world.selectedGameView.civView.currentTechnologyName()
                 val techButton = disc(if (tech == null) ImageGetter.getStatIcon("Science") else ImageGetter.getTechIconPortrait(tech, 30f), 58f, navy)
+                techButton.name = "portrait-tech"
                 techButton.onClick { world.game.pushScreen { TechPickerScreen(civ) } }
                 place(techButton, 104f, bottom + 24f, 58f, 58f)
                 val title = if (tech == null) "Research" else "$tech ${world.selectedGameView.civView.turnsToTech(tech)}"
