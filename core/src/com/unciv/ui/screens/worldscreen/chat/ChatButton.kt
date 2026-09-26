@@ -127,6 +127,7 @@ class ChatButton(val worldScreen: WorldScreen) : IconTextButton(
 
     fun updatePosition() = setPosition(
         worldScreen.techPolicyAndDiplomacy.x.coerceAtLeast(1f),
-        worldScreen.techPolicyAndDiplomacy.y - height - 1f
+        if (worldScreen.isPortrait()) worldScreen.techPolicyAndDiplomacy.let { it.y + it.height + 1f } // buttons sit at the bottom
+        else worldScreen.techPolicyAndDiplomacy.y - height - 1f
     )
 }

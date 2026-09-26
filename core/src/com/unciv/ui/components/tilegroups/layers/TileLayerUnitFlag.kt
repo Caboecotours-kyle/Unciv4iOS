@@ -1,11 +1,13 @@
 package com.unciv.ui.components.tilegroups.layers
 
 import com.badlogic.gdx.scenes.scene2d.ui.Table
+import com.badlogic.gdx.scenes.scene2d.Group
 import com.badlogic.gdx.utils.Align
 import com.unciv.UncivGame
 import com.unciv.view.CivView
 import com.unciv.view.ForeignMapUnitView
 import com.unciv.logic.map.mapunit.MapUnit
+import com.unciv.models.tilesets.TileSetCache
 import com.unciv.models.translations.tr
 import com.unciv.ui.components.extensions.toLabel
 import com.unciv.ui.components.tilegroups.TileGroup
@@ -18,13 +20,31 @@ class TileLayerUnitFlag(tileGroup: TileGroup, size: Float) : TileLayer(tileGroup
 
     private var civilianUnitIcon: UnitIconGroup? = null
     private var militaryUnitIcon: UnitIconGroup? = null
+    private val portraitWrappers = HashMap<UnitIconGroup, Group>()
 
     private fun clearSlots() {
-        civilianUnitIcon?.let { removeOwnedActor(it) }
-        militaryUnitIcon?.let { removeOwnedActor(it) }
+        civilianUnitIcon?.let { removeOwnedActor(portraitWrappers.remove(it) ?: it) }
+        militaryUnitIcon?.let { removeOwnedActor(portraitWrappers.remove(it) ?: it) }
     }
 
+    private val flagsAboveSprites
+        get() = TileSetCache.getCurrent().config.unitFlagsAboveSprites && UncivGame.Current.settings.showPixelUnits
+
     private fun setIconPosition(slot: Int, icon: UnitIconGroup) {
+        if (strings.projection.tilted) {
+            val shared = tileGroup.tileView.militaryUnit != null && tileGroup.tileView.civilianUnit != null
+            val dx = if (shared) { if (slot == 1) -15f else 15f } else if (tileGroup.strategicView) 0f else 20f
+            val wrapper = portraitWrappers.getValue(icon)
+            wrapper.x = tileX + tileGroup.groundCenterX + dx - icon.width * wrapper.scaleX / 2f
+            wrapper.y = tileY + tileGroup.groundCenterY - icon.height * wrapper.scaleY / 2f - if (tileGroup.strategicView) 0f else 7f
+            return
+        }
+        if (flagsAboveSprites) {
+            // Side by side over the top of the hex so the unit sprite below stays visible (military left, civilian right)
+            icon.x = tileX + (size - icon.width) / 2 + if (slot == 1) -12f else 12f
+            icon.y = tileY + size * (0.78f + (1f - tileGroup.mapVerticalScale) * 0.5f)
+            return
+        }
         // Centre horizontally; offset vertically per slot (slot 0 = bottom, slot 1 = top)
         icon.x = tileX + (size - icon.width) / 2
         icon.y = tileY + (size - icon.height) / 2 + if (slot == 1) 20f else -20f
@@ -36,9 +56,17 @@ class TileLayerUnitFlag(tileGroup: TileGroup, size: Float) : TileLayer(tileGroup
 
         if (unit != null && isViewable) {
             val rawUnit = unit.getUnit()
-            newIcon = UnitIconGroup(unit, 30f)
+            newIcon = UnitIconGroup(unit, if (strings.projection.tilted) 14f else if (flagsAboveSprites) 22f else 30f)
+            if (strings.projection.tilted) {
+                val wrapper = Group().apply {
+                    setSize(newIcon.width, newIcon.height)
+                    addActor(newIcon)
+                    setScale(if (tileGroup.strategicView) 22f / 14f * tileGroup.portraitPointScale else 1f)
+                }
+                portraitWrappers[newIcon] = wrapper
+                addOwnedActor(wrapper)
+            } else addOwnedActor(newIcon)
             setIconPosition(slot, newIcon)
-            addOwnedActor(newIcon)
 
             // Display air unit table for carriers/transports
             if (!rawUnit.getTile().isCityCenter() && rawUnit.getTile().airUnits.any { rawUnit.isTransportTypeOf(it) }) {
@@ -85,6 +113,15 @@ class TileLayerUnitFlag(tileGroup: TileGroup, size: Float) : TileLayer(tileGroup
         airUnitTable.add(table).expand().center().right()
 
         return airUnitTable
+    }
+
+    fun updatePortraitScale() {
+        if (!strings.projection.tilted) return
+        for ((slot, icon) in listOf(0 to civilianUnitIcon, 1 to militaryUnitIcon)) {
+            if (icon == null) continue
+            portraitWrappers.getValue(icon).setScale(if (tileGroup.strategicView) 22f / 14f * tileGroup.portraitPointScale else 1f)
+            setIconPosition(slot, icon)
+        }
     }
 
     fun selectFlag(unitView: ForeignMapUnitView) {

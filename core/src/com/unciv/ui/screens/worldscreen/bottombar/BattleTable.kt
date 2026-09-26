@@ -40,6 +40,11 @@ import kotlin.math.max
 import kotlin.math.roundToInt
 
 class BattleTable(val worldScreen: WorldScreen) : Table() {
+    internal var portraitAttackButton: com.badlogic.gdx.scenes.scene2d.ui.TextButton? = null
+        private set
+    internal var portraitDamagePreview: String? = null
+        private set
+
 
     init {
         isVisible = false
@@ -61,6 +66,8 @@ class BattleTable(val worldScreen: WorldScreen) : Table() {
     }
 
     fun update() {
+        portraitAttackButton = null
+        portraitDamagePreview = null
         val attackerUnitView = tryGetAttackerUnit()
         val attackerCityView = if (attackerUnitView == null) worldScreen.bottomUnitTable.selectedCity else null
         if (attackerUnitView == null && attackerCityView == null) return hide()
@@ -266,6 +273,7 @@ class BattleTable(val worldScreen: WorldScreen) : Table() {
             // Don't use original damage estimates - they're raw, before clamping to 0..max
             val avgDamageToDefender = avg(defenderHealth - minRemainingLifeDefender, defenderHealth - maxRemainingLifeDefender)
             val avgDamageToAttacker = avg(attackerHealth - minRemainingLifeAttacker, attackerHealth - maxRemainingLifeAttacker)
+            portraitDamagePreview = "-$avgDamageToDefender HP"
 
             if (minRemainingLifeAttacker == attackerHealth)
                 add(attackerHealth.toLabel())
@@ -317,6 +325,7 @@ class BattleTable(val worldScreen: WorldScreen) : Table() {
                 }
             }
 
+            portraitAttackButton = attackButton
             add(attackButton).colspan(2)
         }
     }

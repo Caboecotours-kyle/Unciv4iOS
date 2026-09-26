@@ -7,6 +7,8 @@ import com.badlogic.gdx.scenes.scene2d.ui.Label
 import com.badlogic.gdx.scenes.scene2d.ui.Table
 import com.badlogic.gdx.scenes.scene2d.ui.TextButton
 import com.badlogic.gdx.utils.Align
+import com.badlogic.gdx.utils.GdxRuntimeException
+import com.badlogic.gdx.utils.SerializationException
 import com.unciv.Constants
 import com.unciv.logic.MissingModsException
 import com.unciv.logic.MissingNationException
@@ -38,13 +40,16 @@ import com.unciv.ui.popups.AnimatedMenuPopup
 import com.unciv.ui.popups.ConfirmPopup
 import com.unciv.ui.popups.LoadingPopup
 import com.unciv.ui.popups.Popup
+import com.unciv.ui.popups.PortraitDialog
 import com.unciv.ui.popups.ToastPopup
+import com.unciv.ui.images.ImageGetter
 import com.unciv.utils.Concurrency
 import com.unciv.utils.Log
 import com.unciv.utils.ONLINE_MOD_MANAGEMENT_UNAVAILABLE
 import com.unciv.utils.launchOnGLThread
 import kotlinx.coroutines.CoroutineScope
 import java.util.Date
+import kotlin.math.roundToInt
 
 private const val loadGameTitleFontSize = 28
 private const val loadGameSecondaryFontSize = 18
@@ -312,8 +317,11 @@ class LoadGameScreen : LoadOrSaveScreen(saveButtonFontSize = loadGameContentFont
                 game.loadGame(loadedGame, callFromLoadScreen = true)
             } catch (notAPlayer: UncivShowableException) {
                 launchOnGLThread {
-                    val (message) = getLoadExceptionMessage(notAPlayer)
-                    loadingPopup.reuseWith(message, true)
+                    if (PortraitDialog.isPortrait(stage) && isCorruptSave(notAPlayer)) loadingPopup.close()
+                    else {
+                        val (message) = getLoadExceptionMessage(notAPlayer)
+                        loadingPopup.reuseWith(message, true)
+                    }
                     handleLoadGameException(notAPlayer)
                 }
             } catch (ex: Exception) {
@@ -417,7 +425,8 @@ class LoadGameScreen : LoadOrSaveScreen(saveButtonFontSize = loadGameContentFont
 
     private fun handleLoadGameException(ex: Exception, primaryText: String = "Could not load game!") {
         val isUserFixable = handleException(ex, primaryText)
-        if (!isUserFixable) {
+        if (PortraitDialog.isPortrait(stage) && isCorruptSave(ex)) showCorruptSaveCard(ex, primaryText)
+        else if (!isUserFixable) {
             val cantLoadGamePopup = Popup(this@LoadGameScreen)
             cantLoadGamePopup.addGoodSizedLabel("It looks like your saved game can't be loaded!").row()
             cantLoadGamePopup.addGoodSizedLabel("If you could copy your game data (\"Copy saved game to clipboard\" - ").row()
@@ -439,6 +448,54 @@ class LoadGameScreen : LoadOrSaveScreen(saveButtonFontSize = loadGameContentFont
         if (ex is MissingNationException){
             redownloadUnupdatedMods(ex.modNames)
         }
+    }
+
+    /** Match the two corrupt-data cases used by the loader without changing handleException's classification. */
+    private fun isCorruptSave(ex: Exception): Boolean {
+        if (ex is UncivShowableException && ex.message == "The file data seems to be corrupted.") return true
+        var cause: Throwable = ex
+        while (cause.cause != null && cause is GdxRuntimeException) cause = cause.cause!!
+        return cause is SerializationException
+    }
+
+    private fun showCorruptSaveCard(ex: Exception, primaryText: String) {
+        val message = getLoadExceptionMessage(ex, primaryText).first
+        val title = message.substringBefore('\n')
+        val detail = message.substringAfter('\n', "")
+        val popup = object : Popup(this@LoadGameScreen, Popup.Scrollability.None,
+            PortraitDialog.sizePercentage(this@LoadGameScreen.stage)) {
+            init {
+                val scale = PortraitDialog.scale(stageToShowOn)
+                PortraitDialog.anchorCard(this, innerTable)
+                cells.first().padBottom(30f * scale)
+                innerTable.pad(18f * scale, 16f * scale, 16f * scale, 16f * scale)
+                innerTable.defaults().pad(0f)
+
+                val header = Table()
+                val warning = Table().apply {
+                    background = ImageGetter.getCircleDrawable().tint(Color(224f / 255f, 82f / 255f, 74f / 255f, .2f))
+                    add(ImageGetter.getImage("OtherIcons/ExclamationMark").apply { color = PortraitDialog.ERROR })
+                        .size(28f * scale)
+                }
+                header.add(warning).size(56f * scale).padRight(14f * scale)
+                val copy = Table()
+                val textWidth = maxPopupWidth - 102f * scale
+                copy.add(title.toLabel(Color.WHITE, (20f * scale).roundToInt(), hideIcons = true)
+                    .apply { wrap = true }).width(textWidth).left().row()
+                copy.add(detail.toLabel(Color.valueOf("b7cde0"), (15f * scale).roundToInt(), hideIcons = true)
+                    .apply { wrap = true }).width(textWidth).left().padTop(6f * scale)
+                header.add(copy).growX()
+                add(header).width(maxPopupWidth - 32f * scale).left().row()
+
+                val ok = addCloseButton(Constants.OK, KeyboardBinding.Confirm)
+                PortraitDialog.styleButton(ok.actor, PortraitDialog.Kind.Primary)
+                ok.growX().height(56f * scale).padTop(18f * scale)
+            }
+        }
+        // Keep the classified message on the load screen after the card is dismissed.
+        errorLabel.isVisible = false
+        popup.closeListeners += { errorLabel.isVisible = true }
+        popup.open()
     }
 
     /** If any nation is missing from a saved game, chances are that one of the mods needs to be redownloaded

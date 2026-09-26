@@ -7,7 +7,7 @@ import com.unciv.utils.SafeInsets
 
 /** Keeps stage layout in safe-area coordinates while optionally drawing beyond those bounds. */
 class SafeAreaViewport(
-    virtualSize: Float,
+    private val virtualSize: Float,
     private val useFullScreenLayout: Boolean = false,
 ) : ExtendViewport(virtualSize, virtualSize) {
     private var insets = SafeInsets()
@@ -41,6 +41,9 @@ class SafeAreaViewport(
     override fun update(screenWidth: Int, screenHeight: Int, centerCamera: Boolean) {
         val safe = insets.applyTo(screenWidth, screenHeight)
         if (safe.width <= 0 || safe.height <= 0) return
+        // A phone held upright is far narrower than the square minimum; fitting it anyway shrinks every control
+        // to about two thirds. Portrait instead lays out for a narrower world, so one unit stays close to one point.
+        minWorldWidth = if (safe.height > safe.width) virtualSize * PORTRAIT_WIDTH_RATIO else virtualSize
         displayWidth = screenWidth
         displayHeight = screenHeight
         if (edgeToEdge && useFullScreenLayout) super.update(screenWidth, screenHeight, centerCamera)
@@ -50,14 +53,15 @@ class SafeAreaViewport(
     override fun apply(centerCamera: Boolean) {
         val safe = insets.applyTo(displayWidth, displayHeight)
         if (safe.width <= 0 || safe.height <= 0) return
-        if (!edgeToEdge) {
+        // Portrait backgrounds fill the phone while the default layout keeps controls in the safe area.
+        if (!edgeToEdge && displayWidth >= displayHeight) {
             drawingBounds.set(0f, 0f, worldWidth, worldHeight)
             setScreenBounds(safe.x, safe.y, safe.width, safe.height)
             super.apply(centerCamera)
             return
         }
 
-        if (useFullScreenLayout) {
+        if (edgeToEdge && useFullScreenLayout) {
             drawingBounds.set(0f, 0f, worldWidth, worldHeight)
             setScreenBounds(0, 0, displayWidth, displayHeight)
             super.apply(centerCamera)
@@ -80,5 +84,10 @@ class SafeAreaViewport(
             drawingBounds.y + drawingBounds.height / 2, 0f
         )
         camera.update()
+    }
+
+    companion object {
+        /** Portrait world width as a share of the UI size setting: 600 (Small) becomes 432, about an iPhone's width in points. */
+        const val PORTRAIT_WIDTH_RATIO = 0.72f
     }
 }

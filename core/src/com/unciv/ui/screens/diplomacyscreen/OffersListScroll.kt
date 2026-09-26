@@ -1,6 +1,8 @@
 package com.unciv.ui.screens.diplomacyscreen
 
 import com.badlogic.gdx.graphics.Color
+import com.badlogic.gdx.scenes.scene2d.Actor
+import com.badlogic.gdx.scenes.scene2d.ui.Button
 import com.badlogic.gdx.scenes.scene2d.ui.Table
 import com.badlogic.gdx.utils.Align
 import com.unciv.Constants
@@ -12,6 +14,9 @@ import com.unciv.logic.trade.TradeOffersList
 import com.unciv.models.ruleset.tile.ResourceSupplyList
 import com.unciv.models.translations.tr
 import com.unciv.ui.components.extensions.disable
+import com.unciv.ui.components.extensions.colorFromRGB
+import com.unciv.ui.components.extensions.toLabel
+import com.unciv.ui.components.fonts.Fonts
 import com.unciv.ui.components.input.onClick
 import com.unciv.ui.components.widgets.ExpanderTab
 import com.unciv.ui.images.IconTextButton
@@ -28,8 +33,12 @@ import com.unciv.ui.components.widgets.AutoScrollPane as ScrollPane
  */
 class OffersListScroll(
     private val persistenceID: String,
+    private val portraitMode: Boolean = false,
+    private val portraitWidth: Float = 393f,
     private val onOfferClicked: (TradeOffer) -> Unit
 ) : ScrollPane(null) {
+    private val portraitTray = portraitMode && persistenceID.endsWith("Avail")
+    private val scale = portraitWidth / 393f
     val table = Table(BaseScreen.skin).apply { defaults().pad(5f) }
 
 
@@ -38,6 +47,7 @@ class OffersListScroll(
     init {
         fadeScrollBars=false
         setScrollbarsVisible(true)
+        if (portraitTray) setScrollingDisabled(false, false)
     }
 
     /**
@@ -54,6 +64,17 @@ class OffersListScroll(
     ) {
         table.clear()
         expanderTabs.clear()
+        if (portraitMode && !portraitTray && offersToDisplay.isEmpty()) {
+            val hint = Table().apply {
+                background = BaseScreen.skinStrings.getUiBackground("DiplomacyScreen/EmptyPile",
+                    BaseScreen.skinStrings.roundedEdgeRectangleMidShape, colorFromRGB(37, 62, 82))
+            }
+            val text = if (persistenceID == "OurTrade") "Tap your items below" else "Tap their items below"
+            hint.add(text.toLabel(colorFromRGB(156, 184, 205), (14f * scale).toInt()))
+            table.add(hint).width(portraitWidth - 48f * scale).height(60f * scale).row()
+            actor = table
+            return
+        }
 
         for (offerType in TradeOfferType.entries) {
             val labelName = when(offerType) {
@@ -67,13 +88,16 @@ class OffersListScroll(
                 City -> "Cities"
             }
             val offersOfType = offersToDisplay.filter { it.type == offerType }
-            if (labelName.isNotEmpty() && offersOfType.any()) {
+            if (!portraitMode && labelName.isNotEmpty() && offersOfType.any()) {
                 expanderTabs[offerType] = ExpanderTab(labelName, persistenceID = "Trade.$persistenceID.$offerType") {
                     it.defaults().pad(5f)
                 }
             }
         }
 
+        val trayColumns = Table(BaseScreen.skin).apply { left() }
+        var trayColumn = Table(BaseScreen.skin)
+        var trayItems = 0
         for (offerType in TradeOfferType.entries) {
             val offersOfType = offersToDisplay.filter { it.type == offerType }
                 .sortedWith(compareBy(
@@ -101,6 +125,30 @@ class OffersListScroll(
                         iconCell.size(30f)
                     label.setAlignment(Align.center)
                     labelCell.pad(5f).grow()
+                    if (portraitTray) {
+                        clearChildren()
+                        style = Button.ButtonStyle(style).apply {
+                            up = BaseScreen.skinStrings.getUiBackground("DiplomacyScreen/TradeToken",
+                                BaseScreen.skinStrings.roundedEdgeRectangleMidShape, colorFromRGB(31, 53, 72))
+                            down = BaseScreen.skinStrings.getUiBackground("DiplomacyScreen/TradeTokenDown",
+                                BaseScreen.skinStrings.roundedEdgeRectangleMidShape, colorFromRGB(43, 77, 105))
+                        }
+                        color = Color.WHITE
+                        pad(3f * scale)
+                        label.wrap = true
+                        label.setFontScale(13f * scale / Fonts.ORIGINAL_FONT_SIZE)
+                        if (tradeIcon != null) add(tradeIcon).size(27f * scale).padBottom(2f * scale).row()
+                        add(label).width(72f * scale).growY()
+                    } else if (portraitMode) {
+                        clearChildren()
+                        label.wrap = true
+                        label.setAlignment(Align.left)
+                        label.setFontScale(14f * scale / Fonts.ORIGINAL_FONT_SIZE)
+                        if (tradeIcon != null) add(tradeIcon).size(28f * scale).padRight(8f * scale)
+                        add(label).width(if (tradeIcon != null) 242f * scale else 278f * scale).left()
+                        add((if (offer.type == Gold || offer.type == Gold_Per_Turn) "Edit" else "×")
+                            .toLabel()).width(34f * scale).right()
+                    }
                 }
 
                 val amountPerClick =
@@ -109,6 +157,8 @@ class OffersListScroll(
                         Treaty -> Int.MAX_VALUE
                         else -> 1
                     }
+                val uniqueResource = offerType in listOf(Luxury_Resource, Strategic_Resource) &&
+                    otherSideOffers.all { it.type != offer.type || it.name != offer.name || it.amount < 0 }
 
                 if (offer.isTradable() && offer.name != Constants.peaceTreaty // can't disable peace treaty!
                     && (offer.name != Constants.researchAgreement // If we have a research agreement make sure the total gold of both Civs is higher than the total cost
@@ -116,9 +166,7 @@ class OffersListScroll(
                         || (ourCiv.gold + theirCiv.gold > ourCiv.getResearchAgreementCost(theirCiv) * 2))) {
 
                     // highlight unique suggestions
-                    if (offerType in listOf(Luxury_Resource, Strategic_Resource)
-                            && otherSideOffers.all { it.type != offer.type || it.name != offer.name || it.amount < 0}) // we can 'have' negative amounts of resources 
-                        tradeButton.color = Color.GREEN
+                    if (uniqueResource && !portraitTray) tradeButton.color = Color.GREEN
 
                     tradeButton.onClick {
                         val amountTransferred = min(amountPerClick, offer.amount)
@@ -128,12 +176,32 @@ class OffersListScroll(
                 else tradeButton.disable()  // for instance, we have negative gold
 
 
-                if (expanderTabs.containsKey(offerType))
-                    expanderTabs[offerType]!!.innerTable.add(tradeButton).row()
-                else
-                    table.add(tradeButton).row()
+                if (portraitTray) {
+                    val token: Actor = if (uniqueResource)
+                        Table(BaseScreen.skin).apply {
+                            background = BaseScreen.skinStrings.getUiBackground("DiplomacyScreen/UniqueTradeToken",
+                                BaseScreen.skinStrings.roundedEdgeRectangleMidShape, Color.GOLD)
+                            pad(2f * scale)
+                            add(tradeButton).grow()
+                        }
+                    else tradeButton
+                    trayColumn.add(token).width(80f * scale).height(80f * scale)
+                        .pad(3f * scale).row()
+                    trayItems++
+                    if (trayItems % 2 == 0) {
+                        trayColumns.add(trayColumn).top()
+                        trayColumn = Table(BaseScreen.skin)
+                    }
+                } else {
+                    val cell = if (expanderTabs.containsKey(offerType))
+                        expanderTabs[offerType]!!.innerTable.add(tradeButton)
+                    else table.add(tradeButton)
+                    if (portraitMode) cell.width(portraitWidth - 54f * scale).height(56f * scale)
+                    cell.row()
+                }
             }
         }
-        actor = table
+        if (portraitTray && trayItems % 2 != 0) trayColumns.add(trayColumn).top()
+        actor = if (portraitTray) trayColumns else table
     }
 }

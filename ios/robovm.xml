@@ -36,6 +36,9 @@
     <forceLinkClasses>
         <pattern>com.badlogic.gdx.backends.iosrobovm.IOSApplication$SceneDelegate</pattern>
         <pattern>com.badlogic.gdx.scenes.scene2d.ui.**</pattern>
+        <!-- Legacy save types referenced only by generic fields during JSON cloning. -->
+        <pattern>com.unciv.logic.achievements.AchievementMountainParty</pattern>
+        <pattern>com.unciv.logic.achievements.AchievementRetreat</pattern>
         <pattern>com.android.org.conscrypt.**</pattern>
         <pattern>kotlinx.serialization.**</pattern>
         <pattern>org.apache.harmony.security.provider.crypto.**</pattern>

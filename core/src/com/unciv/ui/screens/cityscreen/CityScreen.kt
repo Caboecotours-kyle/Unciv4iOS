@@ -32,16 +32,19 @@ import com.unciv.ui.components.tilegroups.CityTileState
 import com.unciv.ui.components.tilegroups.TileGroupMap
 import com.unciv.ui.components.tilegroups.TileSetStrings
 import com.unciv.ui.images.ImageGetter
+import com.unciv.ui.images.PortraitStatIcons
 import com.unciv.ui.popups.ConfirmPopup
 import com.unciv.ui.popups.ToastPopup
 import com.unciv.ui.popups.closeAllPopups
 import com.unciv.ui.screens.basescreen.BaseScreen
+import com.unciv.ui.screens.basescreen.portraitCanvasBounds
 import com.unciv.ui.screens.basescreen.RecreateOnResize
 import com.unciv.ui.screens.worldscreen.WorldScreen
 import com.unciv.utils.Concurrency
 import com.unciv.view.CityView
 import com.unciv.view.CivView
 import com.unciv.view.TileView
+import java.util.concurrent.atomic.AtomicInteger
 import kotlin.math.max
 
 class CityScreen(
@@ -59,7 +62,21 @@ class CityScreen(
 
         /** Size of the decoration icons shown besides the raze button */
         const val wltkIconSize = 40f
+
+        /** Portrait panel shown above the tab bar; kept across the frequent CityScreen re-creations */
+        private var portraitTab = PortraitTab.Build
+        private const val portraitBarHeight = 56f
     }
+
+    private enum class PortraitTab(val label: String) { Build("Build"), City("City") }
+
+    /** Portrait: one panel at a time, picked from a tab bar in thumb reach (DESIGN.md city sheet) */
+    private val portraitTabBar = Table()
+    private var portraitView: CityPortraitView? = null
+    /** Newest portrait list request; an older background gather must not overwrite a newer one */
+    private val portraitDataVersion = AtomicInteger()
+    private var disposed = false
+    internal val portraitStatIcons = PortraitStatIcons()
 
     private val viewingCiv: CivView = cityView.gameView.civView
 
@@ -134,7 +151,7 @@ class CityScreen(
         set(value) { constructionsTable.selectedQueueEntry = value }
     /** Cached city.expansion.chooseNewTileToOwn() */
     // val should be OK as buying tiles is what changes this, and that would re-create the whole CityScreen
-    private val nextTileToOwn = cityView.chooseNewTileToOwn()
+    internal val nextTileToOwn = cityView.chooseNewTileToOwn()
 
     private var cityAmbiencePlayer: CityAmbiencePlayer?  = ambiencePlayer ?: CityAmbiencePlayer(cityView)
 
@@ -160,17 +177,43 @@ class CityScreen(
         stage.addActor(tileTable)
         stage.addActor(cityPickerTable)  // add late so it's top in Z-order and doesn't get covered in cramped portrait
         stage.addActor(exitCityButton)
+        if (isPortrait()) {
+            val safe = safeAreaBoundsInWorld()
+            val canvas = portraitCanvasBounds()
+            val logicalWidth = 393f
+            val scale = safe.width / logicalWidth
+            portraitView = CityPortraitView(this, logicalWidth).also {
+                it.isTransform = true
+                it.setBounds(safe.x, safe.y, logicalWidth,
+                    ((canvas.y + canvas.height - safe.y) / scale - 250f).coerceAtLeast(390f))
+                it.setScale(scale)
+                stage.addActor(it)
+            }
+        }
 
         cityView.updateCityStats()
         updateSync() // NOT async since that gives a "visual flash" when entering the city
+        // Portrait lists show Loading until their first background gather lands
+        if (portraitView != null) updateAsync(recalculateStats = false)
 
         globalShortcuts.add(KeyboardBinding.PreviousCity) { page(-1) }
         globalShortcuts.add(KeyboardBinding.NextCity) { page(1) }
 
         if (isPortrait()) mapScrollPane.apply {
-            // center scrolling so city center sits more to the bottom right
-            scrollX = (maxX - constructionsTable.getLowerWidth() - posFromEdge) / 2
-            scrollY = (maxY - cityStatsTable.packIfNeeded().height - posFromEdge + cityPickerTable.top) / 2
+            if ((actor as TileGroupMap<*>).mapVerticalScale != 1f) {
+                val cityTile = tileGroups.first { it.tileView.position() == cityView.location }
+                val safe = safeAreaBoundsInWorld()
+                val centerX = safe.x + safe.width / 2f
+                val centerY = safe.y + safe.height - 125f * safe.width / 393f
+                validate()
+                // Place the city's ground center in the free map area after zoom and safe-area layout.
+                scrollX = cityTile.x + cityTile.groundCenterX + width / 2f - (centerX - x) / scaleX
+                scrollY = maxY - cityTile.y - cityTile.groundCenterY - height / 2f + (centerY - y) / scaleY
+            } else {
+                // center scrolling so city center sits more to the bottom right
+                scrollX = maxX / 2
+                scrollY = maxY / 2
+            }
             updateVisualScroll()
         }
 
@@ -180,16 +223,47 @@ class CityScreen(
     override fun getCivilopediaRuleset() = cityView.getRuleset()
 
     /** Async */
-    internal fun updateAsync() {
+    internal fun updateAsync(recalculateStats: Boolean = true) {
+        val version = portraitDataVersion.incrementAndGet()
         Concurrency.run {
             // Recalculate Stats
-            cityView.updateCityStats()
-            Concurrency.runOnGLThread { updateSync() }
+            if (recalculateStats) cityView.updateCityStats()
+            // Portrait Build and Buy lists: rejections and turns gathered here like the landscape list, skipped once a newer update is queued
+            val constructions = if (version == portraitDataVersion.get()) portraitView?.gatherConstructions() else null
+            Concurrency.runOnGLThread {
+                if (portraitView != null) {
+                    // A replaced screen or a superseded gather must not rebuild the sheet (disposed icons, stale rows)
+                    if (disposed || version != portraitDataVersion.get()) return@runOnGLThread
+                    portraitView?.constructions = constructions
+                }
+                updateSync()
+            }
         }
     }
     
     internal fun updateSync(){
-        constructionsTable.isVisible = !isSpying
+        if (isPortrait()) {
+            constructionsTable.isVisible = false
+            constructionsTable.update(selectedConstruction)
+            tileTable.update(selectedTile)
+            selectedConstructionTable.update(selectedConstruction)
+            cityPickerTable.isVisible = false
+            cityStatsTable.isVisible = false
+            tileTable.isVisible = false
+            selectedConstructionTable.isVisible = false
+            exitCityButton.isVisible = false
+            razeCityButtonHolder.isVisible = false
+            // Tile states first: the portrait Tiles tab reads them
+            updateTileGroups()
+            portraitView?.refresh()
+            return
+        }
+        if (isPortrait()) {
+            // room for the city name above and the tab bar below; the picker must be filled before it can be measured
+            cityPickerTable.update()
+            constructionsTable.reservedTop = cityPickerTable.packIfNeeded().height + 2 * posFromEdge
+        }
+        constructionsTable.isVisible = !isSpying && (!isPortrait() || portraitTab == PortraitTab.Build)
         constructionsTable.update(selectedConstruction)
         updateWithoutConstructionAndMap()
 
@@ -198,6 +272,14 @@ class CityScreen(
     }
 
     internal fun updateWithoutConstructionAndMap() {
+        if (isPortrait() && portraitView != null) {
+            tileTable.update(selectedTile)
+            selectedConstructionTable.update(selectedConstruction)
+            tileTable.isVisible = false
+            selectedConstructionTable.isVisible = false
+            portraitView?.refresh()
+            return
+        }
         // Bottom right: Tile or selected construction info
         tileTable.update(selectedTile)
         tileTable.setPosition(stage.width - posFromEdge, posFromEdge, Align.bottomRight)
@@ -228,6 +310,62 @@ class CityScreen(
         // Top center: Annex/Raze button
         updateAnnexAndRazeCityButton()
 
+        if (isPortrait()) {
+            // Context-menu selection also reaches this path without rebuilding the construction list.
+            val details = when {
+                selectedTile != null -> tileTable.packIfNeeded().height + posFromEdge
+                selectedConstruction != null -> selectedConstructionTable.packIfNeeded().height + posFromEdge
+                else -> 0f
+            }
+            layoutPortrait(details)
+            constructionsTable.reservedBottom = portraitBarHeight + 2 * posFromEdge + details
+            constructionsTable.updateLayout()
+        }
+    }
+
+    private fun buildPortraitTabBar() {
+        portraitTabBar.defaults().height(portraitBarHeight).padRight(6f)
+        for (tab in PortraitTab.entries) {
+            val button = tab.label.toTextButton()
+            if (tab == portraitTab) button.color = Color.GOLD
+            button.onClick {
+                portraitTab = tab
+                game.replaceCurrentScreen { CityScreen(cityView, selectedConstruction, selectedTile, passOnCityAmbiencePlayer()) }
+            }
+            portraitTabBar.add(button).minWidth(96f)
+        }
+        stage.addActor(portraitTabBar)
+    }
+
+    /** Portrait layout: city name on top, the chosen panel in between, tabs and Exit along the bottom edge. */
+    private fun layoutPortrait(detailsHeight: Float) {
+        val safe = safeAreaBoundsInWorld()
+        val left = safe.x + posFromEdge
+        val right = safe.x + safe.width - posFromEdge
+        val bottom = safe.y + posFromEdge
+        val top = safe.y + safe.height - posFromEdge
+
+        portraitTabBar.pack()
+        portraitTabBar.setPosition(left, bottom)
+        exitCityButton.height = portraitBarHeight
+        exitCityButton.setPosition(right, bottom, Align.bottomRight)
+        val barTop = bottom + portraitBarHeight
+
+        cityPickerTable.setPosition(safe.x + safe.width / 2, top, Align.top)
+        val panelTop = cityPickerTable.y - posFromEdge
+
+        val showCity = portraitTab == PortraitTab.City
+        cityStatsTable.isVisible = showCity
+        if (showCity) {
+            cityStatsTable.update(panelTop - barTop - 2 * posFromEdge - detailsHeight)
+            cityStatsTable.setPosition(safe.x + safe.width / 2, panelTop, Align.top)
+        }
+        razeCityButtonHolder.isVisible = showCity
+        razeCityButtonHolder.setPosition(left, barTop + posFromEdge)
+
+        // selected tile or construction details float right above the tab bar
+        tileTable.setPosition(right, barTop + posFromEdge, Align.bottomRight)
+        selectedConstructionTable.setPosition(right, barTop + posFromEdge, Align.bottomRight)
     }
 
     private fun updateCityStats() {
@@ -393,6 +531,7 @@ class CityScreen(
         stage.addActor(mapScrollPane)
 
         mapScrollPane.layout() // center scrolling
+        mapScrollPane.setDefaultZoom(stage.viewport)
         mapScrollPane.scrollPercentX = 0.5f
         mapScrollPane.scrollPercentY = 0.5f
         mapScrollPane.updateVisualScroll()
@@ -419,6 +558,14 @@ class CityScreen(
         } else if (tileGroup.tileState == CityTileState.PURCHASABLE) {
             askToBuyTile(tileGroup.tileView)
         }
+    }
+
+    /** Portrait Tiles tab: the map's tile states, so the list offers exactly what tapping the map offers */
+    internal fun tileStates(): Map<TileView, CityTileState> = tileGroups.associate { it.tileView to it.tileState }
+
+    /** Portrait Tiles tab: the same work / stop working toggle as the map's worked icon */
+    internal fun toggleTileWorked(tile: TileView) {
+        tileGroups.firstOrNull { it.tileView == tile }?.let { tileWorkedIconOnClick(it) }
     }
 
     /** Ask whether user wants to buy [selectedTile] for gold.
@@ -494,7 +641,7 @@ class CityScreen(
             return
         }
 
-        selectTile(tileGroup.tileView)
+        if (isPortrait()) portraitView?.showTile(tileGroup.tileView) else selectTile(tileGroup.tileView)
         updateAsync()
     }
 
@@ -520,13 +667,15 @@ class CityScreen(
         }
         selectedTile = null
     }
-    private fun selectTile(newTile: TileView?) {
+    internal fun selectTile(newTile: TileView?) {
         selectedConstruction = null
         selectedQueueEntryTargetTile = null
         pickTileData = null
         selectedTile = newTile
     }
     fun clearSelection() = selectTile(null)
+
+    internal fun queueConstruction(construction: IConstruction) = constructionsTable.addConstructionToQueue(construction)
 
     fun startPickTileForCreatesOneImprovement(construction: Building, stat: Stat, isBuying: Boolean) {
         val improvement = cityView.getImprovementToCreate(construction) ?: return
@@ -572,11 +721,19 @@ class CityScreen(
 
     // Don't use passOnCityAmbiencePlayer here - continuing play on the replacement screen would be nice,
     // but the rapid firing of several resize events will get that un-synced, they would no longer stop on leaving.
-    override fun recreate(): BaseScreen = CityScreen(cityView, selectedConstruction, selectedTile)
+    override fun recreate(): BaseScreen {
+        // Portrait keeps its open row, drill-in, scroll and last lists across resize
+        val portraitState = portraitView?.state()
+        return CityScreen(cityView, selectedConstruction, selectedTile).also { screen ->
+            portraitState?.let { screen.portraitView?.restore(it) }
+        }
+    }
 
     override fun dispose() {
+        disposed = true
         cityAmbiencePlayer?.dispose()
         fireworks?.dispose()
+        portraitStatIcons.dispose()
         super.dispose()
     }
 

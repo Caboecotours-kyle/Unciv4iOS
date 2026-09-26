@@ -23,7 +23,7 @@ import org.robovm.apple.uikit.UIWindowSceneGeometryPreferencesIOS
 class IOSDisplay : PlatformDisplay {
     @Volatile private var safeInsets = SafeInsets()
     @Volatile private var edgeToEdge = false
-    @Volatile private var orientation = ScreenOrientation.Landscape
+    @Volatile private var orientation = ScreenOrientation.Portrait
     @Volatile private var orientationRevision = 0
     @Volatile private var keyboardTop: Float? = null
     private var controller: UncivIOSViewController? = null

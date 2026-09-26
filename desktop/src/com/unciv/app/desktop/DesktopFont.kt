@@ -47,7 +47,7 @@ class DesktopFont : FontImplementation {
             createFontFromFile(fontFamilyData.filePath!!, size)
         } else {
             // System font
-            Font(fontFamilyData.invariantName, Font.PLAIN, size)
+            Font(fontFamilyData.invariantName, if (fontFamilyData.invariantName.isBlank()) Font.BOLD else Font.PLAIN, size)
         }
         metric = font.getFontMetrics()
     }

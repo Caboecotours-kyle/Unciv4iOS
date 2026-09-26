@@ -84,6 +84,13 @@
       "title": "Tile Scale",
       "description": "The scale of all tiles. Can be used to increase or decrease the size of every tile."
     },
+    "mapVerticalScale": {
+      "type": "number",
+      "exclusiveMinimum": 0,
+      "maximum": 1,
+      "default": 1,
+      "description": "Portrait ground projection. Upright art can provide matching Tilted/ image variants; landscape stays flat."
+    },
     "tileScales": {
       "type": "object",
       "title": "Tile Scales",

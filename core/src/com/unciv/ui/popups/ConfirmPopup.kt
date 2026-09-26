@@ -4,6 +4,7 @@ import com.badlogic.gdx.scenes.scene2d.Stage
 import com.badlogic.gdx.scenes.scene2d.ui.TextButton.TextButtonStyle
 import com.badlogic.gdx.utils.Align
 import com.unciv.Constants
+import com.unciv.ui.components.extensions.setFontSize
 import com.unciv.ui.components.extensions.toLabel
 import com.unciv.ui.components.input.KeyboardBinding
 import com.unciv.ui.screens.basescreen.BaseScreen
@@ -23,7 +24,7 @@ open class ConfirmPopup(
     isConfirmPositive: Boolean = false,
     restoreDefault: () -> Unit = {},
     action: () -> Unit
-) : Popup(stageToShowOn) {
+) : Popup(stageToShowOn, maxSizePercentage = PortraitDialog.sizePercentage(stageToShowOn)) {
 
     constructor(
         screen: BaseScreen,
@@ -38,13 +39,29 @@ open class ConfirmPopup(
     private val promptLabel = question.toLabel()
 
     init {
-        promptLabel.setAlignment(Align.center)
-        add(promptLabel).colspan(2).row()
-        addCloseButton(Constants.cancel, KeyboardBinding.Cancel, action = restoreDefault)
-        val confirmStyleName = if (isConfirmPositive) "positive" else "negative"
-        val confirmStyle = BaseScreen.skin.get(confirmStyleName, TextButtonStyle::class.java)
-        addOKButton(confirmText, KeyboardBinding.Confirm, confirmStyle, action = action)
-        equalizeLastTwoButtonWidths()
+        if (PortraitDialog.isPortrait(stageToShowOn)) {
+            // Portrait card: question first, then the choice and Cancel stacked full width in thumb reach
+            val scale = PortraitDialog.scale(stageToShowOn)
+            PortraitDialog.anchorCard(this, innerTable)
+            promptLabel.setFontSize(20)
+            promptLabel.wrap = true
+            add(promptLabel).width(maxPopupWidth - 50f).colspan(2).row()
+            val confirmKind = if (isConfirmPositive) PortraitDialog.Kind.Primary else PortraitDialog.Kind.Danger
+            addOKButton(confirmText, KeyboardBinding.Confirm, action = action).apply {
+                PortraitDialog.styleButton(actor, confirmKind)
+            }.growX().height(56f * scale).row()
+            addCloseButton(Constants.cancel, KeyboardBinding.Cancel, action = restoreDefault).apply {
+                PortraitDialog.styleButton(actor, PortraitDialog.Kind.Ghost)
+            }.growX().height(52f * scale)
+        } else {
+            promptLabel.setAlignment(Align.center)
+            add(promptLabel).colspan(2).row()
+            addCloseButton(Constants.cancel, KeyboardBinding.Cancel, action = restoreDefault)
+            val confirmStyleName = if (isConfirmPositive) "positive" else "negative"
+            val confirmStyle = BaseScreen.skin.get(confirmStyleName, TextButtonStyle::class.java)
+            addOKButton(confirmText, KeyboardBinding.Confirm, confirmStyle, action = action)
+            equalizeLastTwoButtonWidths()
+        }
     }
 
 }

@@ -31,6 +31,7 @@ open class PickerScreen(disableScroll: Boolean = false) : BaseScreen() {
 
     init {
         pickerPane.setFillParent(true)
+        if (isPortrait()) pickerPane.usePortraitBottomBar()
         stage.addActor(pickerPane)
         ensureLayout()
     }

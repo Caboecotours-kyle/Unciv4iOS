@@ -28,12 +28,15 @@ import com.unciv.ui.components.extensions.toLabel
 import com.unciv.ui.components.input.KeyboardBinding
 import com.unciv.ui.components.input.keyShortcuts
 import com.unciv.ui.components.input.onActivation
+import com.unciv.ui.components.extensions.toTextButton
 import com.unciv.ui.components.input.onClick
+import com.unciv.ui.components.widgets.AutoScrollPane
 import com.unciv.ui.components.input.onDoubleClick
 import com.unciv.ui.components.widgets.BorderedTable
 import com.unciv.ui.components.widgets.ColorMarkupLabel
 import com.unciv.ui.images.ImageGetter
 import com.unciv.ui.popups.ConfirmPopup
+import com.unciv.ui.screens.basescreen.portraitCanvasBounds
 import com.unciv.ui.screens.basescreen.BaseScreen
 import com.unciv.ui.screens.basescreen.RecreateOnResize
 import com.unciv.utils.Concurrency
@@ -152,6 +155,11 @@ class PolicyPickerScreen(
     select: String? = null
 ) : PickerScreen(), RecreateOnResize {
 
+    companion object {
+        /** Branch shown in portrait; remembered across visits and re-creations */
+        private var portraitBranch: String? = null
+    }
+
     object Sizes {
         const val paddingVertical = 10f
         const val paddingHorizontal = 20f
@@ -160,6 +168,7 @@ class PolicyPickerScreen(
         const val iconSize = 50f
     }
 
+    internal val portraitStats = com.unciv.ui.images.PortraitStatIcons()
     private val policyNameToButton = HashMap<String, PolicyButton>()
     private var selectedPolicyButton: PolicyButton? = null
 
@@ -190,68 +199,120 @@ class PolicyPickerScreen(
         topTable.row()
 
         val branches = viewingCiv.gameInfo.ruleset.policyBranches
-        val branchesPerRow: Int
+        if (isPortrait()) initPortrait(branches, select)
+        else {
+            val branchesPerRow: Int
 
-        // estimate how many branch boxes fit using average size (including pad)
-        // TODO If we'd want to use scene2d correctly, this is supposed to happen inside an overridden layout() method
-        val numBranchesY = scrollPane.height / 305f
-            // Landscape - arrange in as few rows as looks nice
-        branchesPerRow = if (numBranchesY > 1.5f) {
-            val numRows = if (numBranchesY < 2.9f) 2 else (numBranchesY + 0.1f).toInt()
-            (branches.size + numRows - 1) / numRows
-        } else branches.size
+            // estimate how many branch boxes fit using average size (including pad)
+            // TODO If we'd want to use scene2d correctly, this is supposed to happen inside an overridden layout() method
+            val numBranchesY = scrollPane.height / 305f
+                // Landscape - arrange in as few rows as looks nice
+            branchesPerRow = if (numBranchesY > 1.5f) {
+                val numRows = if (numBranchesY < 2.9f) 2 else (numBranchesY + 0.1f).toInt()
+                (branches.size + numRows - 1) / numRows
+            } else branches.size
 
 
-        // Actually create and distribute the policy branches
-        val numberOfRows = ceil(branches.size / branchesPerRow.toFloat()).toInt()
+            // Actually create and distribute the policy branches
+            val numberOfRows = ceil(branches.size / branchesPerRow.toFloat()).toInt()
 
-        val positionToTable = HashMap<String,Table>()
-        val allPoliciesTable = Table()
-        for (rowNum in 0 until numberOfRows){
-            val row = Table()
-            for (columnNum in 0 until branchesPerRow){
-                val branchTable = Table()
-                row.add(branchTable).grow()
-                positionToTable["$rowNum-$columnNum"] = branchTable
+            val positionToTable = HashMap<String,Table>()
+            val allPoliciesTable = Table()
+            for (rowNum in 0 until numberOfRows){
+                val row = Table()
+                for (columnNum in 0 until branchesPerRow){
+                    val branchTable = Table()
+                    row.add(branchTable).grow()
+                    positionToTable["$rowNum-$columnNum"] = branchTable
+                }
+                allPoliciesTable.add(row).pad(5f,10f)
+                if (rowNum != numberOfRows-1) allPoliciesTable.addSeparator().pad(0f, 10f)
             }
-            allPoliciesTable.add(row).pad(5f,10f)
-            if (rowNum != numberOfRows-1) allPoliciesTable.addSeparator().pad(0f, 10f)
-        }
 
-        for ((index, branch) in branches.values.withIndex()){
-            val branchGroup = BranchGroup(branch)
-            branchToGroup[branch.name] = branchGroup
+            for ((index, branch) in branches.values.withIndex()){
+                val branchGroup = BranchGroup(branch)
+                branchToGroup[branch.name] = branchGroup
 
-            val rowNumber = index / branchesPerRow
-            val isRowLeftToRight = rowNumber % 2 == 0
-            val numberInRow =  index % branchesPerRow // RTL rows
-            val rowPosition = if (isRowLeftToRight) numberInRow else branchesPerRow-1-numberInRow
-            val policyTable = positionToTable["$rowNumber-$rowPosition"]!!
-            policyTable.add(branchGroup).grow()
-        }
-        topTable.add(allPoliciesTable)
+                val rowNumber = index / branchesPerRow
+                val isRowLeftToRight = rowNumber % 2 == 0
+                val numberInRow =  index % branchesPerRow // RTL rows
+                val rowPosition = if (isRowLeftToRight) numberInRow else branchesPerRow-1-numberInRow
+                val policyTable = positionToTable["$rowNumber-$rowPosition"]!!
+                policyTable.add(branchGroup).grow()
+            }
+            topTable.add(allPoliciesTable)
 
 
-        // If topTable is larger than available space, scroll in a little - up to top/left
-        // total padding, or up to where the axis is centered, whichever is smaller
-        splitPane.pack()    // packs topTable but also ensures scrollPane.maxXY is calculated
-        if (topTable.height > scrollPane.height) {
-            val vScroll = min(0f, scrollPane.maxY / 2)
-            scrollPane.scrollY = vScroll
-        }
-        if (topTable.width > scrollPane.width) {
-            val hScroll = min(20f, scrollPane.maxX / 2)
-            scrollPane.scrollX = hScroll
-        }
-        scrollPane.updateVisualScroll()
+            // If topTable is larger than available space, scroll in a little - up to top/left
+            // total padding, or up to where the axis is centered, whichever is smaller
+            splitPane.pack()    // packs topTable but also ensures scrollPane.maxXY is calculated
+            if (topTable.height > scrollPane.height) {
+                val vScroll = min(0f, scrollPane.maxY / 2)
+                scrollPane.scrollY = vScroll
+            }
+            if (topTable.width > scrollPane.width) {
+                val hScroll = min(20f, scrollPane.maxX / 2)
+                scrollPane.scrollX = hScroll
+            }
+            scrollPane.updateVisualScroll()
 
-        when (select) {
-            in branches -> branchToGroup[select]?.toggle()
-            in policyNameToButton -> pickPolicy(policyNameToButton[select]!!)
+            when (select) {
+                in branches -> branchToGroup[select]?.toggle()
+                in policyNameToButton -> pickPolicy(policyNameToButton[select]!!)
+            }
         }
     }
 
     override fun getCivilopediaRuleset() = viewingCiv.gameInfo.ruleset
+
+    /**
+     * Portrait (DESIGN.md, policies B): one branch at a time as its own tree, picked from a scrollable rail that
+     * sits right above Close and Adopt in thumb reach.
+     */
+    private fun initPortrait(branches: Map<String, PolicyBranch>, select: String?) {
+        val policies = viewingCiv.policies
+        val selectedBranch = select?.let { branches[it] ?: branches.values.firstOrNull { b -> b.policies.any { p -> p.name == it } } }
+        portraitBranch = selectedBranch?.name ?: portraitBranch?.takeIf { it in branches }
+            ?: branches.values.firstOrNull { policies.isAdopted(it.name) && !policies.isAdopted(it.policies.last().name) }?.name
+            ?: branches.values.firstOrNull { it.isPickable(viewingCiv, canChangeState) }?.name
+            ?: branches.keys.firstOrNull()
+
+        pickerPane.remove()
+        val safeArea = safeAreaBoundsInWorld()
+        val scale = safeArea.width / 393f
+        val (topGap, bottomGap) = portraitChromeGaps(393f)
+        stage.addActor(PortraitMapBackdrop(viewingCiv).apply {
+            val canvas = portraitCanvasBounds()
+            setBounds(canvas.x, canvas.y, canvas.width, canvas.height)
+        })
+        val view = PolicyPickerPortrait(this, 393f, branches, portraitBranch, select, bottomGap)
+        view.isTransform = true
+        view.setScale(scale)
+        view.setBounds(safeArea.x, safeArea.y, 393f, safeArea.height / scale - topGap)
+        stage.addActor(view)
+    }
+
+    internal fun adoptPortrait(policy: Policy) {
+        if (!policy.isPickable(viewingCiv, canChangeState)) return
+        if (policy is PolicyBranch) {
+            ConfirmPopup(this, "Are you sure you want to adopt [${policy.name}]?", "Adopt", true, action = {
+                if (policy.isPickable(viewingCiv, canChangeState)) {
+                    viewingCiv.policies.adopt(policy)
+                    game.replaceCurrentScreen { recreate() }
+                }
+            }).open(force = true)
+            return
+        }
+        Concurrency.run {
+            InputDisabling.withInputDisabled { viewingCiv.policies.adopt(policy) }
+            Concurrency.runOnGLThread {
+                if (game.screen !is PolicyPickerScreen) game.popScreen()
+                else game.replaceCurrentScreen { recreate() }
+            }
+        }
+    }
+
+    internal fun rememberPortraitBranch(name: String) { portraitBranch = name }
 
     private fun pickPolicy(button: PolicyButton) {
 
@@ -681,6 +742,12 @@ class PolicyPickerScreen(
             }
         }
 
+    }
+
+    override fun dispose() {
+        portraitStats.dispose()
+        stage.actors.filterIsInstance<PortraitMapBackdrop>().forEach { it.dispose() }
+        super.dispose()
     }
 
     override fun recreate(): BaseScreen {

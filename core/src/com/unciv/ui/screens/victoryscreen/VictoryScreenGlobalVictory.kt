@@ -13,9 +13,11 @@ import com.unciv.ui.screens.basescreen.BaseScreen
 import com.unciv.ui.screens.worldscreen.WorldScreen
 
 class VictoryScreenGlobalVictory(
-    worldScreen: WorldScreen
+    worldScreen: WorldScreen,
+    private val portrait: Boolean
 ) : Table(BaseScreen.skin), TabbedPager.IPageExtensions {
     private val header = Table()
+    /** Portrait stacks one section per victory instead of side-by-side columns under a shared header */
 
     init {
         align(Align.top)
@@ -26,6 +28,11 @@ class VictoryScreenGlobalVictory(
 
         defaults().pad(10f)
         for (victory in victoriesToShow) {
+            if (portrait) {
+                add("[${victory.name}] Victory".toLabel(fontSize = 20)).padBottom(0f).row()
+                add(getColumn(majorCivs, victory, civView.getCiv())).row()
+                continue
+            }
             header.add("[${victory.name}] Victory".toLabel()).pad(10f)
             add(getColumn(majorCivs, victory, civView.getCiv()))
         }
@@ -51,8 +58,8 @@ class VictoryScreenGlobalVictory(
     }
 
     override fun activated(index: Int, caption: String, pager: TabbedPager) {
-        equalizeColumns(header, this)
+        if (!portrait) equalizeColumns(header, this)
     }
 
-    override fun getFixedContent() = header
+    override fun getFixedContent() = if (portrait) null else header
 }

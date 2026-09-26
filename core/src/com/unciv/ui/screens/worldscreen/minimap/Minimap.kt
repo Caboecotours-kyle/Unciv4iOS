@@ -232,12 +232,14 @@ class Minimap(val mapHolder: WorldMapHolder, minimapSize: Int, private val civIn
         }
 
         val worldToMiniFactor: Vector2
-        var miniViewport = worldViewport
+        val flatWorldWidth = mapHolder.flatMapWidth
+        val flatWorldHeight = mapHolder.flatMapHeight
+        var miniViewport = mapHolder.flatViewport(worldViewport)
 
         if (civInfo != null) {
             if (civInfo.exploredRegion.shouldRecalculateCoords()) civInfo.exploredRegion.calculateStageCoords(
-                worldWidth,
-                worldHeight
+                flatWorldWidth,
+                flatWorldHeight
             )
 
             val exploredRectangle = civInfo.exploredRegion.getRectangle()
@@ -249,7 +251,7 @@ class Minimap(val mapHolder: WorldMapHolder, minimapSize: Int, private val civIn
             miniViewport.y -= exploredRectangle.y
         } else
             worldToMiniFactor =
-                    Vector2(tileLayer.width / worldWidth, tileLayer.height / worldHeight)
+                    Vector2(tileLayer.width / flatWorldWidth, tileLayer.height / flatWorldHeight)
 
         miniViewport *= worldToMiniFactor
         miniViewport.x += (tileLayer.width - tileMapWidth) * 0.5f
@@ -259,7 +261,7 @@ class Minimap(val mapHolder: WorldMapHolder, minimapSize: Int, private val civIn
 
         // If world wrap enabled, draw another 2 viewports at proper offset to simulate wrapping
         if (scrollPositionIndicators.size != 1) {
-            val offset = worldWidth * worldToMiniFactor.x
+            val offset = flatWorldWidth * worldToMiniFactor.x
             miniViewport.x -= offset
             scrollPositionIndicators[1].setViewport(miniViewport)
             miniViewport.x += offset * 2f

@@ -298,6 +298,14 @@ class CityReligionManager : IsPartOfGameInfoSerialization {
         return spreadRange
     }
 
+    /** Pressure this city currently sends to [destination], without changing either city. */
+    @Readonly
+    fun getPressureToCity(destination: City): Int {
+        if (destination == city || getMajorityReligion()?.isMajorReligion() != true) return 0
+        if (city.getCenterTile().aerialDistanceTo(destination.getCenterTile()) > getSpreadRange()) return 0
+        return pressureAmountToAdjacentCities(destination)
+    }
+
     /** Doesn't update the pressures, only returns what they are if the update were to happen right now */
     @Readonly
     fun getPressuresFromSurroundingCities(): Counter<String> {

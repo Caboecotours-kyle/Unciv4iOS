@@ -1,8 +1,12 @@
 package com.unciv.ui.popups
 
 import com.badlogic.gdx.graphics.Color
+import com.badlogic.gdx.math.Rectangle
+import com.badlogic.gdx.scenes.scene2d.Actor
 import com.badlogic.gdx.scenes.scene2d.ui.Button
+import com.badlogic.gdx.scenes.scene2d.ui.Cell
 import com.badlogic.gdx.scenes.scene2d.ui.Table
+import com.badlogic.gdx.scenes.scene2d.ui.TextField.TextFieldStyle
 import com.unciv.ui.components.widgets.UncivTextField
 import com.unciv.ui.components.input.onChange
 import com.unciv.ui.components.input.onClick
@@ -35,11 +39,21 @@ class AskNumberPopup(
     errorText: String = "Invalid input! Please enter a valid number.",
     validate: (input: Int) -> Boolean = { true },
     actionOnOk: (input: Int) -> Unit = { },
-): Popup(screen) {
+): Popup(screen, maxSizePercentage = PortraitDialog.sizePercentage(screen.stage)) {
+    private val portrait = screen.isPortrait()
+
     init {
+        val pointScale = screen.safeAreaBoundsInWorld().width / 393f
+        // Portrait uses the card width of the other dialogs, less the popup's 25pt inner padding per side
+        val contentWidth = if (portrait) maxPopupWidth - 50f else goodTextWidth
+        if (portrait) PortraitDialog.anchorCard(this, innerTable)
         val wrapper = Table()
         wrapper.add(icon).padRight(10f)
-        wrapper.add(label.toLabel())
+        val prompt = label.toLabel()
+        if (portrait) {
+            prompt.wrap = true
+            wrapper.add(prompt).width(contentWidth - icon.width - 10f)
+        } else wrapper.add(prompt)
         add(wrapper).colspan(2).row()
 
         val nameField = UncivTextField.Integer(label, defaultValue)
@@ -63,46 +77,83 @@ class AskNumberPopup(
         val centerTable = Table(skin)
 
         fun addValueButton(delta: Int) {
-            centerTable.add(
-                Button(
-                    delta.toStringSigned().toLabel(),
-                    skin
-                ).apply {
-                    onClick {
-                        val value = nameField.intValue ?: return@onClick
-                        nameField.intValue = clampInBounds(value + delta)
-                    }
+            val button = Button(delta.toStringSigned().toLabel(), skin).apply {
+                onClick {
+                    val value = nameField.intValue ?: return@onClick
+                    nameField.intValue = clampInBounds(value + delta)
                 }
-            ).pad(5f)
-        }
-
-        for (value in amountButtons.reversed()) {
-            addValueButton(-value)
-        }
-
-        centerTable.add(nameField).growX().pad(10f)
-
-        add(centerTable).colspan(2).row()
-
-        for (value in amountButtons) {
-            addValueButton(value)
+            }
+            if (portrait) button.style = PortraitDialog.buttonStyle(PortraitDialog.Kind.Ghost)
+            val cell = centerTable.add(button).pad(5f)
+            if (portrait) cell.width(contentWidth / (amountButtons.size * 2).coerceAtLeast(1) - 10f)
+                .height(48f * pointScale)
         }
 
         val errorLabel = errorText.toLabel()
         errorLabel.color = Color.RED
+        errorLabel.wrap = portrait
+        // Portrait shows the error once, right under the field; landscape keeps appending it under the steppers
+        var portraitErrorCell: Cell<Actor?>? = null
 
-        addCloseButton()
-        addOKButton(
+        if (portrait) {
+            val columns = (amountButtons.size * 2).coerceAtLeast(1)
+            nameField.style = TextFieldStyle(nameField.style).apply {
+                background = PortraitDialog.panel(Color.valueOf("0b1826")).apply {
+                    leftWidth = 16f * pointScale
+                    rightWidth = 16f * pointScale
+                }
+                focusedBackground = null
+            }
+            centerTable.add(nameField).width(contentWidth - 20f).height(56f * pointScale)
+                .colspan(columns).pad(10f).row()
+            portraitErrorCell = centerTable.add().colspan(columns)
+            centerTable.row()
+            errorLabel.color = PortraitDialog.ERROR
+            for (value in amountButtons.reversed()) addValueButton(-value)
+            for (value in amountButtons) addValueButton(value)
+        } else {
+            for (value in amountButtons.reversed()) addValueButton(-value)
+            centerTable.add(nameField).growX().pad(10f)
+            for (value in amountButtons) addValueButton(value)
+        }
+        add(centerTable).colspan(2).row()
+
+        val closeCell = addCloseButton()
+        val okCell = addOKButton(
             validate = {
                 val errorFound = nameField.intValue?.let { validate(it) } != true
-                if (errorFound) add(errorLabel).colspan(2).center()
+                val errorSlot = portraitErrorCell
+                if (errorFound) {
+                    if (errorSlot == null) add(errorLabel).colspan(2).center()
+                    else if (errorSlot.actor == null) {
+                        errorSlot.setActor(errorLabel).width(contentWidth - 20f).padBottom(4f)
+                        centerTable.invalidateHierarchy()
+                    }
+                }
                 !errorFound
             }
         ) {
             actionOnOk(nameField.intValue!!)
         }
-        equalizeLastTwoButtonWidths()
+        if (portrait) {
+            // Cancel and OK side by side, the one row that must fit above the keyboard
+            PortraitDialog.styleButton(closeCell.actor, PortraitDialog.Kind.Ghost)
+            PortraitDialog.styleButton(okCell.actor, PortraitDialog.Kind.Primary)
+            closeCell.growX().uniformX().height(56f * pointScale)
+            okCell.growX().uniformX().height(56f * pointScale)
+        } else equalizeLastTwoButtonWidths()
 
         keyboardFocus = nameField
+    }
+
+    /** Portrait keeps the card anchored to the top of the keyboard instead of the base class's push-from-center */
+    override fun onVisibleAreaChanged(visibleArea: Rectangle) {
+        super.onVisibleAreaChanged(visibleArea)
+        if (!portrait) return
+        padLeft(visibleArea.x)
+        padBottom(visibleArea.y)
+        padRight(stageToShowOn.width - visibleArea.x - visibleArea.width)
+        padTop(stageToShowOn.height - visibleArea.y - visibleArea.height)
+        invalidate()
     }
 }

@@ -2,11 +2,14 @@ package com.unciv.ui.screens.cityscreen
 
 import com.badlogic.gdx.graphics.Color
 import com.badlogic.gdx.scenes.scene2d.Actor
+import com.badlogic.gdx.scenes.scene2d.Touchable
 import com.badlogic.gdx.scenes.scene2d.ui.Cell
 import com.badlogic.gdx.scenes.scene2d.ui.Label
 import com.badlogic.gdx.scenes.scene2d.ui.Table
+import com.badlogic.gdx.scenes.scene2d.ui.TextButton
 import com.badlogic.gdx.utils.Align
 import com.unciv.Constants
+import com.unciv.GUI
 import com.unciv.logic.city.*
 import com.unciv.models.Counter
 import com.unciv.models.ruleset.Building
@@ -24,11 +27,13 @@ import com.unciv.ui.components.widgets.ExpanderTab
 import com.unciv.ui.components.UncivTooltip.Companion.addTooltip
 import com.unciv.ui.images.ImageGetter
 import com.unciv.ui.screens.basescreen.BaseScreen
+import com.unciv.ui.screens.overviewscreen.EmpireOverviewCategories
 import com.unciv.view.CityView
 import kotlin.math.ceil
 import kotlin.math.roundToInt
 
-class CityStatsTable(private val cityScreen: CityScreen) : Table() {
+class CityStatsTable(private val cityScreen: CityScreen,
+                     private val onPortraitBuildingSelected: ((Building) -> Unit)? = null) : Table() {
     private val cityView: CityView = cityScreen.cityView
     private val expander: ExpanderTab
     // table within this Table. Slightly smaller creates border
@@ -45,14 +50,16 @@ class CityStatsTable(private val cityScreen: CityScreen) : Table() {
     }
 
     init {
-        pad(2f)
-        background = BaseScreen.skinStrings.getUiBackground(
-            "CityScreen/CityStatsTable/Background",
-            tintColor = colorFromRGB(194, 180, 131)
-        )
+        if (!cityScreen.isPortrait()) {
+            pad(2f)
+            background = BaseScreen.skinStrings.getUiBackground(
+                "CityScreen/CityStatsTable/Background",
+                tintColor = colorFromRGB(194, 180, 131)
+            )
+        }
 
         expander = ExpanderTab("",
-            startsOutOpened = !cityScreen.isCrampedPortrait(),
+            startsOutOpened = true, // portrait shows city stats alone on their own tab
             persistenceID = "CityStatsTable",
             defaultPad = 7f,
             headerPad = if (cityScreen.isCrampedPortrait()) 7f else 6f,
@@ -81,10 +88,17 @@ class CityStatsTable(private val cityScreen: CityScreen) : Table() {
         lowerPane.setScrollingDisabled(x = true, y = false)
         lowerTable.defaults().space(4f)
 
-        add(expander).growX()
+        if (cityScreen.isPortrait()) {
+            lowerTable.background = portraitBackground(Color.valueOf("20394f"))
+            add(lowerTable).width(369f)
+        } else add(expander).growX()
     }
 
     fun update(height: Float) {
+        if (cityScreen.isPortrait()) {
+            updatePortrait()
+            return
+        }
         miniStatsTable.update()
 
         lowerTable.clear()
@@ -112,8 +126,332 @@ class CityStatsTable(private val cityScreen: CityScreen) : Table() {
         pack()  // update self last
     }
 
-    private fun onContentResize() {
+    private fun portraitBackground(color: Color) = BaseScreen.skinStrings.getUiBackground(
+        "", BaseScreen.skinStrings.roundedEdgeRectangleShape, color)
+
+    private fun portraitTitle(title: String) {
+        lowerTable.add(title.toLabel(Color.valueOf("8eacc2"), 14)).width(345f).left()
+            .padTop(12f).padBottom(6f).row()
+    }
+
+    private fun portraitRow(actor: Actor, height: Float = 48f) {
+        lowerTable.add(actor).width(345f).minHeight(height).fillY().left().padBottom(8f).row()
+    }
+
+    private fun portraitButton(text: String, enabled: Boolean = true, primary: Boolean = false,
+                               binding: KeyboardBinding = KeyboardBinding.None, action: () -> Unit): TextButton {
+        val button = text.toTextButton()
+        val color = if (primary) Color.valueOf("ffc93c") else Color(1f, 1f, 1f, .08f)
+        button.style = TextButton.TextButtonStyle(button.style).apply {
+            up = portraitBackground(color)
+            down = portraitBackground(color)
+            disabled = portraitBackground(Color(1f, 1f, 1f, .08f))
+            fontColor = if (primary) Color.valueOf("3a2a00") else Color.WHITE
+            disabledFontColor = Color.valueOf("8eacc2")
+        }
+        if (enabled) button.onActivation(binding = binding) { action() } else button.disable()
+        return button
+    }
+
+    private fun portraitTextRow(text: String, onTap: (() -> Unit)? = null) {
+        val row = Table().apply { background = portraitBackground(Color(1f, 1f, 1f, .06f)); pad(8f, 12f, 8f, 12f) }
+        row.add(text.toLabel().apply { wrap = true }).width(321f).left()
+        if (onTap != null) {
+            row.touchable = Touchable.enabled
+            row.onClick { onTap() }
+        }
+        portraitRow(row)
+    }
+
+    private fun updatePortrait() {
+        lowerTable.clear()
+        lowerTable.pad(12f)
+        portraitTitle("City yields")
+        val statGrid = Table()
+        var column = 0
+        for (stat in Stat.entries) {
+            if (stat == Stat.Faith && !cityView.viewingCiv().isReligionEnabled()) continue
+            val focus = CityFocus.safeValueOf(stat)
+            val selected = focus == cityView.getCityFocus()
+            val nextFocus = if (selected) CityFocus.NoFocus else focus
+            val chip = Table().apply {
+                background = portraitBackground(if (selected) Color(1f, 1f, 1f, .18f) else Color(1f, 1f, 1f, .06f))
+            }
+            chip.add(ImageGetter.getStatIcon(stat.name)).size(24f).padRight(6f)
+            val value = if (stat == Stat.Happiness) cityView.getHappinessList().values.sum()
+                else cityView.getCurrentCityStats()[stat]
+            chip.add(value.roundToInt().toLabel()).left()
+            if (cityScreen.canCityBeChanged()) {
+                chip.touchable = Touchable.enabled
+                chip.onActivation(binding = nextFocus.binding) {
+                    cityView.trySetCityFocus(nextFocus)
+                    cityScreen.updateAsync()
+                }
+            }
+            statGrid.add(chip).width(109f).height(48f).padRight(if (column == 2) 0f else 6f).padBottom(6f)
+            column++
+            if (column == 3) { statGrid.row(); column = 0 }
+        }
+        portraitRow(statGrid)
+        portraitRow(portraitButton("Stats", binding = KeyboardBinding.ShowStats) {
+            DetailedStatsPopup(cityScreen).open()
+        })
+        addPortraitStatus()
+        addPortraitCitizenManagement()
+        addPortraitGreatPeople()
+        if (!cityView.getMaxSpecialists().isEmpty()) addPortraitSpecialists()
+        if (cityView.getNumberOfFollowers().isNotEmpty() && cityView.viewingCiv().isReligionEnabled())
+            addPortraitReligion()
+        addPortraitBuildings()
+        lowerTable.pack()
         pack()
+    }
+
+    private fun addPortraitStatus() {
+        portraitTitle("Population and expansion")
+        val unassigned = "{Unassigned population}: ".tr() +
+            cityView.getFreePopulation().tr() + "/" + cityView.getPopulationCount().tr()
+        portraitTextRow(unassigned, if (cityScreen.canChangeState) ({
+            cityView.tryReassignPopulation()
+            cityScreen.updateAsync()
+        }) else null)
+
+        val expansion = if (cityView.getCurrentCityStats().culture > 0 && cityView.hasChoosableTiles()) {
+            val remaining = cityView.getCultureToNextTile() - cityView.getCultureStored()
+            val turns = ceil(remaining / cityView.getCurrentCityStats().culture).toInt().coerceAtLeast(1)
+            "[$turns] turns to expansion".tr()
+        } else "Stopped expansion".tr()
+        val expansionProgress = if (cityView.hasChoosableTiles())
+            " (${cityView.getCultureStored()}${Fonts.culture}/${cityView.getCultureToNextTile()}${Fonts.culture})"
+        else ""
+        portraitTextRow(expansion + expansionProgress)
+
+        val growth = when {
+            cityView.isStarving() -> "[${cityView.getNumTurnsToStarvation()}] turns to lose population"
+            cityView.getRuleset().units[cityView.currentConstructionName()]
+                .let { it != null && it.hasUnique(UniqueType.ConvertFoodToProductionWhenConstructed) } ->
+                "Food converts to production"
+            cityView.isGrowing() -> "[${cityView.getNumTurnsToNewPopulation()}] turns to new population"
+            else -> "Stopped population growth"
+        }.tr()
+        portraitTextRow(growth + " (${cityView.getFoodStored()}${Fonts.food}/${cityView.getFoodToNextPopulation()}${Fonts.food})")
+        if (cityView.isInResistance())
+            portraitTextRow("In resistance for another [${cityView.getFlag(CityFlags.Resistance)}] turns")
+
+        val resources = Counter<TileResource>()
+        for (supply in cityView.getCityResourcesAvailableToCity())
+            if (supply.resource.getMatchingUniques(UniqueType.NotShownOnWorldScreen, cityView.getState()).none())
+                resources.add(supply.resource, supply.amount)
+        for ((name, amount) in cityView.getResourceStockpiles()) {
+            val resource = cityView.getRuleset().tileResources[name] ?: continue
+            if (resource.getMatchingUniques(UniqueType.NotShownOnWorldScreen, cityView.getState()).none())
+                resources.add(resource, amount)
+        }
+        if (resources.any { it.key.isCityWide }) portraitTitle("Resources")
+        for ((resource, amount) in resources) {
+            if (!resource.isCityWide) continue
+            val row = Table().apply { background = portraitBackground(Color(1f, 1f, 1f, .06f)); pad(0f, 12f, 0f, 12f) }
+            row.add(ImageGetter.getResourcePortrait(resource.name, 28f)).size(28f).padRight(10f)
+            row.add(resource.name.toLabel().apply { wrap = true }).width(233f).left()
+            row.add(amount.toLabel()).width(40f).right()
+            row.touchable = Touchable.enabled
+            row.onClick { cityScreen.openCivilopedia(resource.makeLink()) }
+            portraitRow(row)
+        }
+        val wltk = when {
+            cityView.isWeLoveTheKingDayActive() ->
+                "We Love The King Day for another [${cityView.getFlag(CityFlags.WeLoveTheKing)}] turns"
+            cityView.demandedResource.isNotEmpty() -> "Demanding [${cityView.demandedResource}]"
+            else -> null
+        }
+        if (wltk != null) portraitTextRow(wltk) {
+            cityScreen.openCivilopedia("Tutorial/We Love The King Day")
+        }
+    }
+
+    private fun addPortraitCitizenManagement() {
+        portraitTitle("Citizen management")
+        portraitRow(portraitButton("Reset Citizens", cityScreen.canCityBeChanged(), binding = KeyboardBinding.ResetCitizens) {
+            cityView.tryReassignPopulation(resetLocked = true)
+            cityScreen.updateAsync()
+        })
+        portraitRow(portraitButton("Avoid Growth", cityScreen.canCityBeChanged(), cityView.avoidGrowth,
+            KeyboardBinding.AvoidGrowth) {
+            cityView.tryToggleAvoidGrowth()
+            cityScreen.updateAsync()
+        })
+        portraitTitle("Citizen focus")
+        val grid = Table()
+        var column = 0
+        for (focus in CityFocus.entries) {
+            if (!focus.tableEnabled || focus == CityFocus.FaithFocus && !cityView.viewingCiv().isReligionEnabled()) continue
+            val button = portraitButton(focus.label, cityScreen.canCityBeChanged(), cityView.getCityFocus() == focus,
+                if (cityView.getCityFocus() == focus) focus.binding else KeyboardBinding.None) {
+                cityView.trySetCityFocus(focus)
+                cityScreen.updateAsync()
+            }
+            button.label.wrap = true
+            grid.add(button).width(168f).minHeight(48f).padRight(if (column == 0) 9f else 0f).padBottom(8f)
+            column++
+            if (column == 2) { grid.row(); column = 0 }
+        }
+        portraitRow(grid)
+    }
+
+    private fun addPortraitGreatPeople() {
+        val breakdown = cityView.getGreatPersonPointsBreakdown()
+        if (breakdown.allNames.isEmpty()) return
+        portraitTitle("Great People")
+        val points = breakdown.sum()
+        for (name in breakdown.allNames) {
+            val person = cityView.getRuleset().units[name] ?: continue
+            val current = cityView.viewingCiv().getGreatPersonPoints(name)
+            val needed = cityView.viewingCiv().getPointsRequiredForGreatPerson(name)
+            val card = Table().apply { background = portraitBackground(Color(1f, 1f, 1f, .06f)); pad(10f) }
+            card.add(ImageGetter.getUnitIcon(person, Color.GOLD).toGroup(36f)).size(36f).padRight(10f)
+            card.add("{$name} (+${points[name]})".toLabel(hideIcons = true).apply { wrap = true })
+                .width(279f).left().row()
+            val bar = ImageGetter.ProgressBar(300f, 25f, false)
+            bar.setBackground(ImageGetter.CHARCOAL.cpy().apply { a = .8f })
+            bar.setProgress(Color.ORANGE, current / needed.toFloat())
+            bar.setLabel(Color.WHITE, "$current/$needed", fontSize = 14)
+            card.add(bar).colspan(2).width(300f).padTop(8f).left().row()
+            portraitRow(card, 85f)
+            val actions = Table()
+            actions.add(portraitButton("Breakdown") {
+                GreatPersonPointsBreakdownPopup(cityScreen, breakdown, name)
+            }).width(168f).height(48f).padRight(9f)
+            actions.add(portraitButton("All great people") {
+                GreatPersonPointsBreakdownPopup(cityScreen, breakdown, null)
+            }).width(168f).height(48f)
+            portraitRow(actions)
+        }
+    }
+
+    private fun addPortraitSpecialists() {
+        portraitTitle("Specialists")
+        if (cityScreen.canCityBeChanged()) {
+            val toggle = if (cityView.manualSpecialists) "Manual Specialists" else "Auto Specialists"
+            portraitRow(portraitButton(toggle) {
+                if (cityView.manualSpecialists) {
+                    cityView.tryDisableManualSpecialists()
+                    cityScreen.updateAsync()
+                } else {
+                    cityView.tryEnableManualSpecialists()
+                    cityScreen.updateAsync()
+                }
+            })
+        }
+        for ((name, maximum) in cityView.getMaxSpecialists().asSequence().sortedBy { it.key }) {
+            val specialist = cityView.getRuleset().specialists[name] ?: continue
+            val assigned = cityView.getNewSpecialists()[name]
+            val stats = cityView.getStatsOfSpecialist(name).joinToString("  ") { "${it.value.toInt()}${it.key.character}" }
+            val greatPeople = specialist.greatPersonPoints.asSequence().sortedBy { it.key }
+                .joinToString("  ") { "${it.value} ${it.key.tr(hideIcons = true)}" }
+            val card = Table().apply { background = portraitBackground(Color(1f, 1f, 1f, .06f)); pad(10f) }
+            card.add(ImageGetter.getSpecialistIcon(specialist.colorObject)).size(36f).padRight(10f)
+            card.add("{${name}}  $assigned/$maximum".toLabel().apply { wrap = true }).width(279f).left().row()
+            card.add(listOf(greatPeople, stats).filter { it.isNotEmpty() }.joinToString("  ").toLabel().apply { wrap = true })
+                .colspan(2).width(325f).left().padTop(6f)
+            portraitRow(card, 70f)
+            if (cityScreen.canChangeState) {
+                val actions = Table()
+                actions.add(portraitButton("−", assigned > 0 && !cityView.isPuppet()) {
+                    cityView.tryUnassignSpecialist(name)
+                    cityScreen.updateAsync()
+                }).width(168f).height(48f).padRight(9f)
+                actions.add(portraitButton("+", assigned < maximum && !cityView.isPuppet() &&
+                    cityView.getFreePopulation() > 0) {
+                    cityView.tryAssignSpecialist(name)
+                    cityScreen.updateAsync()
+                }).width(168f).height(48f)
+                portraitRow(actions)
+            }
+        }
+    }
+
+    private fun addPortraitReligion() {
+        portraitTitle("Religion")
+        val majority = cityView.getMajorityReligion()
+        portraitTextRow("Majority Religion: [${majority?.getReligionDisplayName() ?: "None"}]")
+        val holy = cityView.getReligionThisIsTheHolyCityOf()
+        if (holy != null) {
+            val label = cityView.getReligion(holy)?.getReligionDisplayName() ?: holy
+            portraitTextRow("${if (cityView.isBlockedHolyCity()) "Former Holy City of" else "Holy City of"}: [$label]") {
+                openPortraitReligion(holy)
+            }
+        }
+        val pressures = cityView.getPressuresFromSurroundingCities()
+        for ((religionName, count) in cityView.getNumberOfFollowers().asSequence().sortedByDescending { it.value }) {
+            val religion = cityView.getReligion(religionName) ?: continue
+            val iconName = religion.getIconName()
+            val pressure = if (pressures.containsKey(religionName))
+                " · +${pressures[religionName]} pressure" else ""
+            val row = Table().apply { background = portraitBackground(Color(1f, 1f, 1f, .06f)); pad(0f, 12f, 0f, 12f) }
+            row.add(ImageGetter.getReligionPortrait(iconName, 30f)).size(30f).padRight(10f)
+            row.add("${religion.getReligionDisplayName()}: $count followers$pressure".toLabel().apply { wrap = true })
+                .width(281f).left()
+            row.touchable = Touchable.enabled
+            row.onClick { openPortraitReligion(religionName) }
+            portraitRow(row)
+        }
+    }
+
+    private fun openPortraitReligion(name: String) {
+        val iconName = cityView.getReligion(name)?.getIconName() ?: return
+        if (name == iconName)
+            GUI.getWorldScreen().openEmpireOverview(EmpireOverviewCategories.Religion, name)
+        else GUI.openCivilopedia("Belief/$name")
+    }
+
+    private fun addPortraitBuildings() {
+        val buildings = cityView.getBuiltBuildings().sortedBy { it.name }
+        val groups = listOf(
+            "Specialist Buildings" to buildings.filter { !it.newSpecialists().isEmpty() && !it.isAnyWonder() },
+            "Wonders" to buildings.filter { it.isAnyWonder() },
+            "Other" to buildings.filter { !it.isAnyWonder() && it.newSpecialists().isEmpty() }
+        )
+        portraitTitle("Buildings")
+        for ((heading, entries) in groups) {
+            if (entries.none()) continue
+            portraitTitle(heading)
+            for (building in entries) {
+                val free = cityScreen.hasFreeBuilding(building)
+                val title = if (free) "{${building.name}} ({Free})" else building.name
+                val yields = cityView.getBuildingStats(building).joinToString("  ") {
+                    "${it.value.toInt()}${it.key.character}"
+                }
+                val specialists = building.newSpecialists().asSequence().joinToString("  ") {
+                    "${it.value} ${it.key.tr(hideIcons = true)} ${if (it.value == 1) "slot" else "slots"}"
+                }
+                val row = Table().apply { background = portraitBackground(Color(1f, 1f, 1f, .06f)); pad(8f, 10f, 8f, 10f) }
+                row.add(ImageGetter.getConstructionPortrait(building.name, 50f)).size(50f).padRight(10f)
+                val info = Table()
+                info.add(title.toLabel(hideIcons = true).apply { wrap = true }).width(265f).left().row()
+                if (yields.isNotEmpty()) info.add(yields.toLabel().apply { wrap = true }).width(265f).left().row()
+                if (specialists.isNotEmpty()) info.add(specialists.toLabel().apply { wrap = true }).width(265f).left().row()
+                row.add(info).width(265f).left()
+                row.touchable = Touchable.enabled
+                row.onClick {
+                    if (onPortraitBuildingSelected != null) onPortraitBuildingSelected.invoke(building)
+                    else {
+                        cityScreen.selectConstruction(building)
+                        cityScreen.updateAsync()
+                    }
+                }
+                portraitRow(row, 66f)
+            }
+        }
+    }
+
+    private fun onContentResize() {
+        val previousTop = top
+        val previousCenterX = x + width / 2f
+        pack()
+        if (cityScreen.isPortrait()) {
+            setPosition(previousCenterX, previousTop, Align.top)
+            return
+        }
         setPosition(
             stage.width - CityScreen.posFromEdge,
             stage.height - CityScreen.posFromEdge,

@@ -1,4 +1,5 @@
 {
+    "mapVerticalScale": 0.6,
     "useColorAsBaseTerrain": false,
     "fallbackTileSet": "FantasyHex",
     "unexploredTileColor": {
@@ -12,5 +13,13 @@
         "g": 0.62,
         "b": 0.72,
         "a": 1
-    }
+    },
+    "mapBackgroundColor": {
+        "r": 0.93,
+        "g": 0.95,
+        "b": 0.97,
+        "a": 1
+    },
+    "unitFlagsAboveSprites": true,
+    "vividUnitTeamColor": true
 }

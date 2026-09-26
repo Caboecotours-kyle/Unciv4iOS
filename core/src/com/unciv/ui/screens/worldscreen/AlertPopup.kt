@@ -1,8 +1,19 @@
 package com.unciv.ui.screens.worldscreen
 
+import com.badlogic.gdx.Gdx
 import com.badlogic.gdx.graphics.Color
+import com.badlogic.gdx.graphics.Texture
+import com.badlogic.gdx.graphics.Texture.TextureFilter
+import com.badlogic.gdx.graphics.g2d.TextureRegion
+import com.badlogic.gdx.scenes.scene2d.Touchable
+import com.badlogic.gdx.scenes.scene2d.actions.Actions
+import com.badlogic.gdx.scenes.scene2d.ui.Image
 import com.badlogic.gdx.scenes.scene2d.ui.ScrollPane
 import com.badlogic.gdx.scenes.scene2d.ui.Table
+import com.badlogic.gdx.scenes.scene2d.utils.TextureRegionDrawable
+import com.badlogic.gdx.math.Interpolation
+import com.badlogic.gdx.utils.Align
+import com.badlogic.gdx.utils.Scaling
 import com.unciv.Constants
 import com.unciv.UncivGame
 import com.unciv.logic.battle.BattleUnitCapture
@@ -27,11 +38,17 @@ import com.unciv.ui.components.extensions.disable
 import com.unciv.ui.components.extensions.pad
 import com.unciv.ui.components.extensions.toLabel
 import com.unciv.ui.components.extensions.toTextButton
+import com.unciv.ui.components.input.onClick
+import com.unciv.ui.components.input.KeyCharAndCode
 import com.unciv.ui.components.input.KeyboardBinding
 import com.unciv.ui.components.input.keyShortcuts
 import com.unciv.ui.components.input.onActivation
 import com.unciv.ui.images.ImageGetter
 import com.unciv.ui.popups.Popup
+import com.unciv.ui.popups.PortraitDialog
+import com.unciv.ui.screens.basescreen.BaseScreen
+import com.unciv.ui.screens.basescreen.portraitCanvasBounds
+import com.unciv.ui.screens.cityscreen.CityScreen
 import com.unciv.ui.screens.diplomacyscreen.LeaderIntroTable
 import com.unciv.ui.screens.victoryscreen.VictoryScreen
 import yairm210.purity.annotations.Readonly
@@ -63,6 +80,9 @@ class AlertPopup(
     private val worldScreen: WorldScreen,
     private val popupAlert: PopupAlert
 ): Popup(worldScreen) {
+
+    private var wonderSceneTexture: Texture? = null
+    private var leaderSceneTexture: Texture? = null
     
     companion object {
         private const val SEPARATOR_LINE_TO_TEXT_PADDING = 25f
@@ -468,10 +488,13 @@ class AlertPopup(
 
     private fun addStartIntro() {
         val civInfo = viewingCiv
-        addLeaderName(civInfo)
-        addGoodSizedLabel(civInfo.nation.startIntroPart1).row()
-        addGoodSizedLabel(civInfo.nation.startIntroPart2).row()
-        addCloseButton("Let's begin!")
+        if (stageHeight > stageWidth) addPortraitStartIntro(civInfo)
+        else {
+            addLeaderName(civInfo)
+            addGoodSizedLabel(civInfo.nation.startIntroPart1).row()
+            addGoodSizedLabel(civInfo.nation.startIntroPart2).row()
+            addCloseButton("Let's begin!")
+        }
 
         // Since there's introduction text, play the startIntroPart1 voice hook with the nation's theme.
         val music = UncivGame.Current.musicController
@@ -479,15 +502,101 @@ class AlertPopup(
         music.playVoice("${civInfo.nation.name}.startIntroPart1")
     }
 
+    /** Leader moment like the wonder scene: portrait fills the top, the intro scrolls in a card, "Let's begin!" in thumb reach */
+    private fun addPortraitStartIntro(civInfo: Civilization) {
+        val nation = civInfo.nation
+        background = null
+        innerTable.background = null
+        val canvas = worldScreen.portraitCanvasBounds()
+        val logicalWidth = 393f
+        val scale = stageWidth / logicalWidth
+        addActorAt(0, Image(ImageGetter.getWhiteDotDrawable()).apply {
+            color = nation.getOuterColor()
+            touchable = Touchable.disabled
+            setBounds(canvas.x, canvas.y, canvas.width, canvas.height)
+        })
+
+        val artTop = canvas.y + canvas.height
+        val artHeight = canvas.height * .62f
+        val art = Gdx.files.internal("ExtraImages/Leaders/p_${nation.leaderName.substringBefore(' ')}.png")
+        val leaderIcon = "LeaderIcons/${nation.leaderName}"
+        val picture = when {
+            nation.leaderName.isNotEmpty() && art.exists() -> {
+                val texture = Texture(art)
+                leaderSceneTexture = texture
+                texture.setFilter(TextureFilter.Linear, TextureFilter.Linear)
+                Image(TextureRegionDrawable(TextureRegion(texture))).apply {
+                    setScaling(Scaling.fill)
+                    setAlign(Align.top)
+                    setBounds(canvas.x, artTop - artHeight, canvas.width, artHeight)
+                }
+            }
+            nation.leaderName.isNotEmpty() && ImageGetter.imageExists(leaderIcon) ->
+                ImageGetter.getImage(leaderIcon).apply { setSize(200f * scale, 200f * scale) }
+            else -> ImageGetter.getNationPortrait(nation, 160f * scale)
+        }
+        if (picture.width < canvas.width)  // mod leaders without generated art sit centered in the art area
+            picture.setPosition(canvas.x + (canvas.width - picture.width) / 2f,
+                artTop - artHeight / 2f - picture.height / 2f)
+        picture.touchable = Touchable.disabled
+        picture.setOrigin(picture.width / 2f, picture.height / 2f)
+        picture.setScale(1.12f)
+        picture.addAction(Actions.scaleTo(1f, 1f, 1.8f, Interpolation.pow3Out))
+        addActorAt(1, picture)
+
+        val bottom = maxOf(canvas.y + 30f * scale, worldScreen.safeAreaBoundsInWorld().y)
+        val cardWidth = logicalWidth - 20f
+        val textWidth = cardWidth - 36f
+        val story = Table()
+        for (part in listOf(nation.startIntroPart1, nation.startIntroPart2).filter { it.isNotEmpty() })
+            story.add(part.toLabel(Color.valueOf("e8f0f7"), 16).apply { wrap = true })
+                .width(textWidth).left().padBottom(12f).row()
+        val begin = "Let's begin!".toTextButton(PortraitDialog.buttonStyle(PortraitDialog.Kind.Primary))
+        // Same keys as the landscape close button
+        begin.onActivation(binding = KeyboardBinding.NextTurnAlternate) { close() }
+        begin.keyShortcuts.add(KeyCharAndCode.BACK)
+        val card = Table().apply {
+            background = PortraitDialog.panel(Color(16f / 255f, 31f / 255f, 47f / 255f, .92f))
+            pad(20f, 18f, 16f, 18f)
+            // Tapping the leader opens their Civilopedia entry, as LeaderIntroTable does
+            add(civInfo.getLeaderDisplayName().toLabel(Color.valueOf("ffd97a"), 30, hideIcons = true).apply {
+                wrap = true
+                onClick { worldScreen.openCivilopedia(nation.makeLink()) }
+            }).width(textWidth).left().row()
+            add(ScrollPane(story).apply {
+                setOverscroll(false, false)
+                setScrollingDisabled(true, false)
+            }).width(textWidth).expandY().fill().top().padTop(14f).row()
+            add(begin).growX().height(56f).padTop(8f)
+        }
+        card.isTransform = true
+        card.setSize(cardWidth, (canvas.y + canvas.height * .54f - bottom) / scale)
+        card.setScale(scale)
+        card.setPosition((stageWidth - cardWidth * scale) / 2f, bottom)
+        card.touchable = Touchable.enabled
+        card.color.a = 0f
+        card.moveBy(0f, -40f * scale)
+        card.addAction(Actions.sequence(Actions.delay(.4f), Actions.parallel(
+            Actions.fadeIn(.7f, Interpolation.pow3Out),
+            Actions.moveBy(0f, 40f * scale, .7f, Interpolation.pow3Out)
+        )))
+        addActor(card)
+    }
+
     private fun addTechResearched() {
         val tech = gameInfo.ruleset.technologies[popupAlert.value]!!
         addGoodSizedLabel(tech.name)
         addSeparator().padBottom(SEPARATOR_LINE_TO_TEXT_PADDING)
         val centerTable = Table()
-        centerTable.add(tech.quote.toLabel().apply { wrap = true }).width(stageWidth / 3)
-        centerTable.add(ImageGetter.getTechIconPortrait(tech.name, 100f)).pad(20f)
+        val portrait = stageHeight > stageWidth
+        // portrait stacks icon, quote and description in one column; landscape keeps three columns
+        val columnWidth = if (portrait) goodTextWidth else stageWidth / 3
+        if (portrait) centerTable.add(ImageGetter.getTechIconPortrait(tech.name, 100f)).pad(10f).row()
+        centerTable.add(tech.quote.toLabel().apply { wrap = true }).width(columnWidth)
+        if (portrait) centerTable.row()
+        else centerTable.add(ImageGetter.getTechIconPortrait(tech.name, 100f)).pad(20f)
         val descriptionScroll = ScrollPane(tech.getDescription(viewingCiv).toLabel().apply { wrap = true })
-        centerTable.add(descriptionScroll).width(stageWidth / 3).maxHeight(stageHeight / 2)
+        centerTable.add(descriptionScroll).width(columnWidth).maxHeight(stageHeight / if (portrait) 3 else 2).padTop(if (portrait) 10f else 0f)
         add(centerTable).row()
         addCloseButton()
         music.chooseTrack(tech.name, MusicMood.Researched, MusicTrackChooserFlags.setSpecific)
@@ -517,6 +626,13 @@ class AlertPopup(
 
     private fun addWonderBuilt() {
         val wonder = gameInfo.ruleset.buildings[popupAlert.value]!!
+        val png = Gdx.files.internal("ExtraImages/WonderScenes/${wonder.name}.png")
+        val scene = if (png.exists()) png else Gdx.files.internal("ExtraImages/WonderScenes/${wonder.name}.jpg")
+        if (stageHeight > stageWidth) {
+            addPortraitWonderBuilt(wonder, scene)
+            music.chooseTrack(wonder.name, MusicMood.Wonder, MusicTrackChooserFlags.setSpecific)
+            return
+        }
         addGoodSizedLabel(wonder.name)
         addSeparator().padBottom(10f)
         if(ImageGetter.wonderImageExists(wonder.name)) {    // Wonder Graphic exists
@@ -537,11 +653,13 @@ class AlertPopup(
         }
 
         val centerTable = Table()
-        val centerTableColumnWidth = stageWidth / if (wonder.quote.isEmpty()) 2 else 3
+        val portrait = stageHeight > stageWidth
+        val centerTableColumnWidth = if (portrait) goodTextWidth else stageWidth / if (wonder.quote.isEmpty()) 2 else 3
         if (wonder.quote.isNotEmpty()) {
             centerTable.add(wonder.quote.toLabel().apply { wrap = true })
                 .width(centerTableColumnWidth)
                 .pad(10f)
+            if (portrait) centerTable.row() // quote above the effect, one column
         }
         centerTable.add(wonder.getShortDescription().toLabel().apply { wrap = true })
             .width(centerTableColumnWidth)
@@ -549,6 +667,131 @@ class AlertPopup(
         add(centerTable).row()
         addCloseButton()
         music.chooseTrack(wonder.name, MusicMood.Wonder, MusicTrackChooserFlags.setSpecific)
+    }
+
+    private fun addPortraitWonderBuilt(wonder: com.unciv.models.ruleset.Building, scene: com.badlogic.gdx.files.FileHandle) {
+        background = null
+        innerTable.background = null
+        clickBehindToClose = false
+        val canvas = worldScreen.portraitCanvasBounds()
+        val logicalWidth = 393f
+        val scale = stageWidth / logicalWidth
+        if (scene.exists() || ImageGetter.wonderImageExists(wonder.name)) {
+            val picture = if (scene.exists()) {
+                val texture = Texture(scene)
+                wonderSceneTexture = texture
+                texture.setFilter(TextureFilter.Linear, TextureFilter.Linear)
+                Image(TextureRegionDrawable(TextureRegion(texture)))
+            } else ImageGetter.getWonderImage(wonder.name)
+            picture.setScaling(Scaling.fill)
+            picture.touchable = Touchable.disabled
+            picture.setBounds(canvas.x, canvas.y, canvas.width, canvas.height)
+            picture.setOrigin(picture.width / 2f, picture.height / 2f)
+            picture.setScale(1.22f)
+            picture.addAction(Actions.scaleTo(1f, 1f, 2.6f, Interpolation.pow3Out))
+            addActorAt(0, picture)
+        } else {
+            val backdrop = Image(ImageGetter.getWhiteDotDrawable()).apply {
+                color = Color.valueOf("142c40")
+                touchable = Touchable.disabled
+                setBounds(canvas.x, canvas.y, canvas.width, canvas.height)
+            }
+            addActorAt(0, backdrop)
+            val halo = ImageGetter.getCircle().apply {
+                color = Color(1f, .76f, .39f, .16f)
+                touchable = Touchable.disabled
+                setBounds(canvas.x + canvas.width * .05f, canvas.y + canvas.height * .35f,
+                    canvas.width * .9f, canvas.width * .9f)
+            }
+            addActor(halo)
+            val landmark = ImageGetter.getConstructionPortrait(wonder.name, 220f).apply {
+                touchable = Touchable.disabled
+                setPosition(canvas.x + (canvas.width - width) / 2f, canvas.y + canvas.height * .57f)
+                setOrigin(width / 2f, height / 2f)
+                setScale(.82f)
+                addAction(Actions.scaleTo(1f, 1f, 2.6f, Interpolation.pow3Out))
+            }
+            addActor(landmark)
+        }
+
+        val flash = Image(ImageGetter.getWhiteDotDrawable()).apply {
+            color = Color.valueOf("fff8e1")
+            touchable = Touchable.disabled
+            setBounds(canvas.x, canvas.y, canvas.width, canvas.height)
+            addAction(Actions.alpha(0f, 1.1f))
+        }
+        addActorAt(1, flash)
+        repeat(12) { index ->
+            val sparkle = "✦".toLabel(Color.valueOf("fff6c9"), 20).apply {
+                touchable = Touchable.disabled
+                setPosition(canvas.x + canvas.width * ((index * 37 + 11) % 96) / 100f,
+                    canvas.y + canvas.height * (1f - ((index * 53) % 58 + 8) / 100f))
+                color.a = 0f
+                addAction(Actions.forever(Actions.sequence(
+                    Actions.delay((index * .37f) % 2.6f),
+                    Actions.alpha(.9f, .55f), Actions.alpha(0f, .85f), Actions.delay(1.2f)
+                )))
+            }
+            addActor(sparkle)
+        }
+
+        val builtCity = viewingCiv.cities.firstOrNull { it.cityConstructions.isBuilt(wonder.name) }
+        val card = Table().apply {
+            background = BaseScreen.skinStrings.getUiBackground("",
+                BaseScreen.skinStrings.roundedEdgeRectangleShape,
+                Color(16f / 255f, 31f / 255f, 47f / 255f, .92f))
+            pad(20f, 18f, 16f, 18f)
+            add(wonder.name.toLabel(Color.valueOf("ffd97a"), 32, hideIcons = true).apply { wrap = true })
+                .width(logicalWidth - 60f).left().row()
+            val builtText = if (builtCity == null) "Completed on turn ${gameInfo.turns}"
+                else "Built in ${builtCity.name} on turn ${gameInfo.turns}"
+            add(builtText.toLabel(Color.valueOf("b7cde0"), 14).apply { wrap = true })
+                .width(logicalWidth - 60f).left().padTop(2f).row()
+            val effects = Table()
+            effects.add(wonder.getShortDescription().toLabel(Color.WHITE, 14).apply { wrap = true })
+                .width(logicalWidth - 80f).left()
+            add(effects).left().padTop(13f).row()
+            add("World wonder".toLabel(Color.valueOf("ffd97a"), 13)).left().padTop(4f).row()
+            if (wonder.quote.isNotEmpty()) {
+                add(wonder.quote.toLabel(Color.valueOf("9db7ca"), 13).apply { wrap = true })
+                    .width(logicalWidth - 60f).left().padTop(12f).row()
+            }
+            val continueButton = Table().apply {
+                background = BaseScreen.skinStrings.getUiBackground("",
+                    BaseScreen.skinStrings.roundedEdgeRectangleShape, Color.valueOf("ffc93c"))
+                touchable = Touchable.enabled
+                add("Continue".toLabel(Color.valueOf("322800"), 18)).center()
+                onClick { close() }
+            }
+            add(continueButton).growX().height(56f).padTop(16f).row()
+            if (builtCity != null) {
+                val viewCity = Table().apply {
+                    background = BaseScreen.skinStrings.getUiBackground("",
+                        BaseScreen.skinStrings.roundedEdgeRectangleShape, Color.valueOf("344250"))
+                    touchable = Touchable.enabled
+                    add("View ${builtCity.name}".toLabel(fontSize = 16).apply { wrap = true }).growX().center()
+                    onClick {
+                        close()
+                        worldScreen.game.pushScreen { CityScreen(worldScreen.selectedGameView.getCityView(builtCity)) }
+                    }
+                }
+                add(viewCity).growX().height(48f).padTop(8f).row()
+            }
+        }
+        card.isTransform = true
+        card.pack()
+        card.setScale(scale)
+        val safeBottom = worldScreen.safeAreaBoundsInWorld().y
+        card.setPosition((stageWidth - card.width * scale) / 2f,
+            maxOf(canvas.y + 30f * scale, safeBottom))
+        card.touchable = Touchable.enabled
+        card.color.a = 0f
+        card.moveBy(0f, -60f)
+        card.addAction(Actions.sequence(Actions.delay(.9f), Actions.parallel(
+            Actions.fadeIn(.7f, Interpolation.pow3Out),
+            Actions.moveBy(0f, 60f, .7f, Interpolation.pow3Out)
+        )))
+        addActor(card)
     }
 
     //endregion
@@ -679,5 +922,9 @@ class AlertPopup(
         viewingCiv.popupAlerts.remove(popupAlert)
         worldScreen.shouldUpdate = true
         super.close()
+        wonderSceneTexture?.dispose()
+        wonderSceneTexture = null
+        leaderSceneTexture?.dispose()
+        leaderSceneTexture = null
     }
 }
