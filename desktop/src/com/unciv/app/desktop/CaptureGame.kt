@@ -19,7 +19,11 @@ import com.unciv.ui.screens.civilopediascreen.CivilopediaScreen
 import com.unciv.ui.screens.diplomacyscreen.DiplomacyScreen
 import com.unciv.ui.screens.newgamescreen.NewGameScreen
 import com.unciv.ui.screens.overviewscreen.EmpireOverviewScreen
+import com.unciv.models.Counter
+import com.unciv.models.ruleset.BeliefType
+import com.unciv.ui.screens.pickerscreens.PantheonPickerScreen
 import com.unciv.ui.screens.pickerscreens.PolicyPickerScreen
+import com.unciv.ui.screens.pickerscreens.ReligiousBeliefsPickerScreen
 import com.unciv.ui.screens.pickerscreens.TechPickerScreen
 import com.unciv.ui.screens.victoryscreen.VictoryScreen
 import com.unciv.ui.screens.worldscreen.WorldScreen
@@ -112,6 +116,11 @@ class CaptureGame(
             "civilopedia" -> pushScreen { CivilopediaScreen(world.gameInfo.ruleset) }
             "victory" -> pushScreen { VictoryScreen(world) }
             "newgame" -> pushScreen { NewGameScreen() }
+            "pantheon" -> pushScreen { PantheonPickerScreen(civ) }
+            "religion" -> pushScreen {
+                // founding a religion: one founder and one follower belief, plus picking the icon and name
+                ReligiousBeliefsPickerScreen(civ, Counter<BeliefType>().apply { add(BeliefType.Founder, 1); add(BeliefType.Follower, 1) }, true)
+            }
             "menu" -> replaceCurrentScreen { MainMenuScreen() }
             "city" -> pushScreen { CityScreen(world.selectedGameView.getCityView(foundCapital(world))) }
             else -> error("unknown --open=$open")
