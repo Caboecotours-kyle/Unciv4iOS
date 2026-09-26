@@ -91,7 +91,10 @@ class ConstructionInfoTable(val cityScreen: CityScreen) : Table() {
 
             val descriptionLabel = Label(description, BaseScreen.skin)  // already translated
             descriptionLabel.wrap = true
-            add(descriptionLabel).colspan(2).width(cityScreen.stage.width / if(cityScreen.isCrampedPortrait()) 3 else 4)
+            // portrait floats this panel alone above the tab bar, so it can take most of the phone's width
+            val descriptionWidth = if (cityScreen.isPortrait()) cityScreen.stage.width * 0.7f
+                else cityScreen.stage.width / if (cityScreen.isCrampedPortrait()) 3 else 4
+            add(descriptionLabel).colspan(2).width(descriptionWidth)
 
             if (cityConstructions.isBuilt(construction.name)) {
                 showSellButton(construction)

@@ -156,6 +156,9 @@ class CaptureGame(
             }
             "vote" -> pushScreen { DiplomaticVotePickerScreen(civ) }
             "city" -> pushScreen { CityScreen(world.selectedGameView.getCityView(foundCapital(world))) }
+            "city-build" -> pushScreen {
+                CityScreen(world.selectedGameView.getCityView(foundCapital(world)), world.gameInfo.ruleset.buildings["Monument"])
+            }
             // alert-<Type>: an alert popup as the game would raise it (with --reveal so other civs are met)
             else -> if (open!!.startsWith("alert-")) showAlert(world, AlertType.valueOf(open.removePrefix("alert-")))
                 else error("unknown --open=$open")
