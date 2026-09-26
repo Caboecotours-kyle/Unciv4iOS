@@ -85,7 +85,8 @@ class DiplomacyScreen(
 
     private val leftSideTable = Table().apply {
         // Portrait: the list sits on the sheet, so it must not paint its own navy over it
-        if (!isPortrait()) background = skinStrings.getUiBackground("DiplomacyScreen/LeftSide", tintColor = clearColor)
+        if (isPortrait()) top()
+        else background = skinStrings.getUiBackground("DiplomacyScreen/LeftSide", tintColor = clearColor)
     }
     private val leftSideScroll = ScrollPaneWithMinSize()
 
