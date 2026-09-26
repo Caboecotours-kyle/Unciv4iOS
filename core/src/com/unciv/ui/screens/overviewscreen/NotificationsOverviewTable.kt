@@ -276,9 +276,10 @@ class NotificationsOverviewTable(
     private fun getNotificationTable(index: Int, notification: Notification, doHighlight: Boolean) = Table(BaseScreen.skin).apply {
         val label = ColorMarkupLabel(notification.text, if (portrait) Color.WHITE else ImageGetter.CHARCOAL, fontSize = 20)
             .apply { wrap = true }
-        add(label).width((if (portrait) stageWidth - 80f - 40f * notification.icons.size
+        val iconGap = if (portrait && notification.icons.isNotEmpty()) 12f else 0f
+        add(label).width((if (portrait) stageWidth - 80f - 45f * notification.icons.size - iconGap
             else notificationWidth - iconSize * notification.icons.size)
-            .coerceAtLeast(100f))
+            .coerceAtLeast(100f)).padRight(iconGap)
 
         val tintColor = when {
             !doHighlight -> null
