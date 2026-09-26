@@ -31,6 +31,11 @@ import com.unciv.ui.screens.pickerscreens.ReligiousBeliefsPickerScreen
 import com.unciv.ui.screens.pickerscreens.TechPickerScreen
 import com.unciv.ui.screens.victoryscreen.VictoryScreen
 import com.unciv.ui.screens.worldscreen.WorldScreen
+import com.unciv.ui.screens.savescreens.SaveGameScreen
+import com.unciv.ui.screens.savescreens.LoadGameScreen
+import com.unciv.ui.screens.modmanager.ModManagementScreen
+import com.unciv.ui.screens.multiplayerscreens.MultiplayerScreen
+import com.unciv.ui.screens.mapeditorscreen.MapEditorScreen
 import com.unciv.ui.screens.worldscreen.AlertPopup
 import com.unciv.logic.civilization.AlertType
 import com.unciv.logic.civilization.PopupAlert
@@ -155,6 +160,11 @@ class CaptureGame(
                 pushScreen { ImprovementPickerScreen(tile, worker) {} }
             }
             "vote" -> pushScreen { DiplomaticVotePickerScreen(civ) }
+            "save" -> pushScreen { SaveGameScreen(world.gameInfo) }
+            "load" -> pushScreen { LoadGameScreen() }
+            "mods" -> pushScreen { ModManagementScreen() }
+            "multiplayer" -> pushScreen { MultiplayerScreen() }
+            "mapeditor" -> pushScreen { MapEditorScreen() }
             "city" -> pushScreen { CityScreen(world.selectedGameView.getCityView(foundCapital(world))) }
             "city-build" -> pushScreen {
                 CityScreen(world.selectedGameView.getCityView(foundCapital(world)), world.gameInfo.ruleset.buildings["Monument"])

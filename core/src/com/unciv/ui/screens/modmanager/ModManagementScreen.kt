@@ -197,15 +197,18 @@ class ModManagementScreen private constructor(
             ModManagementStyle.styleButton(receiveButton)
             headerActions.add(receiveButton).growX().minWidth(0f).minHeight(58f).padTop(6f)
         }
+        // A phone held upright is narrower than the two tabs plus the link button at their usual widths
+        val narrow = stage.width < 600f
+        // Measure translated content before choosing a header row; buttons can also wrap.
+        val linkWidth = ("Download mod from URL".toLabel(fontSize = 22).prefWidth + 40f)
+            .coerceIn(if (narrow) 0f else 180f, stage.width * 0.3f)
+        val tabWidth = if (narrow) (stage.width - linkWidth - 60f) / 2 else if (singleColumn) 180f else 200f
         val tabs = Table().apply {
             background = ModManagementStyle.rounded(ModManagementStyle.surface)
             pad(4f)
-            add(discoverButton).minWidth(0f).width(if (singleColumn) 180f else 200f).minHeight(58f).padRight(4f)
-            add(installedButton).minWidth(0f).width(if (singleColumn) 180f else 200f).minHeight(58f)
+            add(discoverButton).minWidth(0f).width(tabWidth).minHeight(58f).padRight(4f)
+            add(installedButton).minWidth(0f).width(tabWidth).minHeight(58f)
         }
-        // Measure translated content before choosing a header row; buttons can also wrap.
-        val linkWidth = ("Download mod from URL".toLabel(fontSize = 22).prefWidth + 40f)
-            .coerceIn(180f, stage.width * 0.3f)
         header.add(closeButton).width(110f).minHeight(58f).padRight(16f)
         header.add(title).left().expandX().padRight(16f)
         if (singleColumn || stage.width < 1100f * game.settings.fontSizeMultiplier) {
