@@ -1,8 +1,12 @@
 package com.unciv.ui.screens.diplomacyscreen
 
 import com.badlogic.gdx.graphics.Color
+import com.badlogic.gdx.math.MathUtils
+import com.badlogic.gdx.scenes.scene2d.Touchable
 import com.badlogic.gdx.scenes.scene2d.ui.ScrollPane
 import com.badlogic.gdx.scenes.scene2d.Group
+import com.badlogic.gdx.scenes.scene2d.ui.Image
+import com.badlogic.gdx.scenes.scene2d.ui.Label
 import com.badlogic.gdx.scenes.scene2d.ui.Table
 import com.badlogic.gdx.scenes.scene2d.ui.TextButton
 import com.badlogic.gdx.utils.Align
@@ -131,26 +135,65 @@ class CityStateDiplomacyTable(private val diplomacyScreen: DiplomacyScreen) {
         }
         track.addActor(trackLine)
         fun position(value: Int): Float = 25f + (value.coerceAtLeast(0).toFloat() / maximum) * 420f
-        fun marker(name: String, value: Int, color: Color): Group {
-            val marker = Group().apply { setSize(trackWidth, 44f) }
-            val dot = ImageGetter.getCircle(color, 18f).apply { setPosition(112f, 13f) }
+        data class InfluenceMarker(
+            var value: Int,
+            val group: Group,
+            val dot: Image,
+            val label: Label,
+            val connector: Image
+        )
+        val markers = mutableListOf<InfluenceMarker>()
+        fun marker(name: String, value: Int, color: Color): InfluenceMarker {
+            val marker = Group().apply {
+                setSize(trackWidth, 480f)
+                touchable = Touchable.disabled
+            }
+            val connector = ImageGetter.getWhiteDot().apply {
+                this.color = color.cpy().apply { a = 0.6f }
+                setOrigin(0f, 0.75f)
+            }
+            marker.addActor(connector)
+            val dot = ImageGetter.getCircle(color, 18f)
             marker.addActor(dot)
             val label = "[$name] [$value]".toLabel(fontSize = 14).apply {
-                setSize(105f, 40f)
+                setSize(105f, 20f)
                 setEllipsis(true)
             }
             marker.addActor(label)
-            label.setPosition(0f, 2f)
             track.addActor(marker)
-            marker.setPosition(0f, position(value) - 22f)
-            return marker
+            return InfluenceMarker(value, marker, dot, label, connector).also { markers.add(it) }
+        }
+        fun layoutMarkers() {
+            val visible = markers.filter { it.group.isVisible }.sortedBy { position(it.value) }
+            val spacing = minOf(22f, 460f / (visible.size - 1).coerceAtLeast(1))
+            var lastCenter = 10f - spacing
+            val centers = visible.map {
+                maxOf(position(it.value), lastCenter + spacing).also { center -> lastCenter = center }
+            }.toMutableList()
+            if (centers.isNotEmpty()) {
+                centers[centers.lastIndex] = minOf(centers.last(), 470f)
+                for (index in centers.lastIndex - 1 downTo 0)
+                    centers[index] = minOf(centers[index], centers[index + 1] - spacing)
+            }
+            for ((index, item) in visible.withIndex()) {
+                val dotY = position(item.value)
+                val labelY = centers[index]
+                val deltaY = dotY - labelY
+                item.dot.setPosition(112f, dotY - 9f)
+                item.label.setPosition(0f, labelY - 10f)
+                item.connector.isVisible = kotlin.math.abs(deltaY) > 4f
+                item.connector.setSize(kotlin.math.sqrt(16f * 16f + deltaY * deltaY), 1.5f)
+                item.connector.setPosition(105f, labelY - 0.75f)
+                item.connector.rotation = MathUtils.atan2(deltaY, 16f) * MathUtils.radiansToDegrees
+            }
         }
         marker("Friend", 30, Color.CYAN)
         marker("Ally", 60, Color.GOLD)
         for ((rival, score) in rivals) marker(rival.civName, score, Color.RED)
         marker("You", current, Color.WHITE)
         val preview = marker("→", current, Color.GOLD)
-        preview.isVisible = false
+        preview.group.isVisible = false
+        layoutMarkers()
         content.add(track).width(trackWidth).height(480f).top()
 
         val actions = Table().apply { defaults().padBottom(7f) }
@@ -160,9 +203,10 @@ class CityStateDiplomacyTable(private val diplomacyScreen: DiplomacyScreen) {
         var selectedAction = false
         fun select(delta: Int, label: String, enabled: Boolean = true, action: () -> Unit) {
             val result = current + delta
-            preview.isVisible = delta != 0
-            preview.setPosition(0f, position(result) - 22f)
-            summary.setText("[${viewingCiv.civName}]: [$current] → [$result] influence")
+            preview.group.isVisible = delta != 0
+            preview.value = result
+            layoutMarkers()
+            summary.setText("[${viewingCiv.civName}]: [$current] → [$result] influence".tr())
             actionHolder.clear()
             val button = label.toTextButton()
             button.onClick(action)
