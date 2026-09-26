@@ -17,6 +17,7 @@ import com.unciv.logic.trade.TradeLogic
 import com.unciv.logic.trade.TradeOffer
 import com.unciv.logic.trade.TradeOfferType
 import com.unciv.models.ruleset.Quest
+import com.unciv.models.ruleset.QuestName
 import com.unciv.models.ruleset.tile.ResourceType
 import com.unciv.models.ruleset.unique.GameContext
 import com.unciv.models.ruleset.unique.UniqueType
@@ -101,47 +102,56 @@ class CityStateDiplomacyTable(private val diplomacyScreen: DiplomacyScreen) {
         val manager = otherCiv.getDiplomacyManager(viewingCiv)!!
         val current = manager.getInfluence().toInt()
         val rivals = otherCiv.getKnownCivs().filter {
-            it.isMajorCiv() && it != viewingCiv && viewingCiv.knows(it)
+            it.isMajorCiv() && !it.isDefeated() && it != viewingCiv && viewingCiv.knows(it)
         }.mapNotNull { rival ->
             otherCiv.getDiplomacyManager(rival)?.let { rival to it.getInfluence().toInt() }
         }.sortedByDescending { it.second }
         val quests = otherCiv.questManager.getAssignedQuestsFor(viewingCiv)
+        // A gold gift completes GiveGold quests immediately, in addition to its normal influence gain.
+        val giftQuestBonus = quests.filter { it.questNameInstance == QuestName.GiveGold }
+            .sumOf { it.getInfluence().toInt() }
+        fun giftInfluence(amount: Int) =
+            otherCiv.cityStateFunctions.influenceGainedByGift(viewingCiv, amount) + giftQuestBonus
         val maximum = (listOf(60, current) + rivals.map { it.second } +
             quests.map { current + it.quest.influence.toInt() } +
-            listOf(250, 500, 1000).map { current + otherCiv.cityStateFunctions.influenceGainedByGift(viewingCiv, it) })
+            listOf(250, 500, 1000).map { current + giftInfluence(it) })
             .maxOrNull()!!.coerceAtLeast(60) + 10
         val width = diplomacyScreen.stage.width - 32f
+        val trackWidth = 140f
         val root = Table().apply { defaults().pad(5f) }
         root.add(LeaderIntroTable(otherCiv)).width(width).left().row()
         root.add(diplomacyScreen.getRelationshipTable(manager)).left().row()
 
         val content = Table()
-        val track = Group().apply { setSize(108f, 480f) }
+        val track = Group().apply { setSize(trackWidth, 480f) }
         val trackLine = ImageGetter.getWhiteDot().apply {
             color = Color.CYAN.cpy().apply { a = 0.45f }
             setSize(5f, 420f)
-            setPosition(63f, 25f)
+            setPosition(119f, 25f)
         }
         track.addActor(trackLine)
         fun position(value: Int): Float = 25f + (value.coerceAtLeast(0).toFloat() / maximum) * 420f
-        fun marker(name: String, value: Int, color: Color, left: Boolean = false): Group {
-            val marker = Group().apply { setSize(108f, 44f) }
-            val dot = ImageGetter.getCircle(color, 18f).apply { setPosition(56f, 13f) }
+        fun marker(name: String, value: Int, color: Color): Group {
+            val marker = Group().apply { setSize(trackWidth, 44f) }
+            val dot = ImageGetter.getCircle(color, 18f).apply { setPosition(112f, 13f) }
             marker.addActor(dot)
-            val label = "[$name] [$value]".toLabel(fontSize = 14)
+            val label = "[$name] [$value]".toLabel(fontSize = 14).apply {
+                setSize(105f, 40f)
+                setEllipsis(true)
+            }
             marker.addActor(label)
-            label.setPosition(if (left) 0f else 76f, 12f)
+            label.setPosition(0f, 2f)
             track.addActor(marker)
             marker.setPosition(0f, position(value) - 22f)
             return marker
         }
-        marker("Friend", 30, Color.CYAN, true)
-        marker("Ally", 60, Color.GOLD, true)
-        for ((rival, score) in rivals) marker(rival.civName, score, Color.RED, true)
-        marker("You", current, Color.WHITE, true)
+        marker("Friend", 30, Color.CYAN)
+        marker("Ally", 60, Color.GOLD)
+        for ((rival, score) in rivals) marker(rival.civName, score, Color.RED)
+        marker("You", current, Color.WHITE)
         val preview = marker("→", current, Color.GOLD)
         preview.isVisible = false
-        content.add(track).width(108f).height(480f).top()
+        content.add(track).width(trackWidth).height(480f).top()
 
         val actions = Table().apply { defaults().padBottom(7f) }
         actions.add("Ways to gain influence".toLabel(fontSize = Constants.headingFontSize)).left().row()
@@ -163,8 +173,7 @@ class CityStateDiplomacyTable(private val diplomacyScreen: DiplomacyScreen) {
             val button = "[$title]  ${if (delta > 0) "+" else ""}[$delta]\n$detail".toTextButton()
             button.label.wrap = true
             button.onClick { select(delta, title, enabled, action) }
-            if (!enabled) button.disable()
-            actions.add(button).width(width - 120f).height(66f).row()
+            actions.add(button).width(width - trackWidth - 12f).height(66f).row()
             if (enabled && !selectedAction) {
                 select(delta, title, true, action)
                 selectedAction = true
@@ -177,7 +186,7 @@ class CityStateDiplomacyTable(private val diplomacyScreen: DiplomacyScreen) {
             row(quest.quest.name, detail, delta) { quest.onClickAction() }
         }
         for (amount in listOf(250, 500, 1000)) {
-            val delta = otherCiv.cityStateFunctions.influenceGainedByGift(viewingCiv, amount)
+            val delta = giftInfluence(amount)
             val enabled = viewingCiv.gold >= amount && !diplomacyScreen.isNotPlayersTurn() &&
                 !viewingCiv.isAtWarWith(otherCiv)
             row("Gift [$amount] gold", "+[$delta] influence", delta, enabled) {
@@ -189,7 +198,8 @@ class CityStateDiplomacyTable(private val diplomacyScreen: DiplomacyScreen) {
         if (manager.diplomaticStatus != DiplomaticStatus.Protector) {
             val enabled = !diplomacyScreen.isNotPlayersTurn() &&
                 otherCiv.cityStateFunctions.otherCivCanPledgeProtection(viewingCiv)
-            row("Pledge to protect", "Protection does not change influence", 0, enabled) {
+            val restingPoint = manager.getCityStateInfluenceRestingPoint().toInt() + 10
+            row("Pledge to protect", "Influence will rest at [$restingPoint]", 0, enabled) {
                 ConfirmPopup(diplomacyScreen, "Declare Protection of [${otherCiv.civName}]?", "Pledge to protect", true) {
                     otherCiv.cityStateFunctions.addProtectorCiv(viewingCiv)
                     diplomacyScreen.updateLeftSideTable(otherCiv)
@@ -197,7 +207,7 @@ class CityStateDiplomacyTable(private val diplomacyScreen: DiplomacyScreen) {
                 }.open()
             }
         }
-        content.add(actions).width(width - 120f).top()
+        content.add(actions).width(width - trackWidth - 12f).top()
         root.add(ScrollPane(content)).width(width)
             .height((diplomacyScreen.stage.height - 440f).coerceAtLeast(300f)).row()
         root.add(summary).width(width).left().row()
