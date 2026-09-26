@@ -1,5 +1,7 @@
 package com.unciv.ui.screens.pickerscreens
 
+import com.unciv.ui.screens.basescreen.portraitCanvasBounds
+
 import com.badlogic.gdx.Gdx
 import com.badlogic.gdx.graphics.Color
 import com.badlogic.gdx.graphics.g2d.Batch
@@ -147,7 +149,7 @@ class TechPickerScreen(
         rightSideButton.setText(if (freeTechPick) "Pick a free tech".tr() else "Pick a tech".tr())
 
         val safeArea = safeAreaBoundsInWorld()
-        val drawingBounds = (stage.viewport as SafeAreaViewport).drawingBounds
+        val drawingBounds = portraitCanvasBounds()
         val map = PortraitMapBackdrop(civInfo)
         portraitMapBackdrop = map
         map.setBounds(drawingBounds.x, drawingBounds.y, drawingBounds.width, drawingBounds.height)

@@ -142,7 +142,7 @@ internal class TechPickerPortrait(
     private fun buildNextUp() {
         nextUpBuilt = true
         val width = contentWidth - 28f
-        nextUpContent.pad(10f, 14f, 16f, 14f).defaults().growX()
+        nextUpContent.pad(10f, 14f, 16f, 14f).defaults().width(width)
         nextUpContent.add(nowCard(width)).row()
         if (!screen.freeTechPick) {
             val current = civTech.currentTechnology()
@@ -254,17 +254,17 @@ internal class TechPickerPortrait(
             val content = Table().pad(8f, 10f, 8f, 12f)
             content.add(ImageGetter.getConstructionPortrait(goal.name, 44f)).size(46f).padRight(12f)
             val middle = Table().left()
-            middle.add(goal.name.toLabel(if (goal.kind == GoalKind.Wonders) YELLOW else Color.WHITE, 17, hideIcons = true)).left().row()
+            middle.add(goal.name.toLabel(if (goal.kind == GoalKind.Wonders) YELLOW else Color.WHITE, 17, hideIcons = true).apply { wrap = true }).minWidth(0f).growX().left().row()
             val via = Table()
             via.add(ImageGetter.getTechIconPortrait(goal.tech.name, 18f)).size(20f).padRight(5f)
             via.add(goal.tech.name.toLabel(INK2, 14, hideIcons = true))
             middle.add(via).left().padTop(4f)
-            content.add(middle).growX().left()
+            content.add(middle).minWidth(0f).growX().left()
             content.add(turnsLabel(turnsFor(goal.remainingScience))).padLeft(8f)
             val card = PickCard(content)
             card.setPicked(pickedGoal?.name == goal.name)
             card.onClick { pickGoal(goal) }
-            goalRows.add(card).growX().padBottom(8f).row()
+            goalRows.add(card).width(contentWidth - 28f).padBottom(8f).row()
         }
     }
 
@@ -520,7 +520,7 @@ internal class TechPickerPortrait(
             head.add(pedia).growX().left()
             val close = closeIcon()
             close.onClick { screen.clearSelection() }
-            head.add(close).size(44f)
+            head.add(close).size(48f)
             detail.add(head).growX().row()
 
             val info = Table().left()
@@ -568,7 +568,7 @@ internal class TechPickerPortrait(
             chip.touchable = Touchable.disabled
             chip.add(ImageGetter.getTechIconPortrait(techName, 24f)).size(26f).padRight(6f)
             chip.add(techName.toLabel(if (civTech.isResearched(techName)) INK2 else Color.WHITE, 14, hideIcons = true))
-            return Container(chip).prefHeight(44f).minHeight(44f).apply {
+            return Container(chip).prefHeight(48f).minHeight(48f).apply {
                 touchable = Touchable.enabled
                 onClick { ruleset.technologies[techName]?.let { select(it) } }
             }
