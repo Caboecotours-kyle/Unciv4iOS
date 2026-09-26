@@ -53,6 +53,10 @@ button:focus-visible,select:focus-visible,.tile-hit:focus-visible{outline:3px so
 .world .unit-ring{fill:none;stroke-width:2.6}
 .world .flash{opacity:0}
 .world text{font-family:var(--r)}
+.map-labels{position:absolute;inset:0;z-index:1;pointer-events:none}
+.next-badge{position:absolute;width:78px;height:24px;border:1.5px solid var(--yellow);border-radius:12px;background:#132435;color:var(--yellow);display:grid;place-items:center;font-size:12px;font-weight:900}
+.city-banner{position:absolute;width:130px;height:28px;border-radius:14px;background:#418dfe;color:#fff;display:flex;align-items:center;gap:7px;padding:0 5px;font-size:15px;font-weight:900}
+.city-banner span{width:22px;height:22px;border-radius:50%;display:grid;place-items:center;background:#2459a5;font-size:13px}
 .top-shade{position:absolute;top:0;left:0;right:0;height:130px;background:linear-gradient(rgba(10,22,34,.6),transparent);pointer-events:none}
 .bottom-shade{position:absolute;left:0;right:0;bottom:0;height:390px;background:linear-gradient(transparent 0%,rgba(10,22,34,.42) 42%,rgba(10,22,34,.88) 100%);pointer-events:none}
 .status-bar{position:absolute;top:0;left:0;right:0;height:50px;display:flex;align-items:center;justify-content:space-between;padding:7px 34px 0 42px;font-size:16px;font-weight:800;z-index:4}
@@ -79,12 +83,13 @@ button:focus-visible,select:focus-visible,.tile-hit:focus-visible{outline:3px so
 .scene-tag{position:absolute;z-index:4;left:12px;top:194px;min-height:40px;max-width:350px;background:var(--panel);border-radius:13px;padding:10px 13px;font-size:13px;font-weight:800;color:var(--ink2)}
 .scene-tag b{color:#fff}
 .unit-dock{position:absolute;left:0;right:0;bottom:0;height:235px;z-index:5}
-.action{position:absolute;width:58px;height:58px;border-radius:50%;background:#eef5fb;color:var(--navy);display:grid;place-items:center;box-shadow:0 4px 0 #b9cadb,0 8px 17px rgba(0,0,0,.24)}
-.action svg{display:block;width:28px;height:28px;stroke:currentColor;stroke-width:2.5;fill:none;stroke-linecap:round;stroke-linejoin:round}
-.action.move{right:120px;bottom:85px}
-.action.attack{right:192px;bottom:85px}
-.action.fortify{right:151px;bottom:157px}
-.action.more{right:74px;bottom:177px}
+.action{position:absolute;width:54px;height:54px;border-radius:50%;background:#eef5fb;color:var(--navy);display:grid;place-items:center;box-shadow:0 4px 0 #b9cadb,0 8px 17px rgba(0,0,0,.24)}
+.action svg{display:block;width:26px;height:26px;stroke:currentColor;stroke-width:2.5;fill:none;stroke-linecap:round;stroke-linejoin:round}
+/* One close arc from Skip, with 110px center radius and 34-degree spacing. */
+.action.move{right:149px;bottom:55px}
+.action.attack{right:131px;bottom:117px}
+.action.fortify{right:80px;bottom:157px}
+.action.more{right:16px;bottom:163px}
 .action.active{box-shadow:0 0 0 3px var(--yellow),0 4px 0 #b9cadb,0 8px 17px rgba(0,0,0,.24)}
 .action:active,.skip:active{transform:translateY(3px)}
 .skip{position:absolute;right:18px;bottom:34px;width:96px;height:96px;border-radius:50%;background:var(--yellow);color:var(--yellow-ink);box-shadow:0 5px 0 #c9951c,0 10px 20px rgba(0,0,0,.27);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;font-size:15px;font-weight:900}
@@ -105,8 +110,17 @@ button:focus-visible,select:focus-visible,.tile-hit:focus-visible{outline:3px so
 .drawer-row .disc{width:46px;height:46px;border-radius:50%;background:#eef5fb;color:var(--navy);display:grid;place-items:center;flex:none}
 .drawer-row .disc svg{stroke:currentColor}
 .drawer-foot{padding:15px 16px 34px;color:var(--ink2);font-size:13px;font-weight:750}
-.city-panel{position:absolute;left:0;right:0;bottom:0;z-index:6;background:rgba(16,31,47,.96);border-radius:26px 26px 0 0;box-shadow:0 -8px 24px rgba(0,0,0,.27);padding:10px 15px 36px;min-height:250px}
-.city-panel .grab{margin:0 auto 12px}
+.city-panel{position:absolute;left:0;right:0;bottom:0;z-index:6;height:600px;background:rgba(16,31,47,.96);border-radius:26px 26px 0 0;box-shadow:0 -8px 24px rgba(0,0,0,.27);transition:transform .3s cubic-bezier(.16,1,.3,1);touch-action:pan-y;will-change:transform}
+.city-panel.collapsed{transform:translateY(calc(100% - 64px))}
+.city-panel.dragging{transition:none}
+.city-peek{width:100%;height:64px;border:0;background:none;color:#fff;padding:0 16px;display:grid;grid-template-columns:1fr auto;grid-template-rows:16px 40px;align-items:center;text-align:left;touch-action:none;cursor:pointer}
+.city-peek .grab{grid-column:1 / -1;justify-self:center;align-self:start;margin-top:8px}
+.city-peek strong{font-size:20px;font-weight:900}
+.city-peek span:last-child{font-size:13px;font-weight:800;color:var(--ink2)}
+.city-panel-body{padding:2px 15px 36px}
+.city-tabs{display:grid;grid-template-columns:repeat(5,1fr);gap:3px;padding:7px 0 13px}
+.city-tabs span{border-radius:9px;padding:8px 1px;text-align:center;font-size:11px;font-weight:800;color:var(--ink2)}
+.city-tabs .active{background:#29465d;color:#fff}
 .panel-title{display:flex;align-items:center;justify-content:space-between;gap:8px}
 .panel-title strong{font-size:20px;font-weight:900}
 .panel-title .culture{color:var(--ink2);font-size:13px;font-weight:800}
@@ -127,6 +141,9 @@ button:focus-visible,select:focus-visible,.tile-hit:focus-visible{outline:3px so
 .expansion-card .when{margin-left:auto;white-space:nowrap;color:var(--yellow);font-size:13px;font-weight:900}
 .expansion-card.stopped{border-color:var(--line)}
 .expansion-card.stopped .when{color:var(--ink2)}
+.city-list-title{margin:15px 0 5px;color:var(--ink2);font-size:13px;font-weight:900}
+.city-list-row{height:44px;border-bottom:1px solid var(--line);display:flex;align-items:center;justify-content:space-between;gap:10px;font-size:14px;font-weight:800}
+.city-list-row small{color:var(--ink2);font-size:11px;font-weight:800}
 .growth-badge{fill:var(--yellow);stroke:#8c650d;stroke-width:1;paint-order:stroke}
 .fx{pointer-events:none}
 .screen.reduce-motion .drawer,.reduce-motion .motion-switch input::after{transition:none}
@@ -177,7 +194,7 @@ const icon=(name)=>`<svg viewBox="0 0 24 24" aria-hidden="true">${ICONS[name]}</
 const params=new URLSearchParams(location.search);
 const initialScene=['idle','move','attack','drawer','zones'].includes(params.get('scene'))?params.get('scene'):'idle';
 const initialScenario=['growing','no-culture','no-tile'].includes(params.get('expansion'))?params.get('expansion'):'growing';
-const state={scene:initialScene,reduce:matchMedia('(prefers-reduced-motion: reduce)').matches,scenario:initialScenario,selected:'3,5',drawerOpen:false,run:0,animation:null,moveDone:false,hitAt:0,damageAt:0,unitRefs:{},fx:[]};
+const state={scene:initialScene,reduce:matchMedia('(prefers-reduced-motion: reduce)').matches,scenario:initialScenario,selected:'3,5',drawerOpen:false,cityCollapsed:params.get('city')==='collapsed',run:0,animation:null,moveDone:false,hitAt:0,damageAt:0,unitRefs:{},fx:[]};
 const screen=document.getElementById('screen');
 const R=50,SQ=.6,W=Math.sqrt(3)*R,DY=45,X0=-25,Y0=122;
 const TERRA={
@@ -253,7 +270,7 @@ function selectedOutline(){const [c,r]=state.selected.split(',').map(Number);ret
 function nextExpansion(){
   if(state.scenario!=='growing')return '';
   const [c,r]=nextTile.split(',').map(Number),[x,y]=center(c,r);
-  return `<polygon class="next-outline" points="${points(corners(x,y,.84))}"/><g pointer-events="none"><rect x="${x-39}" y="${y-13}" width="78" height="24" rx="12" fill="#132435" stroke="#ffc93c" stroke-width="1.5"/><text x="${x-18}" y="${y-18}" text-anchor="middle" fill="#ffc93c" font-size="12" font-weight="900">3 turns</text></g>`;
+  return `<polygon class="next-outline" points="${points(corners(x,y,.84))}"/>`;
 }
 function unitMarkup(id,name,civ,x,y,flip=false){
   const color=civ==='gre'?'#418dfe':'#2f7fe0';
@@ -269,7 +286,7 @@ function worldMarkup(){
     }
   }
   let figures='';
-  if(zones){const [x,y]=center(3,6);figures=`<image href="${sprites.c_Ancient_medium?.gre||'art/c_Ancient_medium.png'}" x="${x-34}" y="${y-59}" width="68" height="64"/><g><rect x="${x-65}" y="${y+24}" width="130" height="28" rx="14" fill="#418dfe"/><circle cx="${x-50}" cy="${y+38}" r="11" fill="#2459a5"/><text x="${x-70}" y="${y+1}" text-anchor="middle" fill="#fff" font-size="13" font-weight="900">9</text><text x="${x-49}" y="${y+2}" fill="#fff" font-size="15" font-weight="900">Athens</text></g>`;}
+  if(zones){const [x,y]=center(3,6);figures=`<image href="${sprites.c_Ancient_medium?.gre||'art/c_Ancient_medium.png'}" x="${x-34}" y="${y-59}" width="68" height="64"/>`;}
   else {
     const bow=state.scene==='idle'?center(2,8):state.scene==='move'?center(1,8):center(2,8);
     const hop=center(3,8);
@@ -280,6 +297,10 @@ function worldMarkup(){
 function stats(){return `<div class="stats"><div class="stat"><svg viewBox="0 0 20 20"><circle cx="10" cy="10" r="8" fill="#ffc93c"/><circle cx="10" cy="10" r="5.5" fill="none" stroke="#bd8d16" stroke-width="2"/></svg>39<small>+3</small></div><div class="stat"><svg viewBox="0 0 20 20"><path d="M7 2h6v5l4 9a2 2 0 0 1-2 3H5a2 2 0 0 1-2-3l4-9z" fill="#5cc8ff"/><path d="M5 14h10" stroke="#2277a0" stroke-width="2"/></svg>+4</div><div class="stat"><svg viewBox="0 0 20 20"><path d="M7 15V4l10-2v11" stroke="#d38bff" stroke-width="2.5" fill="none"/><circle cx="5" cy="15" r="3" fill="#d38bff"/><circle cx="15" cy="13" r="3" fill="#d38bff"/></svg>3<small>/15</small></div><div class="turn">T3</div></div>`}
 function unitHead(){return `<div class="unit-head"><div class="avatar"><img src="${sprites.k_bowman?.bab||'art/k_bowman.png'}" alt=""></div><div><strong>Bowman</strong><div class="sub">Ranged 9 · Move 2/2</div></div><div class="head-right" id="health">100 HP</div></div>`}
 function cityHead(){return `<div class="city-head"><div class="avatar"><img src="${sprites.c_Ancient_medium?.gre||'art/c_Ancient_medium.png'}" alt=""></div><div><strong>Athens</strong><div class="sub">City zones</div></div><div class="head-right">Population 9</div></div>`}
+function cityMapLabels(){
+  const [x,y]=center(3,6),[nx,ny]=center(...nextTile.split(',').map(Number));
+  return `<div class="map-labels"><div class="city-banner" style="left:${x-65}px;top:${y+24}px"><span>9</span>Athens</div>${state.scenario==='growing'?`<div class="next-badge" style="left:${nx-39}px;top:${ny-13}px">3 turns</div>`:''}</div>`;
+}
 function actions(){
   if(state.scene==='drawer')return `<button type="button" class="open-drawer" id="open-drawer">Open actions</button>`;
   return `<div class="unit-dock"><button class="action more" data-action="more" aria-label="More actions" title="More actions">${icon('more')}</button><button class="action fortify" data-action="fortify" aria-label="Fortify" title="Fortify">${icon('fortify')}</button><button class="action attack ${state.scene==='attack'?'active':''}" data-action="attack" aria-label="Attack" title="Attack">${icon('attack')}</button><button class="action move ${state.scene==='move'?'active':''}" data-action="move" aria-label="Move" title="Move">${icon('move')}</button><button class="skip" data-action="skip" aria-label="Skip unit"><span>${icon('skip')}</span>Skip</button><div class="action-label" id="action-label"></div></div>`;
@@ -289,12 +310,28 @@ function cityPanel(){
   const d=tileData[state.selected]||{name:'Plains',state:'Unworked',note:'Next expansion tile'};
   const growing=state.scenario==='growing';
   const expansion=state.scenario==='no-culture'?['Expansion paused','Culture is +0 per turn','No estimate']:state.scenario==='no-tile'?['No expansion tile','No eligible tile right now','No estimate']:['Next tile · Plains','21 / 30 culture · +3 per turn','About 3 turns'];
-  return `<div class="city-panel"><div class="grab"></div><div class="panel-title"><strong>City zones</strong><span class="culture">Athens · population 9</span></div><div class="legend"><span><i class="border-swatch"></i>Territory</span><span><i class="worked-swatch"></i>Worked</span><span><i class="open-swatch"></i>Unworked</span><span><i class="lock-swatch"></i>Locked</span></div><div class="tile-card"><div><strong>${d.name}</strong><small>${d.note}</small></div><span class="tile-state ${d.state.toLowerCase()}">${d.state}</span></div><div class="expansion-card ${growing?'':'stopped'}"><div><strong>${expansion[0]}</strong><small>${expansion[1]}</small></div><span class="when">${expansion[2]}</span></div></div>`;
+  return `<div class="city-panel ${state.cityCollapsed?'collapsed':''}" id="city-panel">
+    <button type="button" class="city-peek" id="city-peek" aria-label="${state.cityCollapsed?'Expand':'Collapse'} Athens city sheet" aria-expanded="${!state.cityCollapsed}">
+      <span class="grab"></span><strong>Athens</strong><span>${state.cityCollapsed?'Tap or swipe up to open ↑':'Swipe down to view map ↓'}</span>
+    </button>
+    <div class="city-panel-body">
+      <div class="panel-title"><strong>City zones</strong><span class="culture">Population 9 · +3 culture</span></div>
+      <div class="city-tabs"><span>Build</span><span>Buildings</span><span class="active">Tiles</span><span>Citizens</span><span>Buy</span></div>
+      <div class="legend"><span><i class="border-swatch"></i>Territory</span><span><i class="worked-swatch"></i>Worked</span><span><i class="open-swatch"></i>Unworked</span><span><i class="lock-swatch"></i>Locked</span></div>
+      <div class="tile-card"><div><strong>${d.name}</strong><small>${d.note}</small></div><span class="tile-state ${d.state.toLowerCase()}">${d.state}</span></div>
+      <div class="expansion-card ${growing?'':'stopped'}"><div><strong>${expansion[0]}</strong><small>${expansion[1]}</small></div><span class="when">${expansion[2]}</span></div>
+      <div class="city-list-title">City tiles · 3 of 7 worked</div>
+      <div class="city-list-row"><span>Grassland · Farm</span><small>Worked · +2 food</small></div>
+      <div class="city-list-row"><span>Plains · Hill</span><small>Unworked · +1 production</small></div>
+      <div class="city-list-row"><span>Forest · Lumber mill</span><small>Locked · +2 production</small></div>
+      <div class="city-list-row"><span>Grassland</span><small>Unworked · +2 food</small></div>
+    </div>
+  </div>`;
 }
 function render(){
   const zones=state.scene==='zones';screen.classList.toggle('reduce-motion',state.reduce);
   screen.setAttribute('aria-label',`${state.scene==='zones'?'City zones':state.scene[0].toUpperCase()+state.scene.slice(1)+' motion'} preview`);
-  screen.innerHTML=worldMarkup()+`<div class="top-shade"></div>${zones?'':'<div class="bottom-shade"></div>'}<div class="status-bar"><span>10:53</span><span class="status-right"><span class="signal"><i></i><i></i><i></i></span><span class="battery"></span></span></div>`+stats()+(zones?cityHead()+cityPanel():unitHead()+`<div class="scene-tag"><b>${state.scene==='drawer'?'Actions':state.scene==='idle'?'Idle':state.scene==='move'?'Move':'Attack'}</b> · ${state.scene==='idle'?'Whole-sprite breathing':state.scene==='move'?'One tile hop':state.scene==='attack'?'Lunge and hit feedback':'Swipe to close'}</div>`+actions()+drawer());
+  screen.innerHTML=worldMarkup()+(zones?cityMapLabels():'')+`<div class="top-shade"></div>${zones?'':'<div class="bottom-shade"></div>'}<div class="status-bar"><span>10:53</span><span class="status-right"><span class="signal"><i></i><i></i><i></i></span><span class="battery"></span></span></div>`+(zones?cityPanel():stats()+unitHead()+`<div class="scene-tag"><b>${state.scene==='drawer'?'Actions':state.scene==='idle'?'Idle':state.scene==='move'?'Move':'Attack'}</b> · ${state.scene==='idle'?'Whole-sprite breathing':state.scene==='move'?'One tile hop':state.scene==='attack'?'Lunge and hit feedback':'Swipe to close'}</div>`+actions()+drawer());
   state.unitRefs={bowman:document.getElementById('bowman'),hoplite:document.getElementById('hoplite')};
   document.querySelectorAll('[data-scene]').forEach(b=>b.setAttribute('aria-selected',String(b.dataset.scene===state.scene)));
   document.getElementById('caption').textContent=SCENE_LABEL[state.scene];
@@ -393,12 +430,19 @@ function tick(t){
 }
 function openDrawer(){const el=document.getElementById('drawer');if(!el)return;state.drawerOpen=true;el.style.transform='';el.classList.add('open');announce('Actions opened. Swipe down or use Close actions.')}
 function closeDrawer(instant=false){const el=document.getElementById('drawer');if(!el)return;state.drawerOpen=false;el.classList.remove('open','dragging');el.style.transform='';if(instant){el.style.transition='none';requestAnimationFrame(()=>{el.style.transition=''})}announce('Actions closed')}
+function setCityCollapsed(value){state.cityCollapsed=value;render();announce(value?'Athens sheet collapsed. The map is open.':'Athens sheet restored with Tiles selected.')}
+let cityDrag=null;
+screen.addEventListener('pointerdown',e=>{if(!e.target.closest('#city-peek'))return;const el=document.getElementById('city-panel');cityDrag={y:e.clientY,offset:state.cityCollapsed?el.offsetHeight-64:0,moved:false};el.classList.add('dragging');e.target.closest('#city-peek').setPointerCapture(e.pointerId)});
+screen.addEventListener('pointermove',e=>{if(!cityDrag)return;const el=document.getElementById('city-panel'),scale=parseFloat(getComputedStyle(document.getElementById('viewport')).getPropertyValue('--scale'));const dy=(e.clientY-cityDrag.y)/scale;cityDrag.moved ||= Math.abs(dy)>10;el.style.transform=`translateY(${Math.max(0,Math.min(el.offsetHeight-64,cityDrag.offset+dy))}px)`});
+screen.addEventListener('pointerup',e=>{if(!cityDrag)return;const scale=parseFloat(getComputedStyle(document.getElementById('viewport')).getPropertyValue('--scale')),dy=(e.clientY-cityDrag.y)/scale;const wasDrag=cityDrag.moved;cityDrag=null;e.preventDefault();setCityCollapsed(wasDrag?(dy>80?true:dy< -80?false:state.cityCollapsed):!state.cityCollapsed)});
+screen.addEventListener('pointercancel',()=>{if(!cityDrag)return;cityDrag=null;render()});
 let drag=null;
 screen.addEventListener('pointerdown',e=>{if(!e.target.closest('#drawer-grab'))return;const el=document.getElementById('drawer');drag={y:e.clientY,dy:0};el.classList.add('dragging');e.target.closest('#drawer-grab').setPointerCapture(e.pointerId)});
 screen.addEventListener('pointermove',e=>{if(!drag)return;const el=document.getElementById('drawer');drag.dy=Math.max(0,(e.clientY-drag.y)/parseFloat(getComputedStyle(document.getElementById('viewport')).getPropertyValue('--scale')));el.style.transform=`translateY(${drag.dy}px)`});
 screen.addEventListener('pointerup',e=>{if(!drag)return;const el=document.getElementById('drawer');const close=drag.dy>85;drag=null;el.classList.remove('dragging');el.style.transform='';if(close)closeDrawer();else openDrawer()});
 screen.addEventListener('pointercancel',()=>{if(!drag)return;drag=null;openDrawer()});
 screen.addEventListener('click',e=>{
+  if(e.target.closest('#city-peek')){if(e.detail===0)setCityCollapsed(!state.cityCollapsed);return}
   const tile=e.target.closest('[data-tile]');if(tile){state.selected=tile.dataset.tile;if(state.selected===nextTile&&state.scenario==='growing')state.selected=selectedDefault;render();return}
   if(e.target.closest('#open-drawer')){openDrawer();return}
   if(e.target.closest('#close-drawer')){closeDrawer();return}
