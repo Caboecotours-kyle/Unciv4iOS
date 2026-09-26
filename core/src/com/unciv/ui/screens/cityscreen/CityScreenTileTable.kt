@@ -1,6 +1,7 @@
 package com.unciv.ui.screens.cityscreen
 
 import com.badlogic.gdx.graphics.Color
+import com.badlogic.gdx.scenes.scene2d.Touchable
 import com.badlogic.gdx.scenes.scene2d.ui.Table
 import com.badlogic.gdx.scenes.scene2d.ui.TextButton
 import com.badlogic.gdx.utils.Align
@@ -21,6 +22,7 @@ import com.unciv.ui.popups.AnimatedMenuPopup
 import com.unciv.ui.popups.AnimatedMenuPopup.Companion.addContextMenu
 import com.unciv.ui.screens.basescreen.BaseScreen
 import com.unciv.ui.screens.civilopediascreen.FormattedLine.IconDisplay
+import com.unciv.ui.screens.civilopediascreen.FormattedLine.LinkType
 import com.unciv.ui.screens.civilopediascreen.MarkupRenderer
 import com.unciv.view.CityView
 import com.unciv.view.TileView
@@ -34,10 +36,14 @@ class CityScreenTileTable(private val cityScreen: CityScreen) : Table() {
     init {
         innerTable.background = BaseScreen.skinStrings.getUiBackground(
             "CityScreen/CityScreenTileTable/InnerTable",
-            tintColor = BaseScreen.skinStrings.skinConfig.baseColor.darken(0.5f)
+            tintColor = if (cityScreen.isPortrait()) Color.valueOf("20394f")
+                else BaseScreen.skinStrings.skinConfig.baseColor.darken(0.5f)
         )
-        add(innerTable).pad(2f).fill()
-        background = BaseScreen.skinStrings.getUiBackground("CityScreen/CityScreenTileTable/Background", tintColor = Color.WHITE)
+        if (cityScreen.isPortrait()) add(innerTable).width(369f)
+        else {
+            add(innerTable).pad(2f).fill()
+            background = BaseScreen.skinStrings.getUiBackground("CityScreen/CityScreenTileTable/Background", tintColor = Color.WHITE)
+        }
     }
 
     fun update(tileView: TileView?) {
@@ -50,18 +56,33 @@ class CityScreenTileTable(private val cityScreen: CityScreen) : Table() {
         innerTable.clearChildren()
 
         val stats = tileView.getTileStats(cityView.viewingCiv(), cityView)
-        innerTable.pad(5f)
+        innerTable.pad(if (cityScreen.isPortrait()) 12f else 5f)
 
-        innerTable.add(MarkupRenderer.render(TileDescription.toMarkup(
+        val description = TileDescription.toMarkup(
             tileView,
             cityView.viewingCiv(),
             hideUnits = cityScreen.isSpying,
             spyCity = if (cityScreen.isSpying) cityView else null
-        ), iconDisplay = IconDisplay.None) {
-            cityScreen.openCivilopedia(it)
-        })
-        innerTable.row()
-        innerTable.add(getTileStatsTable(stats)).row()
+        )
+        if (cityScreen.isPortrait()) {
+            for (line in description) {
+                val row = Table()
+                row.add(MarkupRenderer.render(listOf(line), labelWidth = 333f, iconDisplay = IconDisplay.None))
+                    .width(338f).left()
+                if (line.linkType == LinkType.Internal) {
+                    row.touchable = Touchable.enabled
+                    row.onClick { cityScreen.openCivilopedia(line.link) }
+                }
+                innerTable.add(row).width(345f)
+                    .minHeight(if (line.linkType == LinkType.Internal) 48f else 0f).fillY().left().row()
+            }
+            innerTable.add(getTileStatsTable(stats)).width(345f).left().padTop(8f).row()
+        } else {
+            innerTable.add(MarkupRenderer.render(description, iconDisplay = IconDisplay.None) {
+                cityScreen.openCivilopedia(it)
+            }).row()
+            innerTable.add(getTileStatsTable(stats)).row()
+        }
 
         if (cityView.canBuyTile(tileView)) {
             val goldCostOfTile = cityView.getGoldCostOfTile(tileView)
@@ -72,16 +93,14 @@ class CityScreenTileTable(private val cityScreen: CityScreen) : Table() {
             }
             buyTileButton.addContextMenu { TileBuyMenu(buyTileButton) }
             buyTileButton.isEnabled = cityScreen.canChangeState && cityView.viewingCiv().hasStatToBuy(Stat.Gold, goldCostOfTile)
-            innerTable.add(buyTileButton).padTop(5f).row()
+            addAction(buyTileButton, true)
         }
 
         val owningCity = tileView.owningCity()
-        if (owningCity != null)
-            innerTable.add("Owned by [${owningCity.name}]".toLabel()).row()
+        if (owningCity != null) addInfo("Owned by [${owningCity.name}]")
 
         val workingCity = tileView.getWorkingCity()
-        if (workingCity != null)
-            innerTable.add("Worked by [${workingCity.name}]".toLabel()).row()
+        if (workingCity != null) addInfo("Worked by [${workingCity.name}]")
 
         if (cityView.isWorked(tileView)) {
             if (tileView.isLocked()) {
@@ -92,7 +111,7 @@ class CityScreenTileTable(private val cityScreen: CityScreen) : Table() {
                     cityScreen.updateAsync()
                 }
                 if (!cityScreen.canChangeState) unlockButton.disable()
-                innerTable.add(unlockButton).padTop(5f).row()
+                addAction(unlockButton)
             } else {
                 val lockButton = "Lock".toTextButton()
                 lockButton.onClick {
@@ -101,28 +120,56 @@ class CityScreenTileTable(private val cityScreen: CityScreen) : Table() {
                     cityScreen.updateAsync()
                 }
                 if (!cityScreen.canChangeState) lockButton.disable()
-                innerTable.add(lockButton).padTop(5f).row()
+                addAction(lockButton)
             }
         }
 
         if (tileView.isCityCenter()) {
             val otherCityView = tileView.owningCity()?.tryGetCityView()
             if (otherCityView != null && otherCityView != cityView)
-                innerTable.add("Move to city".toTextButton().onClick {
+                addAction("Move to city".toTextButton().apply { onClick {
                     cityScreen.game.replaceCurrentScreen { CityScreen(otherCityView) }
-                })
+                } })
         }
 
         innerTable.pack()
         pack()
     }
 
+    private fun addInfo(text: String) {
+        val label = text.toLabel().apply { wrap = cityScreen.isPortrait() }
+        if (cityScreen.isPortrait()) innerTable.add(label).width(345f).left().padTop(8f).row()
+        else innerTable.add(label).row()
+    }
+
+    private fun addAction(button: TextButton, primary: Boolean = false) {
+        if (cityScreen.isPortrait()) {
+            stylePortraitButton(button, primary)
+            innerTable.add(button).width(345f).height(48f).padTop(8f).row()
+        } else innerTable.add(button).padTop(5f).row()
+    }
+
+    private fun stylePortraitButton(button: TextButton, primary: Boolean = false) {
+        val shape = BaseScreen.skinStrings.roundedEdgeRectangleShape
+        val normal = if (primary) Color.valueOf("ffc93c") else Color(1f, 1f, 1f, .08f)
+        val disabled = Color(1f, 1f, 1f, .08f)
+        button.style = TextButton.TextButtonStyle(button.style).apply {
+            up = BaseScreen.skinStrings.getUiBackground("", shape, normal)
+            down = BaseScreen.skinStrings.getUiBackground("", shape, normal)
+            this.disabled = BaseScreen.skinStrings.getUiBackground("", shape, disabled)
+            fontColor = if (primary) Color.valueOf("3a2a00") else Color.WHITE
+            disabledFontColor = Color.valueOf("8eacc2")
+        }
+    }
+
     private fun getTileStatsTable(stats: Stats): Table {
         val statsTable = Table()
         statsTable.defaults().pad(2f)
-        for ((key, value) in stats) {
+        for ((index, entry) in stats.withIndex()) {
+            val (key, value) = entry
             statsTable.add(ImageGetter.getStatIcon(key.name)).size(20f)
             statsTable.add(value.roundToInt().toLabel()).padRight(5f)
+            if (cityScreen.isPortrait() && index % 3 == 2) statsTable.row()
         }
         return statsTable
     }
@@ -133,7 +180,11 @@ class CityScreenTileTable(private val cityScreen: CityScreen) : Table() {
             val counts = IntArray(maxRing + 1) { countBuyableInRing(it) }
             if (counts.sum() < 2) return null
             return super.createContentTable()!!.apply {
-                add("Currently you have [${cityView.viewingCiv().gold}] [Gold].".toLabel(alignment = Align.center)).growX().row()
+                val balance = "Currently you have [${cityView.viewingCiv().gold}] [Gold].".toLabel(alignment = Align.center)
+                if (cityScreen.isPortrait()) {
+                    balance.wrap = true
+                    add(balance).width(333f).minHeight(48f).row()
+                } else add(balance).growX().row()
                 for (ring in 0..maxRing) {
                     val count = counts[ring]
                     if (count == 0 || ring > 0 && count == counts[ring - 1]) continue
@@ -141,7 +192,10 @@ class CityScreenTileTable(private val cityScreen: CityScreen) : Table() {
                     val text = "Buy [$count] tiles in ring [$ring] for [$cost][${Stat.Gold.character}]"
                     val button = getButton(text, KeyboardBinding.None) { buyRing(ring) }
                     button.isDisabled = cost > cityView.viewingCiv().gold
-                    add(button).row()
+                    if (cityScreen.isPortrait()) {
+                        button.label.wrap = true
+                        add(button).width(333f).height(48f).row()
+                    } else add(button).row()
                 }
             }
         }

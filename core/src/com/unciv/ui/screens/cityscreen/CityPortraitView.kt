@@ -12,6 +12,7 @@ import com.badlogic.gdx.scenes.scene2d.ui.Image
 import com.badlogic.gdx.scenes.scene2d.ui.Table
 import com.badlogic.gdx.scenes.scene2d.ui.WidgetGroup
 import com.badlogic.gdx.scenes.scene2d.utils.Drawable
+import com.badlogic.gdx.scenes.scene2d.utils.Layout
 import com.unciv.Constants
 import com.unciv.models.ruleset.Building
 import com.unciv.models.ruleset.IConstruction
@@ -343,15 +344,31 @@ internal class CityPortraitView(private val screen: CityScreen, private val shee
         }
     }
 
-    /** Actions under a selected row, one line per group so nothing runs off the sheet */
+    /** Actions under a selected row, wrapped without shrinking their touch targets. */
     private fun strip(vararg lines: List<Actor>) {
         val strip = Table().left()
+        val available = contentWidth - 56f
         for (actors in lines.filter { it.isNotEmpty() }) {
-            val line = Table().left()
-            for (actor in actors) line.add(actor).height(48f).padRight(8f)
+            var line = Table().left()
+            var used = 0f
+            for (actor in actors) {
+                val preferred = (actor as? Layout)?.prefWidth ?: actor.width
+                val width = preferred.coerceAtMost(available)
+                val gap = if (used == 0f) 0f else 8f
+                if (used > 0f && used + gap + width > available) {
+                    strip.add(line).left().padBottom(8f).row()
+                    line = Table().left()
+                    used = 0f
+                }
+                if (actor is com.badlogic.gdx.scenes.scene2d.ui.Label && preferred > available) actor.wrap = true
+                val cell = line.add(actor).height(48f)
+                if (used > 0f) cell.padLeft(8f)
+                if (preferred > available) cell.width(available)
+                used += width + if (used == 0f) 0f else 8f
+            }
             strip.add(line).left().padBottom(8f).row()
         }
-        content.add(strip).width(contentWidth - 56f).padLeft(56f).left().row()
+        content.add(strip).width(available).padLeft(56f).left().row()
     }
 
     /** A 66pt list row: icon, title, detail lines, optional trailing actor, bottom rule. */
@@ -720,7 +737,10 @@ internal class CityPortraitView(private val screen: CityScreen, private val shee
     private fun buildingsTab() {
         if (cityDetailsOpen) {
             back(Tab.Buildings.label) { cityDetailsOpen = false }
-            val stats = CityStatsTable(screen)
+            val stats = CityStatsTable(screen) { building ->
+                cityDetailsOpen = false
+                openDetails(building, -1)
+            }
             // Its own list scrolls inside; give it the sheet's visible height rather than a fixed box
             stats.update((scroll.height - 72f).coerceAtLeast(340f))
             drillIn(stats)
