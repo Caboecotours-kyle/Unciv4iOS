@@ -164,13 +164,19 @@ class CityConstructionsTable(private val cityScreen: CityScreen) {
         updateButtons(construction)
         updateConstructionQueue()
         upperTable.pack()
+        updateLayout()
+        constructionsQueueTable.adjustContextMenuIndicators()
+    }
+
+    /** Reposition existing actors so an open context menu keeps its construction anchor. */
+    internal fun updateLayout() {
         // Need to reposition when height changes as setPosition's alignment does not persist, it's just a readability shortcut to calculate bottomLeft
         upperTable.setPosition(posFromEdge, stageHeight - posFromEdge - reservedTop, Align.topLeft)
         lowerTable.setPosition(posFromEdge, posFromEdge + reservedBottom, Align.bottomLeft)
         lowerTableScrollCell.maxHeight(
             (stageHeight - upperTable.height - 2 * posFromEdge - reservedTop - reservedBottom).coerceAtLeast(20f)
         )
-        constructionsQueueTable.adjustContextMenuIndicators()
+        if (cityScreen.isPortrait()) resizeAvailableConstructionsScrollPane()
     }
 
     private fun updateButtons(construction: IConstruction?) {

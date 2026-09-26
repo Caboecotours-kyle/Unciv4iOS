@@ -203,15 +203,6 @@ class CityScreen(
             // room for the city name above and the tab bar below; the picker must be filled before it can be measured
             cityPickerTable.update()
             constructionsTable.reservedTop = cityPickerTable.packIfNeeded().height + 2 * posFromEdge
-            // a selected construction or tile shows its details above the tab bar; keep the list above those too
-            tileTable.update(selectedTile)
-            selectedConstructionTable.update(selectedConstruction)
-            val details = when {
-                selectedTile != null -> tileTable.packIfNeeded().height + posFromEdge
-                selectedConstruction != null -> selectedConstructionTable.packIfNeeded().height + posFromEdge
-                else -> 0f
-            }
-            constructionsTable.reservedBottom = portraitBarHeight + 2 * posFromEdge + details
         }
         constructionsTable.isVisible = !isSpying && (!isPortrait() || portraitTab == PortraitTab.Build)
         constructionsTable.update(selectedConstruction)
@@ -252,7 +243,17 @@ class CityScreen(
         // Top center: Annex/Raze button
         updateAnnexAndRazeCityButton()
 
-        if (isPortrait()) layoutPortrait()
+        if (isPortrait()) {
+            layoutPortrait()
+            // Context-menu selection also reaches this path without rebuilding the construction list.
+            val details = when {
+                selectedTile != null -> tileTable.packIfNeeded().height + posFromEdge
+                selectedConstruction != null -> selectedConstructionTable.packIfNeeded().height + posFromEdge
+                else -> 0f
+            }
+            constructionsTable.reservedBottom = portraitBarHeight + 2 * posFromEdge + details
+            constructionsTable.updateLayout()
+        }
     }
 
     private fun buildPortraitTabBar() {
