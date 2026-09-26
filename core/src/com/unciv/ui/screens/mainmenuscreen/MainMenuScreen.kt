@@ -2,10 +2,18 @@
 
 import com.badlogic.gdx.Gdx
 import com.badlogic.gdx.graphics.Color
+import com.badlogic.gdx.graphics.Pixmap
+import com.badlogic.gdx.graphics.Texture
+import com.badlogic.gdx.graphics.Texture.TextureFilter
+import com.badlogic.gdx.graphics.g2d.NinePatch
+import com.badlogic.gdx.graphics.g2d.TextureRegion
 import com.badlogic.gdx.scenes.scene2d.Touchable
 import com.badlogic.gdx.scenes.scene2d.actions.Actions
+import com.badlogic.gdx.scenes.scene2d.ui.Image
 import com.badlogic.gdx.scenes.scene2d.ui.Stack
 import com.badlogic.gdx.scenes.scene2d.ui.Table
+import com.badlogic.gdx.scenes.scene2d.utils.TextureRegionDrawable
+import com.badlogic.gdx.scenes.scene2d.utils.NinePatchDrawable
 import com.badlogic.gdx.utils.Align
 import com.unciv.Constants
 import com.unciv.GUI
@@ -24,6 +32,7 @@ import com.unciv.models.metadata.GameSetupInfo
 import com.unciv.models.ruleset.Ruleset
 import com.unciv.models.ruleset.RulesetCache
 import com.unciv.models.tilesets.TileSetCache
+import com.unciv.models.translations.tr
 import com.unciv.ui.audio.SoundPlayer
 import com.unciv.ui.components.UncivTooltip.Companion.addTooltip
 import com.unciv.ui.components.extensions.center
@@ -66,11 +75,19 @@ import com.unciv.utils.launchOnGLThread
 import kotlinx.coroutines.Job
 import yairm210.purity.annotations.Pure
 import kotlin.math.ceil
+import kotlin.math.max
+import kotlin.math.roundToInt
+import kotlin.math.sqrt
 
 
 class MainMenuScreen: BaseScreen(), RecreateOnResize {
     private val backgroundStack = Stack()
     private val singleColumn = isCrampedPortrait()
+    private val portraitMenu = isPortrait()
+    private var portraitBackgroundTexture: Texture? = null
+    private var portraitBackground: Image? = null
+    private val portraitDecorationTextures = mutableListOf<Texture>()
+    private var portraitDisposed = false
 
     private val backgroundMapRuleset: Ruleset
     private var easterEggRuleset: Ruleset? = null  // Cache it so the next 'egg' can be found in Civilopedia
@@ -136,14 +153,17 @@ class MainMenuScreen: BaseScreen(), RecreateOnResize {
 
         if (game.settings.enableEasterEggs) {
             val holiday = HolidayDates.getHolidayByDate()
-            if (holiday != null)
+            if (holiday != null && !portraitMenu)
                 EasterEggFloatingArt(stage, holiday.name)
             val easterEggMod = EasterEggRulesets.getTodayEasterEggRuleset()
             if (easterEggMod != null)
                 easterEggRuleset = RulesetCache.getComplexRuleset(baseRuleset, listOf(easterEggMod))
         }
         backgroundMapRuleset = easterEggRuleset ?: baseRuleset
+        if (portraitMenu) initPortraitMenu() else initLandscapeMenu()
+    }
 
+    private fun initLandscapeMenu() {
         // This is an extreme safeguard - should an invalid settings.tileSet ever make it past the
         // guard in UncivGame.create, simply omit the background so the user can at least get to options
         // (let him crash when loading a game but avoid locking him out entirely)
@@ -281,6 +301,195 @@ class MainMenuScreen: BaseScreen(), RecreateOnResize {
             popup.open()
         }
         stage.addActor(versionTable)
+    }
+
+    private fun initPortraitMenu() {
+        val bounds = (stage.viewport as com.unciv.ui.screens.basescreen.SafeAreaViewport).drawingBounds
+        val unit = bounds.width / 393f
+        val texture = Texture(Gdx.files.internal("ExtraImages/MainMenuArmy.png"))
+        texture.setFilter(TextureFilter.Linear, TextureFilter.Linear)
+        portraitBackgroundTexture = texture
+        portraitBackground = Image(TextureRegionDrawable(TextureRegion(texture))).apply {
+            touchable = Touchable.disabled
+            this@MainMenuScreen.stage.addActor(this)
+        }
+        updatePortraitBackgroundBounds()
+        addPortraitTopScrim(bounds.x, bounds.y + bounds.height - 130f * unit,
+            bounds.width, 130f * unit)
+
+        val wordmarkSize = (62f * unit).roundToInt()
+        val wordmarkHeight = 76f * unit
+        val wordmarkY = bounds.y + bounds.height - (120f * unit) - wordmarkHeight
+        val shadow = "Unciv".toLabel(Color.valueOf("1c3249"), wordmarkSize, Align.center).apply {
+            setBounds(bounds.x, wordmarkY - 4f * unit, bounds.width, wordmarkHeight)
+            touchable = Touchable.disabled
+        }
+        stage.addActor(shadow)
+        val wordmark = "Unciv".toLabel(Color.WHITE, wordmarkSize, Align.center).apply {
+            setBounds(bounds.x, wordmarkY, bounds.width, wordmarkHeight)
+            touchable = Touchable.enabled
+            onClick { openPortraitExtras() }
+        }
+        stage.addActor(wordmark)
+
+        val gap = 10f * unit
+        val margin = 18f * unit
+        val menuWidth = bounds.width - margin * 2f
+        val buttonWidth = (menuWidth - gap) / 2f
+        val buttonHeight = 56f * unit
+        val firstRowY = bounds.y + 44f * unit + buttonHeight + gap
+        val leftX = bounds.x + margin
+        val rightX = leftX + buttonWidth + gap
+        val secondaryBackground = portraitPanelDrawable(16f, unit,
+            Color(16f / 255f, 31f / 255f, 47f / 255f, .9f))
+
+        portraitButton("New game", KeyboardBinding.StartNewGame, secondaryBackground) { game.pushScreen { NewGameScreen() } }
+            .apply { setBounds(leftX, firstRowY, buttonWidth, buttonHeight); this@MainMenuScreen.stage.addActor(this) }
+        portraitButton("Load game", KeyboardBinding.MainMenuLoad, secondaryBackground) { game.pushScreen { LoadGameScreen() } }
+            .apply { setBounds(rightX, firstRowY, buttonWidth, buttonHeight); this@MainMenuScreen.stage.addActor(this) }
+        portraitButton("Civilopedia", KeyboardBinding.Civilopedia, secondaryBackground) { openCivilopedia() }
+            .apply { setBounds(leftX, firstRowY - buttonHeight - gap, buttonWidth, buttonHeight); this@MainMenuScreen.stage.addActor(this) }
+        portraitButton("Settings", KeyboardBinding.MainMenuOptions, secondaryBackground) { openOptionsPopup() }
+            .apply {
+                setBounds(rightX, firstRowY - buttonHeight - gap, buttonWidth, buttonHeight)
+                onLongPress { openOptionsPopup(withDebug = true) }
+                this@MainMenuScreen.stage.addActor(this)
+            }
+
+        if (game.files.autosaves.autosaveExists()) {
+            val continueY = firstRowY + buttonHeight + gap
+            val shadow = BackgroundActor(portraitPanelDrawable(20f, unit, Color.valueOf("c9951c")), Align.center)
+            shadow.setBounds(leftX, continueY - 5f * unit, menuWidth, 72f * unit)
+            stage.addActor(shadow)
+            val continueButton = Table().apply {
+                background = portraitPanelDrawable(20f, unit, Color.valueOf("ffc93c"))
+                touchable = Touchable.enabled
+                padLeft(20f * unit)
+                padRight(20f * unit)
+            }
+            val text = Table().apply { left() }
+            text.add("Continue".toLabel(Color.valueOf("3a2a00"), (21f * unit).roundToInt())).left().row()
+            val summary = "Saved game".toLabel(Color.valueOf("6d541c"), (14f * unit).roundToInt())
+            text.add(summary).left()
+            continueButton.add(text).growX().left()
+            continueButton.add(ImageGetter.getImage("OtherIcons/ForwardArrow", Color.valueOf("3a2a00")))
+                .size(26f * unit)
+            continueButton.setBounds(leftX, continueY, menuWidth, 72f * unit)
+            continueButton.onActivation(binding = KeyboardBinding.Resume) { resumeGame() }
+            stage.addActor(continueButton)
+            setPortraitSaveSummary(summary)
+        }
+
+        globalShortcuts.add(KeyboardBinding.QuitMainMenu) {
+            if (hasOpenPopups()) closeAllPopups() else game.popScreen()
+        }
+    }
+
+    private fun portraitButton(text: String, binding: KeyboardBinding,
+                               panel: NinePatchDrawable, action: () -> Unit): Table =
+        Table().apply {
+            background = panel
+            touchable = Touchable.enabled
+            add(text.toLabel(Color.WHITE, (16f * this@MainMenuScreen.stage.width / 393f).roundToInt(), Align.center)).grow()
+            onActivation(binding = binding, action = action)
+        }
+
+    private fun setPortraitSaveSummary(label: com.badlogic.gdx.scenes.scene2d.ui.Label) {
+        if (GUI.isWorldLoaded()) {
+            val info = GUI.getWorldScreen().gameInfo
+            label.setText("${info.getCurrentPlayerCivilization().civName.tr(hideIcons = true)}, turn ${info.turns}")
+            return
+        }
+        Concurrency.run("MainMenuSaveSummary") {
+            val files = game.files
+            val summary = try {
+                val primary = files.getSave("Autosave")
+                val candidates = sequenceOf(primary).filter { it.exists() } +
+                    files.getSaves().filter { it.name().startsWith("Autosave-") }
+                        .sortedByDescending { it.lastModified() }
+                candidates.firstNotNullOfOrNull { file ->
+                    try {
+                        val preview = files.loadGamePreviewFromFile(file)
+                        "${preview.getCurrentPlayerCiv().civName.tr(hideIcons = true)}, turn ${preview.turns}"
+                    } catch (_: Exception) { null }
+                }
+            } catch (_: Exception) { null }
+            if (summary != null) launchOnGLThread {
+                if (!portraitDisposed) label.setText(summary)
+            }
+        }
+    }
+
+    private fun updatePortraitBackgroundBounds() {
+        val background = portraitBackground ?: return
+        val bounds = (stage.viewport as com.unciv.ui.screens.basescreen.SafeAreaViewport).drawingBounds
+        val texture = portraitBackgroundTexture ?: return
+        val scale = max(bounds.width / texture.width, bounds.height / texture.height)
+        val width = texture.width * scale
+        val height = texture.height * scale
+        background.setBounds(bounds.x + (bounds.width - width) / 2f,
+            bounds.y + (bounds.height - height) / 2f, width, height)
+    }
+
+    private fun portraitPanelDrawable(radiusPx: Float, unit: Float, tint: Color): NinePatchDrawable {
+        val radius = (radiusPx * unit).roundToInt().coerceAtLeast(2)
+        val side = radius * 2 + 2
+        val pixels = Pixmap(side, side, Pixmap.Format.RGBA8888)
+        pixels.blending = Pixmap.Blending.None
+        for (y in 0 until side) for (x in 0 until side) {
+            val px = x + .5f
+            val py = y + .5f
+            val dx = max(max(radius - px, px - (side - radius)), 0f)
+            val dy = max(max(radius - py, py - (side - radius)), 0f)
+            val alpha = (radius + .5f - sqrt(dx * dx + dy * dy)).coerceIn(0f, 1f)
+            pixels.drawPixel(x, y, 0xffffff00.toInt() or (alpha * 255f).roundToInt())
+        }
+        val texture = Texture(pixels)
+        pixels.dispose()
+        texture.setFilter(TextureFilter.Linear, TextureFilter.Linear)
+        portraitDecorationTextures.add(texture)
+        return NinePatchDrawable(NinePatch(TextureRegion(texture), radius, radius, radius, radius)).tint(tint)
+    }
+
+    private fun addPortraitTopScrim(x: Float, y: Float, width: Float, height: Float) {
+        val pixels = Pixmap(1, height.roundToInt(), Pixmap.Format.RGBA8888)
+        pixels.blending = Pixmap.Blending.None
+        for (row in 0 until pixels.height) {
+            val alpha = (158f * (1f - row.toFloat() / pixels.height)).roundToInt()
+            pixels.drawPixel(0, row, 0x0a162200 or alpha)
+        }
+        val texture = Texture(pixels)
+        pixels.dispose()
+        texture.setFilter(TextureFilter.Linear, TextureFilter.Linear)
+        portraitDecorationTextures.add(texture)
+        val scrim = Image(TextureRegionDrawable(TextureRegion(texture)))
+        scrim.touchable = Touchable.disabled
+        scrim.setBounds(x, y, width, height)
+        stage.addActor(scrim)
+    }
+
+    private fun openPortraitExtras() {
+        val popup = Popup(this, Popup.Scrollability.All)
+        popup.addGoodSizedLabel("More").row()
+        popup.addButton("Quickstart") { popup.close(); quickstartNewGame() }.row()
+        popup.addButton("Multiplayer") {
+            popup.close()
+            if (game.platformCapabilities.onlineMultiplayer) game.pushScreen { MultiplayerScreen() }
+            else ToastPopup(ONLINE_MULTIPLAYER_UNAVAILABLE, this)
+        }.row()
+        popup.addButton("Map editor") { popup.close(); game.pushScreen { MapEditorScreen() } }.row()
+        if (game.platformCapabilities.onlineModManagement)
+            popup.addButton("Mods") { popup.close(); game.pushScreen { ModManagementScreen() } }.row()
+        if (game.achievementsAvailable)
+            popup.addButton("Achievements") { popup.close(); game.showAchievements() }.row()
+        popup.addButton("Discord") { Gdx.net.openURI("https://discord.gg/GGGAn4SGT") }.row()
+        popup.addButton("Github") { Gdx.net.openURI(Constants.uncivRepoURL) }.row()
+        popup.addButton("About") {
+            popup.close()
+            Popup(stage).apply { add(AboutTab.asTable()).row(); addCloseButton(); open() }
+        }.row()
+        popup.addCloseButton().row()
+        popup.open()
     }
 
     private fun startBackgroundMapGeneration() {
@@ -427,6 +636,7 @@ class MainMenuScreen: BaseScreen(), RecreateOnResize {
 
     override fun render(delta: Float) {
         updateBackgroundBounds()
+        if (portraitMenu) updatePortraitBackgroundBounds()
         super.render(delta)
     }
 
@@ -436,9 +646,17 @@ class MainMenuScreen: BaseScreen(), RecreateOnResize {
     }
 
     override fun resume() {
-        startBackgroundMapGeneration()
+        if (!portraitMenu) startBackgroundMapGeneration()
+    }
+
+    override fun dispose() {
+        portraitDisposed = true
+        portraitBackgroundTexture?.dispose()
+        portraitDecorationTextures.forEach(Texture::dispose)
+        super.dispose()
     }
 
     // We contain a map...
-    override fun getShortcutDispatcherVetoer() = KeyShortcutDispatcherVeto.createTileGroupMapDispatcherVetoer()
+    override fun getShortcutDispatcherVetoer() = if (portraitMenu) null
+        else KeyShortcutDispatcherVeto.createTileGroupMapDispatcherVetoer()
 }
