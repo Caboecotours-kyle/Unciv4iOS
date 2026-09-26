@@ -14,6 +14,7 @@ import com.unciv.models.ruleset.Policy
 import com.unciv.models.ruleset.PolicyBranch
 import com.unciv.models.translations.tr
 import com.unciv.ui.components.extensions.toLabel
+import com.unciv.ui.components.input.SwipeDownToClose
 import com.unciv.ui.components.input.onClick
 import com.unciv.ui.components.widgets.AutoScrollPane
 import com.unciv.ui.images.ImageGetter
@@ -44,11 +45,14 @@ internal class PolicyPickerPortrait(
 
     init {
         background = rounded(SHEET.cpy().apply { a = .9f }, BaseScreen.skinStrings.roundedTopEdgeRectangleSmallShape)
-        add(Table().apply { add(Image(solid(Color(1f, 1f, 1f, .3f)))).size(44f, 5f) }).growX().height(16f).row()
-        add(header()).growX().row()
+        // Grab bar and header are the drag zone; swiping them down closes like ×
+        add(Table().apply { add(Image(solid(Color(1f, 1f, 1f, .3f)))).size(44f, 5f); touchable = Touchable.enabled }).growX().height(16f).row()
+        val header = header().apply { touchable = Touchable.enabled }
+        add(header).growX().row()
         add(cultureCard()).growX().pad(0f, 14f, 8f, 14f).row()
         add(body).grow().prefHeight(0f).row()
         add(railScroll).growX().height(106f)
+        addListener(SwipeDownToClose(this, header) { screen.game.popScreen() })
         refresh()
     }
 

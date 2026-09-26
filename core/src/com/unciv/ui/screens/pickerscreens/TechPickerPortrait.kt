@@ -20,6 +20,7 @@ import com.unciv.ui.components.extensions.isEnabled
 import com.unciv.ui.components.extensions.surroundWithCircle
 import com.unciv.ui.components.extensions.toLabel
 import com.unciv.ui.components.fonts.Fonts
+import com.unciv.ui.components.input.SwipeDownToClose
 import com.unciv.ui.components.input.onClick
 import com.unciv.ui.components.input.onDoubleClick
 import com.unciv.ui.components.input.onRightClick
@@ -74,12 +75,17 @@ internal class TechPickerPortrait(
         background = rounded(SHEET_GLASS, BaseScreen.skinStrings.roundedEdgeRectangleShape)
         val grab = Table()
         grab.add(Image(solid(Color.valueOf("607587")))).size(36f, 4f)
+        val header = header()
+        // Grab bar and header are the drag zone; swiping them down closes like ×
+        grab.touchable = Touchable.enabled
+        header.touchable = Touchable.enabled
         add(grab).growX().height(12f).row()
-        add(header()).growX().row()
+        add(header).growX().row()
         add(tabs).growX().row()
         add(body).grow().prefHeight(0f)
         nextUpView.add(nextUpScroll).grow().prefHeight(0f).row()
         nextUpView.add(nextUpBar).growX()
+        addListener(SwipeDownToClose(this, header) { screen.game.popScreen() })
     }
 
     /** Re-reads selection and queue from [screen]; called after every change there */

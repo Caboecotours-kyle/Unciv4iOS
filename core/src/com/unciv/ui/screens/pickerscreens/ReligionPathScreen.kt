@@ -21,6 +21,7 @@ import com.unciv.models.ruleset.unique.UniqueType
 import com.unciv.models.translations.tr
 import com.unciv.ui.components.extensions.toLabel
 import com.unciv.ui.components.input.KeyCharAndCode
+import com.unciv.ui.components.input.SwipeDownToClose
 import com.unciv.ui.components.input.onClick
 import com.unciv.ui.components.input.onClickSuppressive
 import com.unciv.ui.components.widgets.AutoScrollPane
@@ -92,8 +93,11 @@ class ReligionPathScreen(
             setScale(scale)
             setBounds(bounds.x, bounds.y, bounds.width, bounds.height - topGap)
         }
-        root.add(Table().apply { add(Image(solid(Color(1f, 1f, 1f, .3f)))).size(44f, 5f) }).growX().height(16f).row()
-        root.add(header(bounds.width)).growX().row()
+        // Grab bar and header are the drag zone; swiping them down closes like ×
+        root.add(Table().apply { add(Image(solid(Color(1f, 1f, 1f, .3f)))).size(44f, 5f); touchable = Touchable.enabled }).growX().height(16f).row()
+        val header = header(bounds.width).apply { touchable = Touchable.enabled }
+        root.add(header).growX().row()
+        root.addListener(SwipeDownToClose(root, header) { game.popScreen() })
         val tabs = Table()
         for ((title, isWorld) in listOf("Your faith" to false, "World" to true)) {
             val tab = Table().apply { touchable = Touchable.enabled }
@@ -491,11 +495,13 @@ class ReligionPathScreen(
             setBounds(bounds.x, bounds.y, bounds.width, bounds.height * .75f)
         }
         val header = Table()
+        header.touchable = Touchable.enabled
         header.add("${type.name} beliefs".toLabel(fontSize = 21)).growX().left().pad(12f)
         val close = button("×", CHIP, Color.WHITE, 48f)
         close.onClick { showingBeliefs = null; rebuild() }
         header.add(close).size(48f).pad(8f)
         sheet.add(header).growX().row()
+        sheet.addListener(SwipeDownToClose(sheet, header) { showingBeliefs = null; rebuild() })
         val list = Table().top().left().apply { pad(8f, 14f, 20f, 14f) }
         for (belief in viewingCiv.gameInfo.ruleset.beliefs.values.filter { it.type == type }) {
             val holder = manager.getReligionWithBelief(belief)

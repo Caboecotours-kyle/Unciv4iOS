@@ -16,6 +16,7 @@ import com.unciv.logic.civilization.NotificationCategory
 import com.unciv.logic.civilization.NotificationIcon
 import com.unciv.models.translations.tr
 import com.unciv.ui.components.extensions.toLabel
+import com.unciv.ui.components.input.SwipeDownToClose
 import com.unciv.ui.components.input.activate
 import com.unciv.ui.components.input.onClick
 import com.unciv.ui.components.widgets.AutoScrollPane
@@ -162,6 +163,8 @@ internal class PortraitNotificationDigest(private val world: WorldScreen) : Grou
             add(button("×") { remove() }).size(48f)
         }
         sheet.add(header).width(365f).pad(8f, 14f, 12f, 14f).row()
+        // Grab bar and header are the drag zone; swiping them down closes like ×
+        sheet.addListener(SwipeDownToClose(sheet, header) { remove() })
         val filters = Table().left()
         filters.add(button("All", category == null) { category = null; limit = 50; rebuild() }).height(48f).padRight(6f)
         for (cat in all.map { it.second.category }.distinct())

@@ -3,6 +3,7 @@ package com.unciv.ui.screens.diplomacyscreen
 import com.badlogic.gdx.graphics.Color
 import com.badlogic.gdx.graphics.Texture
 import com.badlogic.gdx.scenes.scene2d.Actor
+import com.badlogic.gdx.scenes.scene2d.Touchable
 import com.badlogic.gdx.scenes.scene2d.ui.SplitPane
 import com.badlogic.gdx.scenes.scene2d.ui.Table
 import com.badlogic.gdx.scenes.scene2d.ui.TextButton
@@ -30,6 +31,7 @@ import com.unciv.ui.components.extensions.toTextButton
 import com.unciv.ui.components.fonts.Fonts
 import com.unciv.ui.components.input.KeyCharAndCode
 import com.unciv.ui.components.input.KeyboardBinding
+import com.unciv.ui.components.input.SwipeDownToClose
 import com.unciv.ui.components.input.keyShortcuts
 import com.unciv.ui.components.input.onActivation
 import com.unciv.ui.components.input.onClick
@@ -212,7 +214,12 @@ class DiplomacyScreen(
         }
         sheet.add(ImageGetter.getWhiteDot().apply { color = Color(1f, 1f, 1f, .3f) })
             .size(44f, 5f).padTop(8f).row()
-        sheet.add(getPortraitSheetHeader(knownCivs)).growX().row()
+        val header = getPortraitSheetHeader(knownCivs)
+        sheet.add(header).growX().row()
+        // Grab bar and header are the drag zone; swiping them down closes like ×
+        sheet.touchable = Touchable.enabled
+        header.touchable = Touchable.enabled
+        sheet.addListener(SwipeDownToClose(sheet, header) { game.popScreen() })
         if (knownCivs.isEmpty()) {
             val guidance = "Explore the map to meet other civilizations and city-states.".toLabel(ink2, 17, Align.center)
             guidance.wrap = true

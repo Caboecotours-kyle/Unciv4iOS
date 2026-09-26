@@ -25,6 +25,7 @@ import com.unciv.ui.components.extensions.toLabel
 import com.unciv.ui.components.extensions.toTextButton
 import com.unciv.ui.components.input.KeyCharAndCode
 import com.unciv.ui.components.input.KeyboardBinding
+import com.unciv.ui.components.input.SwipeDownToClose
 import com.unciv.ui.components.input.onActivation
 import com.unciv.ui.components.input.keyShortcuts
 import com.unciv.ui.components.input.onChange
@@ -369,6 +370,9 @@ class CivilopediaScreen(
             setBounds(drawing.x, drawing.y, drawing.width, drawing.height)
         })
         portraitRoot.background = portraitPanel(Color.valueOf("132435"), 26f)
+        // The header with its grab bar is the drag zone; swiping it down closes like ×
+        portraitHeader.touchable = Touchable.enabled
+        portraitRoot.addListener(SwipeDownToClose(portraitRoot, portraitHeader) { game.popScreen() })
         stage.addActor(portraitRoot)
 
         // Category buttons carry these bindings in landscape; here the shelves are not always on screen
