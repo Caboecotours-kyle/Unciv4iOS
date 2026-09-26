@@ -11,7 +11,8 @@ import kotlin.math.roundToInt
 import yairm210.purity.annotations.Readonly
 
 class VictoryScreenDemographics(
-    worldScreen: WorldScreen
+    worldScreen: WorldScreen,
+    portrait: Boolean
 ) : Table(BaseScreen.skin) {
     private val playerCiv = worldScreen.selectedGameView.civView.getCiv()
 
@@ -21,7 +22,7 @@ class VictoryScreenDemographics(
         defaults().pad(5f)
         val majorCivs = worldScreen.gameInfo.civilizations.filter { it.isMajorCiv() }
 
-        if (worldScreen.isPortrait()) buildPortrait(majorCivs)
+        if (portrait) buildPortrait(majorCivs)
         else buildLandscape(majorCivs)
     }
 

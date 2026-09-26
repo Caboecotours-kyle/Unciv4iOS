@@ -12,11 +12,11 @@ import com.unciv.ui.screens.basescreen.BaseScreen
 import com.unciv.ui.screens.worldscreen.WorldScreen
 
 class VictoryScreenCivRankings(
-    worldScreen: WorldScreen
+    worldScreen: WorldScreen,
+    private val portrait: Boolean
 ) : Table(BaseScreen.skin), TabbedPager.IPageExtensions {
     private val header = Table()
     /** Portrait stacks one section per ranking instead of side-by-side columns under a shared header */
-    private val portrait = worldScreen.isPortrait()
 
     init {
         align(if (portrait) Align.top else Align.topLeft)

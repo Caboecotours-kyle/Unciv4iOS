@@ -16,9 +16,9 @@ import com.unciv.ui.screens.worldscreen.WorldScreen
 
 /** Portrait "Our status": one card per victory type, a track of its milestones that fills as you
  *  complete them, rivals as dots at their own progress, then the milestone details. */
-class VictoryScreenTracks(worldScreen: WorldScreen) : Table(BaseScreen.skin) {
+class VictoryScreenTracks(worldScreen: WorldScreen, stageWidth: Float) : Table(BaseScreen.skin) {
     private val playerCiv = worldScreen.selectedGameView.civView.getCiv()
-    private val cardWidth = worldScreen.stage.width - 2 * outerPad
+    private val cardWidth = stageWidth - 2 * outerPad
     private val trackWidth = cardWidth - 2 * cardPad
 
     init {

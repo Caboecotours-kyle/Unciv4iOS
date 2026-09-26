@@ -56,25 +56,25 @@ class VictoryScreen(
     ) {
         OurStatus('O', caption = "Our status") {
             override fun getContent(parent: VictoryScreen) =
-                if (parent.portrait) VictoryScreenTracks(parent.worldScreen) else VictoryScreenOurVictory(parent.worldScreen)
+                if (parent.portrait) VictoryScreenTracks(parent.worldScreen, parent.stage.width) else VictoryScreenOurVictory(parent.worldScreen)
             override fun isHidden(playerCiv: Civilization) = playerCiv.isSpectator()
         },
         Global('G', caption = "Global status") {
-            override fun getContent(parent: VictoryScreen) = VictoryScreenGlobalVictory(parent.worldScreen)
+            override fun getContent(parent: VictoryScreen) = VictoryScreenGlobalVictory(parent.worldScreen, parent.portrait)
         },
         Illustration('I') {
             override fun getContent(parent: VictoryScreen) = VictoryScreenIllustrations(parent, parent.worldScreen)
             override fun isHidden(playerCiv: Civilization) = !VictoryScreenIllustrations.enablePage(playerCiv)
         },
         Demographics('D', allowAsSecret = true) {
-            override fun getContent(parent: VictoryScreen) = VictoryScreenDemographics(parent.worldScreen)
+            override fun getContent(parent: VictoryScreen) = VictoryScreenDemographics(parent.worldScreen, parent.portrait)
             override fun isHidden(playerCiv: Civilization) =
                 !playerCiv.isSpectator()
                     && !(playerCiv.gameInfo.gameParameters.showCivilizationStats == true && playerCiv.gameInfo.gameParameters.showDemographics)
                     && playerCiv.gameInfo.victoryData == null
         },
         Rankings('R', allowAsSecret = true) {
-            override fun getContent(parent: VictoryScreen) = VictoryScreenCivRankings(parent.worldScreen)
+            override fun getContent(parent: VictoryScreen) = VictoryScreenCivRankings(parent.worldScreen, parent.portrait)
             override fun isHidden(playerCiv: Civilization) =
                 !playerCiv.isSpectator()
                     && !(playerCiv.gameInfo.gameParameters.showCivilizationStats == true && playerCiv.gameInfo.gameParameters.showRankings)
