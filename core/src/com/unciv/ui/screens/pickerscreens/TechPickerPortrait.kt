@@ -99,6 +99,8 @@ internal class TechPickerPortrait(
         tree?.centerOn(tech.name)
     }
 
+    fun isShowingTree() = showTree
+
     private fun showTab(treeTab: Boolean) {
         if (showTree == treeTab) return
         showTree = treeTab
@@ -151,7 +153,11 @@ internal class TechPickerPortrait(
                 pickedGoal = null
                 screen.selectTechnology(tech, queue = true)
             }
-            card.onDoubleClick(UncivSound.Paper) { screen.tryExit() }
+            card.onDoubleClick(UncivSound.Paper) {
+                pickedGoal = null
+                screen.selectTechnology(tech)
+                screen.tryExit()
+            }
             pickCards[tech.name] = card
             nextUpContent.add(card).padBottom(8f).row()
         }
@@ -471,6 +477,7 @@ internal class TechPickerPortrait(
 
         private fun select(tech: Technology, queue: Boolean = false) {
             pendingScroll = tech.name to false
+            pickedGoal = null
             screen.selectTechnology(tech, queue = queue)
         }
 
@@ -545,15 +552,17 @@ internal class TechPickerPortrait(
             add(content).left()
         }
 
-        private fun techChip(techName: String): Table {
+        private fun techChip(techName: String): Actor {
             val chip = Table()
             chip.background = rounded(CHIP, BaseScreen.skinStrings.roundedEdgeRectangleSmallShape)
             chip.pad(6f, 7f, 6f, 11f)
-            chip.touchable = Touchable.enabled
+            chip.touchable = Touchable.disabled
             chip.add(ImageGetter.getTechIconPortrait(techName, 24f)).size(26f).padRight(6f)
             chip.add(techName.toLabel(if (civTech.isResearched(techName)) INK2 else Color.WHITE, 14, hideIcons = true))
-            chip.onClick { ruleset.technologies[techName]?.let { select(it) } }
-            return chip
+            return Container(chip).prefHeight(44f).minHeight(44f).apply {
+                touchable = Touchable.enabled
+                onClick { ruleset.technologies[techName]?.let { select(it) } }
+            }
         }
 
         /** One tech on the tree: its disc with state rings and badges, the name, and a row of what it unlocks */
@@ -608,7 +617,10 @@ internal class TechPickerPortrait(
 
                 onClick { select(tech) }
                 onRightClick { select(tech, queue = true) }
-                onDoubleClick(UncivSound.Paper) { screen.tryExit() }
+                onDoubleClick(UncivSound.Paper) {
+                    select(tech)
+                    screen.tryExit()
+                }
             }
 
             /** y of the disc's top edge in the canvas */

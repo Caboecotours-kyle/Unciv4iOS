@@ -21,6 +21,7 @@ import com.unciv.ui.components.NonTransformGroup
 import com.unciv.ui.components.extensions.colorFromRGB
 import com.unciv.ui.components.extensions.darken
 import com.unciv.ui.components.extensions.disable
+import com.unciv.ui.components.extensions.isEnabled
 import com.unciv.ui.components.extensions.surroundWithCircle
 import com.unciv.ui.components.extensions.toLabel
 import com.unciv.ui.components.fonts.Fonts
@@ -33,6 +34,8 @@ import com.unciv.ui.components.input.onRightClick
 import com.unciv.ui.components.input.onDoubleClick
 import com.unciv.ui.images.ImageGetter
 import com.unciv.ui.popups.ToastPopup
+import com.unciv.ui.screens.basescreen.BaseScreen
+import com.unciv.ui.screens.basescreen.RecreateOnResize
 import com.unciv.utils.Concurrency
 import yairm210.purity.annotations.Readonly
 import kotlin.math.abs
@@ -41,7 +44,8 @@ import kotlin.math.abs
 class TechPickerScreen(
     internal val civInfo: Civilization,
     centerOnTech: Technology? = null,
-) : PickerScreen() {
+    private val startOnTree: Boolean? = null,
+) : PickerScreen(), RecreateOnResize {
 
     internal val freeTechPick: Boolean = civInfo.tech.freeTechs != 0
     private val ruleset = civInfo.gameInfo.ruleset
@@ -141,7 +145,7 @@ class TechPickerScreen(
         rightSideButton.setText(if (freeTechPick) "Pick a free tech".tr() else "Pick a tech".tr())
 
         val safeArea = safeAreaBoundsInWorld()
-        val view = TechPickerPortrait(this, safeArea.width, startOnTree = centerOnTech != null)
+        val view = TechPickerPortrait(this, safeArea.width, startOnTree = startOnTree ?: (centerOnTech != null))
         view.setBounds(safeArea.x, safeArea.y, safeArea.width, safeArea.height)
         stage.addActor(view)
         portraitView = view
@@ -169,10 +173,10 @@ class TechPickerScreen(
 
     internal fun tryExit() {
         if (freeTechPick) {
-            val freeTech = selectedTech!!.name
+            val freeTech = selectedTech?.name ?: return
             // More evil people fast-clicking to cheat - #4977
             if (!researchableTechs.contains(freeTech)) return
-            civTech.getFreeTechnology(selectedTech!!.name)
+            civTech.getFreeTechnology(freeTech)
         }
         else civTech.techsToResearch = tempTechsToResearch
 
@@ -181,6 +185,18 @@ class TechPickerScreen(
         game.settings.addCompletedTutorialTask("Pick technology")
 
         game.popScreen()
+    }
+
+    override fun recreate(): BaseScreen {
+        val newScreen = TechPickerScreen(civInfo, startOnTree = portraitView?.isShowingTree() ?: (selectedTech != null))
+        newScreen.selectedTech = selectedTech
+        newScreen.tempTechsToResearch = ArrayList(tempTechsToResearch)
+        newScreen.descriptionLabel.setText(selectedTech?.getDescription(civInfo))
+        newScreen.rightSideButton.setText(rightSideButton.text.toString())
+        newScreen.setRightSideButtonEnabled(rightSideButton.isEnabled)
+        newScreen.setButtonsInfo()
+        selectedTech?.let { newScreen.centerOnTechnology(it) }
+        return newScreen
     }
 
     private fun createTechTable() {
