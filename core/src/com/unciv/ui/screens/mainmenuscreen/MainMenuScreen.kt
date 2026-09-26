@@ -1,6 +1,6 @@
 ﻿package com.unciv.ui.screens.mainmenuscreen
 
-import com.unciv.ui.screens.basescreen.portraitCanvasBounds
+import com.unciv.ui.screens.basescreen.SafeAreaViewport
 
 import com.badlogic.gdx.Gdx
 import com.badlogic.gdx.graphics.Color
@@ -72,6 +72,7 @@ import com.unciv.ui.screens.worldscreen.BackgroundActor
 import com.unciv.ui.screens.worldscreen.WorldScreen
 import com.unciv.ui.screens.worldscreen.mainmenu.WorldScreenMenuPopup
 import com.unciv.utils.Concurrency
+import com.unciv.utils.Display
 import com.unciv.utils.ONLINE_MULTIPLAYER_UNAVAILABLE
 import com.unciv.utils.launchOnGLThread
 import kotlinx.coroutines.Job
@@ -141,6 +142,7 @@ class MainMenuScreen: BaseScreen(), RecreateOnResize {
 
     init {
         SoundPlayer.initializeForMainMenu()
+        if (portraitMenu) updatePortraitViewport()
 
         val background = skinStrings.getUiBackground("MainMenuScreen/Background", tintColor = clearColor)
         backgroundStack.add(BackgroundActor(background, Align.center))
@@ -306,7 +308,7 @@ class MainMenuScreen: BaseScreen(), RecreateOnResize {
     }
 
     private fun initPortraitMenu() {
-        val bounds = portraitCanvasBounds()
+        val bounds = (stage.viewport as SafeAreaViewport).drawingBounds
         val unit = bounds.width / 393f
         val texture = Texture(Gdx.files.internal("ExtraImages/MainMenuArmy.png"))
         texture.setFilter(TextureFilter.Linear, TextureFilter.Linear)
@@ -424,7 +426,7 @@ class MainMenuScreen: BaseScreen(), RecreateOnResize {
 
     private fun updatePortraitBackgroundBounds() {
         val background = portraitBackground ?: return
-        val bounds = portraitCanvasBounds()
+        val bounds = (stage.viewport as SafeAreaViewport).drawingBounds
         val texture = portraitBackgroundTexture ?: return
         val scale = max(bounds.width / texture.width, bounds.height / texture.height)
         val width = texture.width * scale
@@ -632,11 +634,18 @@ class MainMenuScreen: BaseScreen(), RecreateOnResize {
     }
 
     private fun updateBackgroundBounds() {
-        val bounds = (stage.viewport as com.unciv.ui.screens.basescreen.SafeAreaViewport).drawingBounds
+        val bounds = (stage.viewport as SafeAreaViewport).drawingBounds
         backgroundStack.setBounds(bounds.x, bounds.y, bounds.width, bounds.height)
     }
 
+    private fun updatePortraitViewport() {
+        // Menu art fills the phone while controls and popups retain safe-area stage coordinates.
+        (stage.viewport as SafeAreaViewport).updateDisplay(
+            Gdx.graphics.width, Gdx.graphics.height, Display.getSafeInsets(), edgeToEdge = true)
+    }
+
     override fun render(delta: Float) {
+        if (portraitMenu) updatePortraitViewport()
         updateBackgroundBounds()
         if (portraitMenu) updatePortraitBackgroundBounds()
         super.render(delta)
