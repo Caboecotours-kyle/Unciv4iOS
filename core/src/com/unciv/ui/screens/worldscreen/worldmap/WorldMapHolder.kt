@@ -698,9 +698,11 @@ class WorldMapHolder(
         // use scaleX instead of zoomScale itself, because zoomScale might have been outside minZoom..maxZoom and thus not applied
         val clampedCityButtonZoom = 1 / scaleX
         if (currentTileSetStrings.mapVerticalScale != 1f) {
+            val pointsToWorld = worldScreen.stage.viewport.camera.viewportWidth / worldScreen.stage.viewport.screenWidth
+            val cityScale = clampedCityButtonZoom * pointsToWorld
             for (tileGroup in tileGroups.values) {
-                tileGroup.layerCityButton.setButtonTransform(scaleX != 1f && tileGroup.layerCityButton.hasButton())
-                tileGroup.layerCityButton.setButtonScale(clampedCityButtonZoom)
+                tileGroup.layerCityButton.setButtonTransform(cityScale != 1f && tileGroup.layerCityButton.hasButton())
+                tileGroup.layerCityButton.setButtonScale(cityScale)
             }
             return
         }
