@@ -33,6 +33,8 @@ import com.unciv.ui.components.extensions.toTextButton
 import com.unciv.ui.components.input.KeyCharAndCode
 import com.unciv.ui.components.input.onClick
 import com.unciv.ui.images.ImageGetter
+import com.unciv.ui.images.PortraitStatIcons
+import com.unciv.ui.popups.Popup
 import com.unciv.ui.screens.basescreen.BaseScreen
 import com.unciv.ui.screens.basescreen.RecreateOnResize
 import com.unciv.ui.screens.newgamescreen.NewGameScreen
@@ -41,6 +43,7 @@ import com.unciv.ui.screens.pickerscreens.PortraitMapBackdrop
 import com.unciv.ui.screens.basescreen.portraitCanvasBounds
 import com.unciv.ui.screens.worldscreen.WorldScreen
 import kotlin.math.sqrt
+import kotlin.math.roundToInt
 import com.unciv.ui.components.widgets.AutoScrollPane as ScrollPane
 import yairm210.purity.annotations.Readonly
 import java.util.EnumSet
@@ -52,10 +55,11 @@ class VictoryScreen(
     private val music get() = UncivGame.Current.musicController
     private val gameInfo = worldScreen.gameInfo
     private val playerCiv = worldScreen.selectedGameView.civView.getCiv()
+    private val portraitStats = PortraitStatIcons()
     private var endPortraitTexture: Texture? = null
     private var portraitBackdrop: PortraitMapBackdrop? = null
     private var endBackdrop: PortraitMapBackdrop? = null
-    /** Portrait wraps the tabs into rows, shows victory tracks, and moves the game info to the bottom bar */
+    /** Portrait uses compact victory tracks with the other result pages in a secondary chooser. */
     private val portrait = isPortrait()
     private val tabs = TabbedPager(separatorColor = Color.WHITE, shortcutScreen = this,
         wrapHeaderWidth = if (portrait) 393f else 0f)
@@ -211,13 +215,25 @@ class VictoryScreen(
         val stats = Table().apply {
             background = skinStrings.getUiBackground("VictoryScreen/PortraitStats",
                 tintColor = Color(0.06f, .13f, .2f, .88f))
+            pad(4f)
         }
-        stats.add("Turn ${gameInfo.turns} of ${gameInfo.gameParameters.maxTurns}"
-            .toLabel(Color.WHITE, (13f * scale).toInt())).left().padLeft(12f * scale)
-        stats.add(gameInfo.difficulty.toLabel(Color.WHITE, (13f * scale).toInt())).expandX()
-        stats.add(gameInfo.gameParameters.speed.toLabel(Color.WHITE, (13f * scale).toInt()))
-            .right().padRight(12f * scale)
-        chrome.add(stats).width(width - 24f * scale).height(40f * scale).padBottom(8f * scale)
+        fun stat(name: String, value: String, secondary: String? = null) {
+            val item = Table()
+            item.add(portraitStats.image(name)).size(18f).padRight(2f)
+            item.add(value.toLabel(Color.WHITE, 14))
+            if (secondary != null) item.add(secondary.toLabel(Color.valueOf("b7cde0"), 11))
+                .padLeft(2f)
+            stats.add(item).expandX().fillX()
+        }
+        val nextTurn = playerCiv.stats.statsForNextTurn
+        fun signed(value: Int) = if (value >= 0) "+$value" else value.toString()
+        stat("Gold", playerCiv.gold.toString(), signed(nextTurn.gold.roundToInt()))
+        stat("Science", signed(nextTurn.science.roundToInt()))
+        stat("Culture", playerCiv.policies.storedCulture.toString(),
+            "/${playerCiv.policies.getCultureNeededForNextPolicy()}")
+        stat("Happiness", playerCiv.getHappiness().toString())
+        stats.add("T${gameInfo.turns}".toLabel(Color.WHITE, 14)).padRight(5f)
+        chrome.add(stats).width(width - 12f * scale).height(48f * scale).padBottom(8f * scale)
         shell.add(chrome).width(width).height(120f * scale).row()
         val sheet = Table().apply {
             background = skinStrings.getUiBackground("VictoryScreen/PortraitSheet",
@@ -225,8 +241,31 @@ class VictoryScreen(
             top()
         }
         val header = Table()
-        header.add("Victory".toLabel(Color.WHITE, (25f * scale).toInt())).growX().left()
-            .padLeft(16f * scale)
+        val title = "Victory".toLabel(Color.WHITE, (25f * scale).toInt())
+        val titles = Table().apply { left() }
+        titles.add(title).left().row()
+        titles.add("Turn ${gameInfo.turns} of ${gameInfo.gameParameters.maxTurns} · ${gameInfo.difficulty} · ${gameInfo.gameParameters.speed}"
+            .toLabel(Color.valueOf("b7cde0"), 12).apply { wrap = true }).width(205f).left().row()
+        header.add(titles).width(205f).growX().left().padLeft(16f * scale)
+        val viewsButton = "Views".toTextButton().apply {
+            style = TextButton.TextButtonStyle(style).apply {
+                up = skinStrings.getUiBackground("VictoryScreen/PortraitViews",
+                    skinStrings.roundedEdgeRectangleMidShape, Color.valueOf("20394f"))
+                down = up
+                fontColor = Color.valueOf("b5c9d9")
+            }
+        }
+        viewsButton.onClick {
+            val popup = Popup(this@VictoryScreen, Popup.Scrollability.All, .82f)
+            for (index in 0 until tabs.pageCount()) {
+                val caption = tabs.getPageButton(index).name
+                val option = caption.toTextButton()
+                option.onClick { tabs.selectPage(index); popup.close() }
+                popup.add(option).width(260f).height(48f).padBottom(4f).row()
+            }
+            popup.open()
+        }
+        header.add(viewsButton).size(88f, 48f).padRight(8f)
         val exit = ImageGetter.getImage("OtherIcons/Close").apply {
             color = Color.valueOf("142536")
             setSize(24f * scale, 24f * scale)
@@ -236,7 +275,13 @@ class VictoryScreen(
             game.popScreen()
         }
         header.add(exit).size(48f * scale).padRight(14f * scale)
-        sheet.add(header).width(width).height(64f * scale).row()
+        sheet.add(header).width(width).height(72f * scale).row()
+        tabs.headerScroll.isVisible = false
+        tabs.getCell(tabs.headerScroll).height(0f).minHeight(0f).maxHeight(0f).pad(0f)
+        tabs.invalidateHierarchy()
+        tabs.onSelection { _, caption, _ -> title.setText(if (caption == "Our status") "Victory" else caption) }
+        if (tabs.activePage >= 0) title.setText(tabs.getPageButton(tabs.activePage).name
+            .let { if (it == "Our status") "Victory" else it })
         sheet.add(tabs).grow()
         shell.add(sheet).grow()
         stage.addActor(shell)
@@ -424,6 +469,7 @@ class VictoryScreen(
 
     override fun dispose() {
         tabs.selectPage(-1)  // Tells Replay page to stop its timer
+        portraitStats.dispose()
         endPortraitTexture?.dispose()
         endBackdrop?.dispose()
         portraitBackdrop?.dispose()

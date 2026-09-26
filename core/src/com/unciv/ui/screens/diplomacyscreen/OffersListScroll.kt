@@ -1,6 +1,8 @@
 package com.unciv.ui.screens.diplomacyscreen
 
 import com.badlogic.gdx.graphics.Color
+import com.badlogic.gdx.scenes.scene2d.Actor
+import com.badlogic.gdx.scenes.scene2d.ui.Button
 import com.badlogic.gdx.scenes.scene2d.ui.Table
 import com.badlogic.gdx.utils.Align
 import com.unciv.Constants
@@ -125,6 +127,14 @@ class OffersListScroll(
                     labelCell.pad(5f).grow()
                     if (portraitTray) {
                         clearChildren()
+                        style = Button.ButtonStyle(style).apply {
+                            up = BaseScreen.skinStrings.getUiBackground("DiplomacyScreen/TradeToken",
+                                BaseScreen.skinStrings.roundedEdgeRectangleMidShape, colorFromRGB(31, 53, 72))
+                            down = BaseScreen.skinStrings.getUiBackground("DiplomacyScreen/TradeTokenDown",
+                                BaseScreen.skinStrings.roundedEdgeRectangleMidShape, colorFromRGB(43, 77, 105))
+                        }
+                        color = Color.WHITE
+                        pad(3f * scale)
                         label.wrap = true
                         label.setFontScale(13f * scale / Fonts.ORIGINAL_FONT_SIZE)
                         if (tradeIcon != null) add(tradeIcon).size(27f * scale).padBottom(2f * scale).row()
@@ -147,6 +157,8 @@ class OffersListScroll(
                         Treaty -> Int.MAX_VALUE
                         else -> 1
                     }
+                val uniqueResource = offerType in listOf(Luxury_Resource, Strategic_Resource) &&
+                    otherSideOffers.all { it.type != offer.type || it.name != offer.name || it.amount < 0 }
 
                 if (offer.isTradable() && offer.name != Constants.peaceTreaty // can't disable peace treaty!
                     && (offer.name != Constants.researchAgreement // If we have a research agreement make sure the total gold of both Civs is higher than the total cost
@@ -154,9 +166,7 @@ class OffersListScroll(
                         || (ourCiv.gold + theirCiv.gold > ourCiv.getResearchAgreementCost(theirCiv) * 2))) {
 
                     // highlight unique suggestions
-                    if (offerType in listOf(Luxury_Resource, Strategic_Resource)
-                            && otherSideOffers.all { it.type != offer.type || it.name != offer.name || it.amount < 0}) // we can 'have' negative amounts of resources 
-                        tradeButton.color = Color.GREEN
+                    if (uniqueResource && !portraitTray) tradeButton.color = Color.GREEN
 
                     tradeButton.onClick {
                         val amountTransferred = min(amountPerClick, offer.amount)
@@ -167,7 +177,15 @@ class OffersListScroll(
 
 
                 if (portraitTray) {
-                    trayColumn.add(tradeButton).width(80f * scale).height(80f * scale)
+                    val token: Actor = if (uniqueResource)
+                        Table(BaseScreen.skin).apply {
+                            background = BaseScreen.skinStrings.getUiBackground("DiplomacyScreen/UniqueTradeToken",
+                                BaseScreen.skinStrings.roundedEdgeRectangleMidShape, Color.GOLD)
+                            pad(2f * scale)
+                            add(tradeButton).grow()
+                        }
+                    else tradeButton
+                    trayColumn.add(token).width(80f * scale).height(80f * scale)
                         .pad(3f * scale).row()
                     trayItems++
                     if (trayItems % 2 == 0) {
