@@ -21,6 +21,39 @@ class VictoryScreenDemographics(
         defaults().pad(5f)
         val majorCivs = worldScreen.gameInfo.civilizations.filter { it.isMajorCiv() }
 
+        if (worldScreen.isPortrait()) buildPortrait(majorCivs)
+        else buildLandscape(majorCivs)
+    }
+
+    /** One block per demographic, its rank lines listed below it, so the page fits a phone's width */
+    private fun buildPortrait(majorCivs: List<Civilization>) {
+        top()
+        for (category in RankingType.filteredEntries(playerCiv.gameInfo.gameParameters)) {
+            val title = Table()
+            category.getImage()?.let { title.add(it).size(Constants.defaultFontSize.toFloat()).padRight(5f) }
+            title.add(category.label.toLabel(fontSize = 20))
+            add(title).colspan(2).padTop(15f).row()
+            addSeparator().colspan(2).fillX()
+
+            val sorted = majorCivs.filter { it.isAlive() || it == playerCiv }
+                .map { VictoryScreen.CivWithStat(it, it.getStatForDemographics(category)) }
+                .sortedByDescending { it.value }
+            for (rankLabel in RankLabels.entries) {
+                val value = when (rankLabel) {
+                    RankLabels.Rank -> (sorted.indexOfFirst { it.civ == playerCiv } + 1).toLabel()
+                    RankLabels.Value -> sorted.firstOrNull { it.civ == playerCiv && playerCiv.isMajorCiv() && !playerCiv.isDefeated() }
+                        ?.let { VictoryScreenCivGroup(it, playerCiv) } ?: continue
+                    RankLabels.Best -> VictoryScreenCivGroup(sorted.first(), playerCiv)
+                    RankLabels.Average -> (sorted.sumOf { it.value }.toFloat() / sorted.size).roundToInt().toLabel()
+                    RankLabels.Worst -> VictoryScreenCivGroup(sorted.last(), playerCiv)
+                }
+                add(rankLabel.name.toLabel()).left()
+                add(value).left().row()
+            }
+        }
+    }
+
+    private fun buildLandscape(majorCivs: List<Civilization>) {
         buildDemographicsHeaders()
 
         for (rankLabel in RankLabels.entries)   {
