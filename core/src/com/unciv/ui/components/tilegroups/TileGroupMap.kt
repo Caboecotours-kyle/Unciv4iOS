@@ -7,13 +7,14 @@ import com.badlogic.gdx.scenes.scene2d.Actor
 import com.badlogic.gdx.scenes.scene2d.Group
 import com.badlogic.gdx.scenes.scene2d.Touchable
 import com.badlogic.gdx.utils.viewport.Viewport
-import com.unciv.logic.map.HexCoord
 import com.unciv.logic.map.HexMath
 import com.unciv.logic.map.TileMap
 import com.unciv.ui.components.tilegroups.layers.*
 import com.unciv.ui.components.widgets.ZoomableScrollPane
+import com.unciv.ui.screens.basescreen.SafeAreaViewport
 import kotlin.math.max
 import kotlin.math.min
+import kotlin.math.round
 
 
 /**
@@ -65,6 +66,8 @@ class TileGroupMap<T: TileGroup>(
     /** All top-level layer container groups in render order (bottom to top).
      *  Used by the world-wrap draw path to reposition tile-level actors. */
     private val allMapLayers: List<Group>
+    private val groundHitLayer: Group
+    private val hitPoint = Vector2()
 
     /** Cached expanded rectangle used to avoid per-frame allocation when culling borders/city buttons. */
     private val expandedCullingArea = Rectangle()
@@ -73,7 +76,18 @@ class TileGroupMap<T: TileGroup>(
      *  so world-wrap can reposition the click-target by index. */
     private val sortedTileGroups: List<T>
     val mapVerticalScale = tileGroups.firstOrNull()?.mapVerticalScale ?: 1f
-    private val groundCenterY = tileGroups.firstOrNull()?.groundCenterY ?: groupSize / 2f
+    val projection = MapProjection(mapVerticalScale)
+    private val groundCenter = Vector2(tileGroups.firstOrNull()?.groundCenterX ?: groupSize / 2f,
+        tileGroups.firstOrNull()?.groundCenterY ?: groupSize / 2f)
+    private val flatMinimum = Vector2(Float.MAX_VALUE, Float.MAX_VALUE)
+    private val flatMaximum = Vector2(-Float.MAX_VALUE, -Float.MAX_VALUE)
+    val flatWidth get() = flatMaximum.x - flatMinimum.x
+    val flatHeight get() = flatMaximum.y - flatMinimum.y
+    val wrapVector get() = projection.project(Vector2(flatWidth, 0f))
+    private val originalFlatXs: FloatArray
+    private val wrapOffsets: IntArray
+    private var lastWrapCameraX = Float.NaN
+    private lateinit var boardLayer: Group
     private val tiltedRows = ArrayList<Group>()
     private val registeredMapLayers: List<TileMapLayer<*>>
 
@@ -82,16 +96,19 @@ class TileGroupMap<T: TileGroup>(
         for (tileGroup in tileGroups) {
             val positionalVector = if (tileGroupsToUnwrap?.contains(tileGroup) == true) {
                 HexMath.hex2WorldCoords(
-                    tileGroup.tileView.getTile().tileMap.getUnwrappedPosition(tileGroup.tileView.position()), mapVerticalScale
+                    tileGroup.tileView.getTile().tileMap.getUnwrappedPosition(tileGroup.tileView.position())
                 )
             } else {
-                HexMath.hex2WorldCoords(tileGroup.tileView.position(), mapVerticalScale)
+                HexMath.hex2WorldCoords(tileGroup.tileView.position())
             }
 
-            tileGroup.setPosition(
-                positionalVector.x * 0.8f * groupSize,
-                positionalVector.y * 0.8f * groupSize
-            )
+            positionalVector.scl(MapProjection.TILE_RADIUS)
+            flatMinimum.x = min(flatMinimum.x, positionalVector.x)
+            flatMinimum.y = min(flatMinimum.y, positionalVector.y)
+            flatMaximum.x = max(flatMaximum.x, positionalVector.x + if (worldWrap) 60f else 54f)
+            flatMaximum.y = max(flatMaximum.y, positionalVector.y + groupSize)
+            projection.project(positionalVector)
+            tileGroup.setPosition(positionalVector.x, positionalVector.y)
 
             topX =
                     if (worldWrap)
@@ -138,17 +155,15 @@ class TileGroupMap<T: TileGroup>(
             override fun act(delta: Float) {}
             override fun draw(batch: Batch, parentAlpha: Float) {}
         }
+        groundHitLayer = tileGroupLayer
         val unitFlagMapLayer    = UnitFlagMapLayer(numberOfTilegroups, actable = true)
         // CityButton wrapper Groups are Touchable.childrenOnly, so the container must forward touches
         val cityButtonMapLayer  = CityButtonMapLayer(numberOfTilegroups, actable = true, touchable = true)
 
-        // Apparently the sortedByDescending is kinda memory-intensive because it needs to sort ALL the tiles
-        //  So instead we group by and then sort on the groups
-        // Profiling is a bit iffy if this is actually better but...probably?
-        val sortedGroups = tileGroups.groupBy { it.tileView.position().x + it.tileView.position().y }
-            .entries.sortedByDescending { it.key }.flatMap { it.value }
+        // Upright art behind a nearer row must be drawn first.
+        val sortedGroups = tileGroups.sortedByDescending { it.y }
 
-        val boardLayer = object : Group() {
+        boardLayer = object : Group() {
             init { isTransform = false; touchable = Touchable.disabled }
             override fun act(delta: Float) {}
         }
@@ -157,6 +172,7 @@ class TileGroupMap<T: TileGroup>(
             val row = if (mapVerticalScale != 1f) Group().apply {
                 isTransform = false
                 touchable = Touchable.disabled
+                userObject = group
                 boardLayer.addActor(this)
                 tiltedRows.add(this)
             } else null
@@ -176,6 +192,11 @@ class TileGroupMap<T: TileGroup>(
         }
 
         sortedTileGroups = sortedGroups
+        originalFlatXs = FloatArray(sortedGroups.size) { index ->
+            val group = sortedGroups[index]
+            toFlat(Vector2(group.x, group.y).add(groundCenter)).x
+        }
+        wrapOffsets = IntArray(sortedGroups.size)
 
         for (group in tileGroups) tileGroupLayer.addActor(group)
 
@@ -222,29 +243,71 @@ class TileGroupMap<T: TileGroup>(
      * Returns the positional coordinates of the TileGroupMap center.
      */
     fun getPositionalVector(stageCoords: Vector2): Vector2 {
-        val trueGroupSize = 0.8f * groupSize
-        return Vector2(bottomX, bottomY)
-            .add(stageCoords)
-            .sub(if (mapVerticalScale == 1f) groupSize / 2f else sortedTileGroups.first().groundCenterX,
-                if (mapVerticalScale == 1f) groupSize / 2f else sortedTileGroups.first().groundCenterY)
-            .scl(1f / trueGroupSize, 1f / (trueGroupSize * mapVerticalScale))
+        if (!projection.tilted) return Vector2(bottomX, bottomY).add(stageCoords)
+            .sub(groupSize / 2f, groupSize / 2f).scl(1f / MapProjection.TILE_RADIUS)
+        return projection.inverse(Vector2(stageCoords).sub(groundCenter).add(bottomX, bottomY))
+            .scl(1f / MapProjection.TILE_RADIUS)
     }
 
-    fun getFlatHeight(mapHeight: Float) = if (mapVerticalScale == 1f) mapHeight
-        else (mapHeight - groupSize) / mapVerticalScale + groupSize
+    /** Coordinates in the original flat map, including its original origin. */
+    fun toFlat(point: Vector2): Vector2 = projection.inverse(point.sub(groundCenter).add(bottomX, bottomY))
+        .sub(flatMinimum).add(groundCenter)
 
-    fun getFlatY(mapY: Float) = if (mapVerticalScale == 1f) mapY
-        else (mapY - groundCenterY) / mapVerticalScale + groundCenterY
+    fun fromFlat(point: Vector2): Vector2 = projection.project(point.sub(groundCenter).add(flatMinimum))
+        .sub(bottomX, bottomY).add(groundCenter)
 
-    fun getProjectedY(flatY: Float) = if (mapVerticalScale == 1f) flatY
-        else (flatY - groundCenterY) * mapVerticalScale + groundCenterY
+    fun flatViewport(viewport: Rectangle): Rectangle {
+        val corners = arrayOf(Vector2(viewport.x, viewport.y), Vector2(viewport.x + viewport.width, viewport.y),
+            Vector2(viewport.x, viewport.y + viewport.height), Vector2(viewport.x + viewport.width, viewport.y + viewport.height))
+        corners.forEach { toFlat(it) }
+        val left = corners.minOf { it.x }
+        val bottom = corners.minOf { it.y }
+        return Rectangle(left, bottom, corners.maxOf { it.x } - left, corners.maxOf { it.y } - bottom)
+    }
 
-    /** Screen coordinates are logical points on iOS; the camera also covers safe-area/cutout modes. */
-    fun getDefaultZoom(viewport: Viewport): Float {
-        if (mapVerticalScale == 1f) return 1f
-        val rowSpacing = HexMath.hex2WorldCoords(HexCoord(1, 0), mapVerticalScale).y * 0.8f * groupSize
-        val unitsPerPoint = viewport.camera.viewportHeight / viewport.screenHeight
-        return max(1.6f, 44f * unitsPerPoint / rowSpacing)
+    /** Raw Scene2D scale for one mock map unit per logical point at normalized zoom 1. */
+    fun portraitZoomScale(viewport: Viewport): Float =
+        MapProjection.PORTRAIT_RADIUS / MapProjection.TILE_RADIUS * portraitUnitsPerPoint(viewport)
+
+    fun portraitUnitsPerPoint(viewport: Viewport): Float =
+        ((viewport as? SafeAreaViewport)?.safeAreaBoundsInWorld?.width ?: viewport.worldWidth) / 393f
+
+    fun getDefaultZoom(viewport: Viewport): Float =
+        if (!projection.tilted) 1f else MapProjection.DEFAULT_ZOOM * portraitZoomScale(viewport)
+
+    /** Move every layer of a tile to the same periodic copy, including its ground hit target. */
+    fun updateWrappedPositions() {
+        if (!worldWrap || !projection.tilted) return
+        val camera = toFlat(Vector2(mapHolder.scrollX, mapHolder.maxY - mapHolder.scrollY))
+        if (camera.x == lastWrapCameraX) return
+        lastWrapCameraX = camera.x
+        val wrap = wrapVector
+        var changed = false
+        for ((i, group) in sortedTileGroups.withIndex()) {
+            val copies = round((camera.x - originalFlatXs[i]) / flatWidth).toInt()
+            val previous = wrapOffsets[i]
+            if (copies == previous) continue
+            wrapOffsets[i] = copies
+            val dx = (copies - previous) * wrap.x
+            val dy = (copies - previous) * wrap.y
+            for (layer in registeredMapLayers) {
+                val tileLayer = layer.tileLayers[i]
+                tileLayer.tileX += dx
+                tileLayer.tileY += dy
+                tileLayer.forEachOwnedActor { it.moveBy(dx, dy) }
+            }
+            group.moveBy(dx, dy)
+            changed = true
+        }
+        for (child in children) {
+            if (child in allMapLayers) continue
+            val flatX = toFlat(Vector2(child.x, child.y).add(groundCenter)).x
+            val copies = round((camera.x - flatX) / flatWidth)
+            if (copies != 0f) child.moveBy(copies * wrap.x, copies * wrap.y)
+        }
+        if (changed) boardLayer.children.sort { a, b ->
+            (b.userObject as TileGroup).y.compareTo((a.userObject as TileGroup).y)
+        }
     }
 
     override fun act(delta: Float) {
@@ -252,10 +315,23 @@ class TileGroupMap<T: TileGroup>(
             super.act(delta)
     }
 
+    /** An overview can keep its own direct-child city markers interactive without game actions. */
+    fun disableGameplayInput() {
+        for (layer in allMapLayers) layer.touchable = Touchable.disabled
+    }
+
     override fun hit(x: Float, y: Float, touchable: Boolean): Actor? {
-        if (shouldHit)
+        if (!shouldHit || !isVisible || touchable && this.touchable == Touchable.disabled) return null
+        if (!projection.tilted || sortedTileGroups.firstOrNull() !is WorldTileGroup)
             return super.hit(x, y, touchable)
-        return null
+        // Explicit action overlays stay interactive. Upright art and city banners do not intercept ground taps.
+        for (index in children.size - 1 downTo 0) {
+            val child = children[index]
+            if (child in allMapLayers) continue
+            child.parentToLocalCoordinates(hitPoint.set(x, y))
+            child.hit(hitPoint.x, hitPoint.y, touchable)?.let { return it }
+        }
+        return groundHitLayer.hit(x, y, touchable)
     }
 
     override fun draw(batch: Batch?, parentAlpha: Float) {
@@ -283,7 +359,8 @@ class TileGroupMap<T: TileGroup>(
             mapLayer.cullingArea = culling
         }
 
-        if (worldWrap) {
+        updateWrappedPositions()
+        if (worldWrap && !projection.tilted) {
             // Prevent flickering when zoomed out so you can see entire map
             val visibleMapWidth =
                     if (mapHolder.width > maxVisibleMapWidth) maxVisibleMapWidth

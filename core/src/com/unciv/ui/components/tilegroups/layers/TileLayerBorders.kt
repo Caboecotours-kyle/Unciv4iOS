@@ -1,6 +1,10 @@
 package com.unciv.ui.components.tilegroups.layers
 
 import com.badlogic.gdx.scenes.scene2d.ui.Image
+import com.badlogic.gdx.math.Vector2
+import com.unciv.ui.images.ImageGetter
+import com.unciv.ui.components.tilegroups.MapProjection
+import kotlin.math.atan2
 import com.unciv.view.CivView
 import com.unciv.view.ForeignCivView
 import com.unciv.view.TileView
@@ -23,10 +27,16 @@ class TileLayerBorders(tileGroup: TileGroup, size: Float) : TileLayer(tileGroup,
         }
     }
 
+    private val portraitImages = ArrayList<Image>()
+    private var portraitKey = ""
+
     private var previousTileOwner: ForeignCivView? = null
     private val borderSegments = HashMap<TileView, BorderSegment>()
 
     fun reset() {
+        portraitImages.forEach { removeOwnedActor(it) }
+        portraitImages.clear()
+        portraitKey = ""
         if (borderSegments.isNotEmpty()) {
             for (borderSegment in borderSegments.values)
                 for (image in borderSegment.images)
@@ -141,7 +151,42 @@ class TileLayerBorders(tileGroup: TileGroup, size: Float) : TileLayer(tileGroup,
 
     }
 
+    private fun updatePortraitBorders() {
+        val tileView = tileGroup.tileView
+        val owner = tileView.getOwner()
+        val neighbors = tileView.getVisibleNeighbors().filter { it.getOwner() != owner }.toList()
+        val key = "${owner?.civName}:${tileGroup.strategicView}:" + neighbors.joinToString { it.position().toString() }
+        if (key == portraitKey) return
+        reset()
+        portraitKey = key
+        if (owner == null) return
+        val tint = getGroundImage(strings.hexagon).setHexagonSize()
+        tint.color = owner.getOuterColor().cpy().apply { a = 0.12f }
+        addOwnedActor(tint)
+        portraitImages.add(tint)
+        val radius = MapProjection.TILE_RADIUS * 0.93f
+        for (neighbor in neighbors) {
+            val direction = tileView.getTileMap().getNeighborTilePositionAsWorldCoords(tileView, neighbor).nor()
+            val midpoint = Vector2(direction).scl(radius * MapProjection.COS_30)
+            val tangent = Vector2(-direction.y, direction.x).scl(radius / 2f)
+            val from = strings.projection.project(Vector2(midpoint).add(tangent))
+            val to = strings.projection.project(Vector2(midpoint).sub(tangent))
+            val delta = to.sub(from)
+            val thickness = if (tileGroup.strategicView) 7f else 3.2f * 40f / 31f
+            val line = ImageGetter.getWhiteDot().apply {
+                setSize(delta.len(), thickness)
+                setOrigin(0f, thickness / 2f)
+                setPosition(tileX + tileGroup.groundCenterX + from.x,
+                    tileY + tileGroup.groundCenterY + from.y - thickness / 2f)
+                rotation = atan2(delta.y, delta.x) * 180f / PI.toFloat()
+                color = owner.getOuterColor()
+            }
+            addOwnedActor(line)
+            portraitImages.add(line)
+        }
+    }
+
     override fun doUpdate(viewingCiv: CivView?) {
-        updateBorders()
+        if (strings.projection.tilted) updatePortraitBorders() else updateBorders()
     }
 }

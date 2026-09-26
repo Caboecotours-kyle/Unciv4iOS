@@ -16,6 +16,7 @@ class TileLayerTerrain(tileGroup: TileGroup, size: Float) : TileLayer(tileGroup,
 
     val tileBaseImages: ArrayList<Image> = ArrayList()
     private var tileImageIdentifiers = listOf<String>()
+    private var previousStrategicView = false
     private var bottomRightRiverImage: Image? = null
     private var bottomRiverImage: Image? = null
     private var bottomLeftRiverImage: Image? = null
@@ -170,11 +171,12 @@ class TileLayerTerrain(tileGroup: TileGroup, size: Float) : TileLayer(tileGroup,
     private fun updateTileImage(viewingCiv: CivView?) {
         val tileBaseImageLocations = getTileBaseImageLocations(viewingCiv)
 
-        if (tileBaseImageLocations.size == tileImageIdentifiers.size) {
+        if (previousStrategicView == tileGroup.strategicView && tileBaseImageLocations.size == tileImageIdentifiers.size) {
             if (tileBaseImageLocations.withIndex().all { (i, imageLocation) -> tileImageIdentifiers[i] == imageLocation })
                 return // All image identifiers are the same as the current ones, no need to change anything
         }
         tileImageIdentifiers = tileBaseImageLocations
+        previousStrategicView = tileGroup.strategicView
 
         // Record where old terrain images sit in TileMapLayer so new ones can be inserted at
         // the same position, preserving the isometric Z-order established at map construction.
@@ -211,7 +213,12 @@ class TileLayerTerrain(tileGroup: TileGroup, size: Float) : TileLayer(tileGroup,
             }
             val finalLocation = existingImages.random(
                 Random(tileGroup.tileView.position().hashCode() + locationToCheck.hashCode()))
-            val mapLocation = strings.getMapImageLocation(finalLocation)
+            var mapLocation = strings.getMapImageLocation(finalLocation)
+            if (tileGroup.strategicView && !baseLocation.contains("/Edges/") && baseLocation != strings.hexagon) {
+                val strategicLocation = mapLocation.replace("/Tilted/", "/Strategic/")
+                if (!ImageGetter.imageExists(strategicLocation)) continue
+                mapLocation = strategicLocation
+            }
             val groundOnly = baseLocation == strings.hexagon || baseLocation.endsWith("/" + tileGroup.tileView.baseTerrain)
                 || baseLocation.contains("/Edges/")
             val image = if (mapLocation == finalLocation && groundOnly) getGroundImage(finalLocation)

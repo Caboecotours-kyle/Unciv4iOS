@@ -55,6 +55,7 @@ class TileSetStrings(
     val tileSetConfig = TileSetCache[tileSet]?.config ?: TileSetConfig()
 
     val mapVerticalScale = if (isPortrait) tileSetConfig.mapVerticalScale.coerceIn(0.1f, 1f) else 1f
+    val projection = MapProjection(mapVerticalScale)
 
     /** Exported variants squash only the ground and keep sprite height and atlas batching. */
     fun getMapImageLocation(location: String): String {

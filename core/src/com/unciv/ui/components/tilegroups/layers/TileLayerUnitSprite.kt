@@ -103,7 +103,7 @@ class TileLayerUnitSprite(tileGroup: TileGroup, size: Float) : TileLayer(tileGro
     }
 
     override fun determineVisibility() {
-        isVisible = civilianSlot != null || militarySlot != null
+        isVisible = !tileGroup.strategicView && (civilianSlot != null || militarySlot != null)
     }
 
     fun reset() {

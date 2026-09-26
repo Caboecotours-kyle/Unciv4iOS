@@ -4,7 +4,6 @@ import com.badlogic.gdx.graphics.g2d.Batch
 import com.badlogic.gdx.scenes.scene2d.Actor
 import com.badlogic.gdx.scenes.scene2d.Touchable
 import com.badlogic.gdx.scenes.scene2d.Group
-import com.unciv.logic.map.HexMath
 import com.unciv.view.CivView
 import com.unciv.view.TileMapView
 import com.unciv.view.TileView
@@ -40,16 +39,17 @@ open class TileGroup(
     /** Cache simple but frequent calculations.
      * Honestly, I got these numbers empirically by printing `.x` and `.y` after `.center()`, and I'm not totally
      * clear on the stack of transformations that makes them work. But they are still exact ratios, AFAICT. */
-    val hexagonImageWidth = groupSize * 1.5f
+    val mapVerticalScale = tileSetStrings.mapVerticalScale
+    val groundCenterX = groupSize / 2f
+    val groundCenterY = groupSize * 1.5f * sqrt(3f) * 3f / 16f
+    val hexagonImageWidth = if (mapVerticalScale == 1f) groupSize * 1.5f else groupSize * 80f / 54f
     val hexagonImageOriginX = hexagonImageWidth / 2f
     val hexagonImageOriginY = sqrt((hexagonImageWidth / 2f).pow(2) - (hexagonImageWidth / 4f).pow(2))
-    val hexagonImagePosition = Pair(-hexagonImageOriginX / 3f, -hexagonImageOriginY / 4f)
-
-    val mapVerticalScale = tileSetStrings.mapVerticalScale
-    val groundCenterX = hexagonImagePosition.first + hexagonImageOriginX
-    val groundCenterY = hexagonImagePosition.second + hexagonImageOriginY
+    val hexagonImagePosition = Pair(groundCenterX - hexagonImageOriginX, groundCenterY - hexagonImageOriginY)
 
     var isForMapEditorIcon = false
+    var strategicView = false
+    var portraitPointScale = 1f
 
     @Suppress("LeakingThis") val layerTerrain = TileLayerTerrain(this, groupSize)
     @Suppress("LeakingThis") val layerFeatures = TileLayerFeatures(this, groupSize)
@@ -122,7 +122,7 @@ open class TileGroup(
 
         // Do not update layers if tile is not explored by viewing player
         if (viewingCiv != null && !(tileView.isForceVisible() || viewingCiv.hasExplored(tileView))) {
-            if (tileView.getVisibleNeighbors().none()) {
+            if (mapVerticalScale == 1f && tileView.getVisibleNeighbors().none()) {
                 // No explored neighbors - hide all layers
                 setAllLayersVisible(false)
             } else {
@@ -142,8 +142,8 @@ open class TileGroup(
     override fun hit(x: Float, y: Float, touchable: Boolean): Actor? {
         if (mapVerticalScale == 1f || isForMapEditorIcon) return super.hit(x, y, touchable)
         if (!isVisible || touchable && this.touchable != Touchable.enabled) return null
-        return if (HexMath.isWithinHex(x - groundCenterX, y - groundCenterY,
-                TileGroupMap.groupSize * 0.8f, mapVerticalScale)) this else null
+        return if (tileSetStrings.projection.contains(x - groundCenterX, y - groundCenterY,
+                MapProjection.TILE_RADIUS)) this else null
     }
 
     override fun draw(batch: Batch?, parentAlpha: Float) { super.draw(batch, parentAlpha) }

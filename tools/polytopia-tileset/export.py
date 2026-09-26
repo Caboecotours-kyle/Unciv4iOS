@@ -42,6 +42,12 @@ def hexpts(cy=CY, h=H):
     return [(0, cy), (W / 4, cy - h / 2), (3 * W / 4, cy - h / 2), (W, cy), (3 * W / 4, cy + h / 2), (W / 4, cy + h / 2)]
 
 
+def project(x, y):
+    # Texture Y points down. This is the same +30-degree Y-up rotation as MapProjection.
+    dx, dy = x - CX, y - CY
+    return CX + math.sqrt(3) / 2 * dx + .5 * dy, CY + MAP_VERTICAL_SCALE * (-.5 * dx + math.sqrt(3) / 2 * dy)
+
+
 def poly(pts):
     return " ".join(f"{x:.1f},{y:.1f}" for x, y in pts)
 
@@ -49,12 +55,17 @@ def poly(pts):
 def slab(name, tilted=False):
     """Two-tone hex face; land gets a darker slab edge along the lower sides."""
     lit, shade, side = TERRAIN[name]
-    top = hexpts(CY, H * MAP_VERTICAL_SCALE) if tilted else hexpts(CY - (SIDE / 2 if side else 0), H - (SIDE if side else 0))
+    top = [project(x, y) for x, y in hexpts()] if tilted else hexpts(CY - (SIDE / 2 if side else 0), H - (SIDE if side else 0))
     draw = []
     if side:
-        full = [(x, y + SIDE) for x, y in top] if tilted else hexpts()
-        draw.append(f"fill {side} polygon {poly([full[0], top[0], top[5], top[4], top[3], full[3], full[4], full[5]])}")
-    c = (CX, (top[1][1] + top[4][1]) / 2)
+        full = [(x, y + 4 * W / 62) for x, y in top] if tilted else hexpts()
+        if tilted:
+            for i in (3, 4, 5):
+                j = (i + 1) % 6
+                draw.append(f"fill {side} polygon {poly([top[i], top[j], full[j], full[i]])}")
+        else:
+            draw.append(f"fill {side} polygon {poly([full[0], top[0], top[5], top[4], top[3], full[3], full[4], full[5]])}")
+    c = (CX, CY) if tilted else (CX, (top[1][1] + top[4][1]) / 2)
     # facets facing the light (upper left): the top-left, top and bottom-left wedges
     for i in range(6):
         colour = lit if i in (0, 1, 5) else shade
@@ -91,13 +102,18 @@ def write(rel, draw=(), sprites=(), recolor=None, tilted_draw=None):
         if draw:
             transform = f"translate 0,{head} "
             if tilted and tilted_draw is None:
-                transform += f"translate 0,{CY} scale 1,{MAP_VERTICAL_SCALE} translate 0,{-CY} "
+                transform += f"translate {CX},{CY} scale 1,{MAP_VERTICAL_SCALE} rotate -30 translate {-CX},{-CY} "
             args += ["-draw", transform + " ".join(tilted_draw if tilted and tilted_draw is not None else draw)]
         for key, size, bottom, *rest in placed:
             args += place(H, key, size, bottom, cx=rest[0] if rest else CX, head=head)
         if recolor:
             args += recolor
         magick(*args, out)
+        if tilted and draw and rel.startswith("Tiles/"):
+            strategic = OUT / "Strategic" / rel
+            strategic.parent.mkdir(parents=True, exist_ok=True)
+            magick("-size", f"{W}x{H}", "xc:none", "-draw", transform.replace(f"translate 0,{head} ", "") +
+                   " ".join(tilted_draw if tilted_draw is not None else draw), strategic)
     return OUT / rel
 
 
@@ -121,9 +137,23 @@ def units():
         if not src.exists():
             print("no unit art:", u["name"]); continue
         for tilted in (False, True):
-            bottom = CY + (148 - CY) * MAP_VERTICAL_SCALE if tilted else 148
-            head = headroom(132, bottom)
-            common = ["-size", f"{W}x{H + head}", "xc:none", "(", src, "-resize", "132x132", ")", "-geometry", f"+{CX - 66:.0f}+{head + bottom - 132:.0f}", "-composite"]
+            if tilted:
+                bounds = subprocess.check_output(["magick", str(src), "-alpha", "extract", "-threshold", "9.4%",
+                                                  "-format", "%@", "info:"], text=True).strip()
+                bw, bh, x0, y0 = map(int, re.fullmatch(r"(\d+)x(\d+)\+(\d+)\+(\d+)", bounds).groups())
+                x1, y1 = x0 + bw, y0 + bh
+                sprite_h = round(36 * W / 62)
+                sprite_w = round((x1 - x0) * sprite_h / (y1 - y0))
+                head = headroom(sprite_h, CY)
+                common = ["-size", f"{W}x{H + head}", "xc:none", "-draw",
+                          f"fill rgba(0,0,0,.24) ellipse {CX},{head + CY + 5} 40,15 0,360 "
+                          f"fill none stroke #00e000 stroke-width 8 ellipse {CX},{head + CY} 37,14 0,360",
+                          "(", src, "-crop", f"{x1-x0}x{y1-y0}+{x0}+{y0}", "+repage", "-resize", f"{sprite_w}x{sprite_h}!", ")",
+                          "-geometry", f"+{CX - sprite_w / 2:.0f}+{head + CY - sprite_h:.0f}", "-composite"]
+            else:
+                bottom = 148
+                head = headroom(132, bottom)
+                common = ["-size", f"{W}x{H + head}", "xc:none", "(", src, "-resize", "132x132", ")", "-geometry", f"+{CX - 66:.0f}+{head + bottom - 132:.0f}", "-composite"]
             unit_out = OUT / ("Tilted" if tilted else "") / "Units"
             unit_out.mkdir(parents=True, exist_ok=True)
             magick(*common, "-channel", "A", "-fx", f"{GREEN} ? 0 : u", "+channel", unit_out / f"{u['name']}.png")
@@ -180,6 +210,12 @@ def main():
     edges(); n += 12
     # unexplored tiles: soft cloud white; not-visible tiles keep the terrain with no crosshatch
     write("UnexploredTile.png", [f"fill #eef3f7 polygon {poly(hexpts())}"])
+    # Cloud puffs stay upright and overlap their neighbors, concealing the tile lattice.
+    cloud = OUT / "Tilted/UnexploredTile.png"
+    magick("-size", f"{W}x{H}", "xc:none", "-draw",
+           "fill #e6edf4 ellipse 96,98 92,37 0,360 fill #f7f9fc "
+           "ellipse 45,88 43,34 0,360 ellipse 88,70 49,40 0,360 "
+           "ellipse 139,80 46,37 0,360 ellipse 104,104 68,31 0,360", cloud)
     magick("-size", "1x1", "xc:none", OUT / "CrosshatchHexagon.png")
     n += units()
     config = {

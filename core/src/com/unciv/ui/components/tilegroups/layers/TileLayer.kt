@@ -79,7 +79,10 @@ abstract class TileLayer(val tileGroup: TileGroup, val size: Float) {
         this.x = baseX + tileGroup.hexagonImagePosition.first
         this.y = baseY + tileGroup.hexagonImagePosition.second
         this.setScale(scale ?: TileSetCache.getCurrent().config.tileScale)
-        if (this is GroundImage) projectionOriginY = tileGroup.groundCenterY - tileGroup.hexagonImagePosition.second
+        if (this is GroundImage) {
+            projectionOriginX = tileGroup.groundCenterX - tileGroup.hexagonImagePosition.first
+            projectionOriginY = tileGroup.groundCenterY - tileGroup.hexagonImagePosition.second
+        }
         return this
     }
 
@@ -88,7 +91,10 @@ abstract class TileLayer(val tileGroup: TileGroup, val size: Float) {
     else GroundImage(ImageGetter.getDrawable(location), tileGroup.mapVerticalScale)
 
     fun Image.projectOnGround() {
-        if (this is GroundImage) projectionOriginY = tileGroup.groundCenterY - (y - tileY)
+        if (this is GroundImage) {
+            projectionOriginX = tileGroup.groundCenterX - (x - tileX)
+            projectionOriginY = tileGroup.groundCenterY - (y - tileY)
+        }
     }
 
     fun isViewable(viewingCiv: CivView?) = viewingCiv == null || tileGroup.isViewable(viewingCiv)

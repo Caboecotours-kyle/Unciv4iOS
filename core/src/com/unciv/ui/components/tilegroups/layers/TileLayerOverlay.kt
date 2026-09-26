@@ -20,7 +20,11 @@ class TileLayerOverlay(tileGroup: TileGroup, size: Float) : TileLayer(tileGroup,
     private fun getFog() = getGroundImage(strings.crosshatchHexagon).setHexagonSize().apply {
         color = Color.WHITE.cpy().apply { a = 0.2f }
     }
-    private fun getUnexplored() = getGroundImage(strings.unexploredTile).setHexagonSize()
+    private fun getUnexplored(): Image {
+        val location = strings.getMapImageLocation(strings.unexploredTile)
+        return (if (location != strings.unexploredTile) ImageGetter.getImage(location)
+            else getGroundImage(location)).setHexagonSize()
+    }
 
     fun showCrosshair(alpha: Float = 1f) {
         if (crosshair == null) {

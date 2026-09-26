@@ -9,6 +9,8 @@ import com.badlogic.gdx.scenes.scene2d.ui.Table
 import com.badlogic.gdx.utils.Align
 import com.badlogic.gdx.math.Interpolation
 import com.badlogic.gdx.math.Vector2
+import com.badlogic.gdx.math.Rectangle
+import com.unciv.ui.components.tilegroups.MapProjection
 import com.badlogic.gdx.scenes.scene2d.*
 import com.unciv.UncivGame
 import com.unciv.logic.city.City
@@ -35,6 +37,8 @@ import com.unciv.ui.components.tilegroups.citybutton.CityButton
 import com.unciv.ui.components.widgets.UnitIconGroup
 import com.unciv.ui.components.widgets.ZoomableScrollPane
 import com.unciv.ui.screens.basescreen.UncivStage
+import com.unciv.ui.popups.Popup
+import com.unciv.ui.screens.worldscreen.bottombar.TileInfoTable
 import com.unciv.ui.screens.worldscreen.UndoHandler.Companion.recordUndoCheckpoint
 import com.unciv.ui.screens.worldscreen.WorldScreen
 import com.unciv.ui.screens.worldscreen.bottombar.BattleTableHelpers.battleAnimationDeferred
@@ -44,9 +48,10 @@ import com.unciv.utils.launchOnGLThread
 import kotlin.math.max
 
 
-class WorldMapHolder(
+class WorldMapHolder @JvmOverloads constructor(
     internal val worldScreen: WorldScreen,
-    internal val tileMap: TileMap
+    internal val tileMap: TileMap,
+    private val gameplayInput: Boolean = true
 ) : ZoomableScrollPane(20f, 20f) {
     internal var selectedTile: TileView? = null
     val tileGroups = HashMap<TileView, WorldTileGroup>()
@@ -61,6 +66,15 @@ class WorldMapHolder(
     private lateinit var tileGroupMap: TileGroupMap<WorldTileGroup>
 
     lateinit var currentTileSetStrings: TileSetStrings
+    private var nearestPortraitUnit: MapUnitView? = null
+    private var nearestPortraitCity = false
+    private var lastPortraitTap: TileView? = null
+    private var portraitTapIndex = 0
+    private var dragUnit: MapUnitView? = null
+    private var dragTarget: TileView? = null
+    private var didDragUnit = false
+    private var dragPreviewBusy = false
+    private var dragGeneration = 0
 
     init {
         if (Gdx.app.type == Application.ApplicationType.Desktop) this.setFlingTime(0f)
@@ -88,7 +102,7 @@ class WorldMapHolder(
 
         onPanStartListener = { setActHit() }
         onPanStopListener = { setActHit() }
-        onZoomStartListener = { setActHit() }
+        onZoomStartListener = { cancelUnitDrag(); setActHit() }
         onZoomStopListener = { setActHit() }
     }
 
@@ -98,12 +112,13 @@ class WorldMapHolder(
         currentTileSetStrings = tileSetStrings
         val tileMapView = worldScreen.selectedGameView.tileMapView
         val tileGroupsNew = tileMap.values.map { WorldTileGroup(tileMapView.getTile(it), tileSetStrings) }
-        tileGroupMap = TileGroupMap(this, tileGroupsNew, continuousScrollingX)
+        continuousScrollingX = tileMap.mapParameters.worldWrap && !tileSetStrings.projection.tilted
+        tileGroupMap = TileGroupMap(this, tileGroupsNew, tileMap.mapParameters.worldWrap)
 
         tileGroups.clear()
         for (tileGroup in tileGroupsNew) tileGroups[tileGroup.tileView] = tileGroup
 
-        addClickListener()
+        if (gameplayInput) addClickListener() else tileGroupMap.disableGameplayInput()
 
         actor = tileGroupMap
         val bounds = (worldScreen.stage.viewport as com.unciv.ui.screens.basescreen.SafeAreaViewport).drawingBounds
@@ -122,15 +137,50 @@ class WorldMapHolder(
         worldScreen.shouldUpdate = true
     }
 
-    /** Flat map coordinates are shared with the minimap and must remain independent of the board tilt. */
-    fun getFlatMapHeight(height: Float) = tileGroupMap.getFlatHeight(height)
+    val flatMapWidth get() = tileGroupMap.flatWidth
+    val flatMapHeight get() = tileGroupMap.flatHeight
+    fun flatViewport(viewport: Rectangle) = tileGroupMap.flatViewport(viewport)
 
-    fun getFlatMapY(y: Float) = tileGroupMap.getFlatY(y)
-
-    fun getMapCenter() = Vector2(scrollX, getFlatMapY(maxY - scrollY))
+    fun getMapCenter() = tileGroupMap.toFlat(Vector2(scrollX, maxY - scrollY))
 
     fun restoreMapCenter(center: Vector2) {
-        scrollTo(center.x, maxY - tileGroupMap.getProjectedY(center.y), immediately = true)
+        val projected = tileGroupMap.fromFlat(Vector2(center))
+        scrollTo(projected.x, maxY - projected.y, immediately = true)
+    }
+
+    val normalizedZoom get() = if (currentTileSetStrings.projection.tilted)
+        scaleX / tileGroupMap.portraitZoomScale(worldScreen.stage.viewport) else scaleX
+
+    override fun setScrollPosition(x: Float, y: Float) {
+        if (!::tileGroupMap.isInitialized || !tileGroupMap.projection.tilted) {
+            super.setScrollPosition(x, y)
+            return
+        }
+        val flat = tileGroupMap.toFlat(Vector2(x, maxY - y))
+        if (tileMap.mapParameters.worldWrap)
+            flat.x = ((flat.x % flatMapWidth) + flatMapWidth) % flatMapWidth
+        else flat.x = flat.x.coerceIn(0f, flatMapWidth)
+        flat.y = flat.y.coerceIn(0f, flatMapHeight)
+        val projected = tileGroupMap.fromFlat(flat)
+        super.setScrollPosition(projected.x, maxY - projected.y)
+        tileGroupMap.updateWrappedPositions()
+    }
+
+    override fun panBy(deltaX: Float, deltaY: Float) {
+        if (dragUnit != null) return
+        if (!currentTileSetStrings.projection.tilted) {
+            super.panBy(deltaX, deltaY)
+            return
+        }
+        val flat = tileGroupMap.toFlat(Vector2(scrollX - deltaX, maxY - scrollY - deltaY))
+        if (!worldScreen.selectedGameView.spectatorMode) {
+            val explored = worldScreen.selectedGameView.civView.getCiv().exploredRegion
+            if (explored.shouldRecalculateCoords()) explored.calculateStageCoords(flatMapWidth, flatMapHeight)
+            if (explored.shouldRestrictX()) flat.x = flat.x.coerceIn(explored.getLeftX(), explored.getRightX())
+            flat.y = flat.y.coerceIn(flatMapHeight - explored.getBottomY(), flatMapHeight - explored.getTopY())
+        }
+        val projected = tileGroupMap.fromFlat(flat)
+        setScrollPosition(projected.x, maxY - projected.y)
     }
 
     fun setDefaultZoom() {
@@ -138,10 +188,157 @@ class WorldMapHolder(
             zoom(tileGroupMap.getDefaultZoom(worldScreen.stage.viewport))
     }
 
+    private fun groundTileAt(x: Float, y: Float): TileView? {
+        val hex = HexMath.roundHexCoords(HexMath.world2HexCoords(tileGroupMap.getPositionalVector(Vector2(x, y))))
+        val tile = tileMap.getIfTileExistsOrNull(hex.x.toInt(), hex.y.toInt()) ?: return null
+        return worldScreen.selectedGameView.tileMapView.getTile(tile)
+    }
+
+    private fun touchRowsAreSmall() = normalizedZoom * 1.5f * MapProjection.PORTRAIT_RADIUS * currentTileSetStrings.mapVerticalScale < 44f
+
+    /** Chip centers are measured in map space; the radius remains 44 logical points at every zoom. */
+    internal fun portraitTapTile(x: Float, y: Float): TileView? {
+        nearestPortraitUnit = null
+        nearestPortraitCity = false
+        if (!touchRowsAreSmall()) return groundTileAt(x, y)
+        val radius = 44f * tileGroupMap.portraitUnitsPerPoint(worldScreen.stage.viewport) / scaleX
+        var distance = radius * radius
+        var closest: TileView? = null
+        fun consider(point: Vector2, tile: TileView, unit: MapUnitView? = null, city: Boolean = false) {
+            val squared = point.dst2(x, y)
+            if (squared > distance) return
+            distance = squared
+            closest = tile
+            nearestPortraitUnit = unit
+            nearestPortraitCity = city
+        }
+        for (group in tileGroups.values) {
+            if (!group.tileView.isExplored()) continue
+            for (unit in group.tileView.getVisibleUnits()) {
+                val icon = group.layerUnitFlag.getIcon(unit) ?: continue
+                val center = icon.localToAscendantCoordinates(tileGroupMap, Vector2(icon.width / 2f, icon.height / 2f))
+                consider(center, group.tileView, unit.tryGetMapUnitView())
+            }
+            group.layerCityButton.centerInMap()?.let { consider(it, group.tileView, city = true) }
+        }
+        return closest ?: groundTileAt(x, y)
+    }
+
+    private fun showTileDetails(tileView: TileView) {
+        if (!tileView.isExplored()) return
+        selectedTile = tileView
+        Popup(worldScreen).apply {
+            name = "portrait-tile-details"
+            add(TileInfoTable(worldScreen).apply { updateTileTable(tileView) }).row()
+            addCloseButton()
+        }.open()
+    }
+
+    private fun portraitTileTapped(tileView: TileView) {
+        val table = worldScreen.bottomUnitTable
+        if (!tileView.isExplored() || table.selectedSpy != null || table.selectedUnitIsSwapping ||
+            table.selectedUnitIsConnectingRoad || table.selectedUnit?.isPreparingAirSweep() == true) {
+            onTileClicked(tileView)
+            return
+        }
+        val civ = worldScreen.selectedGameView.civView
+        val units = listOfNotNull(tileView.militaryUnit, tileView.civilianUnit)
+            .filter { civ.isOwnerOf(it) || civ.isSpectator() }.mapNotNull { it.tryGetMapUnitView() }
+        val city = tileView.owningCity()?.takeIf {
+            tileView.isCityCenter() && (civ.isOwnerOf(it) || civ.isSpectator())
+        }
+        if (units.isEmpty() && city == null && table.selectedUnit?.getTile() != tileView && table.selectedUnit != null) {
+            lastPortraitTap = null
+            onTileClicked(tileView)
+            return
+        }
+        portraitTapIndex = when {
+            nearestPortraitCity && city != null -> units.size
+            nearestPortraitUnit in units -> units.indexOf(nearestPortraitUnit)
+            lastPortraitTap == tileView -> (portraitTapIndex + 1) % (units.size + if (city != null) 2 else 1)
+            else -> 0
+        }
+        lastPortraitTap = tileView
+        onTileClicked(tileView) {
+            when {
+                portraitTapIndex < units.size -> table.selectUnit(units[portraitTapIndex])
+                portraitTapIndex == units.size && city != null -> table.citySelected(city)
+                else -> { table.selectUnit(); showTileDetails(tileView) }
+            }
+        }
+        // Portrait cycles through garrison units directly; the legacy floating picker obscures the map.
+        removeUnitActionOverlay()
+    }
+
+    private fun cancelUnitDrag() {
+        dragGeneration++
+        dragUnit = null
+        dragTarget = null
+        didDragUnit = false
+    }
+
+    private fun previewUnitDrag(destination: TileView) {
+        dragTarget = destination
+        if (dragPreviewBusy) return
+        val unit = dragUnit ?: return
+        val generation = dragGeneration
+        dragPreviewBusy = true
+        Concurrency.run("PortraitDragPath") {
+            val path = try { unit.getShortestPath(destination) } catch (_: UnitMovement.UnreachableDestinationException) { emptyList() }
+            launchOnGLThread {
+                dragPreviewBusy = false
+                if (generation != dragGeneration || dragUnit != unit) return@launchOnGLThread
+                if (dragTarget == destination) {
+                    unitMovementPaths[unit] = ArrayList(path)
+                    worldScreen.shouldUpdate = true
+                } else dragTarget?.let { previewUnitDrag(it) }
+            }
+        }
+    }
+
+    private fun zoomToMoveTarget(tileView: TileView) {
+        if (!currentTileSetStrings.projection.tilted || !touchRowsAreSmall()) return
+        zoom(tileGroupMap.getDefaultZoom(worldScreen.stage.viewport))
+        setCenterPosition(tileView.position(), immediately = true, selectUnit = false)
+    }
+
     private fun addClickListener() {
         // ActivationListener-like listener to allow us to create only one listener for the entire worldmapholder instead of one per tile
         val listener = object : UncivActorGestureListener() {
+            override fun touchDown(event: InputEvent?, x: Float, y: Float, pointer: Int, button: Int) {
+                if (!currentTileSetStrings.projection.tilted) return
+                if (pointer != 0 || button != 0) { cancelUnitDrag(); return }
+                if (!worldScreen.canChangeState) return
+                val tile = groundTileAt(x, y) ?: return
+                dragUnit = listOfNotNull(tile.militaryUnit, tile.civilianUnit)
+                    .firstOrNull { worldScreen.selectedGameView.civView.isOwnerOf(it) }?.tryGetMapUnitView()
+            }
+
+            override fun pan(event: InputEvent?, x: Float, y: Float, deltaX: Float, deltaY: Float) {
+                val unit = dragUnit ?: return
+                if (isZooming()) { cancelUnitDrag(); return }
+                if (!didDragUnit) {
+                    didDragUnit = true
+                    worldScreen.bottomUnitTable.selectUnit(unit)
+                    removeUnitActionOverlay()
+                }
+                val destination = groundTileAt(x, y) ?: return
+                if (destination != dragTarget) previewUnitDrag(destination)
+            }
+
+            override fun touchUp(event: InputEvent?, x: Float, y: Float, pointer: Int, button: Int) {
+                val unit = dragUnit
+                val target = dragTarget
+                val move = didDragUnit && event?.isTouchFocusCancel != true && !isZooming()
+                cancelUnitDrag()
+                if (move && unit != null && target != null) onTileRightClicked(unit, target)
+            }
+
             override fun tap(event: InputEvent?, x: Float, y: Float, count: Int, button: Int) {
+                if (currentTileSetStrings.projection.tilted && button == 0) {
+                    portraitTapTile(x, y)?.let { portraitTileTapped(it) }
+                    return
+                }
                 val child = tileGroupMap.hit(x, y, true) ?: return
 
                 if (child is CityButton) { // the city button can be below the tilegroup, since it moves down when first clicked
@@ -166,6 +363,12 @@ class WorldMapHolder(
                 // See #10050 - when a tap discards its actor or ascendants, Gdx can't cancel the longpress timer
                 if (actor.stage == null) return false
 
+                if (currentTileSetStrings.projection.tilted) {
+                    val tile = groundTileAt(x, y) ?: return false
+                    cancelUnitDrag()
+                    showTileDetails(tile)
+                    return true
+                }
                 if (!UncivGame.Current.settings.longTapMove) return false
                 val unit = worldScreen.bottomUnitTable.selectedUnit
                     ?: return false
@@ -184,7 +387,8 @@ class WorldMapHolder(
         tileGroupMap.addListener(listener)
     }
 
-    fun onTileClicked(tileView: TileView) {
+    @JvmOverloads
+    fun onTileClicked(tileView: TileView, portraitSelection: (() -> Unit)? = null) {
         removeUnitActionOverlay()
         selectedTile = tileView
         unitMovementPaths.clear()
@@ -196,8 +400,9 @@ class WorldMapHolder(
         val previousSelectedUnitIsSwapping = unitTable.selectedUnitIsSwapping
         val previousSelectedUnitIsConnectingRoad = unitTable.selectedUnitIsConnectingRoad
         val movingSpyOnMap = unitTable.selectedSpy != null
-        if (!movingSpyOnMap)
-            unitTable.tileSelected(tileView)
+        if (!movingSpyOnMap) {
+            if (portraitSelection != null) portraitSelection() else unitTable.tileSelected(tileView)
+        }
         val newSelectedUnit = unitTable.selectedUnit
 
         if (previousSelectedCity != null && tileView != previousSelectedCity.getCenterTile() && !movingSpyOnMap)
@@ -255,6 +460,7 @@ class WorldMapHolder(
         unitMovementPaths.clear()
         unitConnectRoadPaths.clear()
         if (!worldScreen.canChangeState) return
+        zoomToMoveTarget(tileView)
 
         // Concurrency might open up a race condition window - if worldScreen.shouldUpdate is on too
         // early, concurrent code might possibly call worldScreen.render() and then our request will be
@@ -304,6 +510,7 @@ class WorldMapHolder(
     }
 
     internal fun moveUnitToTargetTile(selectedUnits: List<MapUnitView>, targetTileView: TileView) {
+        zoomToMoveTarget(targetTileView)
         // this can take a long time, because of the unit-to-tile calculation needed, so we put it in a different thread
         // THIS PART IS REALLY ANNOYING
         // So lets say you have 2 units you want to move in the same direction, right
@@ -486,6 +693,7 @@ class WorldMapHolder(
                 val turnsToGetThere = unitsWhoCanMoveThere.values.maxOrNull()!!
 
                 if (UncivGame.Current.settings.singleTapMove && turnsToGetThere == 1) {
+                    zoomToMoveTarget(tileView)
                     // single turn instant move
                     val selectedUnitView = unitsWhoCanMoveThere.keys.first()
                     for (unitView in unitsWhoCanMoveThere.keys) {
@@ -672,7 +880,8 @@ class WorldMapHolder(
             worldScreen.bottomUnitTable.tileSelected(selectedTile!!, forceSelectUnit?.let { worldScreen.selectedGameView.getForeignMapUnitView(it).tryGetMapUnitView() })
 
         // The Y axis of [scrollY] is inverted - when at 0 we're at the top, not bottom - so we invert it back.
-        if (!scrollTo(tileGroup.x + tileGroup.width / 2, maxY - (tileGroup.y + tileGroup.width / 2), immediately))
+        val centerY = if (currentTileSetStrings.projection.tilted) tileGroup.groundCenterY else tileGroup.width / 2f
+        if (!scrollTo(tileGroup.x + tileGroup.groundCenterX, maxY - (tileGroup.y + centerY), immediately))
             return false
 
         removeAction(blinkAction) // so we don't have multiple blinks at once
@@ -690,6 +899,18 @@ class WorldMapHolder(
 
     override fun zoom(zoomScale: Float) {
         super.zoom(zoomScale)
+        if (::tileGroupMap.isInitialized && currentTileSetStrings.projection.tilted) {
+            val strategic = normalizedZoom < 0.8f
+            val pointScale = tileGroupMap.portraitUnitsPerPoint(worldScreen.stage.viewport) / scaleX
+            var changed = false
+            for (group in tileGroups.values) {
+                changed = changed || group.strategicView != strategic
+                group.strategicView = strategic
+                group.portraitPointScale = pointScale
+                group.layerUnitFlag.updatePortraitScale()
+            }
+            if (changed) worldScreen.shouldUpdate = true
+        }
         clampCityButtonSize()
     }
 
@@ -698,7 +919,7 @@ class WorldMapHolder(
         // use scaleX instead of zoomScale itself, because zoomScale might have been outside minZoom..maxZoom and thus not applied
         val clampedCityButtonZoom = 1 / scaleX
         if (currentTileSetStrings.mapVerticalScale != 1f) {
-            val pointsToWorld = worldScreen.stage.viewport.camera.viewportWidth / worldScreen.stage.viewport.screenWidth
+            val pointsToWorld = tileGroupMap.portraitUnitsPerPoint(worldScreen.stage.viewport)
             val cityScale = clampedCityButtonZoom * pointsToWorld
             for (tileGroup in tileGroups.values) {
                 tileGroup.layerCityButton.setButtonTransform(cityScale != 1f && tileGroup.layerCityButton.hasButton())
@@ -728,6 +949,12 @@ class WorldMapHolder(
     }
 
     override fun reloadMaxZoom() {
+        if (currentTileSetStrings.projection.tilted) {
+            val scale = tileGroupMap.portraitZoomScale(worldScreen.stage.viewport)
+            minZoom = 0.5f * scale
+            maxZoom = 2.2f * scale
+            return
+        }
         val maxWorldZoomOut = UncivGame.Current.settings.maxWorldZoomOut
         val mapRadius = tileMap.mapParameters.mapSize.radius
 
@@ -749,11 +976,7 @@ class WorldMapHolder(
         else
             super.reloadMaxZoom()
 
-        if (currentTileSetStrings.mapVerticalScale != 1f) {
-            // The touch-size guarantee applies to the default, not to a player's zoomed-out view.
-            minZoom = max(minZoom, 0.5f)
-            maxZoom = max(maxZoom, tileGroupMap.getDefaultZoom(worldScreen.stage.viewport))
-        }
+
     }
 
     override fun restrictX(deltaX: Float): Float {
@@ -761,7 +984,7 @@ class WorldMapHolder(
         if (worldScreen.selectedGameView.spectatorMode) return result
 
         val exploredRegion = worldScreen.selectedGameView.civView.getCiv().exploredRegion
-        if (exploredRegion.shouldRecalculateCoords()) exploredRegion.calculateStageCoords(maxX, getFlatMapHeight(maxY))
+        if (exploredRegion.shouldRecalculateCoords()) exploredRegion.calculateStageCoords(maxX, flatMapHeight)
         if (!exploredRegion.shouldRestrictX()) return result
 
         val leftX = exploredRegion.getLeftX()
@@ -780,13 +1003,10 @@ class WorldMapHolder(
         if (worldScreen.selectedGameView.spectatorMode) return result
 
         val exploredRegion = worldScreen.selectedGameView.civView.getCiv().exploredRegion
-        if (exploredRegion.shouldRecalculateCoords()) exploredRegion.calculateStageCoords(maxX, getFlatMapHeight(maxY))
+        if (exploredRegion.shouldRecalculateCoords()) exploredRegion.calculateStageCoords(maxX, flatMapHeight)
 
-        // ExploredRegion stores scroll distances from the top; projection uses map Y from the bottom.
-        fun projectScrollY(y: Float) = if (currentTileSetStrings.mapVerticalScale == 1f) y
-            else maxY - tileGroupMap.getProjectedY(getFlatMapHeight(maxY) - y)
-        val topY = projectScrollY(exploredRegion.getTopY())
-        val bottomY = projectScrollY(exploredRegion.getBottomY())
+        val topY = exploredRegion.getTopY()
+        val bottomY = exploredRegion.getBottomY()
 
         if (result < topY) result = topY
         else if (result > bottomY) result = bottomY

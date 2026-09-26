@@ -1,6 +1,7 @@
 package com.unciv.ui.components.tilegroups
 
 import com.badlogic.gdx.math.Vector2
+import com.badlogic.gdx.math.Rectangle
 import com.badlogic.gdx.scenes.scene2d.Actor
 import com.unciv.dev.FontDesktop
 import com.unciv.logic.map.HexCoord
@@ -51,6 +52,59 @@ class TiltedMapGeometryTest {
         assertNull(group.hit(group.groundCenterX, group.groundCenterY + 30f, true))
     }
 
+    @Test fun portraitLatticeMatchesPointUpMock() {
+        val view = TileMapView(game.tileMap, null)
+        val strings = TileSetStrings("Polytopia", "Polytopia", isPortrait = true)
+        val groups = game.tileMap.values.map { TileGroup(view.getTile(it), strings) }
+        val map = TileGroupMap(ZoomableScrollPane(), groups)
+        val origin = groups.first { it.tileView.position() == HexCoord.Zero }
+        val right = groups.first { it.tileView.position() == HexCoord(-1, 0) }
+        val row = groups.first { it.tileView.position() == HexCoord(0, 1) }
+        assertEquals(69.282f, right.x - origin.x, 0.001f)
+        assertEquals(0f, right.y - origin.y, 0.001f)
+        assertEquals(34.641f, row.x - origin.x, 0.001f)
+        assertEquals(36f, row.y - origin.y, 0.001f)
+        assertSame(origin, map.hit(origin.x + origin.groundCenterX,
+            origin.y + origin.groundCenterY + 23f, true))
+        assertNull(origin.hit(origin.groundCenterX + 36f, origin.groundCenterY, true))
+    }
+
+    @Test fun periodicCopyKeepsEveryLayerAndInverseHitTogether() {
+        val view = TileMapView(game.tileMap, null)
+        val strings = TileSetStrings("Polytopia", "Polytopia", isPortrait = true)
+        val groups = game.tileMap.values.map { TileGroup(view.getTile(it), strings) }
+        val holder = ZoomableScrollPane()
+        val map = TileGroupMap(holder, groups, worldWrap = true)
+        holder.actor = map
+        holder.setSize(120f, 240f)
+        holder.layout()
+        val wrap = map.wrapVector
+        assertTrue(wrap.x > 0f && wrap.y > 0f)
+        val original = groups.associateWith { Vector2(it.x, it.y) }
+        val camera = map.fromFlat(Vector2(map.flatWidth - 1f, map.flatHeight / 2f))
+        holder.setScrollPosition(camera.x, holder.maxY - camera.y)
+        map.updateWrappedPositions()
+        var moved = 0
+        for (group in groups) {
+            val delta = Vector2(group.x, group.y).sub(original.getValue(group))
+            if (delta.len2() < 0.001f) continue
+            moved++
+            assertEquals(wrap.x, delta.x, 0.001f)
+            assertEquals(wrap.y, delta.y, 0.001f)
+            val terrain = group.layerTerrain.tileBaseImages.first()
+            assertEquals(group.x + group.hexagonImagePosition.first, terrain.x, 0.001f)
+            assertEquals(group.y + group.hexagonImagePosition.second, terrain.y, 0.001f)
+            val center = Vector2(group.x + group.groundCenterX, group.y + group.groundCenterY)
+            assertSame(group, map.hit(center.x, center.y, true))
+            val flat = map.toFlat(center)
+            flat.x -= map.flatWidth
+            val originalCenter = map.fromFlat(flat)
+            assertEquals(original.getValue(group).x + group.groundCenterX, originalCenter.x, 0.001f)
+            assertEquals(original.getValue(group).y + group.groundCenterY, originalCenter.y, 0.001f)
+        }
+        assertTrue("The probe must actually cross the seam", moved > 0)
+    }
+
     @Test fun miniatureKeepsItsOwnHitBounds() {
         val view = TileMapView(game.tileMap, null)
         val strings = TileSetStrings("Polytopia", "Polytopia", isPortrait = true)
@@ -85,13 +139,23 @@ class TiltedMapGeometryTest {
         val tiltedGroups = game.tileMap.values.map { TileGroup(view.getTile(it), tiltedStrings) }
         val flat = TileGroupMap(ZoomableScrollPane(), flatGroups)
         val tilted = TileGroupMap(ZoomableScrollPane(), tiltedGroups)
-        assertEquals(flat.height, tilted.getFlatHeight(tilted.height), 0.001f)
+        assertEquals(flat.height, tilted.flatHeight, 0.001f)
+        val viewport = Rectangle(10f, 20f, 100f, 200f)
+        val originalViewport = Rectangle(viewport)
+        val flatViewport = tilted.flatViewport(viewport)
+        assertEquals(originalViewport, viewport)
+        assertTrue(flatViewport.width > viewport.width)
+        assertTrue(flatViewport.height > viewport.height)
         for ((a, b) in flatGroups.zip(tiltedGroups)) {
-            assertEquals(a.y + a.groundCenterY, tilted.getFlatY(b.y + b.groundCenterY), 0.001f)
+            val mapped = tilted.toFlat(Vector2(b.x + b.groundCenterX, b.y + b.groundCenterY))
+            assertEquals(a.x + a.groundCenterX, mapped.x, 0.001f)
+            assertEquals(a.y + a.groundCenterY, mapped.y, 0.001f)
         }
-        // Panning can stop between tiles or beyond a map edge.
-        for (y in listOf(-35f, 0f, 17.5f, flat.height / 2f, flat.height + 35f))
-            assertEquals(y, tilted.getFlatY(tilted.getProjectedY(y)), 0.001f)
+        for (point in listOf(Vector2(-35f, 17.5f), Vector2.Zero, Vector2(flat.width + 20f, flat.height + 35f))) {
+            val mapped = tilted.toFlat(tilted.fromFlat(Vector2(point)))
+            assertEquals(point.x, mapped.x, 0.001f)
+            assertEquals(point.y, mapped.y, 0.001f)
+        }
     }
 
     @Test
@@ -106,7 +170,7 @@ class TiltedMapGeometryTest {
         holder.setSize(432f, 800f)
         holder.layout()
         val a = groups.first { it.tileView.position() == HexCoord.Zero }
-        val b = groups.first { it.tileView.position() == HexCoord(1, 0) }
+        val b = groups.first { it.tileView.position() == HexCoord(0, 1) }
         for (fullLayout in listOf(false, true)) {
             for (edgeToEdge in listOf(false, true)) {
                 val viewport = SafeAreaViewport(600f, fullLayout)
@@ -114,6 +178,7 @@ class TiltedMapGeometryTest {
                 holder.setDefaultZoom(viewport)
                 val from = viewport.project(Vector2(0f, 0f))
                 val to = viewport.project(Vector2(0f, (b.y - a.y) * holder.scaleY))
+                assertEquals(44.64f, to.y - from.y, 0.01f)
                 assertTrue("Row spacing ${to.y - from.y}, full=$fullLayout, edge=$edgeToEdge", to.y - from.y >= 43.999f)
                 println("Tilt 393x852, full=$fullLayout, edge=$edgeToEdge: row=${to.y - from.y}pt, zoom=${holder.scaleY}")
                 holder.zoom(0.5f)

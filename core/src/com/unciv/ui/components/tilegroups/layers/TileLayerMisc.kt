@@ -192,7 +192,7 @@ class TileLayerResource(tileGroup: TileGroup, size: Float) : TileLayer(tileGroup
         val showResourcesAndImprovements = if (tileGroup is WorldTileGroup)
             UncivGame.Current.settings.showResourcesAndImprovements else true
 
-        updateResourceIcon(viewingCiv, showResourcesAndImprovements)
+        updateResourceIcon(viewingCiv, showResourcesAndImprovements || tileGroup.strategicView)
     }
 
     override fun determineVisibility() {

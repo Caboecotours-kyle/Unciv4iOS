@@ -1,6 +1,7 @@
 package com.unciv.ui.components.tilegroups.layers
 
 import com.badlogic.gdx.scenes.scene2d.Group
+import com.badlogic.gdx.math.Vector2
 import com.badlogic.gdx.scenes.scene2d.Touchable
 import com.unciv.view.CivView
 import com.unciv.ui.components.tilegroups.citybutton.CityButton
@@ -26,6 +27,12 @@ class TileLayerCityButton(tileGroup: TileGroup, size: Float) : TileLayer(tileGro
 
     /** Returns true when a CityButton is currently displayed on this tile. */
     fun hasButton(): Boolean = cityButton != null
+
+    fun centerInMap(): Vector2? {
+        val button = cityButton ?: return null
+        val map = actorParent?.parent ?: return null
+        return button.localToAscendantCoordinates(map, Vector2(button.width / 2f, button.height / 2f))
+    }
 
     /** Enables or disables scene-graph transform on the city button wrapper (for scaling). */
     fun setButtonTransform(isTransform: Boolean) {

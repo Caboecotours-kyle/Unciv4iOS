@@ -179,7 +179,7 @@ object BattleTableHelpers {
         val actorsToMove = getMapActorsForCombatant(attacker).toList()
 
         val attackVectorHexCoords = defender.getTile().position().minus(attacker.getTile().position())
-        val attackVectorWorldCoords = HexMath.hex2WorldCoords(attackVectorHexCoords, mapHolder.currentTileSetStrings.mapVerticalScale)
+        val attackVectorWorldCoords = mapHolder.currentTileSetStrings.projection.project(HexMath.hex2WorldCoords(attackVectorHexCoords))
             .nor()  // normalize vector to length of "1"
             .scl(moveActorsDisplacement)
 
