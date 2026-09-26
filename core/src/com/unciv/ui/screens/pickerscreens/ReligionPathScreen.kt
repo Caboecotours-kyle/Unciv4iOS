@@ -22,6 +22,7 @@ import com.unciv.models.translations.tr
 import com.unciv.ui.components.extensions.toLabel
 import com.unciv.ui.components.input.KeyCharAndCode
 import com.unciv.ui.components.input.onClick
+import com.unciv.ui.components.input.onClickSuppressive
 import com.unciv.ui.components.widgets.AutoScrollPane
 import com.unciv.ui.images.ImageGetter
 import com.unciv.ui.screens.basescreen.portraitCanvasBounds
@@ -182,7 +183,7 @@ class ReligionPathScreen(
             else religion?.getBeliefs(type)?.firstOrNull()?.name
             val icon = if (type == null) religion?.takeIf { it.isMajorReligion() }?.getIconName() ?: "Religion" else type.name
             val slot = beliefSlot(chosen ?: label, icon, chosen != null, 92f)
-            slot.onClick {
+            slot.onClickSuppressive {
                 if (founding) openBeliefPicker(true)
                 else if (type != null) showBeliefs(type)
                 else showReligionSymbols()
@@ -207,7 +208,7 @@ class ReligionPathScreen(
             val chosen = if (type == BeliefType.Follower) religion?.getBeliefs(type)?.drop(1)?.firstOrNull()?.name
                 else religion?.getBeliefs(type)?.firstOrNull()?.name
             val slot = beliefSlot(chosen ?: type.name, type.name, chosen != null, 110f)
-            slot.onClick { if (enhancing) openBeliefPicker(false) else showBeliefs(type) }
+            slot.onClickSuppressive { if (enhancing) openBeliefPicker(false) else showBeliefs(type) }
             enhanceSlots.add(slot).width(110f).height(92f).padRight(8f)
         }
         enhance.add(enhanceSlots).colspan(2).growX().pad(10f, 64f, 0f, 0f)
@@ -336,7 +337,6 @@ class ReligionPathScreen(
         })
         val cities = visibleCities()
         val byCity = mapHolder.tileGroups.values.associateBy { it.tileView.position() }
-        val incomingPressure = cities.associateWith { it.religion.getPressuresFromSurroundingCities() }
         val lines = TechTreeLines().apply {
             casingColor = SHEET
             setBounds(0f, 0f, mapGroup.width, mapGroup.height)
@@ -344,15 +344,14 @@ class ReligionPathScreen(
         for (city in cities) {
             val religion = city.religion.getMajorityReligion() ?: continue
             if (!religion.isMajorReligion()) continue
-            val destination = cities.filter { it != city && it.religion.getFollowersOf(religion.name) > 0 &&
-                incomingPressure[it]?.get(religion.name)?.let { pressure -> pressure > 0 } == true }
-                .minByOrNull { it.getCenterTile().aerialDistanceTo(city.getCenterTile()) } ?: continue
-            if (city.getCenterTile().aerialDistanceTo(destination.getCenterTile()) > 10) continue
             val from = byCity[city.location.toHexCoord()] ?: continue
-            val to = byCity[destination.location.toHexCoord()] ?: continue
-            lines.addLink(city.name, destination.name, from.x + from.groundCenterX, from.y + from.groundCenterY,
-                to.x + to.groundCenterX, to.y + to.groundCenterY, emptyList(), emptyList())
-            lines.links.last().apply { color = religionColor(religion); dashed = true; width = 3f }
+            for (destination in cities) {
+                if (city.religion.getPressureToCity(destination) <= 0) continue
+                val to = byCity[destination.location.toHexCoord()] ?: continue
+                lines.addLink(city.name, destination.name, from.x + from.groundCenterX, from.y + from.groundCenterY,
+                    to.x + to.groundCenterX, to.y + to.groundCenterY, emptyList(), emptyList())
+                lines.links.last().apply { color = religionColor(religion); dashed = true; width = 3f }
+            }
         }
         mapHolder.addActorToTileGroupMap(lines)
         for (city in cities) {
@@ -509,7 +508,12 @@ class ReligionPathScreen(
             text.add(label).width(width - 110f).left().padTop(4f)
             card.add(text).growX().left()
             list.add(card).growX().padBottom(8f).row()
-            if (holder != null) list.add(("Chosen by " + holder.foundingCiv.civName).toLabel(INK3, 12)).left().padBottom(6f).row()
+            if (holder != null) {
+                val founder = holder.foundingCiv
+                val name = if (founder == viewingCiv || viewingCiv.knows(founder)) founder.civName
+                    else "Unknown civilization"
+                list.add(("Chosen by " + name).toLabel(INK3, 12)).left().padBottom(6f).row()
+            }
         }
         sheet.add(scroll(list)).grow().prefHeight(0f).row()
         sheet.add("Choose when your Great Prophet is ready".toLabel(INK2, 14, Align.center)).growX().height(54f)
