@@ -556,7 +556,7 @@ class WorldScreen(
         bottomUnitTable.isVisible = false
         minimapWrapper.isVisible = false
         zoomController.isVisible = false
-        bottomTileInfoTable.isVisible = bottomUnitTable.selectedUnit == null && bottomUnitTable.selectedCity == null
+        bottomTileInfoTable.isVisible = false
         portraitHud.isVisible = true
         portraitHud.refresh()
         if (bottomUnitTable.selectedUnit != null && battleTable.portraitAttackButton != null) battleTable.isVisible = false
