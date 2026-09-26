@@ -1,0 +1,77 @@
+# TestFlight release for this fork (bundle com.kylepopp.unciv, team W843447LPP).
+# Credentials come from the environment, never from this repo:
+#   ASC_KEY_ID, ASC_ISSUER_ID, ASC_KEY_PATH  (App Store Connect API key)
+# Run from tools/ios-release on the Mac:  fastlane profile | fastlane upload ipa:<path>
+
+require "securerandom"
+
+BUNDLE_ID = "com.kylepopp.unciv"
+PROFILE_NAME = "Unciv Pocket App Store"
+SIGNING_IDENTITY = "Apple Distribution: kyle popp (W843447LPP)"
+
+def api_token
+  Spaceship::ConnectAPI::Token.create(key_id: ENV.fetch("ASC_KEY_ID"), issuer_id: ENV.fetch("ASC_ISSUER_ID"),
+                                      filepath: ENV.fetch("ASC_KEY_PATH"))
+end
+
+# Creates (or reuses) the App Store distribution profile and installs it where RoboVM looks.
+lane :profile do
+  Spaceship::ConnectAPI.token = api_token
+  bundle = Spaceship::ConnectAPI::BundleId.find(BUNDLE_ID) || UI.user_error!("#{BUNDLE_ID} is not registered")
+  certs = Spaceship::ConnectAPI::Certificate.all.select { |c| c.certificate_type == "DISTRIBUTION" && c.valid? }
+  identities = IO.popen(["security", "find-identity", "-v", "-p", "codesigning"], &:read)
+  cert = certs.find do |candidate|
+    fingerprint = OpenSSL::Digest::SHA1.hexdigest(Base64.decode64(candidate.certificate_content)).upcase
+    identities.lines.any? { |line| line.include?(fingerprint) && line.include?(%Q("#{SIGNING_IDENTITY}")) }
+  end
+  UI.user_error!("no valid certificate with a local private key for #{SIGNING_IDENTITY}") unless cert
+  profiles = Spaceship::ConnectAPI::Profile.all(includes: "bundleId,certificates")
+  existing = profiles.find do |p|
+    (p.name == PROFILE_NAME || p.name.start_with?("#{PROFILE_NAME} ")) && p.valid? &&
+      p.profile_type == "IOS_APP_STORE" && p.bundle_id&.id == bundle.id &&
+      p.certificates.any? { |c| c.id == cert.id }
+  end
+  profile_name = profiles.any? { |p| p.name == PROFILE_NAME } ? "#{PROFILE_NAME} #{SecureRandom.hex(6)}" : PROFILE_NAME
+  profile = existing || Spaceship::ConnectAPI::Profile.create(name: profile_name, profile_type: "IOS_APP_STORE",
+                                                              bundle_id_id: bundle.id, certificate_ids: [cert.id])
+  dir = File.expand_path("~/Library/MobileDevice/Provisioning Profiles")
+  FileUtils.mkdir_p(dir)
+  path = File.join(dir, "#{profile.uuid}.mobileprovision")
+  File.binwrite(path, Base64.decode64(profile.profile_content))
+  UI.success("Profile #{profile.name} (#{profile.uuid}) installed")
+  File.write("../profile-uuid.txt", profile.uuid) # lanes run from fastlane/; release.sh reads tools/ios-release/
+  File.write("../signing-identity.txt", OpenSSL::Digest::SHA1.hexdigest(Base64.decode64(cert.certificate_content)).upcase)
+end
+
+# Uploads a signed IPA to TestFlight without waiting for Apple's processing.
+lane :upload do |options|
+  api_key = app_store_connect_api_key(key_id: ENV.fetch("ASC_KEY_ID"), issuer_id: ENV.fetch("ASC_ISSUER_ID"),
+                                      key_filepath: ENV.fetch("ASC_KEY_PATH"))
+  upload_to_testflight(api_key: api_key, ipa: options[:ipa], skip_waiting_for_build_processing: true)
+end
+
+# Puts an App Store Connect user in the internal testing group, which gets every build without Beta App Review.
+# Usage: fastlane tester email:someone@example.com
+lane :tester do |options|
+  Spaceship::ConnectAPI.token = api_token
+  app = Spaceship::ConnectAPI::App.find(BUNDLE_ID) || UI.user_error!("no App Store Connect app for #{BUNDLE_ID}")
+  group = app.get_beta_groups.find { |g| g.name == "Internal" }
+  unless group
+    # fastlane's create_beta_group sends publicLinkLimitEnabled, which Apple rejects for internal groups
+    Spaceship::ConnectAPI.test_flight_request_client.post("v1/betaGroups", {
+      data: { type: "betaGroups", attributes: { name: "Internal", isInternalGroup: true, hasAccessToAllBuilds: true },
+              relationships: { app: { data: { type: "apps", id: app.id } } } }
+    })
+    group = app.get_beta_groups.find { |g| g.name == "Internal" }
+  end
+  email = options.fetch(:email)
+  if Spaceship::ConnectAPI::BetaTester.all(filter: { email: email, betaGroups: group.id }).any?
+    UI.message("#{email} is already in #{group.name}")
+  else
+    Spaceship::ConnectAPI.test_flight_request_client.post("v1/betaTesters", {
+      data: { type: "betaTesters", attributes: { email: email },
+              relationships: { betaGroups: { data: [{ type: "betaGroups", id: group.id }] } } }
+    })
+    UI.success("Added #{email} to #{group.name}")
+  end
+end

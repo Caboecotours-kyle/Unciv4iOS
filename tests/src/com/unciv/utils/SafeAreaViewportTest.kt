@@ -144,7 +144,7 @@ class SafeAreaViewportTest {
         val old = json().fromJson(GameSettings::class.java, "{androidCutout:true}")
         assertTrue(old.androidCutout)
         assertFalse(old.iosUseDisplayCutout)
-        assertEquals(ScreenOrientation.Landscape, old.displayOrientation)
+        assertEquals(ScreenOrientation.Portrait, old.displayOrientation)
         for (orientation in ScreenOrientation.entries) {
             old.displayOrientation = orientation
             old.iosUseDisplayCutout = true

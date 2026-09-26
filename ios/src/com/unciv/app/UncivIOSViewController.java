@@ -22,7 +22,7 @@ public class UncivIOSViewController extends IOSUIViewController {
     }
 
     @Override public UIInterfaceOrientationMask getSupportedInterfaceOrientations() {
-        return display == null ? UIInterfaceOrientationMask.Landscape : display.getOrientationMask();
+        return display == null ? UIInterfaceOrientationMask.Portrait : display.getOrientationMask();
     }
 
     @Override public void viewDidLayoutSubviews() {

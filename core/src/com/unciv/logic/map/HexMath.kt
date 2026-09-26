@@ -124,7 +124,7 @@ object HexMath {
     }
 
     @Pure
-    fun hex2WorldCoords(hexCoord: HexCoord): Vector2 {
+    fun hex2WorldCoords(hexCoord: HexCoord, verticalScale: Float = 1f): Vector2 {
         // Distance between cells = 2* normal of triangle = 2* (sqrt(3)/2) = sqrt(3)
         val xVector = getVectorByClockHour(10)
         xVector.scl(sqrt(3.0).toFloat() * hexCoord.x)
@@ -132,21 +132,30 @@ object HexMath {
         val yVector = getVectorByClockHour(2)
         yVector.scl(sqrt(3.0).toFloat() * hexCoord.y)
 
-        return xVector.add(yVector)
+        return xVector.add(yVector).also { it.y *= verticalScale }
     }
 
     @Suppress("LocalVariableName")  // clearer
     @Readonly
-    fun world2HexCoords(worldCoord: Vector2): Vector2 {
+    fun world2HexCoords(worldCoord: Vector2, verticalScale: Float = 1f): Vector2 {
         // D: diagonal, A: antidiagonal versors
         val D = getVectorByClockHour(10)
         D.scl(sqrt(3.0).toFloat())
         val A = getVectorByClockHour(2)
         A.scl(sqrt(3.0).toFloat())
         val den = D.x * A.y - D.y * A.x
-        val x = (worldCoord.x * A.y - worldCoord.y * A.x) / den
-        val y = (worldCoord.y * D.x - worldCoord.x * D.y) / den
+        val worldY = worldCoord.y / verticalScale
+        val x = (worldCoord.x * A.y - worldY * A.x) / den
+        val y = (worldY * D.x - worldCoord.x * D.y) / den
         return Vector2(x, y)
+    }
+
+    /** Ground-only hit area for a flat-top hex, centered at the origin. No sprite bounds involved. */
+    @Pure
+    fun isWithinHex(x: Float, y: Float, radius: Float, verticalScale: Float = 1f): Boolean {
+        val dx = abs(x) / radius
+        val dy = abs(y) / (radius * verticalScale)
+        return dx <= 1f && dy <= sqrt(3f) / 2f && sqrt(3f) * dx + dy <= sqrt(3f)
     }
 
     // Both x - 10 o'clock - and y - 2 o'clock - increase the row by 0.5

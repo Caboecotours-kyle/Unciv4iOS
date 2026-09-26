@@ -303,14 +303,15 @@ public class IOSApplication implements Application {
 		UIWindowScene windowScene = uiWindow.getWindowScene();
 		UIStatusBarManager statusBarManager = windowScene == null ? null : windowScene.getStatusBarManager();
 		CGRect statusBarFrame = statusBarManager == null ? uiApp.getStatusBarFrame() : statusBarManager.getStatusBarFrame();
-		double statusBarHeight = statusBarFrame.getHeight();
 		double screenWidth = screenBounds.getWidth();
 		double screenHeight = screenBounds.getHeight();
+		// Portrait art uses the full window; SafeAreaViewport keeps controls inside UIKit's safe insets.
+		double statusBarHeight = screenHeight > screenWidth ? 0.0 : statusBarFrame.getHeight();
 		if (statusBarHeight != 0.0) {
 			debug("IOSApplication", "Status bar is visible (height = " + statusBarHeight + ")");
 			screenHeight -= statusBarHeight;
 		} else {
-			debug("IOSApplication", "Status bar is not visible");
+			debug("IOSApplication", "Drawing the full window behind system UI");
 		}
 		final int offsetX = 0;
 		final int offsetY = (int)Math.round(statusBarHeight);

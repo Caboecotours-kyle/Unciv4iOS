@@ -140,8 +140,7 @@ open class ZoomableScrollPane(
         val anchor = getViewport().getCenter(Vector2())
         setBounds(bounds.x, bounds.y, bounds.width / scaleX, bounds.height / scaleY)
         validate()
-        scrollX = anchor.x
-        scrollY = maxY - anchor.y
+        setScrollPosition(anchor.x, maxY - anchor.y)
         updateVisualScroll()
         updateCulling()
         onViewportChanged()
@@ -319,8 +318,7 @@ open class ZoomableScrollPane(
                 onPanStartListener?.invoke()
             }
             setScrollbarsVisible(true)
-            scrollX = restrictX(deltaX)
-            scrollY = restrictY(deltaY)
+            panBy(deltaX, deltaY)
 
             //clamp() call is missing here but it doesn't seem to make any big difference in this case
 
@@ -332,6 +330,16 @@ open class ZoomableScrollPane(
             isPanning = false
             onPanStopListener?.invoke()
         }
+    }
+
+    /** Paired coordinates let a projected cylindrical map wrap without losing its Y offset. */
+    open fun setScrollPosition(x: Float, y: Float) {
+        scrollX = x
+        scrollY = y
+    }
+
+    open fun panBy(deltaX: Float, deltaY: Float) {
+        setScrollPosition(restrictX(deltaX), restrictY(deltaY))
     }
 
     open fun restrictX(deltaX: Float): Float = scrollX - deltaX
@@ -346,8 +354,7 @@ open class ZoomableScrollPane(
     fun doKeyOrMousePanning(deltaX: Float, deltaY: Float) {
         if (deltaX == 0f && deltaY == 0f) return
         val amountToMove = mapPanningSpeed / scaleX
-        scrollX = restrictX(deltaX * amountToMove)
-        scrollY = restrictY(deltaY * amountToMove)
+        panBy(deltaX * amountToMove, deltaY * amountToMove)
         updateVisualScroll()
     }
 
@@ -371,8 +378,9 @@ open class ZoomableScrollPane(
         private val originalScrollY = zoomableScrollPane.scrollY
 
         override fun update(percent: Float) {
-            zoomableScrollPane.scrollX = zoomableScrollPane.scrollingTo!!.x * percent + originalScrollX * (1 - percent)
-            zoomableScrollPane.scrollY = zoomableScrollPane.scrollingTo!!.y * percent + originalScrollY * (1 - percent)
+            zoomableScrollPane.setScrollPosition(
+                zoomableScrollPane.scrollingTo!!.x * percent + originalScrollX * (1 - percent),
+                zoomableScrollPane.scrollingTo!!.y * percent + originalScrollY * (1 - percent))
             zoomableScrollPane.updateVisualScroll()
         }
     }
@@ -387,8 +395,7 @@ open class ZoomableScrollPane(
         removeAction(scrollingAction)
 
         if (immediately) {
-            scrollX = x
-            scrollY = y
+            setScrollPosition(x, y)
             updateVisualScroll()
         } else {
             scrollingTo = Vector2(x, y)

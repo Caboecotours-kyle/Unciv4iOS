@@ -38,52 +38,107 @@ import com.unciv.view.CityView
  */
 internal class CityTable(
     city: CityView,
-    forPopup: Boolean = false
+    forPopup: Boolean = false,
+    private val compact: Boolean = false
 ) : BorderedTable(
     path = "WorldScreen/CityButton/IconTable",
     defaultBgShape = BaseScreen.skinStrings.roundedEdgeRectangleMidShape,
     defaultBgBorder = BaseScreen.skinStrings.roundedEdgeRectangleMidBorderShape
 ) {
+    private val compactShadow = Color(0f, 0f, 0f, .25f)
+
     init {
         isTransform = false
         touchable = Touchable.enabled
         pad(0f, 4f, 0f, 4f) // outer pad left and right
 
-        val selectedCiv = GUI.getSelectedPlayer()
-        val viewingCiv = city.getViewingCiv()
-        when {
-            city.belongsTo(selectedCiv) -> {
-                borderOnTop = true
-                borderSize = 4f
-                bgBorderColor = Color.valueOf("#E9E9AC")
+        if (compact) buildCompact(city) else {
+            val selectedCiv = GUI.getSelectedPlayer()
+            val viewingCiv = city.getViewingCiv()
+            when {
+                city.belongsTo(selectedCiv) -> {
+                    borderOnTop = true
+                    borderSize = 4f
+                    bgBorderColor = Color.valueOf("#E9E9AC")
+                }
+                city.isAtWarWith(selectedCiv) -> {
+                    borderSize = 4f
+                    bgBorderColor = Color.valueOf("#E63200")
+                }
+                else -> {
+                    borderSize = 2f
+                    bgBorderColor = ImageGetter.CHARCOAL
+                }
             }
-            city.isAtWarWith(selectedCiv) -> {
-                borderSize = 4f
-                bgBorderColor = Color.valueOf("#E63200")
-            }
-            else -> {
-                borderSize = 2f
-                bgBorderColor = ImageGetter.CHARCOAL
-            }
+            bgColor = city.getNationOuterColor().cpy().apply { a = 0.9f }
+
+            val isShowDetailedInfo = DebugUtils.VISIBLE_MAP
+                    || city.belongsTo(selectedCiv)
+                    || viewingCiv.isSpectator()
+
+            addCityPopNumber(city)
+
+            if (isShowDetailedInfo)
+                addCityGrowthBar(city)
+
+            addCityText(city, forPopup)
+
+            if (isShowDetailedInfo)
+                addCityConstruction(city)
+
+            if (!city.belongsTo(viewingCiv))
+                addCivIcon(city)
         }
-        bgColor = city.getNationOuterColor().cpy().apply { a = 0.9f }
+    }
 
-        val isShowDetailedInfo = DebugUtils.VISIBLE_MAP
-                || city.belongsTo(selectedCiv)
-                || viewingCiv.isSpectator()
+    private fun buildCompact(city: CityView) {
+        borderSize = 0f
+        bgColor = city.getNationOuterColor().cpy()
+        val foreground = if (bgColor.r * .299f + bgColor.g * .587f + bgColor.b * .114f > .68f)
+            Color.valueOf("102338") else Color.WHITE
+        val population = Table().apply {
+            background = ImageGetter.getCircleDrawable().tint(bgColor.cpy().darken(.4f))
+            add(city.getPopulationCount().tr().toLabel(Color.WHITE, 12))
+        }
+        pad(2f, 2f, 2f, 6f)
+        add(population).size(18f).padRight(4f)
+        if (city.isCapital()) add(ImageGetter.getImage("OtherIcons/Capital")).size(12f).padRight(4f)
+        add(city.name.toLabel(foreground, 13, hideIcons = true)).padRight(5f)
+        val canSeeDetails = city.belongsTo(city.getViewingCiv()) || city.getViewingCiv().isSpectator() || DebugUtils.VISIBLE_MAP
+        if (canSeeDetails && city.getBuiltBuildings().any { it.isWonder })
+            add(ImageGetter.getImage("OtherIcons/Wonders")).size(16f).padRight(4f)
+        if (canSeeDetails && city.constructions.currentConstructionName().isNotEmpty()) {
+            val construction = city.constructions.getCurrentConstruction()
+            val turns = if (construction is PerpetualConstruction) Fonts.infinity.toString()
+                else city.constructions.turnsToConstruction(construction.name).toString()
+            val build = Table().apply {
+                background = BaseScreen.skinStrings.getUiBackground("WorldScreen/Portrait/CityTurns",
+                    BaseScreen.skinStrings.roundedEdgeRectangleSmallShape, bgColor.cpy().darken(.25f))
+                add(turns.toLabel(Color.WHITE, 11)).pad(0f, 5f, 0f, 5f)
+            }
+            add(build).height(16f)
+        }
+    }
 
-        addCityPopNumber(city)
+    override fun drawBackground(batch: com.badlogic.gdx.graphics.g2d.Batch, parentAlpha: Float, x: Float, y: Float) {
+        if (!compact) return super.drawBackground(batch, parentAlpha, x, y)
+        val circle = ImageGetter.getCircleDrawable()
+        val fill = ImageGetter.getDrawable(ImageGetter.whiteDotLocation)
+        fun pill(tint: Color, baseline: Float) {
+            batch.setColor(tint.r * color.r, tint.g * color.g, tint.b * color.b, tint.a * color.a * parentAlpha)
+            circle.draw(batch, x, baseline, height, height)
+            fill.draw(batch, x + height / 2f, baseline, (width - height).coerceAtLeast(0f), height)
+            circle.draw(batch, x + width - height, baseline, height, height)
+        }
+        pill(compactShadow, y - 2f)
+        pill(bgColor, y)
+    }
 
-        if (isShowDetailedInfo)
-            addCityGrowthBar(city)
-
-        addCityText(city, forPopup)
-
-        if (isShowDetailedInfo)
-            addCityConstruction(city)
-
-        if (!city.belongsTo(viewingCiv))
-            addCivIcon(city)
+    override fun hit(x: Float, y: Float, touchable: Boolean): com.badlogic.gdx.scenes.scene2d.Actor? {
+        // Extend the 48-point target below the banner, keeping its city's ground center selectable.
+        if (compact && isVisible && (!touchable || this.touchable == Touchable.enabled)
+            && x >= 0f && x < width && y >= height - 48f && y < height) return this
+        return super.hit(x, y, touchable)
     }
 
     private fun addCityPopNumber(city: CityView) {

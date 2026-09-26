@@ -66,7 +66,11 @@ class ReligiousBeliefsPickerScreen (
         updateLeftTable()
 
         middlePanes.add(leftScrollPane)
-        middlePanes.addSeparatorVertical()
+        if (isPortrait()) {
+            // portrait stacks the chosen-belief slots above the beliefs to choose from
+            middlePanes.row()
+            middlePanes.addSeparator()
+        } else middlePanes.addSeparatorVertical()
         middlePanes.add(rightScrollPane)
 
         topTable.add(topReligionIcons).minHeight(topReligionIcons.prefHeight).row()

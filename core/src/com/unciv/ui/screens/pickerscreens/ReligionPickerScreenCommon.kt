@@ -78,7 +78,8 @@ abstract class ReligionPickerScreenCommon(
         beliefType: BeliefType? = null,
         withTypeLabel: Boolean = true
     ): Button {
-        val labelWidth = stage.width * 0.5f - 52f  // 32f empirically measured padding inside button, 20f outside padding
+        // 32f empirically measured padding inside button, 20f outside padding; portrait lists one column across the screen
+        val labelWidth = stage.width * (if (isPortrait()) 0.92f else 0.5f) - 52f
         return Button(skin).apply {
             when {
                 belief != null -> {

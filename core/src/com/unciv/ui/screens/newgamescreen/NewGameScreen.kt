@@ -2,6 +2,7 @@ package com.unciv.ui.screens.newgamescreen
 
 import com.badlogic.gdx.Gdx
 import com.badlogic.gdx.graphics.Color
+import com.badlogic.gdx.scenes.scene2d.ui.Table
 import com.badlogic.gdx.scenes.scene2d.ui.HorizontalGroup
 import com.unciv.Constants
 import com.unciv.UncivGame
@@ -63,9 +64,11 @@ class NewGameScreen(
     internal val playerPickerTable: PlayerPickerTable
     private val mapOptionsTable: MapOptionsTable
     private var mapOptionsTableInitialized = false
+    private var portraitView: PortraitNewGameView? = null
 
     init {
-        val isPortrait = isNarrowerThan4to3()
+        val isPortrait = isPortrait()
+        val isNarrow = isNarrowerThan4to3()
 
         // The mods loaded here may come from the last-started game (see GameSetupInfo.fromSettings) -
         // if that combination is now broken (e.g. a mod was updated/removed), silently fall back to
@@ -83,50 +86,63 @@ class NewGameScreen(
         rightSideButton.enable()  // now because PlayerPickerTable init might disable it again
         playerPickerTable = PlayerPickerTable(
             this, gameSetupInfo.gameParameters,
-            if (isPortrait) stage.width - 20f else 0f
+            if (isNarrow) stage.width - 20f else 0f
         )
         newGameOptionsTable = GameOptionsTable(
-            this, isPortrait,
+            this, isNarrow,
             updatePlayerPickerTable = { desiredCiv -> playerPickerTable.update(desiredCiv) },
             updatePlayerPickerRandomLabel = { playerPickerTable.updateRandomNumberLabel() }
         )
         mapOptionsTable = MapOptionsTable(this)
         mapOptionsTableInitialized = true
-        closeButton.onActivation {
-            mapOptionsTable.cancelBackgroundJobs()
-            game.popScreen()
-        }
+        closeButton.onActivation { closeNewGame() }
         closeButton.keyShortcuts.add(KeyCharAndCode.BACK)
 
-        if (isPortrait) initPortrait()
-        else initLandscape()
+        if (!isPortrait) {
+            if (isNarrow) initNarrowLandscape() else initLandscape()
+        }
         bottomTable.background = skinStrings.getUiBackground("NewGameScreen/BottomTable", tintColor = skinStrings.skinConfig.clearColor)
         topTable.background = skinStrings.getUiBackground("NewGameScreen/TopTable", tintColor = skinStrings.skinConfig.clearColor)
 
-        val horizontalGroup = HorizontalGroup().padBottom(5f).space(10f)
-        rightSideGroup.addActorAt(0, horizontalGroup)
-
-        if (UncivGame.Current.settings.lastGameSetup != null) {
-            val resetToDefaultsButton = "Reset to defaults".toTextButton()
-            resetToDefaultsButton.onClick {
-                ConfirmPopup(
-                    this,
-                    "Are you sure you want to reset all game options to defaults?",
-                    "Reset to defaults",
-                ) {
-                    val gameSetupInfo = GameSetupInfo().apply {
-                        gameParameters.espionageEnabled = true
-                    }
-                    game.replaceCurrentScreen{ NewGameScreen(gameSetupInfo) }
-                }.open(true)
+        if (isPortrait) {
+            rightSideButton.setText("Start game!".tr())
+            rightSideButton.color = Color.GOLD
+            rightSideButton.labelCell.pad(14f, 65f, 14f, 65f)
+            rightSideButton.onClick(this::startGameAvoidANRs)
+            pickerPane.isVisible = false
+            val view = PortraitNewGameView(this, newGameOptionsTable, mapOptionsTable,
+                playerPickerTable, this::startGameAvoidANRs, this::closeNewGame)
+            portraitView = view
+            stage.addActor(view)
+        } else {
+            val horizontalGroup = HorizontalGroup().padBottom(5f).space(10f)
+            rightSideGroup.addActorAt(0, horizontalGroup)
+            if (UncivGame.Current.settings.lastGameSetup != null) {
+                val resetToDefaultsButton = "Reset to defaults".toTextButton()
+                resetToDefaultsButton.onClick {
+                    ConfirmPopup(
+                        this,
+                        "Are you sure you want to reset all game options to defaults?",
+                        "Reset to defaults",
+                    ) {
+                        val gameSetupInfo = GameSetupInfo().apply {
+                            gameParameters.espionageEnabled = true
+                        }
+                        game.replaceCurrentScreen{ NewGameScreen(gameSetupInfo) }
+                    }.open(true)
+                }
+                horizontalGroup.addActor(resetToDefaultsButton)
             }
-            horizontalGroup.addActor(resetToDefaultsButton)
+            val startGameButton = "Start game!".toTextButton().apply { color = Color.GREEN }
+            startGameButton.onClick(this::startGameAvoidANRs)
+            horizontalGroup.addActor(startGameButton)
+            pickerPane.rightSideButton.remove()
         }
+    }
 
-        val startGameButton = "Start game!".toTextButton().apply { color = Color.GREEN }        
-        startGameButton.onClick(this::startGameAvoidANRs)
-        horizontalGroup.addActor(startGameButton)
-        pickerPane.rightSideButton.remove()
+    private fun closeNewGame() {
+        mapOptionsTable.cancelBackgroundJobs()
+        game.popScreen()
     }
 
     private fun startGameAvoidANRs(){
@@ -274,26 +290,33 @@ class NewGameScreen(
                 .width(columnWidth).top()
     }
 
-    private fun initPortrait() {
-        scrollPane.setScrollingDisabled(false,false)
-
+    /** Keep the preexisting single-column layout on narrow landscape windows. */
+    private fun initNarrowLandscape() {
+        scrollPane.setScrollingDisabled(false, false)
         topTable.add(ExpanderTab("Game Options") {
             it.add(newGameOptionsTable).row()
         }).expandX().fillX().row()
         topTable.addSeparator(Color.DARK_GRAY, height = 1f)
-
         topTable.add(newGameOptionsTable.modCheckboxes).expandX().fillX().row()
         topTable.addSeparator(Color.DARK_GRAY, height = 1f)
-
         topTable.add(ExpanderTab("Map Options") {
             it.add(mapOptionsTable).row()
         }).expandX().fillX().row()
         topTable.addSeparator(Color.DARK_GRAY, height = 1f)
-
-        (playerPickerTable.playerListTable.parent as ScrollPane).setScrollingDisabled(true,true)
+        (playerPickerTable.playerListTable.parent as ScrollPane).setScrollingDisabled(true, true)
         topTable.add(ExpanderTab("Civilizations") {
             it.add(playerPickerTable).row()
         }).expandX().fillX().row()
+    }
+
+    override fun render(delta: Float) {
+        portraitView?.refresh()
+        super.render(delta)
+    }
+
+    override fun dispose() {
+        portraitView?.dispose()
+        super.dispose()
     }
 
     private suspend fun checkConnectionToMultiplayerServer(): Boolean {

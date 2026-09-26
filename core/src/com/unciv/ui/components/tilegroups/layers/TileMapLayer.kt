@@ -27,9 +27,9 @@ open class TileMapLayer<T : TileLayer>(
     }
 
     /** Register a tile-layer and flush its buffered images into this Group. */
-    fun add(layer: T, tileX: Float, tileY: Float) {
+    fun add(layer: T, tileX: Float, tileY: Float, renderParent: Group = this) {
         tileLayers.add(layer)
-        layer.attachTo(this, tileX, tileY)
+        layer.attachTo(this, tileX, tileY, renderParent)
     }
 
     override fun act(delta: Float) {

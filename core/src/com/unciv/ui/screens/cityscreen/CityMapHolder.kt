@@ -1,5 +1,6 @@
 package com.unciv.ui.screens.cityscreen
 
+import com.badlogic.gdx.utils.viewport.Viewport
 import com.unciv.ui.screens.basescreen.UncivStage
 import com.unciv.ui.components.tilegroups.TileGroupMap
 import com.unciv.ui.components.widgets.ZoomableScrollPane
@@ -8,6 +9,14 @@ class CityMapHolder : ZoomableScrollPane(20f, 20f) {
 
     init {
         setupZoomPanListeners()
+    }
+
+    fun setDefaultZoom(viewport: Viewport) {
+        val map = actor as TileGroupMap<*>
+        if (map.mapVerticalScale == 1f) return
+        val defaultZoom = map.getDefaultZoom(viewport)
+        maxZoom = maxOf(maxZoom, defaultZoom)
+        zoom(defaultZoom)
     }
 
     private fun setupZoomPanListeners() {

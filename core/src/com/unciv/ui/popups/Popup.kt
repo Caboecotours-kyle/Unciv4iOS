@@ -67,6 +67,10 @@ open class Popup(
     enum class Scrollability { None, All, WithoutButtons, DevConsole }
 
     protected val maxPopupWidth get() = stageToShowOn.width * maxSizePercentage
+
+    /** Width for wrapped text: half the stage in landscape, nearly the whole phone width in portrait */
+    val goodTextWidth get() = if (stageToShowOn.height > stageToShowOn.width) stageToShowOn.width * 0.8f
+        else stageToShowOn.width / 2
     protected val maxPopupHeight get() = stageToShowOn.height * maxSizePercentage
 
     /** This exists to differentiate the actual popup (this table)
@@ -337,7 +341,7 @@ open class Popup(
         val label = text.toLabel(fontSize = size, hideIcons = hideIcons, fontColor = color)
         label.wrap = true
         label.setAlignment(Align.center)
-        return add(label).width(stageToShowOn.width / 2)
+        return add(label).width(goodTextWidth)
     }
 
     /**

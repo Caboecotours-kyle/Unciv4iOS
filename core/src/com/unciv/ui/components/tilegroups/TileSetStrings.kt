@@ -1,5 +1,6 @@
 package com.unciv.ui.components.tilegroups
 
+import com.badlogic.gdx.Gdx
 import com.unciv.UncivGame
 import com.unciv.logic.map.NeighborDirection
 import com.unciv.view.ForeignCivView
@@ -32,7 +33,8 @@ import com.unciv.ui.images.ImageGetter
 class TileSetStrings(
     tileSet: String = UncivGame.Current.settings.tileSet,
     unitSet: String? = UncivGame.Current.settings.unitSet,
-    fallbackDepth: Int = 1
+    fallbackDepth: Int = 1,
+    isPortrait: Boolean = Gdx.graphics?.let { it.height > it.width } ?: false
 ) {
 
     constructor(ruleset: Ruleset, settings: GameSettings) : this(
@@ -51,6 +53,18 @@ class TileSetStrings(
     val tileSetLocation = "TileSets/$tileSet/"
     val unitSetLocation = "TileSets/$unitSet/"
     val tileSetConfig = TileSetCache[tileSet]?.config ?: TileSetConfig()
+
+    val mapVerticalScale = if (isPortrait) tileSetConfig.mapVerticalScale.coerceIn(0.1f, 1f) else 1f
+    val projection = MapProjection(mapVerticalScale)
+
+    /** Exported variants squash only the ground and keep sprite height and atlas batching. */
+    fun getMapImageLocation(location: String): String {
+        if (mapVerticalScale == 1f || !location.startsWith("TileSets/")) return location
+        val split = location.indexOf('/', "TileSets/".length)
+        if (split < 0) return location
+        val tilted = location.substring(0, split) + "/Tilted" + location.substring(split)
+        return if (ImageGetter.imageExists(tilted)) tilted else location
+    }
 
     // These need to be by lazy since the orFallback expects a tileset, which it may not get.
     val hexagon: String by lazy { orFallback { tileSetLocation + "Hexagon"} }

@@ -28,15 +28,15 @@ import kotlin.math.sqrt
 
 private class MapArrow(val targetTile: TileView, val arrowType: MapArrowType, val strings: TileSetStrings) {
 
-    private fun getArrowImage(imageName: String) = ImageGetter.getImage(
+    private fun getArrowImage(imageName: String, layer: TileLayer) = layer.getGroundImage(
         strings.orFallback { getString(tileSetLocation, "Arrows/", imageName) })
 
 
-    fun getImage(): Image = when (arrowType) {
-        is UnitMovementMemoryType -> getArrowImage(arrowType.name)
-        is MiscArrowTypes -> getArrowImage(arrowType.name)
-        is TintedMapArrow -> getArrowImage("Generic").apply { color = arrowType.color }
-        else -> getArrowImage("Generic")
+    fun getImage(layer: TileLayer): Image = when (arrowType) {
+        is UnitMovementMemoryType -> getArrowImage(arrowType.name, layer)
+        is MiscArrowTypes -> getArrowImage(arrowType.name, layer)
+        is TintedMapArrow -> getArrowImage("Generic", layer).apply { color = arrowType.color }
+        else -> getArrowImage("Generic", layer)
     }
 }
 
@@ -192,7 +192,7 @@ class TileLayerResource(tileGroup: TileGroup, size: Float) : TileLayer(tileGroup
         val showResourcesAndImprovements = if (tileGroup is WorldTileGroup)
             UncivGame.Current.settings.showResourcesAndImprovements else true
 
-        updateResourceIcon(viewingCiv, showResourcesAndImprovements)
+        updateResourceIcon(viewingCiv, showResourcesAndImprovements || tileGroup.strategicView)
     }
 
     override fun determineVisibility() {
@@ -295,7 +295,7 @@ class TileLayerMisc(tileGroup: TileGroup, size: Float) : TileLayer(tileGroup, si
                 arrows[targetTile] = ArrayList()
             }
 
-            val arrowImage = arrowToAdd.getImage()
+            val arrowImage = arrowToAdd.getImage(this)
             arrowImage.touchable = Touchable.disabled
             // Arrows originate at tile centre (25, -5 in tile-local); offset by tile origin for absolute.
             arrowImage.setPosition(tileX + 25f, tileY - 5f)
@@ -305,6 +305,7 @@ class TileLayerMisc(tileGroup: TileGroup, size: Float) : TileLayer(tileGroup, si
 
             arrowImage.rotation = targetAngle / Math.PI.toFloat() * 180
 
+            arrowImage.projectOnGround()
             arrows[targetTile]!!.add(arrowImage)
             addOwnedActor(arrowImage)
             // FIXME: Culled when too large and panned away.
@@ -431,7 +432,7 @@ class TileLayerMisc(tileGroup: TileGroup, size: Float) : TileLayer(tileGroup, si
 
     fun addHexOutline(color: Color) {
         hexOutlineIcon?.let { removeOwnedActor(it) }
-        hexOutlineIcon = ImageGetter.getImage("OtherIcons/HexagonOutline").apply {
+        hexOutlineIcon = getGroundImage("OtherIcons/HexagonOutline").apply {
             touchable = Touchable.disabled
             setHexagonSize(1f)
         }
@@ -455,7 +456,7 @@ class TileLayerMisc(tileGroup: TileGroup, size: Float) : TileLayer(tileGroup, si
 
     private fun overlayTerrainInner(color: Color) {
         if (terrainOverlay == null) {
-            terrainOverlay = ImageGetter.getImage(strings.hexagon).apply {
+            terrainOverlay = getGroundImage(strings.hexagon).apply {
                 touchable = Touchable.disabled
                 setHexagonSize()
             }

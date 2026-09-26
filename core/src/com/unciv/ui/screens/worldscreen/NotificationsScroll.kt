@@ -139,6 +139,20 @@ class NotificationsScroll(
      */
     override fun getMouseWheelX() = 0f
 
+    private var usingPortraitHud = false
+
+    /** Portrait's digest button replaces the map's legacy scrolling list and restore control. */
+    internal fun usePortraitHud(portrait: Boolean) {
+        if (portrait) {
+            isVisible = false
+            restoreButton.isVisible = false
+        } else if (usingPortraitHud) {
+            isVisible = userSetting != UserSetting.Disabled
+            restoreButton.isVisible = true
+        }
+        usingPortraitHud = portrait
+    }
+
     /** Access to hidden "state" - writing it will ensure this is fully visible or hidden and the
      *  restore button shown as needed - with animation. */
     @Suppress("MemberVisibilityCanBePrivate")  // API for future use
@@ -160,12 +174,20 @@ class NotificationsScroll(
      */
     internal fun update(
         notifications: List<Notification>,
-        coveredNotificationsTop: Float,
-        coveredNotificationsBottom: Float
+        coveredTop: Float,
+        coveredBottom: Float
     ) {
+        // Portrait: the list lives only in the free band between the unit card and the thumb controls, so nothing
+        // scrolls underneath those buttons. Landscape keeps the full-height list with spacers.
+        val band = worldScreen.isPortrait()
+        val bandBottom = coveredBottom
+        height = if (band) (worldScreen.stage.height - coveredTop - coveredBottom).coerceAtLeast(0f) * inverseScaleFactor
+            else worldScreen.stage.height * inverseScaleFactor
+        val coveredNotificationsTop = if (band) 0f else coveredTop
+        val coveredNotificationsBottom = if (band) 0f else coveredBottom
         getUserSetting()
         if (userSetting == UserSetting.Disabled) {
-            restoreButton.setPosition(coveredNotificationsBottom)
+            restoreButton.setPosition(if (band) bandBottom else coveredNotificationsBottom)
             applyUserSettingChange()
             restoreButton.updateCount(notifications.size)
             return
@@ -200,8 +222,10 @@ class NotificationsScroll(
             val trueActorY = it.actorY + (if (it.table == notificationsTable) 0f else it.table.y)
             val actualBottom = (trueActorY + notificationsTable.y) * scaleFactor
             val actualTop = (trueActorY + it.actorHeight + notificationsTable.y) * scaleFactor
-            val fullyVisible = actualBottom >= coveredNotificationsBottom && actualTop <= stage.height - coveredNotificationsTop
-            val centeredBottom = (stage.height - coveredNotificationsTop + coveredNotificationsBottom - it.actorHeight * scaleFactor) / 2
+            // the visible range is the pane itself in the portrait band, else the stage minus covered margins
+            val visibleTop = if (band) height * scaleFactor else stage.height - coveredNotificationsTop
+            val fullyVisible = actualBottom >= coveredNotificationsBottom && actualTop <= visibleTop
+            val centeredBottom = (visibleTop + coveredNotificationsBottom - it.actorHeight * scaleFactor) / 2
             val centeredScrollY = centeredBottom * inverseScaleFactor - trueActorY + maxY
             if (fullyVisible) previousScrollY else centeredScrollY
         }
@@ -217,8 +241,8 @@ class NotificationsScroll(
 
         // Do the positioning here since WorldScreen may also call update when just its geometry changed
         val safeArea = worldScreen.safeAreaBoundsInWorld()
-        setPosition(safeArea.x + safeArea.width - width * scaleFactor, 0f)
-        restoreButton.setPosition(coveredNotificationsBottom)
+        setPosition(safeArea.x + safeArea.width - width * scaleFactor, if (band) bandBottom else 0f)
+        restoreButton.setPosition(if (band) bandBottom else coveredNotificationsBottom)
     }
 
     private fun updateContent(

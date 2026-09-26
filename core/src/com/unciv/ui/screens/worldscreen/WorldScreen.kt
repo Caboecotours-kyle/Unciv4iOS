@@ -1,5 +1,6 @@
 package com.unciv.ui.screens.worldscreen
 
+import com.badlogic.gdx.graphics.Color
 import com.badlogic.gdx.Application
 import com.badlogic.gdx.Gdx
 import com.badlogic.gdx.Input
@@ -25,6 +26,7 @@ import com.unciv.logic.multiplayer.storage.MultiplayerAuthException
 import com.unciv.logic.multiplayer.storage.MultiplayerFileNotFoundException
 import com.unciv.logic.multiplayer.storage.MultiplayerServer
 import com.unciv.logic.trade.TradeEvaluation
+import com.unciv.models.tilesets.TileSetCache
 import com.unciv.models.TutorialTrigger
 import com.unciv.models.metadata.GameSetupInfo
 import com.unciv.models.ruleset.Event
@@ -155,6 +157,7 @@ class WorldScreen(
     internal val techPolicyAndDiplomacy = TechPolicyDiplomacyButtons(this)
     internal val chatButton = ChatButton(this)
     private val unitActionsTable = UnitActionsTable(this)
+    private val portraitHud by lazy { WorldPortraitHud(this, unitActionsTable, battleTable) }
     /** Bottom left widget holding information about a selected unit or city */
     internal val bottomUnitTable = UnitTable(this)
     private val battleTable = BattleTable(this)
@@ -169,6 +172,7 @@ class WorldScreen(
         background = skinStrings.getUiBackground("WorldScreen/TutorialTaskTable", tintColor = skinStrings.skinConfig.baseColor.darken(0.5f))
     }
     private var tutorialTaskTableHash = 0
+    private val portraitTutorialTask = PortraitTutorialTask(this)
 
     private var nextTurnUpdateJob: Job? = null
 
@@ -188,6 +192,7 @@ class WorldScreen(
         // This is the most memory-intensive operation we have currently, most OutOfMemory errors will occur here
         mapHolder.addTiles()
         mapHolder.reloadMaxZoom()
+        mapHolder.setDefaultZoom()
 
         // resume music (in case choices from the menu lead to instantiation of a new WorldScreen)
         UncivGame.Current.musicController.resume()
@@ -196,6 +201,7 @@ class WorldScreen(
         stage.scrollFocus = mapHolder
         stage.addActor(notificationsScroll)  // very low in z-order, so we're free to let it extend _below_ tile info and minimap if we want
         stage.addActor(tutorialTaskTable)    // behind topBar!
+        stage.addActor(portraitTutorialTask)
         stage.addActor(topBar)
         stage.addActor(statusButtons)
         stage.addActor(techPolicyAndDiplomacy)
@@ -211,6 +217,8 @@ class WorldScreen(
         battleTable.width = stage.width / 3
         battleTable.x = stage.width / 3
         stage.addActor(battleTable)
+        stage.addActor(portraitHud)
+        portraitHud.isVisible = false
 
         val tileToCenterOn: HexCoord =
                 when {
@@ -266,6 +274,8 @@ class WorldScreen(
         resizeDeferTimer?.cancel()
         events.stopReceiving()
         statusButtons.dispose()
+        portraitHud.dispose()
+        portraitTutorialTask.dispose()
         super.dispose()
     }
 
@@ -355,13 +365,21 @@ class WorldScreen(
         topBar.isVisible = uiEnabled
         statusButtons.isVisible = uiEnabled
         techPolicyAndDiplomacy.isVisible = uiEnabled
-        tutorialTaskTable.isVisible = uiEnabled
+        tutorialTaskTable.isVisible = uiEnabled && !isPortrait()
+        portraitTutorialTask.isVisible = false
         bottomTileInfoTable.isVisible = uiEnabled
         unitActionsTable.isVisible = uiEnabled
         notificationsScroll.isVisible = uiEnabled
         minimapWrapper.isVisible = uiEnabled
         bottomUnitTable.isVisible = uiEnabled
-        if (uiEnabled) battleTable.update() else battleTable.isVisible = false
+        portraitHud.isVisible = uiEnabled && isPortrait()
+        if (uiEnabled) {
+            battleTable.update()
+            if (isPortrait()) {
+                displayTutorialTaskOnUpdate()
+                layoutPortraitHud()
+            }
+        } else battleTable.isVisible = false
     }
 
     private fun addKeyboardListener() {
@@ -483,7 +501,7 @@ class WorldScreen(
 
         if (uiEnabled) {
             // UnitActionsTable measures geometry (its own y, techPolicyAndDiplomacy and fogOfWarButton), so call update this late
-            unitActionsTable.y = bottomUnitTable.height
+            unitActionsTable.y = if (isPortrait()) safeAreaBoundsInWorld().y + statusButtons.height + 20f else bottomUnitTable.height
             unitActionsTable.update(bottomUnitTable.selectedUnit?.getUnit())
         }
 
@@ -515,11 +533,17 @@ class WorldScreen(
         }
 
         updateGameplayButtons()
+        if (uiEnabled) { if (isPortrait()) layoutPortraitHud() else restoreLandscapeHud() }
 
-        val coveredNotificationsTop = stage.height - statusButtons.y
-        val coveredNotificationsBottom = (bottomTileInfoTable.height + bottomTileInfoTable.y)
+        // Portrait: notifications use the band between the unit card on top and the thumb controls below
+        val coveredNotificationsTop = if (isPortrait()) stage.height - minOf(bottomUnitTable.y, bottomTileInfoTable.y)
+            else stage.height - statusButtons.y
+        val coveredNotificationsBottom = if (isPortrait())
+            maxOf(unitActionsTable.y + unitActionsTable.height, techPolicyAndDiplomacy.y + techPolicyAndDiplomacy.height)
+            else (bottomTileInfoTable.height + bottomTileInfoTable.y)
 //                (if (game.settings.showMinimap) minimapWrapper.height else 0f)
         notificationsScroll.update(viewingCiv.notifications, coveredNotificationsTop, coveredNotificationsBottom)
+        notificationsScroll.usePortraitHud(isPortrait())
 
         val posZoomFromRight = if (game.settings.showMinimap) minimapWrapper.width
         else bottomTileInfoTable.width
@@ -528,6 +552,48 @@ class WorldScreen(
             10f,
             Align.bottomRight
         )
+    }
+
+    /** The mock's portrait HUD has its own point-sized controls; the old widgets retain landscape behavior. */
+    private fun layoutPortraitHud() {
+        topBar.isVisible = false
+        statusButtons.isVisible = false
+        techPolicyAndDiplomacy.isVisible = false
+        unitActionsTable.isVisible = false
+        bottomUnitTable.isVisible = false
+        minimapWrapper.isVisible = false
+        zoomController.isVisible = false
+        bottomTileInfoTable.isVisible = false
+        portraitHud.isVisible = true
+        portraitHud.refresh()
+        if (bottomUnitTable.selectedUnit != null && battleTable.portraitAttackButton != null) battleTable.isVisible = false
+        val safe = safeAreaBoundsInWorld()
+        bottomTileInfoTable.setPosition(safe.x + safe.width - bottomTileInfoTable.width,
+            portraitHud.tutorialTop - bottomTileInfoTable.height)
+        if (tutorialTaskTable.isVisible) {
+            tutorialTaskTable.y = portraitHud.tutorialTop - tutorialTaskTable.height
+            // Removing an earlier actor shifts the HUD index; keep the task just above it, below dialogs.
+            val hudIndex = portraitHud.zIndex
+            tutorialTaskTable.zIndex = hudIndex + if (tutorialTaskTable.zIndex < hudIndex) 0 else 1
+        }
+        if (portraitTutorialTask.isVisible) {
+            portraitTutorialTask.place(portraitHud.tutorialTop, portraitHud)
+            val hudIndex = portraitHud.zIndex
+            portraitTutorialTask.zIndex = hudIndex + if (portraitTutorialTask.zIndex < hudIndex) 0 else 1
+        }
+        chatButton.updatePosition()
+    }
+
+    private fun restoreLandscapeHud() {
+        portraitHud.isVisible = false
+        topBar.isVisible = true
+        statusButtons.isVisible = true
+        techPolicyAndDiplomacy.isVisible = true
+        unitActionsTable.isVisible = true
+        bottomUnitTable.isVisible = true
+        bottomUnitTable.y = 0f
+        minimapWrapper.isVisible = true
+        bottomTileInfoTable.isVisible = true
     }
 
     @Readonly
@@ -582,9 +648,18 @@ class WorldScreen(
             tutorialTaskTable.isVisible = false
             tutorialTaskTable.clear()
             tutorialTaskTableHash = 0
+            portraitTutorialTask.isVisible = false
         }
         if (!game.settings.showTutorials || viewingCiv.isDefeated()) return setInvisible()
         val tutorialTask = getCurrentTutorialTask() ?: return setInvisible()
+
+        if (isPortrait()) {
+            // Phone steps instead of the desktop screenshot card; placed by layoutPortraitHud
+            setInvisible()
+            portraitTutorialTask.isVisible = portraitTutorialTask.show(tutorialTask)
+            return
+        }
+        portraitTutorialTask.isVisible = false
 
         if (!UncivGame.Current.isTutorialTaskCollapsed) {
             val hash = tutorialTask.hashCode()  // Default implementation is OK - we see the same instance or not
@@ -634,6 +709,8 @@ class WorldScreen(
         val zoom = mapHolder.scaleX
         val scrollX = mapHolder.scrollX
         val scrollY = mapHolder.scrollY
+        val mapCenter = mapHolder.getMapCenter()
+        val mapVerticalScale = mapHolder.currentTileSetStrings.mapVerticalScale
     }
     
     @Readonly
@@ -646,9 +723,13 @@ class WorldScreen(
         // This is not the case if you have a multiplayer game where you play as 2 civs
         if (viewingCiv.civID == restoreState.viewingCivName) {
             mapHolder.zoom(restoreState.zoom)
-            mapHolder.scrollX = restoreState.scrollX
-            mapHolder.scrollY = restoreState.scrollY
-            mapHolder.updateVisualScroll()
+            if (restoreState.mapVerticalScale != mapHolder.currentTileSetStrings.mapVerticalScale) {
+                mapHolder.restoreMapCenter(restoreState.mapCenter)
+            } else {
+                mapHolder.scrollX = restoreState.scrollX
+                mapHolder.scrollY = restoreState.scrollY
+                mapHolder.updateVisualScroll()
+            }
         }
 
         setSelectedCiv(gameInfo.getCivilization(restoreState.selectedCivName))
@@ -1045,6 +1126,7 @@ class WorldScreen(
         if (Gdx.app.type == com.badlogic.gdx.Application.ApplicationType.iOS) {
             if (!hasSafeAreaChanged(width, height)) return
             super.resize(width, height)
+            mapHolder.refreshMapProjection()
             mapHolder.resizeViewport((stage.viewport as com.unciv.ui.screens.basescreen.SafeAreaViewport).drawingBounds)
             mapHolder.reloadMaxZoom()
             mapHolder.zoom(mapHolder.scaleX)
@@ -1064,6 +1146,9 @@ class WorldScreen(
             startNewScreenJob(gameInfo, autoPlay, true) // start over
         }
     }
+
+    /** Beyond the drawn tiles the map shows the tileset's background (clouds for Polytopia), not the menu color. */
+    override val backgroundColor: Color get() = TileSetCache.getCurrent().config.mapBackgroundColor ?: clearColor
 
     override fun render(delta: Float) {
         //  This is so that updates happen in the MAIN THREAD, where there is a GL Context,

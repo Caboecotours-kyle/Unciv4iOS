@@ -56,7 +56,9 @@ class LoadingScreenGeometryTest {
                             val viewport = screen.stage.viewport
                             val bottomLeft = viewport.project(Vector2(image.x, image.y))
                             val topRight = viewport.project(Vector2(image.x + image.width, image.y + image.height))
-                            val expected = if (edgeToEdge) SafeArea(0, 0, width, height) else insets.applyTo(width, height)
+                            // Portrait always captures the full drawing area while its controls retain safe layout.
+                            val expected = if (edgeToEdge || height > width) SafeArea(0, 0, width, height)
+                                else insets.applyTo(width, height)
                             val message = "${width}x$height, edgeToEdge=$edgeToEdge, insets=$insets"
                             assertEquals(message, expected.x.toFloat(), bottomLeft.x, 0.001f)
                             assertEquals(message, expected.y.toFloat(), bottomLeft.y, 0.001f)

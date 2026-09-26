@@ -90,6 +90,10 @@ class CityConstructionsTable(private val cityScreen: CityScreen) {
 
     private val highlightColor = Color.GREEN.darken(0.4f)
 
+    /** Stage height kept free above the queue and below the list; portrait uses it for the city header and tab bar. */
+    var reservedTop = 0f
+    var reservedBottom = 0f
+
     /** Gets or sets visibility of [both widgets][CityConstructionsTable] */
     var isVisible: Boolean
         get() = upperTable.isVisible
@@ -160,12 +164,19 @@ class CityConstructionsTable(private val cityScreen: CityScreen) {
         updateButtons(construction)
         updateConstructionQueue()
         upperTable.pack()
-        // Need to reposition when height changes as setPosition's alignment does not persist, it's just a readability shortcut to calculate bottomLeft
-        upperTable.setPosition(posFromEdge, stageHeight - posFromEdge, Align.topLeft)
-        lowerTableScrollCell.maxHeight(
-            (stageHeight - upperTable.height - 2 * posFromEdge).coerceAtLeast(20f)
-        )
+        updateLayout()
         constructionsQueueTable.adjustContextMenuIndicators()
+    }
+
+    /** Reposition existing actors so an open context menu keeps its construction anchor. */
+    internal fun updateLayout() {
+        // Need to reposition when height changes as setPosition's alignment does not persist, it's just a readability shortcut to calculate bottomLeft
+        upperTable.setPosition(posFromEdge, stageHeight - posFromEdge - reservedTop, Align.topLeft)
+        lowerTable.setPosition(posFromEdge, posFromEdge + reservedBottom, Align.bottomLeft)
+        lowerTableScrollCell.maxHeight(
+            (stageHeight - upperTable.height - 2 * posFromEdge - reservedTop - reservedBottom).coerceAtLeast(20f)
+        )
+        if (cityScreen.isPortrait()) resizeAvailableConstructionsScrollPane()
     }
 
     private fun updateButtons(construction: IConstruction?) {
@@ -654,7 +665,7 @@ class CityConstructionsTable(private val cityScreen: CityScreen) {
                 || construction is PerpetualConstruction && cityConstructions.isBeingConstructedOrEnqueued(construction.name)
     }
 
-    private fun addConstructionToQueue(construction: IConstruction) {
+    internal fun addConstructionToQueue(construction: IConstruction) {
         // Some evil person decided to double tap real fast - #4977
         if (cannotAddConstructionToQueue(construction))
             return
@@ -797,7 +808,7 @@ class CityConstructionsTable(private val cityScreen: CityScreen) {
         list: ArrayList<Table>,
         prefWidth: Float,
         toggleKey: KeyboardBinding,
-        startsOutOpened: Boolean = !cityScreen.isCrampedPortrait()
+        startsOutOpened: Boolean = true // portrait shows this list alone on its own tab, so it has the room
     ) {
         if (list.isEmpty()) return
 

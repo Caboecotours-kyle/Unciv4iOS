@@ -10,10 +10,11 @@ import org.robovm.apple.coregraphics.CGColorSpace
 import org.robovm.apple.coregraphics.CGImageAlphaInfo
 import org.robovm.apple.coretext.CTAttributedStringAttributes
 import org.robovm.apple.coretext.CTFont
-import org.robovm.apple.coretext.CTFontUIFontType
 import org.robovm.apple.coretext.CTLine
 import org.robovm.apple.foundation.NSAttributedString
 import org.robovm.apple.uikit.UIFont
+import org.robovm.apple.uikit.UIFontWeight
+import org.robovm.apple.uikit.UIFontDescriptorSystemDesign
 import kotlin.math.ceil
 
 /** Renders glyphs through CoreText so iOS can provide its normal CJK font fallback chain. */
@@ -118,7 +119,12 @@ class IOSFont : FontImplementation {
         const val BITS_PER_COMPONENT = 8
         const val WHITE_RGB = -0x100
 
-        fun createSystemFont(size: Int): CTFont =
-            CTFont.createUIFont(CTFontUIFontType.UIFontSystem, size.toDouble(), null)
+        fun createSystemFont(size: Int): CTFont {
+            val system = UIFont.getSystemFont(size.toDouble(), UIFontWeight.Bold)
+            val descriptor = system.fontDescriptor.newWithDesign(UIFontDescriptorSystemDesign.Rounded)
+                ?: system.fontDescriptor
+            val rounded = UIFont.getFont(descriptor, size.toDouble())
+            return CTFont.create(rounded.fontName, size.toDouble(), null)
+        }
     }
 }

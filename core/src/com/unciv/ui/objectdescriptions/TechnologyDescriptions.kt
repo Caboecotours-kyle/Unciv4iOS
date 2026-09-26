@@ -273,7 +273,7 @@ object TechnologyDescriptions {
      * nuclear weapons and religion settings, and without those expressly hidden from Civilopedia.
      */
     // Used for Civilopedia, Alert and Picker, so if any of these decide to ignore the "Will not be displayed in Civilopedia" unique this needs refactoring
-    private fun getEnabledBuildings(techName: String, ruleset: Ruleset, civInfo: Civilization?) =
+    internal fun getEnabledBuildings(techName: String, ruleset: Ruleset, civInfo: Civilization?) =
             getFilteredBuildings(ruleset, civInfo) { it.requiredTechs().contains(techName) }
 
     /**
@@ -325,7 +325,7 @@ object TechnologyDescriptions {
      * nuclear weapons and religion settings, and without those expressly hidden from Civilopedia.
      */
     // Used for Civilopedia, Alert and Picker, so if any of these decide to ignore the "Will not be displayed in Civilopedia"/HiddenFromCivilopedia unique this needs refactoring
-    private fun getEnabledUnits(techName: String, ruleset: Ruleset, civInfo: Civilization?): Sequence<BaseUnit> {
+    internal fun getEnabledUnits(techName: String, ruleset: Ruleset, civInfo: Civilization?): Sequence<BaseUnit> {
         return ruleset.units.values.asSequence()
             .filter {
                 it.requiredTechs().contains(techName)

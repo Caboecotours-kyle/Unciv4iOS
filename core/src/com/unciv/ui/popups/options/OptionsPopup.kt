@@ -49,9 +49,10 @@ class OptionsPopup(
         val tabMaxWidth: Float
         val tabMaxHeight: Float
         screen.run {
-            rightWidgetMinWidth = if (stage.width < 600f) 200f else 240f
+            rightWidgetMinWidth = if (isPortrait()) 150f else if (stage.width < 600f) 200f else 240f
             tabMaxWidth = if (isPortrait()) stage.width - 10f else 0.8f * stage.width
-            tabMinWidth = 0.6f * stage.width
+            // portrait uses the whole phone width, so long checkbox labels are not clipped
+            tabMinWidth = if (isPortrait()) stage.width - 10f else 0.6f * stage.width
             tabMaxHeight = 0.8f * stage.height
         }
         // Since all pages now initialize their content late, on activation, we can't measure their preferred size anymore -> use tabMaxHeight for tabMinHeight
