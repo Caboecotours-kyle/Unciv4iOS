@@ -31,7 +31,10 @@ FEATURES = {
 # portrait placement from the mock's feature table: image name -> (mock size, mock y offset from the tile center)
 MOCK_FEATURES = {"Forest": (60, 10), "Jungle": (60, 10), "Hill": (54, 12), "Marsh": (46, 8), "Mountain": (62, 12)}
 MOCK = W / 62                      # texture px per mock px: the mock hex radius R=31 is W/2 here
+WOFF = 3 * MOCK                    # portrait water faces and their surf sit the mock's WOFF lower than land
 DECOR = {"Grassland": "f_grass", "Plains": "f_plains", "Desert": "f_desert1", "Tundra": "f_tundra", "Snow": "f_snow"}
+# mock decor size: grass and plains 24, the rest 30; the mock props decor at tile center + 8
+DECOR_MOCK_SIZE = {"Grassland": 24, "Plains": 24}
 
 
 def magick(*args):
@@ -59,6 +62,8 @@ def slab(name, tilted=False):
     """Two-tone hex face; land gets a darker slab edge along the lower sides."""
     lit, shade, side = TERRAIN[name]
     top = [project(x, y) for x, y in hexpts()] if tilted else hexpts(CY - (SIDE / 2 if side else 0), H - (SIDE if side else 0))
+    dy = WOFF if tilted and not side else 0
+    top = [(x, y + dy) for x, y in top]
     draw = []
     if side:
         full = [(x, y + 4 * W / 62) for x, y in top] if tilted else hexpts()
@@ -69,7 +74,7 @@ def slab(name, tilted=False):
                 draw.append(f"fill-opacity {.85 if i == 5 else 1} fill {side} polygon {poly([top[i], top[j], full[j], full[i]])} fill-opacity 1")
         else:
             draw.append(f"fill {side} polygon {poly([full[0], top[0], top[5], top[4], top[3], full[3], full[4], full[5]])}")
-    c = (CX, CY) if tilted else (CX, (top[1][1] + top[4][1]) / 2)
+    c = (CX, CY + dy) if tilted else (CX, (top[1][1] + top[4][1]) / 2)
     # facets facing the light (upper left): the top-left, top and bottom-left wedges
     # portrait follows the mock's corners(): its lit wedges 0, 4, 5 are projected wedges 2, 0, 1, with strokes in mock px
     lit_facets, facet_stroke, seam = ((0, 1, 2), .7 * MOCK, MOCK) if tilted else ((0, 1, 5), 0.8, 1.2)
@@ -102,7 +107,7 @@ def headroom(size, bottom):
     return max(0, math.ceil(size - bottom))
 
 
-def write(rel, draw=(), sprites=(), recolor=None, tilted_draw=None, tilted_sprites=None):
+def write(rel, draw=(), sprites=(), recolor=None, tilted_draw=None, tilted_sprites=None, tilted_dy=0):
     """Keep the flat export unchanged; add a portrait variant with upright, reanchored sprites."""
     for tilted in (False, True):
         placed = tilted_sprites if tilted and tilted_sprites is not None else \
@@ -114,6 +119,8 @@ def write(rel, draw=(), sprites=(), recolor=None, tilted_draw=None, tilted_sprit
         if draw:
             transform = f"translate 0,{head} "
             if tilted and tilted_draw is None:
+                if tilted_dy:
+                    transform += f"translate 0,{tilted_dy:.2f} "
                 transform += f"translate {CX},{CY} scale 1,{MAP_VERTICAL_SCALE} rotate -30 translate {-CX},{-CY} "
             args += ["-draw", transform + " ".join(tilted_draw if tilted and tilted_draw is not None else draw)]
         for key, size, bottom, *rest in placed:
@@ -186,7 +193,8 @@ def edges():
         i = edge_of[n]; a, b, ai, bi = v[i], v[(i + 1) % 6], inner[i], inner[(i + 1) % 6]
         write(f"Edges/Beach-Land-Water-{n}.png", [f"fill #f3dfa8 polygon {poly([a, b, bi, ai])}"])
         write(f"Edges/Surf-Water-Land-{n}.png", [f"fill rgba(143,220,242,0.6) polygon {poly([a, b, bi, ai])}",
-                                                 f"stroke rgba(255,255,255,0.75) stroke-width 3 line {a[0]:.1f},{a[1]:.1f} {b[0]:.1f},{b[1]:.1f}"])
+                                                 f"stroke rgba(255,255,255,0.75) stroke-width 3 line {a[0]:.1f},{a[1]:.1f} {b[0]:.1f},{b[1]:.1f}"],
+              tilted_dy=WOFF)
 
 
 def main():
@@ -202,7 +210,8 @@ def main():
         write(f"Tiles/{name}.png", slab(name), tilted_draw=slab(name, True)); write(f"Tiles/{name}2.png", slab(name), tilted_draw=slab(name, True)); n += 2
         if name in DECOR:
             size, bottom = (70, 132) if name != "Ocean" else (64, 130)
-            write(f"Tiles/{name}3.png", slab(name), [(DECOR[name], size, bottom, CX + 22)], tilted_draw=slab(name, True)); n += 1
+            write(f"Tiles/{name}3.png", slab(name), [(DECOR[name], size, bottom, CX + 22)], tilted_draw=slab(name, True),
+                  tilted_sprites=[(*mock_prop(DECOR[name], DECOR_MOCK_SIZE.get(name, 30), 8), CX + 22)]); n += 1
     for name, (keys, size, bottom) in FEATURES.items():
         for i, key in enumerate(keys):
             write(f"Tiles/{name}{'' if i == 0 else i + 1}.png", sprites=[(key, size, bottom)],
