@@ -160,12 +160,19 @@ class NotificationsScroll(
      */
     internal fun update(
         notifications: List<Notification>,
-        coveredNotificationsTop: Float,
-        coveredNotificationsBottom: Float
+        coveredTop: Float,
+        coveredBottom: Float
     ) {
+        // Portrait: the list lives only in the free band between the unit card and the thumb controls, so nothing
+        // scrolls underneath those buttons. Landscape keeps the full-height list with spacers.
+        val band = worldScreen.isPortrait()
+        val bandBottom = coveredBottom
+        if (band) height = (worldScreen.stage.height - coveredTop - coveredBottom).coerceAtLeast(0f) * inverseScaleFactor
+        val coveredNotificationsTop = if (band) 0f else coveredTop
+        val coveredNotificationsBottom = if (band) 0f else coveredBottom
         getUserSetting()
         if (userSetting == UserSetting.Disabled) {
-            restoreButton.setPosition(coveredNotificationsBottom)
+            restoreButton.setPosition(if (band) bandBottom else coveredNotificationsBottom)
             applyUserSettingChange()
             restoreButton.updateCount(notifications.size)
             return
@@ -217,8 +224,8 @@ class NotificationsScroll(
 
         // Do the positioning here since WorldScreen may also call update when just its geometry changed
         val safeArea = worldScreen.safeAreaBoundsInWorld()
-        setPosition(safeArea.x + safeArea.width - width * scaleFactor, 0f)
-        restoreButton.setPosition(coveredNotificationsBottom)
+        setPosition(safeArea.x + safeArea.width - width * scaleFactor, if (band) bandBottom else 0f)
+        restoreButton.setPosition(if (band) bandBottom else coveredNotificationsBottom)
     }
 
     private fun updateContent(

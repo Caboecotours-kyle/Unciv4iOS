@@ -519,8 +519,12 @@ class WorldScreen(
         updateGameplayButtons()
         if (isPortrait() && uiEnabled) layoutPortraitHud()
 
-        val coveredNotificationsTop = stage.height - statusButtons.y
-        val coveredNotificationsBottom = (bottomTileInfoTable.height + bottomTileInfoTable.y)
+        // Portrait: notifications use the band between the unit card on top and the thumb controls below
+        val coveredNotificationsTop = if (isPortrait()) stage.height - minOf(bottomUnitTable.y, bottomTileInfoTable.y)
+            else stage.height - statusButtons.y
+        val coveredNotificationsBottom = if (isPortrait())
+            maxOf(unitActionsTable.y + unitActionsTable.height, techPolicyAndDiplomacy.y + techPolicyAndDiplomacy.height)
+            else (bottomTileInfoTable.height + bottomTileInfoTable.y)
 //                (if (game.settings.showMinimap) minimapWrapper.height else 0f)
         notificationsScroll.update(viewingCiv.notifications, coveredNotificationsTop, coveredNotificationsBottom)
 
