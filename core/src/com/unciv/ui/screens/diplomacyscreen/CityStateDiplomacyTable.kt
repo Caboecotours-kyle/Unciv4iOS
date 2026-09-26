@@ -234,8 +234,12 @@ class CityStateDiplomacyTable(private val diplomacyScreen: DiplomacyScreen) {
             preview.label.setText(result.toString())
             layoutMarkers()
             val lead = rivals.maxOfOrNull { it.second }
+            val projectedAlly = otherCiv.diplomacy.values
+                .filter { it.otherCiv.isMajorCiv() && !it.otherCiv.isDefeated() }
+                .maxByOrNull { if (it.otherCiv == viewingCiv) manager.getInfluence() + delta else it.getInfluence() }
+                ?.otherCiv
             summary.setText(if (delta == 0) "Influence rests at ${manager.getCityStateInfluenceRestingPoint().toInt() + 10} after a pledge"
-                else "You would reach $result${if (result >= 60) ": Ally" else if (result >= 30) ": Friend" else ""}" +
+                else "You would reach $result${if (result >= 60 && projectedAlly == viewingCiv) ": Ally" else if (result >= 30) ": Friend" else ""}" +
                     (if (lead != null && result > lead) ", ${result - lead} ahead of your closest rival" else ""))
             actionHolder.clear()
             val button = label.toTextButton()
