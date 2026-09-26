@@ -15,9 +15,11 @@ class VictoryScreenCivRankings(
     worldScreen: WorldScreen
 ) : Table(BaseScreen.skin), TabbedPager.IPageExtensions {
     private val header = Table()
+    /** Portrait stacks one section per ranking instead of side-by-side columns under a shared header */
+    private val portrait = worldScreen.isPortrait()
 
     init {
-        align(Align.topLeft)
+        align(if (portrait) Align.top else Align.topLeft)
         header.align(Align.topLeft)
         defaults().pad(10f)
 
@@ -32,7 +34,8 @@ class VictoryScreenCivRankings(
                 textAndIcon.add(columnImage).size(Constants.defaultFontSize.toFloat() * 0.75f)
                     .padRight(2f).padTop(-2f)
             textAndIcon.add(category.label.toLabel()).row()
-            header.add(textAndIcon).pad(10f)
+            if (portrait) add(textAndIcon).padBottom(0f).row()
+            else header.add(textAndIcon).pad(10f)
 
             val column = Table().apply { defaults().space(10f) }
             val civData = majorCivs
@@ -42,14 +45,15 @@ class VictoryScreenCivRankings(
             for (civEntry in civData) {
                 column.add(VictoryScreenCivGroup(civEntry, worldScreen.selectedGameView.civView.getCiv())).fillX().row()
             }
-            add(column)
+            if (portrait) add(column).row()
+            else add(column)
         }
         header.addSeparator(Color.GRAY)
     }
 
     override fun activated(index: Int, caption: String, pager: TabbedPager) {
-        equalizeColumns(header, this)
+        if (!portrait) equalizeColumns(header, this)
     }
 
-    override fun getFixedContent() = header
+    override fun getFixedContent() = if (portrait) null else header
 }
