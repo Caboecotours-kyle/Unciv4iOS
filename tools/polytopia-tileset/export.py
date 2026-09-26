@@ -11,6 +11,7 @@ RULES = ROOT / "android/assets/jsons/Civ V - Gods & Kings"
 OUT = ROOT / "android/Images.Tilesets/TileSets/Polytopia"
 W = 192
 H = round(W * math.sqrt(3) / 2)  # 166, flat-top hex height
+MAP_VERTICAL_SCALE = 0.6
 SIDE = 8                           # slab edge under the lower three sides
 CX, CY = W / 2, H / 2
 
@@ -45,13 +46,13 @@ def poly(pts):
     return " ".join(f"{x:.1f},{y:.1f}" for x, y in pts)
 
 
-def slab(name, variant_decor=None):
+def slab(name, tilted=False):
     """Two-tone hex face; land gets a darker slab edge along the lower sides."""
     lit, shade, side = TERRAIN[name]
-    top = hexpts(CY - (SIDE / 2 if side else 0), H - (SIDE if side else 0))
+    top = hexpts(CY, H * MAP_VERTICAL_SCALE) if tilted else hexpts(CY - (SIDE / 2 if side else 0), H - (SIDE if side else 0))
     draw = []
     if side:
-        full = hexpts()
+        full = [(x, y + SIDE) for x, y in top] if tilted else hexpts()
         draw.append(f"fill {side} polygon {poly([full[0], top[0], top[5], top[4], top[3], full[3], full[4], full[5]])}")
     c = (CX, (top[1][1] + top[4][1]) / 2)
     # facets facing the light (upper left): the top-left, top and bottom-left wedges
@@ -78,20 +79,26 @@ def headroom(size, bottom):
     return max(0, math.ceil(size - bottom))
 
 
-def write(rel, draw=(), sprites=(), recolor=None):
-    """Render one canvas: vector draw ops on the hex, then bottom-anchored sprites, with headroom as needed."""
-    head = max([0] + [headroom(s, b) for _, s, b, *_ in sprites])
-    out = OUT / rel
-    out.parent.mkdir(parents=True, exist_ok=True)
-    args = ["-size", f"{W}x{H + head}", "xc:none"]
-    if draw:
-        args += ["-draw", f"translate 0,{head} " + " ".join(draw)]
-    for key, size, bottom, *rest in sprites:
-        args += place(H, key, size, bottom, cx=rest[0] if rest else CX, head=head)
-    if recolor:
-        args += recolor
-    magick(*args, out)
-    return out
+def write(rel, draw=(), sprites=(), recolor=None, tilted_draw=None):
+    """Keep the flat export unchanged; add a portrait variant with upright, reanchored sprites."""
+    for tilted in (False, True):
+        placed = [(key, size, CY + (bottom - CY) * MAP_VERTICAL_SCALE if tilted else bottom, *rest)
+                  for key, size, bottom, *rest in sprites]
+        head = max([0] + [headroom(s, b) for _, s, b, *_ in placed])
+        out = OUT / ("Tilted" if tilted else "") / rel
+        out.parent.mkdir(parents=True, exist_ok=True)
+        args = ["-size", f"{W}x{H + head}", "xc:none"]
+        if draw:
+            transform = f"translate 0,{head} "
+            if tilted and tilted_draw is None:
+                transform += f"translate 0,{CY} scale 1,{MAP_VERTICAL_SCALE} translate 0,{-CY} "
+            args += ["-draw", transform + " ".join(tilted_draw if tilted and tilted_draw is not None else draw)]
+        for key, size, bottom, *rest in placed:
+            args += place(H, key, size, bottom, cx=rest[0] if rest else CX, head=head)
+        if recolor:
+            args += recolor
+        magick(*args, out)
+    return OUT / rel
 
 
 def load(name):
@@ -113,13 +120,16 @@ def units():
         src = ART / f"k_{u['name'].lower()}.png"
         if not src.exists():
             print("no unit art:", u["name"]); continue
-        head = headroom(132, 148)
-        common = ["-size", f"{W}x{H + head}", "xc:none", "(", src, "-resize", "132x132", ")", "-geometry", f"+{CX - 66:.0f}+{head + 148 - 132}", "-composite"]
-        (OUT / "Units").mkdir(parents=True, exist_ok=True)
-        magick(*common, "-channel", "A", "-fx", f"{GREEN} ? 0 : u", "+channel", OUT / "Units" / f"{u['name']}.png")
-        # alpha first, while the pixels are still green; then the cloth becomes greys (lit near white) for tinting
-        magick(*common, "-channel", "A", "-fx", f"{GREEN} ? u : 0", "-channel", "RGB", "-fx", "min(1, u.g*1.12)", "+channel",
-               OUT / "Units" / f"{u['name']}-1.png")
+        for tilted in (False, True):
+            bottom = CY + (148 - CY) * MAP_VERTICAL_SCALE if tilted else 148
+            head = headroom(132, bottom)
+            common = ["-size", f"{W}x{H + head}", "xc:none", "(", src, "-resize", "132x132", ")", "-geometry", f"+{CX - 66:.0f}+{head + bottom - 132:.0f}", "-composite"]
+            unit_out = OUT / ("Tilted" if tilted else "") / "Units"
+            unit_out.mkdir(parents=True, exist_ok=True)
+            magick(*common, "-channel", "A", "-fx", f"{GREEN} ? 0 : u", "+channel", unit_out / f"{u['name']}.png")
+            # alpha first, while the pixels are still green; then tintable greys
+            magick(*common, "-channel", "A", "-fx", f"{GREEN} ? u : 0", "-channel", "RGB", "-fx", "min(1, u.g*1.12)", "+channel",
+                   unit_out / f"{u['name']}-1.png")
         made += 1
     return made
 
@@ -144,19 +154,19 @@ def main():
     for name in TERRAIN:
         if name == "Mountain":
             for i, key in enumerate(["f_mountain1", "f_mountain2", "f_mountain3"]):
-                write(f"Tiles/Mountain{'' if i == 0 else i + 1}.png", slab(name), [(key, 196, 150)]); n += 1
+                write(f"Tiles/Mountain{'' if i == 0 else i + 1}.png", slab(name), [(key, 196, 150)], tilted_draw=slab(name, True)); n += 1
             continue
-        write(f"Tiles/{name}.png", slab(name)); write(f"Tiles/{name}2.png", slab(name)); n += 2
+        write(f"Tiles/{name}.png", slab(name), tilted_draw=slab(name, True)); write(f"Tiles/{name}2.png", slab(name), tilted_draw=slab(name, True)); n += 2
         if name in DECOR:
             size, bottom = (70, 132) if name != "Ocean" else (64, 130)
-            write(f"Tiles/{name}3.png", slab(name), [(DECOR[name], size, bottom, CX + 22)]); n += 1
+            write(f"Tiles/{name}3.png", slab(name), [(DECOR[name], size, bottom, CX + 22)], tilted_draw=slab(name, True)); n += 1
     for name, (keys, size, bottom) in FEATURES.items():
         for i, key in enumerate(keys):
             write(f"Tiles/{name}{'' if i == 0 else i + 1}.png", sprites=[(key, size, bottom)]); n += 1
     for t in load("Terrains.json"):
         if t["type"] == "NaturalWonder":
             # a natural wonder replaces the base image, so it carries the slab of the terrain it turns into
-            write(f"Tiles/{t['name']}.png", slab(t.get("turnsInto", "Grassland")), [(f"nw_{t['name']}", 186, 154)]); n += 1
+            write(f"Tiles/{t['name']}.png", slab(t.get("turnsInto", "Grassland")), [(f"nw_{t['name']}", 186, 154)], tilted_draw=slab(t.get("turnsInto", "Grassland"), True)); n += 1
     for r in load("TileResources.json"):
         write(f"Tiles/{r['name']}.png", sprites=[(f"r_{r['name']}", 74, 158, 138)]); n += 1
     for i in load("TileImprovements.json"):
@@ -165,13 +175,15 @@ def main():
     for e in load("Eras.json"):
         era = e["name"].split()[0]
         write(f"Tiles/City center-{e['name']}.png", sprites=[(f"c_{era}_medium", 176, 154)], recolor=NEUTRAL_ROOFS); n += 1
-    shutil.copy(OUT / "Tiles/City center-Ancient era.png", OUT / "Tiles/City center.png")
+    for variant in (OUT, OUT / "Tilted"):
+        shutil.copy(variant / "Tiles/City center-Ancient era.png", variant / "Tiles/City center.png")
     edges(); n += 12
     # unexplored tiles: soft cloud white; not-visible tiles keep the terrain with no crosshatch
     write("UnexploredTile.png", [f"fill #eef3f7 polygon {poly(hexpts())}"])
     magick("-size", "1x1", "xc:none", OUT / "CrosshatchHexagon.png")
     n += units()
     config = {
+        "mapVerticalScale": MAP_VERTICAL_SCALE,
         "useColorAsBaseTerrain": False,
         "fallbackTileSet": "FantasyHex",
         "unexploredTileColor": {"r": 0.93, "g": 0.95, "b": 0.97, "a": 1},

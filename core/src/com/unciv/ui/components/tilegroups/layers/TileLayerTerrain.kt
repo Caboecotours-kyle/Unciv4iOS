@@ -179,7 +179,7 @@ class TileLayerTerrain(tileGroup: TileGroup, size: Float) : TileLayer(tileGroup,
         // Record where old terrain images sit in TileMapLayer so new ones can be inserted at
         // the same position, preserving the isometric Z-order established at map construction.
         val mapInsertIdx = if (parentMapLayer != null && tileBaseImages.isNotEmpty())
-            parentMapLayer!!.children.indexOf(tileBaseImages.first())
+            actorParent!!.children.indexOf(tileBaseImages.first())
         else -1
         // In ownedActors, terrain images precede river images; new terrain replaces from index 0.
         val ownedInsertIdx = if (mapInsertIdx >= 0) 0 else -1
@@ -211,14 +211,18 @@ class TileLayerTerrain(tileGroup: TileGroup, size: Float) : TileLayer(tileGroup,
             }
             val finalLocation = existingImages.random(
                 Random(tileGroup.tileView.position().hashCode() + locationToCheck.hashCode()))
-            val image = ImageGetter.getImage(finalLocation)
+            val mapLocation = strings.getMapImageLocation(finalLocation)
+            val groundOnly = baseLocation == strings.hexagon || baseLocation.endsWith("/" + tileGroup.tileView.baseTerrain)
+                || baseLocation.contains("/Edges/")
+            val image = if (mapLocation == finalLocation && groundOnly) getGroundImage(finalLocation)
+                else ImageGetter.getImage(mapLocation)
             image.name = finalLocation // for debug mode reveal
 
             tileBaseImages.add(image)
             if (nextMapIdx >= 0) {
                 // Insert at the recorded position to keep isometric Z-order intact.
                 ownedActors.add(nextOwnedIdx++, image)
-                parentMapLayer!!.addActorAt(nextMapIdx++, image)
+                actorParent!!.addActorAt(nextMapIdx++, image)
             } else {
                 addOwnedActor(image)
             }
@@ -273,7 +277,7 @@ class TileLayerTerrain(tileGroup: TileGroup, size: Float) : TileLayer(tileGroup,
         } else {
             if (currentImage != null) return currentImage // already in place, no movement needed
             if (!ImageGetter.imageExists(imageName)) return null // Old "Default" tileset gets no rivers.
-            val newImage = ImageGetter.getImage(imageName)
+            val newImage = getGroundImage(imageName)
             newImage.setHexagonSize()
             addOwnedActor(newImage) // rivers always append after terrain images
             return newImage

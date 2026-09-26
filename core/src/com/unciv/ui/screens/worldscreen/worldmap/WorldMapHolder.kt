@@ -99,6 +99,7 @@ class WorldMapHolder(
         val tileGroupsNew = tileMap.values.map { WorldTileGroup(tileMapView.getTile(it), tileSetStrings) }
         tileGroupMap = TileGroupMap(this, tileGroupsNew, continuousScrollingX)
 
+        tileGroups.clear()
         for (tileGroup in tileGroupsNew) tileGroups[tileGroup.tileView] = tileGroup
 
         addClickListener()
@@ -108,6 +109,26 @@ class WorldMapHolder(
         setBounds(bounds.x, bounds.y, bounds.width / scaleX, bounds.height / scaleY)
         layout() // Fit the scroll pane to the contents - otherwise, setScroll won't work!
     }
+
+    /** Rebuild the projection on rotation; an existing map's tile origins cannot change in place. */
+    fun refreshMapProjection() {
+        val requested = if (worldScreen.isPortrait()) currentTileSetStrings.tileSetConfig.mapVerticalScale.coerceIn(0.1f, 1f) else 1f
+        if (requested == currentTileSetStrings.mapVerticalScale) return
+        val center = selectedTile?.position()
+        removeUnitActionOverlay()
+        addTiles()
+        if (center != null) setCenterPosition(center, immediately = true, selectUnit = false)
+        worldScreen.shouldUpdate = true
+    }
+
+    /** Flat map coordinates are shared with the minimap and must remain independent of the board tilt. */
+    fun getFlatMapHeight(height: Float) = if (currentTileSetStrings.mapVerticalScale == 1f) height
+        else (height - TileGroupMap.groupSize) / currentTileSetStrings.mapVerticalScale + TileGroupMap.groupSize
+
+    fun getFlatMapY(y: Float) = if (currentTileSetStrings.mapVerticalScale == 1f) y
+        else (y - TileGroupMap.groupSize / 2f) / currentTileSetStrings.mapVerticalScale + TileGroupMap.groupSize / 2f
+
+    private fun getProjectedMapY(y: Float) = (y - TileGroupMap.groupSize / 2f) * currentTileSetStrings.mapVerticalScale + TileGroupMap.groupSize / 2f
 
     private fun addClickListener() {
         // ActivationListener-like listener to allow us to create only one listener for the entire worldmapholder instead of one per tile
@@ -707,6 +728,15 @@ class WorldMapHolder(
         }
         else
             super.reloadMaxZoom()
+
+        if (currentTileSetStrings.mapVerticalScale != 1f) {
+            // iOS uses logical pixels, so stage units / graphics height converts the 44pt target.
+            val rowSpacing = HexMath.hex2WorldCoords(HexCoord(1, 0), currentTileSetStrings.mapVerticalScale).y * 0.8f * TileGroupMap.groupSize
+            val unitsPerPoint = worldScreen.stage.height / Gdx.graphics.height
+            minZoom = max(minZoom, 44f * unitsPerPoint / rowSpacing)
+            maxZoom = max(maxZoom, minZoom * 1.1f)
+            if (scaleX < minZoom) zoom(minZoom)
+        }
     }
 
     override fun restrictX(deltaX: Float): Float {
@@ -714,7 +744,7 @@ class WorldMapHolder(
         if (worldScreen.selectedGameView.spectatorMode) return result
 
         val exploredRegion = worldScreen.selectedGameView.civView.getCiv().exploredRegion
-        if (exploredRegion.shouldRecalculateCoords()) exploredRegion.calculateStageCoords(maxX, maxY)
+        if (exploredRegion.shouldRecalculateCoords()) exploredRegion.calculateStageCoords(maxX, getFlatMapHeight(maxY))
         if (!exploredRegion.shouldRestrictX()) return result
 
         val leftX = exploredRegion.getLeftX()
@@ -733,10 +763,10 @@ class WorldMapHolder(
         if (worldScreen.selectedGameView.spectatorMode) return result
 
         val exploredRegion = worldScreen.selectedGameView.civView.getCiv().exploredRegion
-        if (exploredRegion.shouldRecalculateCoords()) exploredRegion.calculateStageCoords(maxX, maxY)
+        if (exploredRegion.shouldRecalculateCoords()) exploredRegion.calculateStageCoords(maxX, getFlatMapHeight(maxY))
 
-        val topY = exploredRegion.getTopY()
-        val bottomY = exploredRegion.getBottomY()
+        val topY = getProjectedMapY(exploredRegion.getTopY())
+        val bottomY = getProjectedMapY(exploredRegion.getBottomY())
 
         if (result < topY) result = topY
         else if (result > bottomY) result = bottomY

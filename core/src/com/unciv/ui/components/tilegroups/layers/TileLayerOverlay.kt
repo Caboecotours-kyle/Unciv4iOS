@@ -14,13 +14,13 @@ class TileLayerOverlay(tileGroup: TileGroup, size: Float) : TileLayer(tileGroup,
     private var fog: Image? = null
     private var unexplored: Image? = null
 
-    private fun getHighlight() = ImageGetter.getImage(strings.highlight).setHexagonSize()
-    private fun getCrosshair() = ImageGetter.getImage(strings.crosshair).setHexagonSize()
+    private fun getHighlight() = getGroundImage(strings.highlight).setHexagonSize()
+    private fun getCrosshair() = getGroundImage(strings.crosshair).setHexagonSize()
     private fun getGoodCityLocationIndicator() = ImageGetter.getImage("OtherIcons/Cities").setHexagonSize(0.25f)
-    private fun getFog() = ImageGetter.getImage(strings.crosshatchHexagon).setHexagonSize().apply {
+    private fun getFog() = getGroundImage(strings.crosshatchHexagon).setHexagonSize().apply {
         color = Color.WHITE.cpy().apply { a = 0.2f }
     }
-    private fun getUnexplored() = ImageGetter.getImage(strings.unexploredTile).setHexagonSize()
+    private fun getUnexplored() = getGroundImage(strings.unexploredTile).setHexagonSize()
 
     fun showCrosshair(alpha: Float = 1f) {
         if (crosshair == null) {

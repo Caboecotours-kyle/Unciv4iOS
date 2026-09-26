@@ -1078,6 +1078,7 @@ class WorldScreen(
         if (Gdx.app.type == com.badlogic.gdx.Application.ApplicationType.iOS) {
             if (!hasSafeAreaChanged(width, height)) return
             super.resize(width, height)
+            mapHolder.refreshMapProjection()
             mapHolder.resizeViewport((stage.viewport as com.unciv.ui.screens.basescreen.SafeAreaViewport).drawingBounds)
             mapHolder.reloadMaxZoom()
             mapHolder.zoom(mapHolder.scaleX)

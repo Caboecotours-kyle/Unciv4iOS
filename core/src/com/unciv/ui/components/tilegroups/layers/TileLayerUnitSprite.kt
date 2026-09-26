@@ -29,7 +29,7 @@ class TileLayerUnitSprite(tileGroup: TileGroup, size: Float) : TileLayer(tileGro
         var nationName = ""
 
         if (unitView != null && isShown && UncivGame.Current.settings.showPixelUnits) {
-            location = strings.getUnitImageLocation(unitView)
+            location = strings.getMapImageLocation(strings.getUnitImageLocation(unitView))
             nationName = "${unitView.civName}-"
         }
 

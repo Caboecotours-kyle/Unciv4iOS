@@ -5,7 +5,6 @@ import com.unciv.view.CivView
 import com.unciv.view.ForeignCivView
 import com.unciv.view.TileView
 import com.unciv.ui.components.tilegroups.TileGroup
-import com.unciv.ui.images.ImageGetter
 import kotlin.math.PI
 import kotlin.math.atan
 
@@ -120,7 +119,7 @@ class TileLayerBorders(tileGroup: TileGroup, size: Float) : TileLayer(tileGroup,
                 val sign = if (relativeWorldPosition.x < 0) -1 else 1
                 val angle = sign * (atan(sign * relativeWorldPosition.y / relativeWorldPosition.x) * 180 / PI - 90.0).toFloat()
 
-                val innerBorderImage = ImageGetter.getImage(
+                val innerBorderImage = getGroundImage(
                     strings.orFallback { getBorder(borderShapeString,"Inner") }
                 ).setHexagonSize()
 
@@ -129,7 +128,7 @@ class TileLayerBorders(tileGroup: TileGroup, size: Float) : TileLayer(tileGroup,
                 innerBorderImage.rotateBy(angle)
                 innerBorderImage.color = civOuterColor
 
-                val outerBorderImage = ImageGetter.getImage(
+                val outerBorderImage = getGroundImage(
                     strings.orFallback { getBorder(borderShapeString, "Outer") }
                 ).setHexagonSize()
 
