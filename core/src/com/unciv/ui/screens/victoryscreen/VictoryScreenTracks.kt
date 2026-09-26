@@ -28,7 +28,7 @@ class VictoryScreenTracks(worldScreen: WorldScreen, stageWidth: Float) : Table(B
     private val trackWidth = cardWidth - 2 * cardPad * scale
     private val secondary = colorFromRGB(178, 205, 222)
 
-    private data class Step(val name: String, val complete: Boolean, val partial: Boolean = false,
+    private class Step(val name: String, val complete: Boolean, val partial: Boolean = false,
                             val icon: () -> Actor)
 
     init {
