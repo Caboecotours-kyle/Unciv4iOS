@@ -13,6 +13,7 @@ import com.unciv.logic.civilization.Notification
 import com.unciv.logic.civilization.NotificationCategory
 import com.unciv.ui.components.YearTextUtil
 import com.unciv.ui.components.extensions.toLabel
+import com.unciv.ui.components.extensions.toTextButton
 import com.unciv.ui.components.fonts.Fonts
 import com.unciv.ui.components.input.onChange
 import com.unciv.ui.components.input.onClick
@@ -44,6 +45,7 @@ class NotificationsOverviewTable(
 
     private val notificationLog = viewingPlayer.getCiv().notificationsLog
     private val stageWidth = overviewScreen.stage.width
+    private val portrait = overviewScreen.isPortrait()
     private val notificationWidth = stageWidth / 2
     /** Color for notifications that are new this turn but which we have already seen.
      *  Defaults to 'Eggshell'. */
@@ -73,7 +75,7 @@ class NotificationsOverviewTable(
         highlightCount1 = viewingPlayer.getCiv().notificationCountAtStartTurn ?: currentNotificationCount
         highlightCount2 = persistableData.lastCount.takeIf { persistableData.lastTurn == gameInfo.turns }
             ?: highlightCount1
-        generateNotificationTable()
+        if (portrait) generatePortraitDigest() else generateNotificationTable()
         persistableData.lastCount = currentNotificationCount
         persistableData.lastTurn = gameInfo.turns
 
@@ -81,13 +83,14 @@ class NotificationsOverviewTable(
 
         add().row()
 
-        addNotificationLogTurnsAsync(notificationLog.asReversed().iterator())
+        if (!portrait) addNotificationLogTurnsAsync(notificationLog.asReversed().iterator())
     }
 
     override fun activated(index: Int, caption: String, pager: TabbedPager) {
         if (persistableData.scrollY != null)
             pager.setPageScrollY(index, persistableData.scrollY!!)
         super.activated(index, caption, pager)
+        if (portrait) return
         selectBox.remove()
         selectBox.setPosition(stageWidth - 10f, overviewScreen.centerAreaHeight, Align.topRight)
         selectBox.color.a = 0f
@@ -103,6 +106,7 @@ class NotificationsOverviewTable(
     }
 
     override fun deactivated(index: Int, caption: String, pager: TabbedPager) {
+        if (portrait) return
         persistableData.scrollY = pager.getPageScrollY(index)
         persistableData.closedTurns.clear()
         expanders.filterNot { it.value.isOpen }.mapTo(persistableData.closedTurns) { it.key }
@@ -112,6 +116,42 @@ class NotificationsOverviewTable(
     private fun generateNotificationTable() {
         if (viewingPlayer.getCiv().notifications.isNotEmpty())
             add(oneTurnTable(gameInfo.turns, viewingPlayer.getCiv().notifications, doHighlight = true)).row()
+    }
+
+    private fun generatePortraitDigest() {
+        val notifications = viewingPlayer.getCiv().notifications
+        val width = stageWidth - 40f
+        val header = Table()
+        header.add("This turn".toLabel(fontSize = 28)).left().expandX()
+        header.add("${notifications.size} events".toLabel()).right()
+        add(header).width(width).row()
+
+        val rows = Table()
+        fun showCategory(selected: NotificationCategory?) {
+            rows.clear()
+            for (category in NotificationCategory.entries) {
+                if (selected != null && category != selected) continue
+                val matches = notifications.withIndex().filter { it.value.category == category }
+                if (matches.isEmpty()) continue
+                rows.add(category.name.toLabel()).left().padTop(10f).row()
+                for ((index, notification) in matches)
+                    rows.add(getNotificationTable(index, notification, true))
+                        .width(width).minHeight(72f).padTop(5f).row()
+            }
+        }
+        val filters = Table()
+        val all = "All".toTextButton()
+        all.onClick { showCategory(null) }
+        filters.add(all).minHeight(48f).padRight(5f)
+        for (category in NotificationCategory.entries) {
+            if (notifications.none { it.category == category }) continue
+            val chip = category.name.toTextButton()
+            chip.onClick { showCategory(category) }
+            filters.add(chip).minHeight(48f).padRight(5f)
+        }
+        add(ScrollPane(filters)).width(width).height(54f).row()
+        showCategory(null)
+        add(rows).width(width).row()
     }
 
     /** Adds one past-turn table per call, each scheduled only once the previous one is done -
@@ -186,9 +226,11 @@ class NotificationsOverviewTable(
     }
 
     private fun getNotificationTable(index: Int, notification: Notification, doHighlight: Boolean) = Table(BaseScreen.skin).apply {
-        val label = ColorMarkupLabel(notification.text, ImageGetter.CHARCOAL, fontSize = 20)
+        val label = ColorMarkupLabel(notification.text, if (portrait) Color.WHITE else ImageGetter.CHARCOAL, fontSize = 20)
             .apply { wrap = true }
-        add(label).width(notificationWidth - iconSize * notification.icons.size)
+        add(label).width((if (portrait) stageWidth - 80f - 40f * notification.icons.size
+            else notificationWidth - iconSize * notification.icons.size)
+            .coerceAtLeast(100f))
 
         val tintColor = when {
             !doHighlight -> null
@@ -196,13 +238,14 @@ class NotificationsOverviewTable(
             index >= highlightCount1 -> highlightColor1
             else -> null
         }
-        background = skinStrings.getUiBackground("OverviewScreen/NotificationOverviewTable/Notification", skinStrings.roundedEdgeRectangleShape, tintColor)
+        background = skinStrings.getUiBackground("OverviewScreen/NotificationOverviewTable/Notification",
+            skinStrings.roundedEdgeRectangleShape, if (portrait) Color.valueOf("#142b40") else tintColor)
 
         touchable = Touchable.enabled
         if (notification.actions.isNotEmpty())
             onClick { overviewScreen.showOneTimeNotification(notification) }
 
-        notification.addNotificationIconsTo(this, gameInfo.ruleset, iconSize)
+        notification.addNotificationIconsTo(this, gameInfo.ruleset, if (portrait) 40f else iconSize)
     }
 
     private class SelectItem(val turn: Int, val label: String) {

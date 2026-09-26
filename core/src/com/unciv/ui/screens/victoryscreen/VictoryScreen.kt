@@ -20,6 +20,7 @@ import com.unciv.ui.components.widgets.TabbedPager
 import com.unciv.ui.components.extensions.areSecretKeysPressed
 import com.unciv.ui.components.extensions.enable
 import com.unciv.ui.components.extensions.toLabel
+import com.unciv.ui.components.extensions.toTextButton
 import com.unciv.ui.components.input.KeyCharAndCode
 import com.unciv.ui.components.input.onClick
 import com.unciv.ui.images.ImageGetter
@@ -168,6 +169,54 @@ class VictoryScreen(
             stage.addActor(difficultyLabel)
             difficultyLabel.setPosition(10f, panelY, Align.left)
         }
+        if (portrait && (gameInfo.victoryData != null || playerCiv.isDefeated()))
+            showPortraitEndMoment()
+    }
+
+    private fun showPortraitEndMoment() {
+        val victoryData = gameInfo.victoryData
+        val winner = victoryData?.winningCivObject ?: playerCiv
+        val won = winner == playerCiv && victoryData != null
+        val victory = victoryData?.let { gameInfo.ruleset.victories[it.victoryType] } ?: Victory()
+        val title = when {
+            won -> "You have won a [${victoryData!!.victoryType}] Victory!"
+            victoryData != null -> "[${winner.civName}] has won a [${victoryData.victoryType}] Victory!"
+            else -> "You have been defeated"
+        }
+        val body = if (won) victory.victoryString else victory.defeatString
+        val moment = Table().apply {
+            setFillParent(true)
+            background = skinStrings.getUiBackground("VictoryScreen/EndMoment",
+                tintColor = Color.valueOf("#102033"))
+            defaults().pad(8f)
+        }
+        moment.add(ImageGetter.getNationPortrait(winner.nation, 205f))
+            .size(215f).padTop(72f).row()
+        moment.add(title.toLabel(fontColor = if (won) Color.GOLD else Color.WHITE,
+            fontSize = 30).apply { wrap = true; setAlignment(Align.center) })
+            .width(stage.width - 36f).row()
+        moment.add(winner.nation.getLeaderDisplayName().toLabel().apply {
+            setAlignment(Align.center)
+        }).row()
+        moment.add(body.toLabel().apply { wrap = true; setAlignment(Align.center) })
+            .width(stage.width - 44f).maxHeight(150f).row()
+        moment.add().expandY().row()
+
+        val newGame = "Start new game".toTextButton().apply { color = Color.GOLD }
+        newGame.onClick {
+            val setup = GameSetupInfo(gameInfo)
+            setup.mapParameters.reseed()
+            game.pushScreen { NewGameScreen(setup) }
+        }
+        moment.add(newGame).width(stage.width - 44f).height(58f).row()
+        val oneMoreTurn = "One more turn...!".toTextButton()
+        oneMoreTurn.onClick {
+            gameInfo.oneMoreTurnMode = true
+            game.popScreen()
+        }
+        moment.add(oneMoreTurn).width(stage.width - 44f).height(52f)
+            .padBottom(32f).row()
+        stage.addActor(moment)
     }
 
     private fun displayWinner(victoryData: VictoryData) {

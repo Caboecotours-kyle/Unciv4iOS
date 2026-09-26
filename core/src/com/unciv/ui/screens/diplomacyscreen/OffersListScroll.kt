@@ -28,8 +28,10 @@ import com.unciv.ui.components.widgets.AutoScrollPane as ScrollPane
  */
 class OffersListScroll(
     private val persistenceID: String,
+    private val portraitMode: Boolean = false,
     private val onOfferClicked: (TradeOffer) -> Unit
 ) : ScrollPane(null) {
+    private val portraitTray = portraitMode && persistenceID.endsWith("Avail")
     val table = Table(BaseScreen.skin).apply { defaults().pad(5f) }
 
 
@@ -74,6 +76,7 @@ class OffersListScroll(
             }
         }
 
+        var trayColumn = 0
         for (offerType in TradeOfferType.entries) {
             val offersOfType = offersToDisplay.filter { it.type == offerType }
                 .sortedWith(compareBy(
@@ -82,8 +85,9 @@ class OffersListScroll(
                 ))
 
             if (expanderTabs.containsKey(offerType)) {
+                if (portraitTray && trayColumn != 0) { table.row(); trayColumn = 0 }
                 expanderTabs[offerType]!!.innerTable.clear()
-                table.add(expanderTabs[offerType]!!).row()
+                table.add(expanderTabs[offerType]!!).colspan(if (portraitTray) 3 else 1).row()
             }
 
             for (offer in offersOfType) {
@@ -128,10 +132,18 @@ class OffersListScroll(
                 else tradeButton.disable()  // for instance, we have negative gold
 
 
-                if (expanderTabs.containsKey(offerType))
-                    expanderTabs[offerType]!!.innerTable.add(tradeButton).row()
-                else
-                    table.add(tradeButton).row()
+                if (portraitTray) {
+                    val destination = expanderTabs[offerType]?.innerTable ?: table
+                    destination.add(tradeButton).width(108f).height(72f)
+                    trayColumn++
+                    if (trayColumn == 3) { destination.row(); trayColumn = 0 }
+                } else {
+                    val cell = if (expanderTabs.containsKey(offerType))
+                        expanderTabs[offerType]!!.innerTable.add(tradeButton)
+                    else table.add(tradeButton)
+                    if (portraitMode) cell.height(44f)
+                    cell.row()
+                }
             }
         }
         actor = table

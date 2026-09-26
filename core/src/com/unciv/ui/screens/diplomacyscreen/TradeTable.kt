@@ -1,5 +1,6 @@
 package com.unciv.ui.screens.diplomacyscreen
 
+import com.badlogic.gdx.graphics.Color
 import com.badlogic.gdx.scenes.scene2d.ui.Table
 import com.unciv.Constants
 import com.unciv.logic.trade.TradeOfferType
@@ -30,6 +31,10 @@ class TradeTable(
     }
 
     init {
+        if (diplomacyScreen.isPortrait()) {
+            add(LeaderIntroTable(otherCivilization.getCiv())).left().pad(8f).row()
+            offerButton.color = Color.GOLD
+        }
         offerColumnsTableWrapper.add(offerColumnsTable)
         add(offerColumnsTableWrapper).row()
 
@@ -71,7 +76,8 @@ class TradeTable(
             offerButton.setText("Retract offer".tr())
         }
 
-        lowerTable.add(offerButton)
+        lowerTable.add(offerButton).height(if (diplomacyScreen.isPortrait()) 56f else offerButton.prefHeight)
+            .width(if (diplomacyScreen.isPortrait()) diplomacyScreen.stage.width - 44f else offerButton.prefWidth)
 
         lowerTable.pack()
         lowerTable.y = 10f
