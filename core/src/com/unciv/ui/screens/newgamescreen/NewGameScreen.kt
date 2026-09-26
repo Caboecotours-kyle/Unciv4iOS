@@ -2,6 +2,10 @@ package com.unciv.ui.screens.newgamescreen
 
 import com.badlogic.gdx.Gdx
 import com.badlogic.gdx.graphics.Color
+import com.badlogic.gdx.scenes.scene2d.InputEvent
+import com.badlogic.gdx.scenes.scene2d.InputListener
+import com.badlogic.gdx.scenes.scene2d.ui.Table
+import com.badlogic.gdx.scenes.scene2d.ui.TextButton
 import com.badlogic.gdx.scenes.scene2d.ui.HorizontalGroup
 import com.unciv.Constants
 import com.unciv.UncivGame
@@ -63,9 +67,11 @@ class NewGameScreen(
     internal val playerPickerTable: PlayerPickerTable
     private val mapOptionsTable: MapOptionsTable
     private var mapOptionsTableInitialized = false
+    private var refreshPortraitControls: (() -> Unit)? = null
 
     init {
-        val isPortrait = isNarrowerThan4to3()
+        val isPortrait = isPortrait()
+        val isNarrow = isNarrowerThan4to3()
 
         // The mods loaded here may come from the last-started game (see GameSetupInfo.fromSettings) -
         // if that combination is now broken (e.g. a mod was updated/removed), silently fall back to
@@ -83,10 +89,10 @@ class NewGameScreen(
         rightSideButton.enable()  // now because PlayerPickerTable init might disable it again
         playerPickerTable = PlayerPickerTable(
             this, gameSetupInfo.gameParameters,
-            if (isPortrait) stage.width - 20f else 0f
+            if (isNarrow) stage.width - 20f else 0f
         )
         newGameOptionsTable = GameOptionsTable(
-            this, isPortrait,
+            this, isNarrow,
             updatePlayerPickerTable = { desiredCiv -> playerPickerTable.update(desiredCiv) },
             updatePlayerPickerRandomLabel = { playerPickerTable.updateRandomNumberLabel() }
         )
@@ -99,34 +105,40 @@ class NewGameScreen(
         closeButton.keyShortcuts.add(KeyCharAndCode.BACK)
 
         if (isPortrait) initPortrait()
+        else if (isNarrow) initNarrowLandscape()
         else initLandscape()
         bottomTable.background = skinStrings.getUiBackground("NewGameScreen/BottomTable", tintColor = skinStrings.skinConfig.clearColor)
         topTable.background = skinStrings.getUiBackground("NewGameScreen/TopTable", tintColor = skinStrings.skinConfig.clearColor)
 
-        val horizontalGroup = HorizontalGroup().padBottom(5f).space(10f)
-        rightSideGroup.addActorAt(0, horizontalGroup)
-
-        if (UncivGame.Current.settings.lastGameSetup != null) {
-            val resetToDefaultsButton = "Reset to defaults".toTextButton()
-            resetToDefaultsButton.onClick {
-                ConfirmPopup(
-                    this,
-                    "Are you sure you want to reset all game options to defaults?",
-                    "Reset to defaults",
-                ) {
-                    val gameSetupInfo = GameSetupInfo().apply {
-                        gameParameters.espionageEnabled = true
-                    }
-                    game.replaceCurrentScreen{ NewGameScreen(gameSetupInfo) }
-                }.open(true)
+        if (isPortrait) {
+            rightSideButton.setText("Start game!".tr())
+            rightSideButton.color = Color.GOLD
+            rightSideButton.labelCell.pad(14f, 65f, 14f, 65f)
+            rightSideButton.onClick(this::startGameAvoidANRs)
+        } else {
+            val horizontalGroup = HorizontalGroup().padBottom(5f).space(10f)
+            rightSideGroup.addActorAt(0, horizontalGroup)
+            if (UncivGame.Current.settings.lastGameSetup != null) {
+                val resetToDefaultsButton = "Reset to defaults".toTextButton()
+                resetToDefaultsButton.onClick {
+                    ConfirmPopup(
+                        this,
+                        "Are you sure you want to reset all game options to defaults?",
+                        "Reset to defaults",
+                    ) {
+                        val gameSetupInfo = GameSetupInfo().apply {
+                            gameParameters.espionageEnabled = true
+                        }
+                        game.replaceCurrentScreen{ NewGameScreen(gameSetupInfo) }
+                    }.open(true)
+                }
+                horizontalGroup.addActor(resetToDefaultsButton)
             }
-            horizontalGroup.addActor(resetToDefaultsButton)
+            val startGameButton = "Start game!".toTextButton().apply { color = Color.GREEN }
+            startGameButton.onClick(this::startGameAvoidANRs)
+            horizontalGroup.addActor(startGameButton)
+            pickerPane.rightSideButton.remove()
         }
-
-        val startGameButton = "Start game!".toTextButton().apply { color = Color.GREEN }        
-        startGameButton.onClick(this::startGameAvoidANRs)
-        horizontalGroup.addActor(startGameButton)
-        pickerPane.rightSideButton.remove()
     }
 
     private fun startGameAvoidANRs(){
@@ -274,26 +286,185 @@ class NewGameScreen(
                 .width(columnWidth).top()
     }
 
-    private fun initPortrait() {
-        scrollPane.setScrollingDisabled(false,false)
-
+    /** Keep the preexisting single-column layout on narrow landscape windows. */
+    private fun initNarrowLandscape() {
+        scrollPane.setScrollingDisabled(false, false)
         topTable.add(ExpanderTab("Game Options") {
             it.add(newGameOptionsTable).row()
         }).expandX().fillX().row()
         topTable.addSeparator(Color.DARK_GRAY, height = 1f)
-
         topTable.add(newGameOptionsTable.modCheckboxes).expandX().fillX().row()
         topTable.addSeparator(Color.DARK_GRAY, height = 1f)
-
         topTable.add(ExpanderTab("Map Options") {
             it.add(mapOptionsTable).row()
         }).expandX().fillX().row()
         topTable.addSeparator(Color.DARK_GRAY, height = 1f)
-
-        (playerPickerTable.playerListTable.parent as ScrollPane).setScrollingDisabled(true,true)
+        (playerPickerTable.playerListTable.parent as ScrollPane).setScrollingDisabled(true, true)
         topTable.add(ExpanderTab("Civilizations") {
             it.add(playerPickerTable).row()
         }).expandX().fillX().row()
+    }
+
+    private fun initPortrait() {
+        scrollPane.setScrollingDisabled(false,false)
+        val width = stage.width - 28f
+        val card = Table()
+        fun showLeader() {
+            card.clear()
+            val human = gameSetupInfo.gameParameters.players.firstOrNull { it.playerType == PlayerType.Human }
+            val nation = human?.chosenCiv?.let { ruleset.nations[it] }
+            card.background = skinStrings.getUiBackground("NewGameScreen/NationTable/Background",
+                tintColor = Color.valueOf("#12283a"))
+            val available = human?.let { playerPickerTable.getAvailablePlayerCivs(it.chosenCiv).toList() }
+                ?: emptyList()
+            fun selectNext(step: Int) {
+                if (human == null || available.isEmpty()) return
+                val index = available.indexOfFirst { it.name == human.chosenCiv }
+                val nextIndex = if (index < 0) {
+                    if (step > 0) 0 else available.lastIndex
+                } else (index + step + available.size) % available.size
+                val next = available[nextIndex]
+                human.chosenCiv = next.name
+                human.setNationTransient(ruleset)
+                playerPickerTable.update()
+                refreshPortraitControls?.invoke()
+            }
+            val portrait = nation?.let { ImageGetter.getNationPortrait(it, 220f) }
+                ?: ImageGetter.getRandomNationPortrait(220f)
+            val previous = "◀".toTextButton()
+            previous.onClick { selectNext(-1) }
+            card.add(previous).width(48f).height(56f)
+            card.add(portrait).width(230f).height(230f).pad(10f)
+            val next = "▶".toTextButton()
+            next.onClick { selectNext(1) }
+            card.add(next).width(48f).height(56f).row()
+            val canSwitch = human != null && available.any { it.name != human.chosenCiv }
+            if (!canSwitch) {
+                previous.disable()
+                next.disable()
+            }
+            val leader = when {
+                human == null -> "Choose a human player"
+                nation == null -> human.chosenCiv
+                else -> nation.leaderName.ifEmpty { nation.name }
+            }
+            card.add(leader.toLabel(fontSize = Constants.headingFontSize, hideIcons = true)
+                .apply { wrap = true }).width(width - 16f).colspan(3).padTop(10f).row()
+            if (nation != null) {
+                card.add(nation.name.toLabel()).colspan(3).row()
+                if (nation.uniqueName.isNotEmpty())
+                    card.add(nation.uniqueName.toLabel(fontColor = Color.GOLD)).colspan(3).row()
+                if (nation.uniqueText.isNotEmpty())
+                    card.add(nation.uniqueText.toLabel().apply { wrap = true })
+                        .width(width - 48f).colspan(3).pad(10f).row()
+            }
+            card.addListener(object : InputListener() {
+                private var startX = 0f
+                private var startY = 0f
+                override fun touchDown(event: InputEvent, x: Float, y: Float, pointer: Int, button: Int): Boolean {
+                    startX = x
+                    startY = y
+                    return true
+                }
+                override fun touchUp(event: InputEvent, x: Float, y: Float, pointer: Int, button: Int) {
+                    if (kotlin.math.abs(y - startY) >= kotlin.math.abs(x - startX)) return
+                    if (x - startX > 40f) selectNext(-1)
+                    if (startX - x > 40f) selectNext(1)
+                }
+            })
+        }
+        topTable.add(card).width(width).padTop(10f).row()
+
+        val gameSettings = ExpanderTab("Game Options") {
+            it.add(newGameOptionsTable).row()
+            it.add(newGameOptionsTable.modCheckboxes).row()
+        }
+        val mapSettings = ExpanderTab("Map Options") {
+            it.add(mapOptionsTable).row()
+        }
+        (playerPickerTable.playerListTable.parent as ScrollPane).setScrollingDisabled(true,true)
+        val civSettings = ExpanderTab("Civilizations") {
+            it.add(playerPickerTable).row()
+        }
+        val chips = Table()
+        val chipSummaries = mutableListOf<Pair<TextButton, () -> String>>()
+        fun openSection(section: ExpanderTab) {
+            section.isOpen = true
+            Gdx.app.postRunnable {
+                topTable.invalidateHierarchy()
+                topTable.validate()
+                scrollPane.validate()
+                scrollPane.scrollY = (topTable.height - section.y - section.height).coerceAtLeast(0f)
+                scrollPane.updateVisualScroll()
+            }
+        }
+        fun chip(text: () -> String, section: ExpanderTab, column: Int) {
+            val button = text().toTextButton()
+            button.onClick { openSection(section) }
+            chips.add(button).width((width - 10f) / 2f).height(52f).pad(4f)
+            chipSummaries.add(button to text)
+            if (column == 1) chips.row()
+        }
+        fun parameters() = gameSetupInfo.gameParameters
+        chip({ "${gameSetupInfo.mapParameters.mapSize.name} ${gameSetupInfo.mapParameters.type}" }, mapSettings, 0)
+        chip({ parameters().difficulty }, gameSettings, 1)
+        chip({ parameters().speed }, gameSettings, 0)
+        chip({ parameters().startingEra }, gameSettings, 1)
+        chip({
+            val game = parameters()
+            if (game.randomNumberOfPlayers)
+                "${game.minNumberOfPlayers}-${game.maxNumberOfPlayers} players · ${game.numberOfCityStates} CS"
+            else {
+                val rivals = (game.players.count { it.chosenCiv != Constants.spectator } - 1).coerceAtLeast(0)
+                "$rivals rivals · ${game.numberOfCityStates} CS"
+            }
+        }, civSettings, 0)
+        chip({ "${parameters().victoryTypes.size} victories" }, gameSettings, 1)
+        topTable.add(chips).width(width).padTop(14f).row()
+        val all = "All settings".toTextButton()
+        all.onClick {
+            gameSettings.isOpen = true
+            mapSettings.isOpen = true
+            civSettings.isOpen = true
+        }
+        topTable.add(all).width(width).height(48f).row()
+        topTable.add(gameSettings).width(width).row()
+        topTable.add(mapSettings).width(width).row()
+        topTable.add(civSettings).width(width).row()
+        if (UncivGame.Current.settings.lastGameSetup != null) {
+            val reset = "Reset to defaults".toTextButton()
+            reset.onClick {
+                ConfirmPopup(this, "Are you sure you want to reset all game options to defaults?",
+                    "Reset to defaults") {
+                    val setup = GameSetupInfo().apply { gameParameters.espionageEnabled = true }
+                    game.replaceCurrentScreen { NewGameScreen(setup) }
+                }.open(true)
+            }
+            topTable.add(reset).width(width).height(48f).row()
+        }
+        var lastSummary = ""
+        refreshPortraitControls = {
+            val game = parameters()
+            val state = listOf(
+                gameSetupInfo.mapParameters.mapSize.name, gameSetupInfo.mapParameters.type,
+                game.difficulty, game.speed, game.startingEra, game.numberOfCityStates.toString(),
+                game.randomNumberOfPlayers.toString(), game.minNumberOfPlayers.toString(),
+                game.maxNumberOfPlayers.toString(), game.victoryTypes.joinToString(),
+                game.players.joinToString { "${it.playerType}:${it.chosenCiv}" },
+                game.mods.joinToString(), game.baseRuleset
+            ).joinToString("|")
+            if (state != lastSummary) {
+                lastSummary = state
+                showLeader()
+                chipSummaries.forEach { (button, text) -> button.setText(text()) }
+            }
+        }
+        refreshPortraitControls?.invoke()
+    }
+
+    override fun render(delta: Float) {
+        refreshPortraitControls?.invoke()
+        super.render(delta)
     }
 
     private suspend fun checkConnectionToMultiplayerServer(): Boolean {

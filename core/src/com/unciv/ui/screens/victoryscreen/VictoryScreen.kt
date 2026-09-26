@@ -20,6 +20,7 @@ import com.unciv.ui.components.widgets.TabbedPager
 import com.unciv.ui.components.extensions.areSecretKeysPressed
 import com.unciv.ui.components.extensions.enable
 import com.unciv.ui.components.extensions.toLabel
+import com.unciv.ui.components.extensions.toTextButton
 import com.unciv.ui.components.input.KeyCharAndCode
 import com.unciv.ui.components.input.onClick
 import com.unciv.ui.images.ImageGetter
@@ -28,6 +29,7 @@ import com.unciv.ui.screens.basescreen.RecreateOnResize
 import com.unciv.ui.screens.newgamescreen.NewGameScreen
 import com.unciv.ui.screens.pickerscreens.PickerScreen
 import com.unciv.ui.screens.worldscreen.WorldScreen
+import com.unciv.ui.components.widgets.AutoScrollPane as ScrollPane
 import yairm210.purity.annotations.Readonly
 import java.util.EnumSet
 
@@ -168,6 +170,62 @@ class VictoryScreen(
             stage.addActor(difficultyLabel)
             difficultyLabel.setPosition(10f, panelY, Align.left)
         }
+        if (portrait && (gameInfo.victoryData != null || playerCiv.isDefeated()))
+            showPortraitEndMoment()
+    }
+
+    private fun showPortraitEndMoment() {
+        val victoryData = gameInfo.victoryData
+        val winner = victoryData?.winningCivObject ?: playerCiv
+        val won = winner == playerCiv && victoryData != null
+        val victory = victoryData?.let { gameInfo.ruleset.victories[it.victoryType] } ?: Victory()
+        val title = when {
+            won -> "You have won a [${victoryData!!.victoryType}] Victory!"
+            victoryData != null -> "[${winner.civName}] has won a [${victoryData.victoryType}] Victory!"
+            else -> "You have been defeated"
+        }
+        val body = if (won) victory.victoryString else victory.defeatString
+        val moment = Table().apply {
+            setFillParent(true)
+            background = skinStrings.getUiBackground("VictoryScreen/EndMoment",
+                tintColor = Color.valueOf("#102033"))
+            defaults().pad(8f)
+        }
+        val viewResults = "View results".toTextButton()
+        viewResults.onClick { moment.remove() }
+        moment.add(viewResults).width(128f).height(48f).expandX().right().row()
+        val portraitSize = (stage.height * 0.31f).coerceIn(160f, stage.width - 96f)
+        moment.add(ImageGetter.getNationPortrait(winner.nation, portraitSize - 10f))
+            .size(portraitSize).padTop(12f).row()
+        if (victoryData != null)
+            moment.add(ImageGetter.getVictoryTypeIcon(victoryData.victoryType, 44f))
+                .size(44f).row()
+        moment.add(title.toLabel(fontColor = if (won) Color.GOLD else Color.WHITE,
+            fontSize = 30).apply { wrap = true; setAlignment(Align.center) })
+            .width(stage.width - 36f).row()
+        moment.add(winner.nation.getLeaderDisplayName().toLabel().apply {
+            setAlignment(Align.center)
+        }).row()
+        val bodyLabel = body.toLabel().apply { wrap = true; setAlignment(Align.center) }
+        moment.add(ScrollPane(bodyLabel)).width(stage.width - 44f)
+            .height((stage.height * 0.16f).coerceAtMost(150f)).row()
+        moment.add().expandY().row()
+
+        val newGame = "Start new game".toTextButton().apply { color = Color.GOLD }
+        newGame.onClick {
+            val setup = GameSetupInfo(gameInfo)
+            setup.mapParameters.reseed()
+            game.pushScreen { NewGameScreen(setup) }
+        }
+        moment.add(newGame).width(stage.width - 44f).height(58f).row()
+        val oneMoreTurn = "One more turn...!".toTextButton()
+        oneMoreTurn.onClick {
+            gameInfo.oneMoreTurnMode = true
+            game.popScreen()
+        }
+        moment.add(oneMoreTurn).width(stage.width - 44f).height(52f)
+            .padBottom(32f).row()
+        stage.addActor(moment)
     }
 
     private fun displayWinner(victoryData: VictoryData) {

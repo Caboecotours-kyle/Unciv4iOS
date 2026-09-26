@@ -1,7 +1,12 @@
 package com.unciv.ui.screens.diplomacyscreen
 
 import com.badlogic.gdx.graphics.Color
+import com.badlogic.gdx.math.MathUtils
+import com.badlogic.gdx.scenes.scene2d.Touchable
 import com.badlogic.gdx.scenes.scene2d.ui.ScrollPane
+import com.badlogic.gdx.scenes.scene2d.Group
+import com.badlogic.gdx.scenes.scene2d.ui.Image
+import com.badlogic.gdx.scenes.scene2d.ui.Label
 import com.badlogic.gdx.scenes.scene2d.ui.Table
 import com.badlogic.gdx.scenes.scene2d.ui.TextButton
 import com.badlogic.gdx.utils.Align
@@ -16,6 +21,7 @@ import com.unciv.logic.trade.TradeLogic
 import com.unciv.logic.trade.TradeOffer
 import com.unciv.logic.trade.TradeOfferType
 import com.unciv.models.ruleset.Quest
+import com.unciv.models.ruleset.QuestName
 import com.unciv.models.ruleset.tile.ResourceType
 import com.unciv.models.ruleset.unique.GameContext
 import com.unciv.models.ruleset.unique.UniqueType
@@ -35,6 +41,11 @@ class CityStateDiplomacyTable(private val diplomacyScreen: DiplomacyScreen) {
     val viewingCiv = diplomacyScreen.viewingCiv
 
     fun getCityStateDiplomacyTable(otherCiv: Civilization): Table {
+        if (diplomacyScreen.isPortrait()) return getPortraitCityStateTable(otherCiv)
+        return getClassicCityStateTable(otherCiv)
+    }
+
+    private fun getClassicCityStateTable(otherCiv: Civilization): Table {
         val otherCivDiplomacyManager = otherCiv.getDiplomacyManager(viewingCiv)!!
 
         val diplomacyTable = getCityStateDiplomacyTableHeader(otherCiv)
@@ -89,6 +100,172 @@ class CityStateDiplomacyTable(private val diplomacyScreen: DiplomacyScreen) {
         }
 
         return diplomacyTable
+    }
+
+    private fun getPortraitCityStateTable(otherCiv: Civilization): Table {
+        val manager = otherCiv.getDiplomacyManager(viewingCiv)!!
+        val current = manager.getInfluence().toInt()
+        val rivals = otherCiv.getKnownCivs().filter {
+            it.isMajorCiv() && !it.isDefeated() && it != viewingCiv && viewingCiv.knows(it)
+        }.mapNotNull { rival ->
+            otherCiv.getDiplomacyManager(rival)?.let { rival to it.getInfluence().toInt() }
+        }.sortedByDescending { it.second }.toList()
+        val quests = otherCiv.questManager.getAssignedQuestsFor(viewingCiv)
+        // A gold gift completes GiveGold quests immediately, in addition to its normal influence gain.
+        val giftQuestBonus = quests.filter { it.questNameInstance == QuestName.GiveGold }
+            .sumOf { it.getInfluence().toInt() }
+        fun giftInfluence(amount: Int) =
+            otherCiv.cityStateFunctions.influenceGainedByGift(viewingCiv, amount) + giftQuestBonus
+        val maximum = (listOf(60, current) + rivals.map { it.second } +
+            quests.map { current + it.quest.influence.toInt() } +
+            listOf(250, 500, 1000).map { current + giftInfluence(it) })
+            .maxOrNull()!!.coerceAtLeast(60) + 10
+        val width = diplomacyScreen.stage.width - 32f
+        val trackWidth = 140f
+        val trackHeight = maxOf(480f, 20f + 22f * (rivals.size + 3))
+        val trackLength = trackHeight - 60f
+        val root = Table().apply { defaults().pad(5f) }
+        root.add(LeaderIntroTable(otherCiv)).width(width).left().row()
+        root.add(diplomacyScreen.getRelationshipTable(manager)).left().row()
+
+        val content = Table()
+        val track = Group().apply { setSize(trackWidth, trackHeight) }
+        val trackLine = ImageGetter.getWhiteDot().apply {
+            color = Color.CYAN.cpy().apply { a = 0.45f }
+            setSize(5f, trackLength)
+            setPosition(119f, 25f)
+        }
+        track.addActor(trackLine)
+        fun position(value: Int): Float = 25f + (value.coerceAtLeast(0).toFloat() / maximum) * trackLength
+        data class InfluenceMarker(
+            var value: Int,
+            val group: Group,
+            val dot: Image,
+            val label: Label,
+            val connector: Image
+        )
+        val markers = mutableListOf<InfluenceMarker>()
+        fun marker(name: String, value: Int, color: Color): InfluenceMarker {
+            val marker = Group().apply {
+                setSize(trackWidth, trackHeight)
+                touchable = Touchable.disabled
+            }
+            val connector = ImageGetter.getWhiteDot().apply {
+                this.color = color.cpy().apply { a = 0.6f }
+                setOrigin(0f, 0.75f)
+            }
+            marker.addActor(connector)
+            val dot = ImageGetter.getCircle(color, 18f)
+            marker.addActor(dot)
+            val label = "[$name] [$value]".toLabel(fontSize = 14).apply {
+                setSize(105f, 20f)
+                setEllipsis(true)
+            }
+            marker.addActor(label)
+            track.addActor(marker)
+            return InfluenceMarker(value, marker, dot, label, connector).also { markers.add(it) }
+        }
+        fun layoutMarkers() {
+            val visible = markers.filter { it.group.isVisible }.sortedBy { position(it.value) }
+            val spacing = 22f
+            var lastCenter = 10f - spacing
+            val centers = visible.map {
+                maxOf(position(it.value), lastCenter + spacing).also { center -> lastCenter = center }
+            }.toMutableList()
+            if (centers.isNotEmpty()) {
+                centers[centers.lastIndex] = minOf(centers.last(), trackHeight - 10f)
+                for (index in centers.lastIndex - 1 downTo 0)
+                    centers[index] = minOf(centers[index], centers[index + 1] - spacing)
+            }
+            for ((index, item) in visible.withIndex()) {
+                val dotY = position(item.value)
+                val labelY = centers[index]
+                val deltaY = dotY - labelY
+                item.dot.setPosition(112f, dotY - 9f)
+                item.label.setPosition(0f, labelY - 10f)
+                item.connector.isVisible = kotlin.math.abs(deltaY) > 4f
+                item.connector.setSize(kotlin.math.sqrt(16f * 16f + deltaY * deltaY), 1.5f)
+                item.connector.setPosition(105f, labelY - 0.75f)
+                item.connector.rotation = MathUtils.atan2(deltaY, 16f) * MathUtils.radiansToDegrees
+            }
+        }
+        marker("Friend", 30, Color.CYAN)
+        marker("Ally", 60, Color.GOLD)
+        for ((rival, score) in rivals) marker(rival.civName, score, Color.RED)
+        marker("You", current, Color.WHITE)
+        val preview = marker("→", current, Color.GOLD)
+        preview.group.isVisible = false
+        layoutMarkers()
+        content.add(track).width(trackWidth).height(trackHeight).top()
+
+        val actions = Table().apply { defaults().padBottom(7f) }
+        actions.add("Ways to gain influence".toLabel(fontSize = Constants.headingFontSize)).left().row()
+        val summary = "[${viewingCiv.civName}]: [$current] influence".toLabel().apply { wrap = true }
+        val actionHolder = Table()
+        var selectedAction = false
+        fun select(delta: Int, label: String, enabled: Boolean = true, action: () -> Unit) {
+            val result = current + delta
+            preview.group.isVisible = delta != 0
+            preview.value = result
+            preview.label.setText("[→] [$result]".tr())
+            layoutMarkers()
+            summary.setText("[${viewingCiv.civName}]: [$current] → [$result] influence".tr())
+            actionHolder.clear()
+            val button = label.toTextButton()
+            button.onClick(action)
+            if (!enabled) button.disable()
+            actionHolder.add(button).growX().height(52f)
+        }
+        fun row(title: String, detail: String, delta: Int, enabled: Boolean = true, action: () -> Unit) {
+            val button = "[$title]  ${if (delta > 0) "+" else ""}[$delta]\n$detail".toTextButton()
+            button.label.wrap = true
+            button.onClick { select(delta, title, enabled, action) }
+            actions.add(button).width(width - trackWidth - 12f).height(66f).row()
+            if (enabled && !selectedAction) {
+                select(delta, title, true, action)
+                selectedAction = true
+            }
+        }
+        for (quest in quests) {
+            val delta = quest.quest.influence.toInt()
+            val detail = if (quest.quest.duration > 0)
+                "[${quest.getRemainingTurns()}] turns remaining" else quest.getDescription()
+            row(quest.quest.name, detail, delta) { quest.onClickAction() }
+        }
+        for (amount in listOf(250, 500, 1000)) {
+            val delta = giftInfluence(amount)
+            val enabled = viewingCiv.gold >= amount && !diplomacyScreen.isNotPlayersTurn() &&
+                !viewingCiv.isAtWarWith(otherCiv)
+            row("Gift [$amount] gold", "+[$delta] influence", delta, enabled) {
+                otherCiv.cityStateFunctions.receiveGoldGift(viewingCiv, amount)
+                diplomacyScreen.updateLeftSideTable(otherCiv)
+                diplomacyScreen.updateRightSide(otherCiv)
+            }
+        }
+        if (manager.diplomaticStatus != DiplomaticStatus.Protector) {
+            val enabled = !diplomacyScreen.isNotPlayersTurn() &&
+                otherCiv.cityStateFunctions.otherCivCanPledgeProtection(viewingCiv)
+            val restingPoint = manager.getCityStateInfluenceRestingPoint().toInt() + 10
+            row("Pledge to protect", "Influence will rest at [$restingPoint]", 0, enabled) {
+                ConfirmPopup(diplomacyScreen, "Declare Protection of [${otherCiv.civName}]?", "Pledge to protect", true) {
+                    otherCiv.cityStateFunctions.addProtectorCiv(viewingCiv)
+                    diplomacyScreen.updateLeftSideTable(otherCiv)
+                    diplomacyScreen.updateRightSide(otherCiv)
+                }.open()
+            }
+        }
+        content.add(actions).width(width - trackWidth - 12f).top()
+        root.add(ScrollPane(content)).width(width)
+            .height((diplomacyScreen.stage.height - 440f).coerceAtLeast(300f)).row()
+        root.add(summary).width(width).left().row()
+        root.add(actionHolder).width(width).height(52f).row()
+        val allOptions = "All options".toTextButton()
+        allOptions.onClick {
+            diplomacyScreen.rightSideTable.clear()
+            diplomacyScreen.rightSideTable.add(ScrollPane(getClassicCityStateTable(otherCiv)))
+        }
+        root.add(allOptions).width(width).height(44f).row()
+        return root
     }
 
 

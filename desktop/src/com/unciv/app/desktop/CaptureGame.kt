@@ -8,6 +8,7 @@ import com.badlogic.gdx.graphics.glutils.FrameBuffer
 import com.badlogic.gdx.backends.lwjgl3.Lwjgl3ApplicationConfiguration
 import com.badlogic.gdx.utils.BufferUtils
 import com.unciv.logic.GameStarter
+import com.unciv.logic.VictoryData
 import com.unciv.logic.files.UncivFiles
 import com.unciv.logic.civilization.PlayerType
 import com.unciv.models.metadata.GameSetupInfo
@@ -21,6 +22,7 @@ import com.unciv.ui.screens.civilopediascreen.CivilopediaScreen
 import com.unciv.ui.screens.diplomacyscreen.DiplomacyScreen
 import com.unciv.ui.screens.newgamescreen.NewGameScreen
 import com.unciv.ui.screens.overviewscreen.EmpireOverviewScreen
+import com.unciv.ui.screens.overviewscreen.EmpireOverviewCategories
 import com.unciv.models.Counter
 import com.unciv.models.ruleset.BeliefType
 import com.unciv.ui.screens.pickerscreens.PantheonPickerScreen
@@ -152,9 +154,24 @@ class CaptureGame(
                 pushScreen { DiplomacyScreen(world.selectedGameView.civView, world.selectedGameView.getForeignCivView(other),
                     showTrade = open == "trade") }
             }
+            "citystate" -> {
+                val other = world.gameInfo.civilizations.first { it.isCityState }
+                if (!civ.knows(other)) civ.diplomacyFunctions.makeCivilizationsMeet(other)
+                pushScreen { DiplomacyScreen(world.selectedGameView.civView,
+                    world.selectedGameView.getForeignCivView(other)) }
+            }
             "overview" -> pushScreen { EmpireOverviewScreen(world.selectedGameView.civView) }
+            "notifications" -> pushScreen { EmpireOverviewScreen(world.selectedGameView.civView,
+                EmpireOverviewCategories.Notifications) }
             "civilopedia" -> pushScreen { CivilopediaScreen(world.gameInfo.ruleset) }
             "victory" -> pushScreen { VictoryScreen(world) }
+            "victory-won", "victory-lost" -> {
+                val winner = if (open == "victory-won") civ
+                    else world.gameInfo.civilizations.first { it.isMajorCiv() && it != civ }
+                val type = world.gameInfo.ruleset.selectableVictories().first().name
+                world.gameInfo.victoryData = VictoryData(winner, type, world.gameInfo.turns)
+                pushScreen { VictoryScreen(world) }
+            }
             "newgame" -> pushScreen { NewGameScreen() }
             "pantheon" -> pushScreen { PantheonPickerScreen(civ) }
             "religion" -> pushScreen {
