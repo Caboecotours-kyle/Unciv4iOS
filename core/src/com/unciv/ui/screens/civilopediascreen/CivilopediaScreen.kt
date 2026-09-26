@@ -25,6 +25,9 @@ import com.unciv.ui.components.input.KeyCharAndCode
 import com.unciv.ui.components.input.KeyboardBinding
 import com.unciv.ui.components.input.onActivation
 import com.unciv.ui.components.input.keyShortcuts
+import com.unciv.ui.components.input.onChange
+import com.unciv.ui.components.widgets.UncivTextField
+import com.unciv.ui.popups.Popup
 import com.unciv.ui.components.input.onClick
 import com.unciv.ui.images.IconTextButton
 import com.unciv.ui.images.ImageGetter
@@ -162,25 +165,29 @@ class CivilopediaScreen(
 
         for (entry in entries) {
             val entryButton = Table().apply {
-                background = skinStrings.getUiBackground(
-                    "CivilopediaScreen/EntryButton",
-                    tintColor = colorFromRGB(50, 75, 125)
-                )
+                background = if (portrait) portraitPanel(Color(1f, 1f, 1f, .04f), 14f)
+                else skinStrings.getUiBackground("CivilopediaScreen/EntryButton", tintColor = colorFromRGB(50, 75, 125))
                 touchable = Touchable.enabled
             }
-            if (entry.image != null)
+            val entryImage = if (portrait) portraitArt(category, entry.flavour?.getIconName() ?: entry.name, 44f) else entry.image
+            if (entryImage != null)
                 if (category == CivilopediaCategories.Terrain)
-                    entryButton.add(entry.image).padLeft(20f).padRight(10f)
+                    entryButton.add(entryImage).padLeft(20f).padRight(10f)
                 else
-                    entryButton.add(entry.image).padLeft(10f)
+                    entryButton.add(entryImage).padLeft(10f)
             entryButton.left().add(entry.name
-                .toLabel(Color.WHITE, if (portrait) 20 else 25, hideIcons = true)).pad(10f)
+                .toLabel(Color.WHITE, if (portrait) 16 else 25, hideIcons = true)).pad(10f)
             entryButton.onClick { selectEntry(entry) }
             entryButton.name = entry.name               // make button findable
 
             if (currentSubCategory != entry.subCategory) {
-                if (entry.subCategory != null)
-                    entrySelectTable.add(SubCategoryTable(entry.subCategory)).fillX().row()
+                if (entry.subCategory != null) {
+                    val header = if (portrait) entry.subCategory.toLabel(mutedPedia(), 15) else SubCategoryTable(entry.subCategory)
+                    val cell = entrySelectTable.add(header).fillX().padTop(12f)
+                    if (portrait) cell.height(28f)
+                    cell.row()
+                    currentY += if (portrait) 40f else cell.prefHeight + cell.padTop + cell.padBottom
+                }
                 currentSubCategory = entry.subCategory
             }
 
@@ -225,7 +232,7 @@ class CivilopediaScreen(
             flavourTable.isVisible = true
             flavourTable.add(
                 entry.flavour.assembleCivilopediaText(ruleset)
-                    .renderCivilopediaText(if (portrait) stage.width - 2 * portraitPad else stage.width * 0.5f) { selectLink(it) })
+                    .renderCivilopediaText(if (portrait) 393f - 2 * portraitPad else stage.width * 0.5f) { selectLink(it) })
         } else {
             flavourTable.isVisible = false
         }
@@ -346,7 +353,20 @@ class CivilopediaScreen(
 
     private fun initPortrait(category: CivilopediaCategories, link: String) {
         portraitRoot.add(portraitFooter).growX()
-        portraitRoot.setFillParent(true)
+        val safe = safeAreaBoundsInWorld()
+        val unit = safe.width / 393f
+        val drawing = (stage.viewport as com.unciv.ui.screens.basescreen.SafeAreaViewport).drawingBounds
+        val topInset = (drawing.y + drawing.height - safe.y - safe.height) / unit
+        val top = (56f - topInset).coerceAtLeast(0f)
+        portraitRoot.isTransform = true
+        portraitRoot.setScale(unit)
+        portraitRoot.setBounds(safe.x, safe.y, 393f, safe.height / unit - top)
+        stage.addActor(ImageGetter.getWhiteDot().apply {
+            color = Color.valueOf("122536")
+            touchable = Touchable.disabled
+            setBounds(drawing.x, drawing.y, drawing.width, drawing.height)
+        })
+        portraitRoot.background = portraitPanel(Color.valueOf("132435"), 26f)
         stage.addActor(portraitRoot)
 
         // Category buttons carry these bindings in landscape; here the shelves are not always on screen
@@ -391,12 +411,30 @@ class CivilopediaScreen(
         val grid = Table()
         grid.defaults().space(8f).uniformX().growX().minHeight(64f)
         var column = 0
-        for ((categoryKey, entries) in categoryToEntries) {
+        val shelves = listOf(CivilopediaCategories.Unit, CivilopediaCategories.Building,
+            CivilopediaCategories.Wonder, CivilopediaCategories.Technology, CivilopediaCategories.Resource,
+            CivilopediaCategories.Terrain, CivilopediaCategories.Improvement, CivilopediaCategories.Nation,
+            CivilopediaCategories.Policy, CivilopediaCategories.Belief)
+        for (categoryKey in shelves) {
+            val entries = categoryToEntries[categoryKey] ?: continue
             if (entries.isEmpty()) continue
             grid.add(getCategoryTile(categoryKey, entries.size)).fill()
             if (++column % 2 == 0) grid.row()
         }
         body.add(grid).row()
+        val more = Table().apply {
+            touchable = Touchable.enabled
+            add("More categories".toLabel(mutedPedia(), 14))
+        }
+        more.onClick {
+            val popup = Popup(this)
+            categoryToEntries.filter { it.key !in shelves && it.value.isNotEmpty() }.forEach { (key, _) ->
+                popup.addButton(key.label) { popup.close(); selectCategory(key) }.row()
+            }
+            popup.addCloseButton()
+            popup.open()
+        }
+        body.add(more).height(48f).padTop(12f).row()
 
         setPortraitBody(body)
         setPortraitSearchFooter()
@@ -421,12 +459,21 @@ class CivilopediaScreen(
 
         val body = Table()
         body.pad(0f, portraitPad, portraitPad, portraitPad)
-        body.add(flavourTable).top().row()
+        val hero = Table().apply {
+            background = portraitPanel(Color.valueOf("213c54"), 22f)
+            pad(14f)
+            val text = entry.name.toLabel(Color.WHITE, 26, hideIcons = true).apply { wrap = true }
+            add(text).width(169f).bottom().left()
+            val art = portraitArt(currentCategory, entry.flavour?.getIconName() ?: entry.name, 140f)
+            if (art != null) add(art).size(140f)
+        }
+        body.add(hero).width(365f).height(184f).padBottom(14f).row()
+        body.add(flavourTable).width(365f).top().row()
         setPortraitBody(body)
 
         portraitFooter.clear()
         portraitFooter.background = portraitFooterBackground()
-        portraitFooter.pad(10f, portraitPad, 14f, portraitPad)
+        portraitFooter.pad(10f, portraitPad, portraitBottomPad(), portraitPad)
         portraitFooter.defaults().height(52f)
         portraitFooter.add(getPortraitCircleButton("OtherIcons/BackArrow") { navigateEntries(-1) }).size(52f)
         val all = currentCategory.label.toTextButton()
@@ -445,11 +492,13 @@ class CivilopediaScreen(
 
     private fun setPortraitHeader(title: String, subtitle: String? = null, back: (() -> Unit)?) {
         portraitHeader.clear()
-        portraitHeader.pad(10f, portraitPad, 10f, portraitPad)
+        portraitHeader.pad(10f, portraitPad, 8f, portraitPad)
+        portraitHeader.add(ImageGetter.getWhiteDot().apply { color = Color(1f, 1f, 1f, .22f) })
+            .size(40f, 4f).colspan(if (back == null) 2 else 3).padBottom(8f).row()
         if (back != null)
             portraitHeader.add(getPortraitCircleButton("OtherIcons/BackArrow", KeyCharAndCode.BACK, action = back)).size(48f).padRight(10f)
         val titles = Table().left()
-        titles.add(title.toLabel(Color.WHITE, 26, hideIcons = true)).left().row()
+        titles.add(title.toLabel(Color.WHITE, 22, hideIcons = true)).left().row()
         if (subtitle != null) titles.add(subtitle.toLabel(Color.LIGHT_GRAY, 16)).left()
         portraitHeader.add(titles).growX().left().minHeight(48f)
         // Back steps out of an entry or list first; only the home view closes on Back
@@ -468,27 +517,109 @@ class CivilopediaScreen(
     private fun setPortraitSearchFooter() {
         portraitFooter.clear()
         portraitFooter.background = portraitFooterBackground()
-        portraitFooter.pad(10f, portraitPad, 14f, portraitPad)
+        portraitFooter.pad(10f, portraitPad, portraitBottomPad(), portraitPad)
         val search = Table()
-        search.background = skinStrings.getUiBackground("CivilopediaScreen/PortraitSearch",
-            skinStrings.roundedEdgeRectangleMidShape, Color(1f, 1f, 1f, 0.12f))
+        search.background = portraitPanel(Color(1f, 1f, 1f, .1f), 16f)
         search.touchable = Touchable.enabled
         search.add(ImageGetter.getImage("OtherIcons/Search").apply { color = Color.LIGHT_GRAY }).size(20f).padLeft(14f).padRight(10f)
-        search.add("Search every entry".toLabel(Color.LIGHT_GRAY, 18)).growX().left()
-        search.onClick { searchPopup.open(true) }
+        val field = UncivTextField("Search every entry")
+        field.style = com.badlogic.gdx.scenes.scene2d.ui.TextField.TextFieldStyle(field.style).apply {
+            background = null
+            fontColor = Color.WHITE
+        }
+        field.maxLength = 100
+        field.onChange {
+            val query = field.text.trim()
+            if (query.isEmpty()) {
+                if (portraitView == PortraitView.Home) showPortraitHome() else showPortraitList()
+                return@onChange
+            }
+            setPortraitHeader("Civilopedia", back = null)
+            val results = Table().apply { top(); pad(0f, 14f, 14f, 14f); defaults().growX() }
+            var count = 0
+            for ((category, entries) in categoryToEntries) {
+                val matches = entries.filter { it.name.tr().contains(query, ignoreCase = true) }
+                if (matches.isEmpty()) continue
+                results.add(category.label.toLabel(mutedPedia(), 15)).left().padTop(12f).row()
+                for (entry in matches) {
+                    val result = Table().apply {
+                        touchable = Touchable.enabled
+                        val art = portraitArt(category, entry.flavour?.getIconName() ?: entry.name, 40f)
+                        if (art != null) add(art).size(40f).padRight(12f)
+                        add(entry.name.toLabel(Color.WHITE, 16, hideIcons = true).apply { wrap = true }).growX().left()
+                        onClick { stage.keyboardFocus = null; selectLink("${category.name}/${entry.name}") }
+                    }
+                    results.add(result).minHeight(60f).row()
+                    count++
+                }
+            }
+            if (count == 0) results.add("No results".toLabel(mutedPedia(), 16)).padTop(20f)
+            setPortraitBody(results)
+        }
+        search.add(field).growX().height(48f)
+        val clear = "×".toLabel(mutedPedia(), 24).apply {
+            setAlignment(Align.center)
+            touchable = Touchable.enabled
+            onClick { field.text = "" }
+        }
+        search.add(clear).size(48f)
+        if (portraitView == PortraitView.List) {
+            val rail = Table()
+            val groups = categoryToEntries[currentCategory].orEmpty().mapNotNull { it.subCategory }.distinct()
+            for (group in groups) {
+                val chip = Table().apply {
+                    background = portraitPanel(Color(1f, 1f, 1f, .06f), 13f)
+                    touchable = Touchable.enabled
+                    add(group.toLabel(mutedPedia(), 14)).pad(0f, 13f, 0f, 13f)
+                }
+                chip.onClick {
+                    val entry = entryIndex.values.firstOrNull { it.subCategory == group } ?: return@onClick
+                    entrySelectScroll.scrollY = entry.y
+                    entrySelectScroll.updateVisualScroll()
+                }
+                rail.add(chip).height(48f).padRight(6f)
+            }
+            if (groups.size > 1) portraitFooter.add(ScrollPane(rail).apply { setScrollingDisabled(false, true) }).height(52f).growX().row()
+        }
         portraitFooter.add(search).growX().height(52f)
     }
 
-    private fun portraitFooterBackground() =
-        skinStrings.getUiBackground("CivilopediaScreen/PortraitFooter", tintColor = colorFromRGB(15, 32, 48))
+    private fun portraitBottomPad(): Float {
+        val safe = safeAreaBoundsInWorld()
+        val drawing = (stage.viewport as com.unciv.ui.screens.basescreen.SafeAreaViewport).drawingBounds
+        return (34f - (safe.y - drawing.y) / (safe.width / 393f)).coerceAtLeast(10f)
+    }
 
-    private fun portraitSectionLabel(text: String) = text.toLabel(Color.LIGHT_GRAY, 18)
+    private fun mutedPedia() = Color.valueOf("b7cde0")
+
+    private fun shelfLabel(category: CivilopediaCategories) = when (category) {
+        CivilopediaCategories.Technology -> "Techs"
+        CivilopediaCategories.Nation -> "Civilizations"
+        CivilopediaCategories.Improvement -> "Improvements"
+        CivilopediaCategories.Belief -> "Religions"
+        else -> category.label
+    }
+
+    private fun portraitFooterBackground() = ImageGetter.getDrawable(ImageGetter.whiteDotLocation).tint(Color.valueOf("0f2030"))
+
+    private fun portraitPanel(color: Color, radius: Float): com.badlogic.gdx.scenes.scene2d.utils.Drawable {
+        val region = ImageGetter.getCircleDrawable().region
+        val split = (minOf(region.regionWidth, region.regionHeight) / 2 - 1).coerceAtLeast(1)
+        val patch = com.badlogic.gdx.graphics.g2d.NinePatch(region, split, split, split, split)
+        patch.scale(radius / split, radius / split)
+        return com.badlogic.gdx.scenes.scene2d.utils.NinePatchDrawable(patch).tint(color).apply {
+            minWidth = 0f; minHeight = 0f
+            leftWidth = 0f; rightWidth = 0f; topHeight = 0f; bottomHeight = 0f
+        }
+    }
+
+    private fun portraitSectionLabel(text: String) = text.toLabel(mutedPedia(), 16)
 
     private fun getPortraitCircleButton(icon: String, key: KeyCharAndCode? = null, flip: Boolean = false, action: () -> Unit): Group {
         val image = ImageGetter.getImage(icon)
         image.setSize(22f, 22f)
         if (flip) image.rotation = 180f
-        val button = image.surroundWithCircle(48f, resizeActor = false, color = skinStrings.skinConfig.baseColor)
+        val button = image.surroundWithCircle(48f, resizeActor = false, color = Color.valueOf("263b4b"))
         button.touchable = Touchable.enabled
         button.onActivation(action)
         if (key != null) button.keyShortcuts.add(key)
@@ -497,15 +628,14 @@ class CivilopediaScreen(
 
     private fun getCategoryTile(categoryKey: CivilopediaCategories, count: Int): Table {
         val tile = Table()
-        tile.background = skinStrings.getUiBackground("CivilopediaScreen/PortraitTile",
-            skinStrings.roundedEdgeRectangleMidShape, colorFromRGB(35, 58, 88))
+        tile.background = portraitPanel(Color(1f, 1f, 1f, .06f), 16f)
         tile.touchable = Touchable.enabled
         tile.pad(8f, 10f, 8f, 10f)
         val icon = ImageGetter.getImage(categoryKey.headerIcon).apply { color = colorFromRGB(19, 36, 53) }
         tile.add(icon.surroundWithCircle(44f, color = colorFromRGB(238, 245, 251))).size(44f).padRight(10f)
         val text = Table()
-        text.add(categoryKey.label.toLabel(Color.WHITE, 17, hideIcons = true).apply { wrap = true }).growX().left().row()
-        text.add(count.tr().toLabel(Color.LIGHT_GRAY, 14)).left()
+        text.add(shelfLabel(categoryKey).toLabel(Color.WHITE, 15, hideIcons = true).apply { wrap = true }).growX().left().row()
+        text.add(count.tr().toLabel(mutedPedia(), 12)).left()
         tile.add(text).growX()
         tile.onClick { selectCategory(categoryKey) }
         return tile
@@ -513,19 +643,35 @@ class CivilopediaScreen(
 
     private fun getGameCard(cardCategory: CivilopediaCategories, name: String, why: String): Table {
         val card = Table()
-        card.background = skinStrings.getUiBackground("CivilopediaScreen/PortraitTile",
-            skinStrings.roundedEdgeRectangleMidShape, colorFromRGB(35, 58, 88))
+        card.background = portraitPanel(Color.valueOf("1c3249"), 18f)
         card.touchable = Touchable.enabled
         card.pad(10f, 8f, 10f, 8f)
         card.top()
         val flavour = categoryToEntries[cardCategory]?.firstOrNull { it.name == name }?.flavour
-        val image = cardCategory.getImage?.invoke(flavour?.getIconName() ?: name, 56f)
+        val image = portraitArt(cardCategory, flavour?.getIconName() ?: name, 64f)
             ?: ImageGetter.getImage(cardCategory.headerIcon)
-        card.add(image).size(56f).padBottom(6f).row()
-        card.add(name.toLabel(Color.WHITE, 15, Align.center, hideIcons = true).apply { wrap = true }).width(96f).row()
-        card.add(why.toLabel(Color.LIGHT_GRAY, 13, Align.center).apply { wrap = true }).width(96f)
+        card.add(image).size(64f).padBottom(6f).row()
+        card.add(name.toLabel(Color.WHITE, 14, Align.center, hideIcons = true).apply { wrap = true }).width(96f).row()
+        card.add(why.toLabel(mutedPedia(), 12, Align.center).apply { wrap = true }).width(96f)
         card.onClick { selectLink("${cardCategory.name}/$name") }
         return card
+    }
+
+    private fun portraitArt(category: CivilopediaCategories, name: String, size: Float): Actor? {
+        val path = when (category) {
+            CivilopediaCategories.Unit -> "TileSets/Polytopia/Units/$name"
+            CivilopediaCategories.Resource, CivilopediaCategories.Improvement -> "TileSets/Polytopia/Tiles/$name"
+            else -> ""
+        }
+        if (path.isNotEmpty() && ImageGetter.imageExists(path)) return Group().apply {
+            setSize(size, size)
+            addActor(ImageGetter.getImage(path).apply { setSize(size, size) })
+            if (ImageGetter.imageExists("$path-1")) addActor(ImageGetter.getImage("$path-1").apply {
+                setSize(size, size)
+                color = game.worldScreen?.selectedCiv?.nation?.getOuterColor() ?: Color.valueOf("287fd1")
+            })
+        }
+        return category.getImage?.invoke(name, size)
     }
 
     /** Entries that matter in the running game, shown first so the pedia starts from what you are doing */
@@ -568,7 +714,8 @@ class CivilopediaScreen(
         val newIndex = when (direction) {
             Int.MIN_VALUE -> 0
             Int.MAX_VALUE -> entryIndex.size - 1
-            else -> (index + entryIndex.size + direction) % entryIndex.size
+            else -> if (portrait) (index + direction).coerceIn(0, entryIndex.size - 1)
+                else (index + entryIndex.size + direction) % entryIndex.size
         }
         selectEntry(entryIndex.keys.drop(newIndex).first())
     }
