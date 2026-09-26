@@ -1,8 +1,13 @@
 package com.unciv.ui.screens.cityscreen
 
+import com.badlogic.gdx.Gdx
 import com.badlogic.gdx.graphics.Color
+import com.badlogic.gdx.math.Interpolation
 import com.badlogic.gdx.scenes.scene2d.Actor
+import com.badlogic.gdx.scenes.scene2d.InputEvent
+import com.badlogic.gdx.scenes.scene2d.InputListener
 import com.badlogic.gdx.scenes.scene2d.Touchable
+import com.badlogic.gdx.scenes.scene2d.actions.Actions
 import com.badlogic.gdx.scenes.scene2d.ui.Image
 import com.badlogic.gdx.scenes.scene2d.ui.Table
 import com.badlogic.gdx.scenes.scene2d.utils.Drawable
@@ -23,6 +28,7 @@ import com.unciv.ui.popups.AnimatedMenuPopup.Companion.addContextMenu
 import com.unciv.ui.popups.CityScreenConstructionMenu
 import com.unciv.ui.screens.basescreen.BaseScreen
 import com.unciv.view.TileView
+import kotlin.math.abs
 import kotlin.math.roundToInt
 
 /** The five city jobs in a map-backed sheet. The existing city widgets remain available as drill-ins. */
@@ -69,11 +75,71 @@ internal class CityPortraitView(private val screen: CityScreen, private val shee
         constructionDetails.background = bg(CARD)
         tileDetails.background = bg(CARD)
         val handle = Table().apply { add(Image(ImageGetter.getWhiteDotDrawable().tint(INK3))).size(36f, 4f) }
+        // Handle and heading together are the drag zone, so the 12pt handle row stays as drawn
+        handle.touchable = Touchable.enabled
+        heading.touchable = Touchable.enabled
         add(handle).growX().height(12f).row()
         add(heading).growX().row()
         add(yields).growX().row()
         add(scroll).grow().prefHeight(0f).row()
         add(tabs).growX().height(72f)
+        addListener(SwipeDownToClose())
+    }
+
+    /** Dragging the handle or heading down moves the sheet with the finger; past [threshold] it closes like ×. */
+    private inner class SwipeDownToClose : InputListener() {
+        private val slop = 10f
+        private val threshold = 80f
+        private var startX = 0f
+        private var startY = 0f
+        private var restY = 0f
+        private var tracking = false
+        private var dragging = false
+
+        override fun touchDown(event: InputEvent, x: Float, y: Float, pointer: Int, button: Int): Boolean {
+            if (tracking) { restore(); return false }
+            if (pointer != 0 || button != 0 || y < heading.y || hasActions()) return false
+            startX = event.stageX
+            startY = event.stageY
+            restY = this@CityPortraitView.y
+            tracking = true
+            dragging = false
+            return true
+        }
+
+        override fun touchDragged(event: InputEvent, x: Float, y: Float, pointer: Int) {
+            if (!tracking || pointer != 0) return
+            if (Gdx.input.isTouched(1)) { restore(); return }
+            val dx = event.stageX - startX
+            val down = startY - event.stageY
+            if (!dragging) {
+                val slopStage = slop * scaleY
+                if (abs(dx) > slopStage && abs(dx) >= down) { tracking = false; return }
+                if (down <= slopStage || down < abs(dx)) return
+                dragging = true
+                // The drag owns this touch now: no title or × activation on release
+                event.stage.cancelTouchFocusExcept(this, this@CityPortraitView)
+            }
+            this@CityPortraitView.y = restY - down.coerceAtLeast(0f)
+        }
+
+        override fun touchUp(event: InputEvent, x: Float, y: Float, pointer: Int, button: Int) {
+            if (!tracking || pointer != 0) return
+            val closes = dragging && !event.isTouchFocusCancel && !Gdx.input.isTouched(1) && startY - event.stageY >= threshold * scaleY
+            if (!closes) { restore(); return }
+            tracking = false
+            touchable = Touchable.disabled
+            addAction(Actions.sequence(
+                Actions.moveTo(this@CityPortraitView.x, restY - height * scaleY, .15f, Interpolation.fastSlow),
+                Actions.run { screen.exit() }))
+        }
+
+        private fun restore() {
+            if (dragging && this@CityPortraitView.y != restY)
+                addAction(Actions.moveTo(this@CityPortraitView.x, restY, .12f, Interpolation.fastSlow))
+            tracking = false
+            dragging = false
+        }
     }
 
     fun showTile(tile: TileView) {

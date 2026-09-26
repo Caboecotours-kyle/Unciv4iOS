@@ -38,6 +38,7 @@ import com.unciv.ui.components.widgets.UnitIconGroup
 import com.unciv.ui.components.widgets.ZoomableScrollPane
 import com.unciv.ui.screens.basescreen.UncivStage
 import com.unciv.ui.popups.Popup
+import com.unciv.ui.screens.cityscreen.CityScreen
 import com.unciv.ui.screens.worldscreen.bottombar.TileInfoTable
 import com.unciv.ui.screens.worldscreen.UndoHandler.Companion.recordUndoCheckpoint
 import com.unciv.ui.screens.worldscreen.WorldScreen
@@ -259,6 +260,8 @@ class WorldMapHolder @JvmOverloads constructor(
             else -> 0
         }
         lastPortraitTap = tileView
+        // A unit selected elsewhere may be ordered into the city, so that tap only selects the city and shows the path.
+        val canOrderMove = table.selectedUnit.let { it != null && it.getTile() != tileView }
         onTileClicked(tileView) {
             when {
                 portraitTapIndex < units.size -> table.selectUnit(units[portraitTapIndex])
@@ -268,6 +271,11 @@ class WorldMapHolder @JvmOverloads constructor(
         }
         // Portrait cycles through garrison units directly; the legacy floating picker obscures the map.
         removeUnitActionOverlay()
+        // Reaching the city opens it, with the same visibility rule as its banner.
+        if (portraitTapIndex == units.size && !canOrderMove) city?.tryGetCityView()?.let { cityView ->
+            lastPortraitTap = null // back on the map, the next tap starts the cycle again
+            worldScreen.game.pushScreen { CityScreen(cityView) }
+        }
     }
 
     private fun cancelUnitDrag() {
