@@ -40,6 +40,7 @@ lane :profile do
   File.binwrite(path, Base64.decode64(profile.profile_content))
   UI.success("Profile #{profile.name} (#{profile.uuid}) installed")
   File.write("../profile-uuid.txt", profile.uuid) # lanes run from fastlane/; release.sh reads tools/ios-release/
+  File.write("../signing-identity.txt", OpenSSL::Digest::SHA1.hexdigest(Base64.decode64(cert.certificate_content)).upcase)
 end
 
 # Uploads a signed IPA to TestFlight without waiting for Apple's processing.
