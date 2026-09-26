@@ -12,6 +12,26 @@ import kotlin.random.nextInt
 
 
 class HexmathTests {
+    @Test fun tiltedWorldCoordinatesRoundTrip() {
+        for (x in -3..3) for (y in -3..3) {
+            val hex = HexCoord(x, y)
+            val flat = HexMath.hex2WorldCoords(hex)
+            val projected = HexMath.hex2WorldCoords(hex, 0.6f)
+            Assert.assertEquals(flat.x, projected.x, 0f)
+            Assert.assertEquals(flat.y * 0.6f, projected.y, 0.00001f)
+            val roundTrip = HexMath.world2HexCoords(projected, 0.6f)
+            Assert.assertEquals(x.toFloat(), roundTrip.x, 0.00001f)
+            Assert.assertEquals(y.toFloat(), roundTrip.y, 0.00001f)
+        }
+    }
+
+    @Test fun tiltedHitAreaExcludesCornersAndUprightSprites() {
+        Assert.assertTrue(HexMath.isWithinHex(0f, 20f, 40f, 0.6f))
+        Assert.assertFalse(HexMath.isWithinHex(0f, 22f, 40f, 0.6f))
+        Assert.assertFalse(HexMath.isWithinHex(39f, 19f, 40f, 0.6f))
+        Assert.assertTrue(HexMath.isWithinHex(0f, 22f, 40f))
+    }
+
     // Looks like our current movement is actually unoptimized, since it fails this test :)
     @Test
     fun zeroIndexed() {

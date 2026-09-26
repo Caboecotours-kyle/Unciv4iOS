@@ -232,12 +232,17 @@ class Minimap(val mapHolder: WorldMapHolder, minimapSize: Int, private val civIn
         }
 
         val worldToMiniFactor: Vector2
+        val flatWorldHeight = mapHolder.getFlatMapHeight(worldHeight)
         var miniViewport = worldViewport
+        if (mapHolder.currentTileSetStrings.mapVerticalScale != 1f) {
+            miniViewport.y = mapHolder.getFlatMapY(miniViewport.y)
+            miniViewport.height /= mapHolder.currentTileSetStrings.mapVerticalScale
+        }
 
         if (civInfo != null) {
             if (civInfo.exploredRegion.shouldRecalculateCoords()) civInfo.exploredRegion.calculateStageCoords(
                 worldWidth,
-                worldHeight
+                flatWorldHeight
             )
 
             val exploredRectangle = civInfo.exploredRegion.getRectangle()
@@ -249,7 +254,7 @@ class Minimap(val mapHolder: WorldMapHolder, minimapSize: Int, private val civIn
             miniViewport.y -= exploredRectangle.y
         } else
             worldToMiniFactor =
-                    Vector2(tileLayer.width / worldWidth, tileLayer.height / worldHeight)
+                    Vector2(tileLayer.width / worldWidth, tileLayer.height / flatWorldHeight)
 
         miniViewport *= worldToMiniFactor
         miniViewport.x += (tileLayer.width - tileMapWidth) * 0.5f

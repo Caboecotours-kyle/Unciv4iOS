@@ -19,6 +19,8 @@ class TileSetConfig {
     var fallbackTileSet: String? = Constants.defaultFallbackTileset
     /** Scale factor for hex images, with hex center as origin. */
     var tileScale: Float = 1f
+    /** Portrait map ground projection. 1 keeps the flat map; upright art may use Tilted/ variants. */
+    var mapVerticalScale: Float = 1f
     var tileScales: HashMap<String, Float> = HashMap()
     var ruleVariants: HashMap<String, Array<String>> = HashMap()
 
@@ -33,6 +35,7 @@ class TileSetConfig {
         toReturn.vividUnitTeamColor = vividUnitTeamColor
         toReturn.fallbackTileSet = fallbackTileSet
         toReturn.tileScale = tileScale
+        toReturn.mapVerticalScale = mapVerticalScale
         toReturn.tileScales = tileScales
         toReturn.ruleVariants.putAll(ruleVariants.map { Pair(it.key, it.value.clone()) })
         return toReturn
@@ -48,6 +51,7 @@ class TileSetConfig {
         vividUnitTeamColor = other.vividUnitTeamColor
         fallbackTileSet = other.fallbackTileSet
         tileScale = other.tileScale
+        mapVerticalScale = other.mapVerticalScale
         for ((tileString, scale) in other.tileScales) {
             tileScales[tileString] = scale
         }

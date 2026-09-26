@@ -1,6 +1,8 @@
 package com.unciv.ui.components.tilegroups.layers
 
 import com.badlogic.gdx.scenes.scene2d.Actor
+import com.badlogic.gdx.scenes.scene2d.Group
+import com.unciv.ui.images.ImageGetter
 import com.badlogic.gdx.scenes.scene2d.ui.Image
 import com.unciv.view.CivView
 import com.unciv.logic.map.tile.Tile
@@ -18,6 +20,7 @@ abstract class TileLayer(val tileGroup: TileGroup, val size: Float) {
     /** Absolute Y of the tile origin in the parent TileMapLayer. 0 until attachTo() is called. */
     internal var tileY: Float = 0f
     internal var parentMapLayer: TileMapLayer<*>? = null
+    internal var actorParent: Group? = null
 
     /** All Actor children currently owned by this tile-slot. 
      * Lazily initialized — most layers never have actors added during TileGroup construction */
@@ -44,7 +47,7 @@ abstract class TileLayer(val tileGroup: TileGroup, val size: Float) {
         // If the layer is already registered in a TileMapLayer, forward there.
         // Otherwise, add directly to the TileGroup so standalone displays work
         // (map-editor icon previews, Civilopedia entries, etc.).
-        if (parentMapLayer != null) parentMapLayer!!.addActor(actor)
+        if (parentMapLayer != null) actorParent!!.addActor(actor)
         else tileGroup.addActor(actor)
     }
 
@@ -53,7 +56,7 @@ abstract class TileLayer(val tileGroup: TileGroup, val size: Float) {
         if (!_ownedActors!!.remove(actor)) return
         // parentMapLayer handles removal when attached; actor.remove() handles the
         // standalone case where the actor lives directly under tileGroup.
-        if (parentMapLayer != null) parentMapLayer!!.removeActor(actor)
+        if (parentMapLayer != null) actorParent!!.removeActor(actor)
         else actor.remove()
     }
 
@@ -76,7 +79,16 @@ abstract class TileLayer(val tileGroup: TileGroup, val size: Float) {
         this.x = baseX + tileGroup.hexagonImagePosition.first
         this.y = baseY + tileGroup.hexagonImagePosition.second
         this.setScale(scale ?: TileSetCache.getCurrent().config.tileScale)
+        if (this is GroundImage) projectionOriginY = tileGroup.groundCenterY - tileGroup.hexagonImagePosition.second
         return this
+    }
+
+    fun getGroundImage(location: String): Image = if (tileGroup.mapVerticalScale == 1f)
+        ImageGetter.getImage(location)
+    else GroundImage(ImageGetter.getDrawable(location), tileGroup.mapVerticalScale)
+
+    fun Image.projectOnGround() {
+        if (this is GroundImage) projectionOriginY = tileGroup.groundCenterY - (y - tileY)
     }
 
     fun isViewable(viewingCiv: CivView?) = viewingCiv == null || tileGroup.isViewable(viewingCiv)
@@ -93,14 +105,15 @@ abstract class TileLayer(val tileGroup: TileGroup, val size: Float) {
     protected abstract fun doUpdate(viewingCiv: CivView?)
 
     /** Called by TileMapLayer.add() — offsets pre-buffered images from local → absolute coords. */
-    internal fun attachTo(mapLayer: TileMapLayer<*>, x: Float, y: Float) {
+    internal fun attachTo(mapLayer: TileMapLayer<*>, x: Float, y: Float, renderParent: Group = mapLayer) {
         tileX = x
         tileY = y
         parentMapLayer = mapLayer
+        actorParent = renderParent
         forEachOwnedActor { actor ->
             actor.x += x
             actor.y += y
-            mapLayer.addActor(actor)
+            renderParent.addActor(actor)
         }
     }
 }

@@ -32,7 +32,7 @@ class TileLayerUnitFlag(tileGroup: TileGroup, size: Float) : TileLayer(tileGroup
         if (flagsAboveSprites) {
             // Side by side over the top of the hex so the unit sprite below stays visible (military left, civilian right)
             icon.x = tileX + (size - icon.width) / 2 + if (slot == 1) -12f else 12f
-            icon.y = tileY + size * 0.78f
+            icon.y = tileY + size * (0.78f + (1f - tileGroup.mapVerticalScale) * 0.5f)
             return
         }
         // Centre horizontally; offset vertically per slot (slot 0 = bottom, slot 1 = top)

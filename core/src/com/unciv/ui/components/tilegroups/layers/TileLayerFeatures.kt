@@ -4,7 +4,6 @@ import com.badlogic.gdx.scenes.scene2d.ui.Image
 import com.unciv.view.CivView
 import com.unciv.view.TileView
 import com.unciv.logic.map.tile.RoadStatus
-import com.unciv.ui.images.ImageGetter
 import com.unciv.ui.components.tilegroups.TileGroup
 import kotlin.math.atan2
 
@@ -52,7 +51,7 @@ class TileLayerFeatures(tileGroup: TileGroup, size: Float) : TileLayer(tileGroup
             }
             if (roadStatus == RoadStatus.None) continue // no road image
 
-            val image = ImageGetter.getImage(strings.orFallback { roadsMap[roadStatus]!! })
+            val image = getGroundImage(strings.orFallback { roadsMap[roadStatus]!! })
             roadImage.image = image
 
             val relativeWorldPosition = tileMapView.getNeighborTilePositionAsWorldCoords(tileView, neighbor)
@@ -69,6 +68,7 @@ class TileLayerFeatures(tileGroup: TileGroup, size: Float) : TileLayer(tileGroup
 
             image.rotation = (180 / Math.PI * atan2(relativeWorldPosition.y.toDouble(),relativeWorldPosition.x.toDouble())).toFloat()
 
+            image.projectOnGround()
             addOwnedActor(image)
         }
 

@@ -8,6 +8,7 @@ import com.badlogic.gdx.scenes.scene2d.actions.Actions
 import com.badlogic.gdx.scenes.scene2d.ui.Table
 import com.badlogic.gdx.utils.Align
 import com.badlogic.gdx.math.Interpolation
+import com.badlogic.gdx.math.Vector2
 import com.badlogic.gdx.scenes.scene2d.*
 import com.unciv.UncivGame
 import com.unciv.logic.city.City
@@ -99,6 +100,7 @@ class WorldMapHolder(
         val tileGroupsNew = tileMap.values.map { WorldTileGroup(tileMapView.getTile(it), tileSetStrings) }
         tileGroupMap = TileGroupMap(this, tileGroupsNew, continuousScrollingX)
 
+        tileGroups.clear()
         for (tileGroup in tileGroupsNew) tileGroups[tileGroup.tileView] = tileGroup
 
         addClickListener()
@@ -107,6 +109,33 @@ class WorldMapHolder(
         val bounds = (worldScreen.stage.viewport as com.unciv.ui.screens.basescreen.SafeAreaViewport).drawingBounds
         setBounds(bounds.x, bounds.y, bounds.width / scaleX, bounds.height / scaleY)
         layout() // Fit the scroll pane to the contents - otherwise, setScroll won't work!
+    }
+
+    /** Rebuild the projection on rotation; an existing map's tile origins cannot change in place. */
+    fun refreshMapProjection() {
+        val requested = if (worldScreen.isPortrait()) currentTileSetStrings.tileSetConfig.mapVerticalScale.coerceIn(0.1f, 1f) else 1f
+        if (requested == currentTileSetStrings.mapVerticalScale) return
+        val center = getMapCenter()
+        removeUnitActionOverlay()
+        addTiles()
+        restoreMapCenter(center)
+        worldScreen.shouldUpdate = true
+    }
+
+    /** Flat map coordinates are shared with the minimap and must remain independent of the board tilt. */
+    fun getFlatMapHeight(height: Float) = tileGroupMap.getFlatHeight(height)
+
+    fun getFlatMapY(y: Float) = tileGroupMap.getFlatY(y)
+
+    fun getMapCenter() = Vector2(scrollX, getFlatMapY(maxY - scrollY))
+
+    fun restoreMapCenter(center: Vector2) {
+        scrollTo(center.x, maxY - tileGroupMap.getProjectedY(center.y), immediately = true)
+    }
+
+    fun setDefaultZoom() {
+        if (currentTileSetStrings.mapVerticalScale != 1f)
+            zoom(tileGroupMap.getDefaultZoom(worldScreen.stage.viewport))
     }
 
     private fun addClickListener() {
@@ -366,7 +395,10 @@ class WorldMapHolder(
         val tileGroup = tileGroups[previousTileView]!!
 
         // Steal the current sprites to our new group
-        val unitSpriteAndIcon = Group().apply { setPosition(tileGroup.x, tileGroup.y) }
+        val unitSpriteAndIcon = Group().apply {
+            setPosition(tileGroup.x, tileGroup.y)
+            if (currentTileSetStrings.mapVerticalScale != 1f) touchable = Touchable.disabled
+        }
         val unitSpriteSlot = tileGroup.layerUnitArt.getSpriteSlot(selectedUnit) ?: return
 
         for (spriteImage in unitSpriteSlot.spriteGroup.children.toList()) // toList because actors added remove themselves from previous parent
@@ -665,6 +697,13 @@ class WorldMapHolder(
     private fun clampCityButtonSize() {
         // use scaleX instead of zoomScale itself, because zoomScale might have been outside minZoom..maxZoom and thus not applied
         val clampedCityButtonZoom = 1 / scaleX
+        if (currentTileSetStrings.mapVerticalScale != 1f) {
+            for (tileGroup in tileGroups.values) {
+                tileGroup.layerCityButton.setButtonTransform(scaleX != 1f && tileGroup.layerCityButton.hasButton())
+                tileGroup.layerCityButton.setButtonScale(clampedCityButtonZoom)
+            }
+            return
+        }
         if (clampedCityButtonZoom >= 1) {
             for (tileGroup in tileGroups.values) {
                 tileGroup.layerCityButton.setButtonTransform(false) // save rendering time at normal zoom
@@ -707,6 +746,12 @@ class WorldMapHolder(
         }
         else
             super.reloadMaxZoom()
+
+        if (currentTileSetStrings.mapVerticalScale != 1f) {
+            // The touch-size guarantee applies to the default, not to a player's zoomed-out view.
+            minZoom = max(minZoom, 0.5f)
+            maxZoom = max(maxZoom, tileGroupMap.getDefaultZoom(worldScreen.stage.viewport))
+        }
     }
 
     override fun restrictX(deltaX: Float): Float {
@@ -714,7 +759,7 @@ class WorldMapHolder(
         if (worldScreen.selectedGameView.spectatorMode) return result
 
         val exploredRegion = worldScreen.selectedGameView.civView.getCiv().exploredRegion
-        if (exploredRegion.shouldRecalculateCoords()) exploredRegion.calculateStageCoords(maxX, maxY)
+        if (exploredRegion.shouldRecalculateCoords()) exploredRegion.calculateStageCoords(maxX, getFlatMapHeight(maxY))
         if (!exploredRegion.shouldRestrictX()) return result
 
         val leftX = exploredRegion.getLeftX()
@@ -733,10 +778,13 @@ class WorldMapHolder(
         if (worldScreen.selectedGameView.spectatorMode) return result
 
         val exploredRegion = worldScreen.selectedGameView.civView.getCiv().exploredRegion
-        if (exploredRegion.shouldRecalculateCoords()) exploredRegion.calculateStageCoords(maxX, maxY)
+        if (exploredRegion.shouldRecalculateCoords()) exploredRegion.calculateStageCoords(maxX, getFlatMapHeight(maxY))
 
-        val topY = exploredRegion.getTopY()
-        val bottomY = exploredRegion.getBottomY()
+        // ExploredRegion stores scroll distances from the top; projection uses map Y from the bottom.
+        fun projectScrollY(y: Float) = if (currentTileSetStrings.mapVerticalScale == 1f) y
+            else maxY - tileGroupMap.getProjectedY(getFlatMapHeight(maxY) - y)
+        val topY = projectScrollY(exploredRegion.getTopY())
+        val bottomY = projectScrollY(exploredRegion.getBottomY())
 
         if (result < topY) result = topY
         else if (result > bottomY) result = bottomY

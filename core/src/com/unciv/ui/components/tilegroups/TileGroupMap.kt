@@ -6,6 +6,8 @@ import com.badlogic.gdx.math.Vector2
 import com.badlogic.gdx.scenes.scene2d.Actor
 import com.badlogic.gdx.scenes.scene2d.Group
 import com.badlogic.gdx.scenes.scene2d.Touchable
+import com.badlogic.gdx.utils.viewport.Viewport
+import com.unciv.logic.map.HexCoord
 import com.unciv.logic.map.HexMath
 import com.unciv.logic.map.TileMap
 import com.unciv.ui.components.tilegroups.layers.*
@@ -70,16 +72,20 @@ class TileGroupMap<T: TileGroup>(
     /** TileGroups in the same sorted order used for allMapLayers registration,
      *  so world-wrap can reposition the click-target by index. */
     private val sortedTileGroups: List<T>
+    val mapVerticalScale = tileGroups.firstOrNull()?.mapVerticalScale ?: 1f
+    private val groundCenterY = tileGroups.firstOrNull()?.groundCenterY ?: groupSize / 2f
+    private val tiltedRows = ArrayList<Group>()
+    private val registeredMapLayers: List<TileMapLayer<*>>
 
     init {
 
         for (tileGroup in tileGroups) {
             val positionalVector = if (tileGroupsToUnwrap?.contains(tileGroup) == true) {
                 HexMath.hex2WorldCoords(
-                    tileGroup.tileView.getTile().tileMap.getUnwrappedPosition(tileGroup.tileView.position())
+                    tileGroup.tileView.getTile().tileMap.getUnwrappedPosition(tileGroup.tileView.position()), mapVerticalScale
                 )
             } else {
-                HexMath.hex2WorldCoords(tileGroup.tileView.position())
+                HexMath.hex2WorldCoords(tileGroup.tileView.position(), mapVerticalScale)
             }
 
             tileGroup.setPosition(
@@ -142,18 +148,29 @@ class TileGroupMap<T: TileGroup>(
         val sortedGroups = tileGroups.groupBy { it.tileView.position().x + it.tileView.position().y }
             .entries.sortedByDescending { it.key }.flatMap { it.value }
 
+        val boardLayer = object : Group() {
+            init { isTransform = false; touchable = Touchable.disabled }
+            override fun act(delta: Float) {}
+        }
         for (group in sortedGroups) {
+            // Only tilted maps interleave terrain and units. Non-transform groups preserve batching.
+            val row = if (mapVerticalScale != 1f) Group().apply {
+                isTransform = false
+                touchable = Touchable.disabled
+                boardLayer.addActor(this)
+                tiltedRows.add(this)
+            } else null
             // Register each layer with its tile's absolute position; images are flushed
             // from each layer's internal buffer into the shared TileMapLayer.
-            terrainMapLayer.add(group.layerTerrain, group.x, group.y)
-            featureMapLayer.add(group.layerFeatures, group.x, group.y)
-            borderMapLayer.add(group.layerBorders, group.x, group.y)
+            terrainMapLayer.add(group.layerTerrain, group.x, group.y, row ?: terrainMapLayer)
+            featureMapLayer.add(group.layerFeatures, group.x, group.y, row ?: featureMapLayer)
+            borderMapLayer.add(group.layerBorders, group.x, group.y, row ?: borderMapLayer)
             resourceMapLayer.add(group.layerResource, group.x, group.y)
             improvementMapLayer.add(group.layerImprovement, group.x, group.y)
             miscMapLayer.add(group.layerMisc, group.x, group.y)
             yieldMapLayer.add(group.layerYield, group.x, group.y)
-            unitSpriteMapLayer.add(group.layerUnitArt, group.x, group.y)
-            overlayMapLayer.add(group.layerOverlay, group.x, group.y)
+            unitSpriteMapLayer.add(group.layerUnitArt, group.x, group.y, row ?: unitSpriteMapLayer)
+            overlayMapLayer.add(group.layerOverlay, group.x, group.y, row ?: overlayMapLayer)
             unitFlagMapLayer.add(group.layerUnitFlag, group.x, group.y)
             cityButtonMapLayer.add(group.layerCityButton, group.x, group.y)
         }
@@ -162,7 +179,7 @@ class TileGroupMap<T: TileGroup>(
 
         for (group in tileGroups) tileGroupLayer.addActor(group)
 
-        allMapLayers = listOf(
+        allMapLayers = (if (mapVerticalScale != 1f) listOf(boardLayer) else emptyList()) + listOf(
             terrainMapLayer,
             featureMapLayer,
             borderMapLayer,
@@ -178,6 +195,8 @@ class TileGroupMap<T: TileGroup>(
             cityButtonMapLayer
         )
 
+        registeredMapLayers = allMapLayers.filterIsInstance<TileMapLayer<*>>()
+
         children.ensureCapacity(allMapLayers.size)
         for (mapLayer in allMapLayers) addActor(mapLayer)
 
@@ -188,6 +207,7 @@ class TileGroupMap<T: TileGroup>(
         // passes for it (actual per-tile culling is done inside each container via its own
         // cullingArea, which is propagated from TileGroupMap's cullingArea in draw()).
         for (mapLayer in allMapLayers) mapLayer.setSize(mapWidth, mapHeight)
+        for (row in tiltedRows) row.setSize(mapWidth, mapHeight)
 
         // there are tiles "below the zero",
         // so we zero out the starting position of the whole board so they will be displayed as well
@@ -205,8 +225,26 @@ class TileGroupMap<T: TileGroup>(
         val trueGroupSize = 0.8f * groupSize
         return Vector2(bottomX, bottomY)
             .add(stageCoords)
-            .sub(groupSize / 2f, groupSize / 2f)
-            .scl(1f / trueGroupSize)
+            .sub(if (mapVerticalScale == 1f) groupSize / 2f else sortedTileGroups.first().groundCenterX,
+                if (mapVerticalScale == 1f) groupSize / 2f else sortedTileGroups.first().groundCenterY)
+            .scl(1f / trueGroupSize, 1f / (trueGroupSize * mapVerticalScale))
+    }
+
+    fun getFlatHeight(mapHeight: Float) = if (mapVerticalScale == 1f) mapHeight
+        else (mapHeight - groupSize) / mapVerticalScale + groupSize
+
+    fun getFlatY(mapY: Float) = if (mapVerticalScale == 1f) mapY
+        else (mapY - groundCenterY) / mapVerticalScale + groundCenterY
+
+    fun getProjectedY(flatY: Float) = if (mapVerticalScale == 1f) flatY
+        else (flatY - groundCenterY) * mapVerticalScale + groundCenterY
+
+    /** Screen coordinates are logical points on iOS; the camera also covers safe-area/cutout modes. */
+    fun getDefaultZoom(viewport: Viewport): Float {
+        if (mapVerticalScale == 1f) return 1f
+        val rowSpacing = HexMath.hex2WorldCoords(HexCoord(1, 0), mapVerticalScale).y * 0.8f * groupSize
+        val unitsPerPoint = viewport.camera.viewportHeight / viewport.screenHeight
+        return max(1.6f, 44f * unitsPerPoint / rowSpacing)
     }
 
     override fun act(delta: Float) {
@@ -233,6 +271,8 @@ class TileGroupMap<T: TileGroup>(
         // of the viewport is also culled too aggressively — expand for those as well.
         val expand = groupSize * 1.5f
         expandedCullingArea.set(ca.x - expand, ca.y - expand, ca.width + expand * 2, ca.height + expand * 2)
+        var rowIndex = 0
+        while (rowIndex < tiltedRows.size) tiltedRows[rowIndex++].cullingArea = expandedCullingArea
         for (mapLayer in allMapLayers) {
             // Generic type parameters are erased at runtime, so we check the element type instead.
             // Borders use rotated images (visual content displaced from pre-rotation bounds) and
@@ -270,9 +310,7 @@ class TileGroupMap<T: TileGroup>(
 
                 // Reposition tile-level actors via tileLayers (each TileLayer owns its actors).
                 // Bounds are tracked via the reference layer's tileX values.
-                val referenceMapLayer = allMapLayers
-                    .filterIsInstance<TileMapLayer<*>>()
-                    .first()
+                val referenceMapLayer = registeredMapLayers.first()
 
                 for ((i, referenceTileLayer) in referenceMapLayer.tileLayers.withIndex()) {
                     val shouldMove = when {
@@ -282,8 +320,8 @@ class TileGroupMap<T: TileGroup>(
                     }
                     if (shouldMove) {
                         val dx = if (beyondRight) width else -width
-                        for (mapLayer in allMapLayers) {
-                            val tl = (mapLayer as? TileMapLayer<*>)?.tileLayers?.get(i) ?: continue
+                        for (mapLayer in registeredMapLayers) {
+                            val tl = mapLayer.tileLayers[i]
                             tl.tileX += dx
                             tl.forEachOwnedActor { it.x += dx }
                         }

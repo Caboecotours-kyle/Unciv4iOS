@@ -1,7 +1,10 @@
 package com.unciv.ui.components.tilegroups
 
 import com.badlogic.gdx.graphics.g2d.Batch
+import com.badlogic.gdx.scenes.scene2d.Actor
+import com.badlogic.gdx.scenes.scene2d.Touchable
 import com.badlogic.gdx.scenes.scene2d.Group
+import com.unciv.logic.map.HexMath
 import com.unciv.view.CivView
 import com.unciv.view.TileMapView
 import com.unciv.view.TileView
@@ -41,6 +44,10 @@ open class TileGroup(
     val hexagonImageOriginX = hexagonImageWidth / 2f
     val hexagonImageOriginY = sqrt((hexagonImageWidth / 2f).pow(2) - (hexagonImageWidth / 4f).pow(2))
     val hexagonImagePosition = Pair(-hexagonImageOriginX / 3f, -hexagonImageOriginY / 4f)
+
+    val mapVerticalScale = tileSetStrings.mapVerticalScale
+    val groundCenterX = hexagonImagePosition.first + hexagonImageOriginX
+    val groundCenterY = hexagonImagePosition.second + hexagonImageOriginY
 
     var isForMapEditorIcon = false
 
@@ -130,6 +137,13 @@ open class TileGroup(
         setAllLayersVisible(true)
 
         for (layer in allLayers) layer.update(viewingCiv)
+    }
+
+    override fun hit(x: Float, y: Float, touchable: Boolean): Actor? {
+        if (mapVerticalScale == 1f || isForMapEditorIcon) return super.hit(x, y, touchable)
+        if (!isVisible || touchable && this.touchable != Touchable.enabled) return null
+        return if (HexMath.isWithinHex(x - groundCenterX, y - groundCenterY,
+                TileGroupMap.groupSize * 0.8f, mapVerticalScale)) this else null
     }
 
     override fun draw(batch: Batch?, parentAlpha: Float) { super.draw(batch, parentAlpha) }

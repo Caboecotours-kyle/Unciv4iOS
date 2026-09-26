@@ -190,6 +190,7 @@ class WorldScreen(
         // This is the most memory-intensive operation we have currently, most OutOfMemory errors will occur here
         mapHolder.addTiles()
         mapHolder.reloadMaxZoom()
+        mapHolder.setDefaultZoom()
 
         // resume music (in case choices from the menu lead to instantiation of a new WorldScreen)
         UncivGame.Current.musicController.resume()
@@ -667,6 +668,8 @@ class WorldScreen(
         val zoom = mapHolder.scaleX
         val scrollX = mapHolder.scrollX
         val scrollY = mapHolder.scrollY
+        val mapCenter = mapHolder.getMapCenter()
+        val mapVerticalScale = mapHolder.currentTileSetStrings.mapVerticalScale
     }
     
     @Readonly
@@ -679,9 +682,13 @@ class WorldScreen(
         // This is not the case if you have a multiplayer game where you play as 2 civs
         if (viewingCiv.civID == restoreState.viewingCivName) {
             mapHolder.zoom(restoreState.zoom)
-            mapHolder.scrollX = restoreState.scrollX
-            mapHolder.scrollY = restoreState.scrollY
-            mapHolder.updateVisualScroll()
+            if (restoreState.mapVerticalScale != mapHolder.currentTileSetStrings.mapVerticalScale) {
+                mapHolder.restoreMapCenter(restoreState.mapCenter)
+            } else {
+                mapHolder.scrollX = restoreState.scrollX
+                mapHolder.scrollY = restoreState.scrollY
+                mapHolder.updateVisualScroll()
+            }
         }
 
         setSelectedCiv(gameInfo.getCivilization(restoreState.selectedCivName))
@@ -1078,6 +1085,7 @@ class WorldScreen(
         if (Gdx.app.type == com.badlogic.gdx.Application.ApplicationType.iOS) {
             if (!hasSafeAreaChanged(width, height)) return
             super.resize(width, height)
+            mapHolder.refreshMapProjection()
             mapHolder.resizeViewport((stage.viewport as com.unciv.ui.screens.basescreen.SafeAreaViewport).drawingBounds)
             mapHolder.reloadMaxZoom()
             mapHolder.zoom(mapHolder.scaleX)
