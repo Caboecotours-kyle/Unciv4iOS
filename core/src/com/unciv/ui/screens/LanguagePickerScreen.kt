@@ -27,6 +27,7 @@ import com.unciv.ui.components.widgets.LanguageTable.Companion.addLanguageTables
 import com.unciv.ui.images.ImageGetter
 import com.unciv.ui.popups.options.OptionsPopup
 import com.unciv.ui.screens.basescreen.BaseScreen
+import com.unciv.ui.screens.basescreen.RecreateOnResize
 import com.unciv.ui.screens.basescreen.SafeAreaViewport
 import com.unciv.ui.screens.mainmenuscreen.MainMenuScreen
 import com.unciv.ui.screens.pickerscreens.PickerScreen
@@ -39,8 +40,9 @@ import kotlin.math.roundToInt
  *  Reusable code is in [LanguageTable] and [addLanguageTables].
  *  Portrait matches the main menu: the army lineup and wordmark, with the languages on a sheet below.
  */
-class LanguagePickerScreen : PickerScreen() {
-    private var chosenLanguage: String
+class LanguagePickerScreen(
+    private var chosenLanguage: String = LocaleCode.getSystemLanguage()
+) : PickerScreen(), RecreateOnResize {
 
     private val languageTables: ArrayList<LanguageTable>
 
@@ -60,8 +62,6 @@ class LanguagePickerScreen : PickerScreen() {
     }
 
     init {
-        chosenLanguage = LocaleCode.getSystemLanguage()
-
         closeButton.isVisible = false
 
         languageTables = topTable.addLanguageTables(if (portrait) portraitWidth - 60f else stage.width - 60f)
@@ -178,6 +178,8 @@ class LanguagePickerScreen : PickerScreen() {
         portraitTextures.forEach(Texture::dispose)
         super.dispose()
     }
+
+    override fun recreate(): BaseScreen = LanguagePickerScreen(chosenLanguage)
 
     private fun onChoice(choice: String) {
         chosenLanguage = choice
