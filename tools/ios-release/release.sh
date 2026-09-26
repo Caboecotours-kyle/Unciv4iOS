@@ -11,6 +11,7 @@ security unlock-keychain -p "$KEYCHAIN_PASSWORD" ~/Library/Keychains/login.keych
 
 cd "$ROOT/tools/ios-release" && fastlane profile
 UUID="$(cat profile-uuid.txt)"
+SIGNING_FINGERPRINT="$(cat signing-identity.txt)"
 
 PROPS="$(mktemp -t robovm).properties"
 sed "s/^app.build=.*/app.build=$(date +%y%m%d%H%M)/" robovm.properties > "$PROPS"
@@ -19,7 +20,7 @@ cd "$ROOT"
 # another ssh session fails with errSecInternalComponent
 ./gradlew --no-daemon --no-configuration-cache :ios:createIPA \
   -PiosSkipSigning=false \
-  -PiosSignIdentity="Apple Distribution: kyle popp (W843447LPP)" \
+  -PiosSignIdentity="$SIGNING_FINGERPRINT" \
   -PiosProvisioningProfile="$UUID" \
   -PiosRoboVmProperties="$PROPS" \
   -Probovm.arch=arm64 -Probovm.archs=arm64
