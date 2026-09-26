@@ -273,6 +273,9 @@ internal class CityPortraitView(private val screen: CityScreen, private val shee
 
     fun refresh() {
         val oldScroll = scroll.scrollY
+        yields.isVisible = !collapsed
+        scroll.isVisible = !collapsed
+        tabs.isVisible = !collapsed
         drawHeading()
         drawYields()
         drawTabs()
