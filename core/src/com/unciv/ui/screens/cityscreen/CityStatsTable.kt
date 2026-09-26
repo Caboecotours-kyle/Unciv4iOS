@@ -113,7 +113,13 @@ class CityStatsTable(private val cityScreen: CityScreen) : Table() {
     }
 
     private fun onContentResize() {
+        val previousTop = top
+        val previousCenterX = x + width / 2f
         pack()
+        if (cityScreen.isPortrait()) {
+            setPosition(previousCenterX, previousTop, Align.top)
+            return
+        }
         setPosition(
             stage.width - CityScreen.posFromEdge,
             stage.height - CityScreen.posFromEdge,

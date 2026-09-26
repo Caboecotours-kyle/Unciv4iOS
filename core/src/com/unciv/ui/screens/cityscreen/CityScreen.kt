@@ -256,13 +256,13 @@ class CityScreen(
         updateAnnexAndRazeCityButton()
 
         if (isPortrait()) {
-            layoutPortrait()
             // Context-menu selection also reaches this path without rebuilding the construction list.
             val details = when {
                 selectedTile != null -> tileTable.packIfNeeded().height + posFromEdge
                 selectedConstruction != null -> selectedConstructionTable.packIfNeeded().height + posFromEdge
                 else -> 0f
             }
+            layoutPortrait(details)
             constructionsTable.reservedBottom = portraitBarHeight + 2 * posFromEdge + details
             constructionsTable.updateLayout()
         }
@@ -283,7 +283,7 @@ class CityScreen(
     }
 
     /** Portrait layout: city name on top, the chosen panel in between, tabs and Exit along the bottom edge. */
-    private fun layoutPortrait() {
+    private fun layoutPortrait(detailsHeight: Float) {
         val safe = safeAreaBoundsInWorld()
         val left = safe.x + posFromEdge
         val right = safe.x + safe.width - posFromEdge
@@ -302,7 +302,7 @@ class CityScreen(
         val showCity = portraitTab == PortraitTab.City
         cityStatsTable.isVisible = showCity
         if (showCity) {
-            cityStatsTable.update(panelTop - barTop - 2 * posFromEdge)
+            cityStatsTable.update(panelTop - barTop - 2 * posFromEdge - detailsHeight)
             cityStatsTable.setPosition(safe.x + safe.width / 2, panelTop, Align.top)
         }
         razeCityButtonHolder.isVisible = showCity
