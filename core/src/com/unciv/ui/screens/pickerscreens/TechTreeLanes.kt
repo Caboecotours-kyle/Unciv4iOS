@@ -23,7 +23,8 @@ import kotlin.math.sqrt
 internal class TechTreeLanes(ruleset: Ruleset, width: Float) {
     class Band(val era: String, val top: Float, val height: Float)
 
-    val laneX = List(LANES) { width * (2 * it + 1) / (2 * LANES) }
+    // Leave one lane-width of breathing room at each edge so names and unlock icons never clip.
+    val laneX = List(LANES) { width * (it + 1) / (LANES + 1) }
     /** Center of each tech's disc */
     val centers = HashMap<String, Vector2>()
     val bands = ArrayList<Band>()

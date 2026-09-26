@@ -71,7 +71,10 @@ internal class TechPickerPortrait(
     private var tree: TreeView? = null
 
     init {
-        background = solid(SHEET)
+        background = rounded(SHEET_GLASS, BaseScreen.skinStrings.roundedEdgeRectangleShape)
+        val grab = Table()
+        grab.add(Image(solid(Color.valueOf("607587")))).size(36f, 4f)
+        add(grab).growX().height(12f).row()
         add(header()).growX().row()
         add(tabs).growX().row()
         add(body).grow().prefHeight(0f)
@@ -109,10 +112,10 @@ internal class TechPickerPortrait(
     }
 
     private fun header() = Table().apply {
-        pad(10f, 18f, 2f, 12f)
+        pad(6f, 18f, 2f, 12f)
         val titles = Table().left()
-        titles.add("Technologies".toLabel(fontSize = 24)).left().row()
-        titles.add("+${science.roundToInt()}${Fonts.science}".toLabel(INK2, 15)).left()
+        titles.add("Technology".toLabel(fontSize = 26)).left().row()
+        titles.add("+${science.roundToInt()} science per turn".toLabel(INK2, 15)).left()
         add(titles).growX().left()
         val close = closeIcon()
         close.onClick { screen.game.popScreen() }
@@ -141,6 +144,13 @@ internal class TechPickerPortrait(
         val width = contentWidth - 28f
         nextUpContent.pad(10f, 14f, 16f, 14f).defaults().growX()
         nextUpContent.add(nowCard(width)).row()
+        if (!screen.freeTechPick) {
+            val current = civTech.currentTechnology()
+            if (current != null) {
+                val chips = unlocks(current).map { (name, kind) -> unlockChip(name, kind) }
+                if (chips.isNotEmpty()) nextUpContent.add(flow(chips, width)).left().padTop(10f).row()
+            }
+        }
 
         nextUpContent.add(sectionLabel("Pick next")).padTop(18f).padBottom(8f).row()
         val current = if (screen.freeTechPick) null else civTech.currentTechnologyName()
@@ -191,8 +201,6 @@ internal class TechPickerPortrait(
         ).left().padTop(8f)
         add(middle).growX().left()
         add(turnsLabel(screen.turnsToTech[current.name] ?: "")).padLeft(8f).row()
-        val chips = unlocks(current).map { (name, kind) -> unlockChip(name, kind) }
-        if (chips.isNotEmpty()) add(flow(chips, width - 28f)).colspan(3).left().padTop(12f)
     }
 
     private fun techCardContent(tech: Technology, width: Float) = Table().apply {
@@ -804,6 +812,7 @@ internal class TechPickerPortrait(
 
         // The mock's palette (DESIGN.md "Interface"): navy sheet and panels, yellow for the primary action and the path
         val SHEET: Color = Color.valueOf("132435")
+        val SHEET_GLASS: Color = Color(19f / 255f, 36f / 255f, 53f / 255f, .93f)
         val PANEL: Color = Color.valueOf("1c3249")
         val BAR: Color = Color.valueOf("0f2030")
         val CARD: Color = Color.valueOf("1e2f40")

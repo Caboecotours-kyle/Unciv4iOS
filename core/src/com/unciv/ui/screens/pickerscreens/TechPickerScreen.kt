@@ -36,6 +36,7 @@ import com.unciv.ui.images.ImageGetter
 import com.unciv.ui.popups.ToastPopup
 import com.unciv.ui.screens.basescreen.BaseScreen
 import com.unciv.ui.screens.basescreen.RecreateOnResize
+import com.unciv.ui.screens.basescreen.SafeAreaViewport
 import com.unciv.utils.Concurrency
 import yairm210.purity.annotations.Readonly
 import kotlin.math.abs
@@ -89,6 +90,7 @@ class TechPickerScreen(
     /** Portrait lays the screen out one-handed in [TechPickerPortrait]; landscape keeps the classic tree below */
     private val portrait = isPortrait()
     private var portraitView: TechPickerPortrait? = null
+    private var portraitMapBackdrop: PortraitMapBackdrop? = null
 
     init {
         Gdx.input.inputProcessor = null // Avoid ANRs while building the tech screen
@@ -145,8 +147,23 @@ class TechPickerScreen(
         rightSideButton.setText(if (freeTechPick) "Pick a free tech".tr() else "Pick a tech".tr())
 
         val safeArea = safeAreaBoundsInWorld()
-        val view = TechPickerPortrait(this, safeArea.width, startOnTree = startOnTree ?: (centerOnTech != null))
-        view.setBounds(safeArea.x, safeArea.y, safeArea.width, safeArea.height)
+        val drawingBounds = (stage.viewport as SafeAreaViewport).drawingBounds
+        val map = PortraitMapBackdrop(civInfo)
+        portraitMapBackdrop = map
+        map.setBounds(drawingBounds.x, drawingBounds.y, drawingBounds.width, drawingBounds.height)
+        stage.addActor(map)
+        val shade = Image(ImageGetter.getWhiteDotDrawable()).apply {
+            color = Color(0f, 0f, 0f, .35f)
+            touchable = Touchable.disabled
+            setBounds(drawingBounds.x, drawingBounds.y, drawingBounds.width, drawingBounds.height)
+        }
+        stage.addActor(shade)
+        val logicalWidth = 393f
+        val scale = safeArea.width / logicalWidth
+        val view = TechPickerPortrait(this, logicalWidth, startOnTree = startOnTree ?: (centerOnTech != null))
+        view.isTransform = true
+        view.setBounds(safeArea.x, safeArea.y, logicalWidth, safeArea.height / scale - portraitChromeGaps(logicalWidth).first)
+        view.setScale(scale)
         stage.addActor(view)
         portraitView = view
 
@@ -197,6 +214,11 @@ class TechPickerScreen(
         newScreen.setButtonsInfo()
         selectedTech?.let { newScreen.centerOnTechnology(it) }
         return newScreen
+    }
+
+    override fun dispose() {
+        portraitMapBackdrop?.dispose()
+        super.dispose()
     }
 
     private fun createTechTable() {
