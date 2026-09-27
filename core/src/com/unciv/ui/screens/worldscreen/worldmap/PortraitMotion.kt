@@ -410,4 +410,24 @@ internal class PortraitMotion(private val holder: WorldMapHolder) {
             actor.color.a = 1f - p
         }
     }
+
+    /** A ranged shot: an arrow on an arc from [from] to [to], turned along its flight. */
+    inner class Projectile(delay: Float, private val from: TileGroup, private val to: TileGroup) : Effect(delay, .42f, 1) {
+        private val u = unitScale(from)
+        override fun make(index: Int) = ImageGetter.getImage("OtherIcons/ArrowRight").apply {
+            setSize(16f * u, 10f * u)
+            setOrigin(width / 2f, height / 2f)
+            color = Color.valueOf("3a2a14")
+        }
+        override fun step(index: Int, actor: Actor, p: Float) {
+            val ax = groundX(from) - 10f * u
+            val ay = groundY(from) + 30f * u
+            val bx = groundX(to) + 6f * u
+            val by = groundY(to) + 26f * u
+            val arc = 46f * u
+            place(actor, ax + (bx - ax) * p, ay + (by - ay) * p + sin(PI * p).toFloat() * arc)
+            actor.rotation = (atan2((by - ay) + arc * PI.toFloat() * cos(PI * p).toFloat(), bx - ax) * 180 / PI).toFloat()
+            actor.isVisible = p < .95f
+        }
+    }
 }

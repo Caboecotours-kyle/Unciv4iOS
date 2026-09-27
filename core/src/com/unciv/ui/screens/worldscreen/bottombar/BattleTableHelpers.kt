@@ -306,6 +306,14 @@ object BattleTableHelpers {
                 else emptyArray()
             )
         )
+        if (portrait) {
+            // A ranged shot flies an arc before the hit lands
+            val flight = if (ranged && !UncivGame.Current.settings.reduceMotion) .42f else 0f
+            if (ranged) {
+                mapHolder.motion.play(mapHolder.motion.Projectile(moveActorsDuration, attackerGroup, defenderGroup))
+                if (flight > 0f) sequence.addAction(Actions.delay(flight))
+            }
+        }
         sequence.addAction(
                 Actions.run {
                     addDamageLabel(damageToAttacker, attackerGroup)
