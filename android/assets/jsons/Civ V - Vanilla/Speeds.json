@@ -1,5 +1,33 @@
 [
     {
+        "name": "Rapid",
+        "modifier": 0.4,
+        "productionCostModifier": 0.4,
+        "goldCostModifier": 0.4,
+        "scienceCostModifier": 0.4,
+        "cultureCostModifier": 0.4,
+        "faithCostModifier": 0.4,
+        "improvementBuildLengthModifier": 0.4,
+        "barbarianModifier": 0.4,
+        "goldGiftModifier": 1.5,
+        "cityStateTributeScalingInterval": 3.5,
+        "goldenAgeLengthModifier": 0.6,
+        "religiousPressureAdjacentCity": 12,
+        "peaceDealDuration": 8,
+        "dealDuration": 20,
+        "startYear": -4000,
+        "turns": [
+            {"yearsPerTurn": 100, "untilTurn":  30},
+            {"yearsPerTurn":  65, "untilTurn":  48},
+            {"yearsPerTurn":  50, "untilTurn":  60},
+            {"yearsPerTurn":  35, "untilTurn":  78},
+            {"yearsPerTurn":  15, "untilTurn":  93},
+            {"yearsPerTurn":   8, "untilTurn": 117},
+            {"yearsPerTurn":   3, "untilTurn": 156},
+            {"yearsPerTurn":   2, "untilTurn": 200}
+        ]
+    },
+    {
         "name": "Quick",
         "modifier": 0.67,
         "productionCostModifier": 0.67,

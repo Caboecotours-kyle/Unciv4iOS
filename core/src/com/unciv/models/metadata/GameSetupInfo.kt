@@ -5,6 +5,7 @@ import com.unciv.UncivGame
 import com.unciv.logic.GameInfo
 import com.unciv.logic.map.MapParameters
 import com.unciv.logic.map.MapShape
+import com.unciv.models.ruleset.Speed
 
 class GameSetupInfo(
     val gameParameters: GameParameters = GameParameters(),
@@ -31,6 +32,8 @@ class GameSetupInfo(
                     mapParameters.shape = MapShape.rectangular
                     mapParameters.worldWrap = true
                     gameParameters.espionageEnabled = true
+                    gameParameters.speed = Speed.NEW_GAME
+                    gameParameters.maxTurns = Speed.defaultMaxTurns(Speed.NEW_GAME)
                 } else GameSetupInfo(lastGameSetup!!).apply {
                     mapParameters.reseed()
                 }
