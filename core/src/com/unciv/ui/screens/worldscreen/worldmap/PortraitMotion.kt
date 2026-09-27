@@ -12,6 +12,7 @@ import com.badlogic.gdx.scenes.scene2d.ui.Image
 import com.badlogic.gdx.scenes.scene2d.utils.Drawable
 import com.unciv.UncivGame
 import com.unciv.ui.components.tilegroups.TileGroup
+import com.unciv.ui.components.tilegroups.layers.GroundImage
 import com.unciv.ui.components.tilegroups.layers.TileLayerUnitSprite
 import com.unciv.ui.components.tilegroups.layers.UnitSpriteSlot
 import com.unciv.ui.images.ImageGetter
@@ -244,6 +245,104 @@ internal class PortraitMotion(private val holder: WorldMapHolder) {
                 if (landed == hops || landed == swapAt)
                     play(if (embarked(tile)) Splash(0f, tile) else Dust(0f, tile))
             }
+        }
+    }
+
+    /** Rises out of the ground; with [ring] a yellow ring marks a city that produced it, else it simply fades in. */
+    inner class SpawnClip(delay: Float, speed: Float, unitId: Int, tile: TileGroup, sprite: List<SpriteCopy>,
+                          private val ring: Boolean) :
+        GhostClip(delay, if (ring) .42f else .3f, speed, unitId, tile, sprite, tile) {
+        private var ringed = false
+        override fun pose(t: Float) {
+            hideReal()
+            rest(home)
+            val p = (t / length).coerceIn(0f, 1f)
+            if (t < 0f) { ghost.color.a = 0f; return }
+            if (!ring) { ghost.color.a = p; return }
+            if (!ringed) { ringed = true; play(Ring(0f, home, Color.valueOf("ffc93c"), .7f)) }
+            val rise = ease(p)
+            ghost.color.a = (p * 2f).coerceAtMost(1f)
+            ghost.y = home.y - 14f * unitScale(home) * (1f - rise)
+            ghost.setScale(.5f + .5f * rise + if (p > .8f) .08f * sin((p - .8f) / .2f * PI).toFloat() else 0f,
+                .3f + .7f * rise)
+        }
+    }
+
+    /**
+     * A founded city: the settler hops in place and sinks, the city rises with dust, the border draws around
+     * clockwise and the banner drops in. [territory] are the city's tiles; [settler] is optional.
+     */
+    inner class SettleClip(delay: Float, speed: Float, private val center: TileGroup, private val territory: List<TileGroup>,
+                           settler: List<SpriteCopy>?) : Clip(delay, 2.05f, speed) {
+        private val settlerGhost = settler?.let { SettlerGhost(it) }
+        private val restAlpha = HashMap<Actor, Float>()
+        private val restScale = HashMap<Actor, Pair<Float, Float>>()
+        private val restY = HashMap<Actor, Float>()
+        private var dusted = false
+
+        private inner class SettlerGhost(sprite: List<SpriteCopy>) :
+            GhostClip(0f, 0f, 1f, -1, center, sprite, null) {
+            private val hop = HopPose()
+            override fun pose(t: Float) {
+                hideReal()
+                rest(home)
+                if (t < .25f) return
+                if (t < .67f) {
+                    hop.at((t - .25f) / .42f, true)
+                    ghost.y += hop.lift * 16f * unitScale(home)
+                    ghost.setScale(hop.scaleX, hop.scaleY)
+                    ghost.rotation = hop.lean
+                    return
+                }
+                val sink = ((t - .67f) / .26f).coerceIn(0f, 1f)
+                ghost.setScale(1f + .3f * sink, 1f - ease(sink))
+                ghost.color.a = 1f - sink
+            }
+        }
+
+        private fun cityImages() = center.layerTerrain.tileBaseImages.filter { it !is GroundImage && it.name?.contains("City center") == true }
+        private fun borderActors() = territory.flatMap { it.layerBorders.ownedActors }
+        private fun bannerActors() = center.layerCityButton.ownedActors.toList()
+
+        private fun alpha(actor: Actor, value: Float) {
+            actor.color.a = restAlpha.getOrPut(actor) { actor.color.a } * value
+        }
+
+        override fun pose(t: Float) {
+            settlerGhost?.pose(t)
+            val u = unitScale(center)
+            if (t >= .76f && !dusted) {
+                dusted = true
+                play(Dust(0f, center))
+                play(Ring(0f, center, Color.valueOf("efe6cf"), .7f))
+            }
+            val rise = ((t - .76f) / .48f).coerceIn(0f, 1f)
+            val over = if (rise < 1f) ease(rise) + .12f * sin(rise * PI).toFloat() else 1f
+            for (image in cityImages()) {
+                alpha(image, (rise * 3f).coerceAtMost(1f))
+                val (sx, sy) = restScale.getOrPut(image) { image.scaleX to image.scaleY }
+                image.setScale(sx * (.7f + .3f * over), sy * over)
+            }
+            val sweep = ease(((t - 1.25f) / .7f).coerceIn(0f, 1f))
+            val cx = groundX(center)
+            val cy = groundY(center)
+            for (actor in borderActors()) {
+                val turn = ((atan2(actor.x + actor.width / 2f - cx, actor.y + actor.height / 2f - cy) / (2 * PI)).toFloat() + 1f) % 1f
+                alpha(actor, ((sweep * 1.1f - turn) * 10f).coerceIn(0f, 1f))
+            }
+            val drop = ((t - 1.7f) / .32f).coerceIn(0f, 1f)
+            for (actor in bannerActors()) {
+                alpha(actor, drop)
+                actor.y = restY.getOrPut(actor) { actor.y } + 14f * u * (1f - ease(drop))
+            }
+            if (!Gdx.graphics.isContinuousRendering) Gdx.graphics.requestRendering()
+        }
+
+        override fun end() {
+            settlerGhost?.end()
+            for ((actor, a) in restAlpha) actor.color.a = a
+            for ((actor, s) in restScale) actor.setScale(s.first, s.second)
+            for ((actor, y) in restY) actor.y = y
         }
     }
 

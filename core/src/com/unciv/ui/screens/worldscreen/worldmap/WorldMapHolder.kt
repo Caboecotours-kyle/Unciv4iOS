@@ -88,6 +88,8 @@ class WorldMapHolder @JvmOverloads constructor(
     internal val motion = PortraitMotion(this)
     /** When the camera glide started for a move ends, in [System.nanoTime] */
     private var cameraSettlesAt = 0L
+    /** The map as last drawn, to notice cities founded and units bought between updates */
+    private var liveMap: SeenMap? = null
 
     init {
         if (Gdx.app.type == Application.ApplicationType.Desktop) this.setFlingTime(0f)
@@ -799,6 +801,37 @@ class WorldMapHolder @JvmOverloads constructor(
         val wait = ((cameraSettlesAt - System.nanoTime()) / 1e9f).coerceAtLeast(0f)
         motion.play(motion.HopClip(wait, 1f, unit.id, path, SpriteCopy.of(slot), !unit.getBaseUnit().isWaterUnit,
             { slotOf(destination, unit.id)?.let { SpriteCopy.of(it) } }, min(.34f, 2.4f / (path.size - 1))))
+    }
+
+    /** Called after each tile update: a city founded or a unit bought since the last one plays its motion. */
+    internal fun observeMapChanges() {
+        if (!currentTileSetStrings.projection.tilted) {
+            liveMap = null
+            return
+        }
+        val now = seeMap()
+        val before = liveMap
+        liveMap = now
+        if (before == null || before.civID != now.civID || before.gameIdentity != now.gameIdentity) return
+        val groups = tileGroups.values.associateBy { it.tileView.position() }
+        for ((id, position) in now.cities) {
+            if (id in before.cities) continue
+            val city = worldScreen.gameInfo.getCities().firstOrNull { it.id == id } ?: continue
+            val center = groups[position] ?: continue
+            if (city.turnAcquired != worldScreen.gameInfo.turns) continue
+            val settler = before.units.values.firstOrNull {
+                it.position == position && it.civilian && it.civID == city.civ.civID && it.id !in now.units
+            }?.sprite
+            motion.play(motion.SettleClip(0f, 1f, center, city.getTiles().mapNotNull { groups[it.position] }.toList(), settler))
+        }
+        for (unit in now.units.values) {
+            if (unit.id <= before.maxUnitId || unit.civID != now.civID) continue
+            val tile = groups[unit.position] ?: continue
+            // An upgrade replaces a unit on the same tile; only a bought or produced unit rises
+            if (!tile.tileView.isCityCenter() || before.units.values.any {
+                    it.civID == unit.civID && it.position == unit.position && it.id !in now.units }) continue
+            motion.play(motion.SpawnClip(0f, 1f, unit.id, tile, unit.sprite, ring = true))
+        }
     }
 
     internal fun swapMoveUnitToTargetTile(selectedUnitView: MapUnitView, targetTileView: TileView) {

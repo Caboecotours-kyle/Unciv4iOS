@@ -50,6 +50,7 @@ object WorldMapTileUpdater {
 
         zoom(scaleX) // zoom to current scale, to set the size of the city buttons after "next turn"
         updateSelectedUnitBreathing()
+        observeMapChanges()
     }
 
     private fun WorldMapHolder.updateTilesForSelectedUnit(unitView: MapUnitView) {
