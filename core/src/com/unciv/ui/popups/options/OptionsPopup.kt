@@ -18,13 +18,14 @@ import kotlin.math.floor
  * The Options (Settings) Popup
  *
  * In portrait it becomes a full-screen [OptionsPortraitView]: a category home plus one page at a time.
- * A plain open shows the home, an explicit page (or a reload) opens that page directly.
+ * A plain open (no [selectPage]) shows the home, an explicit page (or a reload) opens that page directly.
  * @param screen The caller - note if this is a [WorldScreen] or [MainMenuScreen] they will be rebuilt when major options change.
  */
 //region Fields
 class OptionsPopup(
     screen: BaseScreen,
-    private val selectPage: OptionsPopupPages = defaultPage,
+    /** `null`: no page requested, portrait shows the home and landscape opens [defaultPage] */
+    private val selectPage: OptionsPopupPages? = null,
     withDebug: Boolean = false,
     private val onClose: () -> Unit = {},
     private val subSelect: String? = null
@@ -188,10 +189,10 @@ class OptionsPopup(
         super.setVisible(visible)
         if (!visible || initialPageShown) return
         initialPageShown = true
-        val targetPage = if (selectPage in pageIndex) selectPage else defaultPage
+        val targetPage = if (selectPage != null && selectPage in pageIndex) selectPage else defaultPage
         pageIndex[targetPage]?.subSelect(subSelect)
         // A plain open lands on the portrait home; explicit pages and reloads keep their page
-        val openHome = portraitView != null && selectPage == defaultPage && subSelect == null
+        val openHome = portraitView != null && selectPage == null
         showPage(if (openHome) null else targetPage)
     }
 }

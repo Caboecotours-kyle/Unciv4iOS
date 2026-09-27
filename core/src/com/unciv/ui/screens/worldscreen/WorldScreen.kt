@@ -288,7 +288,7 @@ class WorldScreen(
     override fun getCivilopediaRuleset() = gameInfo.ruleset
 
     // Handle disabling and re-enabling WASD listener while Options are open
-    override fun openOptionsPopup(startingPage: OptionsPopupPages, withDebug: Boolean, onClose: () -> Unit) {
+    override fun openOptionsPopup(startingPage: OptionsPopupPages?, withDebug: Boolean, onClose: () -> Unit) {
         val oldListener = stage.root.listeners.filterIsInstance<KeyboardPanningListener>().firstOrNull()
         if (oldListener != null) {
             stage.removeListener(oldListener)
