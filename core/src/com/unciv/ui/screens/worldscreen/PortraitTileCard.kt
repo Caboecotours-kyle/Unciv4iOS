@@ -22,6 +22,9 @@ import com.unciv.ui.images.ImageGetter
 import com.unciv.ui.images.PortraitStatIcons
 import com.unciv.ui.objectdescriptions.TileDescription
 import com.unciv.ui.popups.Popup
+import com.unciv.ui.popups.TrayColors
+import com.unciv.ui.popups.TraySheet
+import com.unciv.ui.popups.tinted
 import com.unciv.ui.screens.basescreen.BaseScreen
 import com.unciv.ui.screens.civilopediascreen.FormattedLine
 import com.unciv.ui.screens.civilopediascreen.FormattedLine.IconDisplay
@@ -46,7 +49,9 @@ internal class PortraitTileCard(
     spyCity: CityView? = null,
     private val p: Float = 1f,
     /** Smallest touch target in this card's units: at least 48 real screen points, whatever [p] does to the art */
-    val touch: Float = 48f * p
+    val touch: Float = 48f * p,
+    /** The map's tile and unit sheets draw the card in the tray style: 44pt discs, inset grouped rows, stat chips */
+    private val tray: TraySheet? = null,
 ) {
     companion object {
         val NAVY2: Color = Color.valueOf("1c3249")
@@ -74,8 +79,8 @@ internal class PortraitTileCard(
 
     private fun pt(value: Float) = value * p
     private fun font(size: Int) = (size * p).roundToInt()
-    /** 56pt rows, never shorter than [touch] */
-    val rowHeight get() = max(pt(56f), touch)
+    /** 56pt rows (64pt in the tray), never shorter than [touch] */
+    val rowHeight get() = tray?.rowHeight ?: max(pt(56f), touch)
 
     private val lines = TileDescription.toMarkup(tileView, civView, hideUnits, spyCity)
     private var baseLine: FormattedLine? = null
@@ -158,13 +163,15 @@ internal class PortraitTileCard(
     fun header(trailing: Actor? = null): Table {
         val header = Table()
         val text = Table().left()
-        text.add(title.toLabel(Color.WHITE, font(22), hideIcons = true).apply { wrap = true }).growX().left().row()
+        text.add(title.toLabel(Color.WHITE, if (tray != null) tray.font(23f) else font(22), hideIcons = true).apply { wrap = true }).growX().left().row()
         val owner = tileView.getOwner()?.civName?.tr(hideIcons = true) ?: "Unowned".tr()
         val subtitle = if (freshWater) "$owner · ${Constants.freshWater.tr()}" else owner
-        text.add(subtitle.toLabel(INK2, font(14), hideIcons = true).apply { wrap = true }).growX().left().padTop(pt(3f))
+        text.add(subtitle.toLabel(tray?.let { TrayColors.INK2 } ?: INK2, if (tray != null) tray.font(14.5f) else font(14), hideIcons = true)
+            .apply { wrap = true }).growX().left().padTop(pt(3f))
         val baseLink = baseLine?.link
         val block = Table()
-        block.add(thumbnail(pt(64f), pt(56f))).size(pt(64f), pt(56f)).padRight(pt(13f))
+        if (tray != null) block.add(thumbnail(pt(52f), pt(46f))).size(pt(52f), pt(46f)).padRight(pt(12f))
+        else block.add(thumbnail(pt(64f), pt(56f))).size(pt(64f), pt(56f)).padRight(pt(13f))
         block.add(text).growX().minWidth(0f)
         if (baseLink != null) {
             block.touchable = Touchable.enabled
@@ -181,6 +188,13 @@ internal class PortraitTileCard(
     fun yields(maxWidth: Float): Table? {
         val stats = tileView.getTileStats(civView, cityView)
         if (stats.isEmpty()) return null
+        if (tray != null) {
+            // Stat chips of the tray, three to a line
+            val chips = stats.map { (stat, value) ->
+                tray.statChip(icons.image(stat.name), amount(value)) { openBreakdown() }.apply { name = "portrait-yield-${stat.name}" }
+            }
+            return tray.statGrid(chips, 3)
+        }
         val table = Table().left()
         var line = Table().left()
         var used = 0f
@@ -217,7 +231,7 @@ internal class PortraitTileCard(
         }.open(force = true)
     }
 
-    fun pill(text: String, fill: Color, ink: Color, icon: String? = null): Table = Table().apply {
+    fun pill(text: String, fill: Color, ink: Color, icon: String? = null): Table = tray?.pill(text, fill, ink, icon) ?: Table().apply {
         background = bg(fill, BaseScreen.skinStrings.roundedEdgeRectangleMidShape)
         if (icon != null) add(ImageGetter.getImage(icon).apply { color = ink }).size(pt(14f)).padRight(pt(5f))
         add(text.toLabel(ink, font(13), hideIcons = true)).height(pt(30f))
@@ -228,18 +242,25 @@ internal class PortraitTileCard(
     fun defencePill(suffix: String = ""): Table? =
         if (!defence) null else pill(defencePercent + suffix, PLAIN, Color.WHITE, "OtherIcons/Shield")
 
-    private fun iconBox(actor: Actor?, round: Boolean = false): Actor = Table().apply {
+    private fun iconBox(actor: Actor?, round: Boolean = false, light: Boolean = false): Actor = Table().apply {
+        if (tray != null) {
+            // Tray discs: white behind resource and improvement art, the fill colour behind terrain and units
+            background = ImageGetter.getCircleDrawable().tint(if (light) TrayColors.DISC else TrayColors.FILL)
+            if (actor != null) add(actor).size(pt(if (round) 40f else 34f))
+            return@apply
+        }
         background = if (round) null else bg(NAVY2)
         if (actor != null) add(actor).size(pt(if (round) 40f else 34f))
     }
 
     /** Plain bars: the skin's rounded shapes cannot draw as thin as 8pt */
-    fun healthBar(health: Int, width: Float = pt(84f), height: Float = pt(8f)): Table = Table().apply {
-        background = ImageGetter.getWhiteDotDrawable().tint(HP_TRACK)
+    fun healthBar(health: Int, width: Float = pt(84f), height: Float = pt(8f), tray: Boolean = false): Table = Table().apply {
+        val round = if (tray) this@PortraitTileCard.tray?.art?.rounded(height / 2f) else null
+        background = round?.tinted(TrayColors.TRACK) ?: ImageGetter.getWhiteDotDrawable().tint(HP_TRACK)
         // Whole units, so the rounded layout keeps the bar at exactly [width]
         val total = floor(width)
         val filled = floor(total * health.coerceIn(0, 100) / 100f)
-        if (filled > 0f) add(Image(ImageGetter.getWhiteDotDrawable().tint(HP))).size(filled, height)
+        if (filled > 0f) add(Image(round?.tinted(HP) ?: ImageGetter.getWhiteDotDrawable().tint(HP))).size(filled, height)
         if (filled < total) add().size(total - filled, height)
     }
 
@@ -247,27 +268,33 @@ internal class PortraitTileCard(
     fun row(icon: Actor?, title: String, meta: String? = null, end: List<Actor> = emptyList(), link: String? = null,
             onTap: (() -> Unit)? = if (link == null) null else ({ openLink(link) })): Table {
         val row = Table()
-        if (icon != null) row.add(icon).size(pt(40f)).padRight(pt(12f))
+        if (tray != null) {
+            row.add().minHeight(rowHeight).width(0f)
+            if (icon != null) row.add(icon).size(pt(44f)).padRight(pt(14f))
+        } else if (icon != null) row.add(icon).size(pt(40f)).padRight(pt(12f))
         val text = Table().left()
-        text.add(title.toLabel(Color.WHITE, font(17), hideIcons = true).apply { wrap = true }).growX().left().row()
-        if (meta != null) text.add(meta.toLabel(INK2, font(13), hideIcons = true).apply { wrap = true }).growX().left().padTop(pt(2f))
-        row.add(text).growX().minWidth(0f).padTop(pt(6f)).padBottom(pt(6f))
+        text.add(title.toLabel(Color.WHITE, if (tray != null) tray.font(17f) else font(17), hideIcons = true).apply { wrap = true }).growX().left().row()
+        if (meta != null) text.add(meta.toLabel(tray?.let { TrayColors.INK2 } ?: INK2, if (tray != null) tray.font(13.5f) else font(13), hideIcons = true)
+            .apply { wrap = true }).growX().left().padTop(pt(if (tray != null) 3f else 2f))
+        row.add(text).growX().minWidth(0f).padTop(pt(if (tray != null) 9f else 6f)).padBottom(pt(if (tray != null) 9f else 6f))
         for (actor in end) {
             val cell = row.add(actor).padLeft(pt(8f))
             if (actor.touchable == Touchable.enabled && actor.listeners.size > 0) cell.minSize(touch)
         }
         if (onTap != null) {
-            row.add(ImageGetter.getImage("OtherIcons/ArrowRight").apply { color = CHEVRON }).size(pt(14f)).padLeft(pt(8f))
+            row.add(ImageGetter.getImage("OtherIcons/ArrowRight").apply { color = tray?.let { TrayColors.CHEVRON } ?: CHEVRON }).size(pt(14f)).padLeft(pt(8f))
             row.touchable = Touchable.enabled
             row.onClick { onTap() }
         }
+        if (tray != null) row.pad(0f, pt(14f), 0f, pt(14f))
         return row
     }
 
     /** The lock pill names the tech [TileDescription] says the resource needs, and opens that tech */
     private fun lockPill(line: FormattedLine): Table {
         val tech = line.text.removePrefix("Requires [").removeSuffix("]")
-        val pill = pill(tech.tr(hideIcons = true), LOCK_FILL, LOCK, "OtherIcons/LockSmall")
+        val pill = if (tray != null) pill(tech.tr(hideIcons = true), TrayColors.LOCK_BG, TrayColors.LOCK_INK, "OtherIcons/LockSmall")
+            else pill(tech.tr(hideIcons = true), LOCK_FILL, LOCK, "OtherIcons/LockSmall")
         return Table().apply {
             name = "portrait-lock-pill"
             touchable = Touchable.enabled
@@ -291,13 +318,15 @@ internal class PortraitTileCard(
     /** Rows in the order the brief sets: resource, wonder, improvements, terrain, impassable, units, then anything else */
     fun rows(): Table {
         val table = Table()
+        val trayRows = ArrayList<Actor>()
         fun add(row: Actor) {
+            if (tray != null) { trayRows += row; return }
             if (table.cells.size > 0) table.add(Image(ImageGetter.getWhiteDotDrawable().tint(LINE))).height(max(1f, pt(1f))).growX().row()
             table.add(row).growX().minHeight(rowHeight).row()
         }
         resourceLine?.let { line ->
             val resource = tileView.getViewableResource(civView)
-            add(row(iconBox(ImageGetter.getResourcePortrait(line.link.substringAfter('/'), pt(34f))), line.text, resource?.let { "${it.resourceType.name} resource" },
+            add(row(iconBox(ImageGetter.getResourcePortrait(line.link.substringAfter('/'), pt(34f)), light = true), line.text, resource?.let { "${it.resourceType.name} resource" },
                 listOfNotNull(techLine?.let { lockPill(it) }), line.link))
         }
         wonderLine?.let { line ->
@@ -305,7 +334,7 @@ internal class PortraitTileCard(
         }
         for (line in improvementLines) {
             val name = line.link.substringAfter('/')
-            add(row(iconBox(ImageGetter.getImprovementPortrait(name, pt(34f))), line.text, link = line.link))
+            add(row(iconBox(ImageGetter.getImprovementPortrait(name, pt(34f)), light = true), line.text, link = line.link))
         }
         // Without a feature the base terrain carries the row, so a bare tile still opens its entry and shows its defence
         val features = featureLines.ifEmpty { listOfNotNull(baseLine) }
@@ -319,8 +348,8 @@ internal class PortraitTileCard(
         for (line in unitLines) add(unitRow(line, used))
         if (otherLines.isNotEmpty()) {
             val rendered = MarkupRenderer.render(otherLines, labelWidth = pt(320f), padding = pt(4f), iconDisplay = IconDisplay.None) { openLink(it) }
-            add(rendered)
+            add(if (tray != null) Table().apply { this.add(rendered).growX().pad(pt(8f), pt(14f), pt(8f), pt(14f)) } else rendered)
         }
-        return table
+        return if (tray != null) tray.card(trayRows) else table
     }
 }
