@@ -4,7 +4,7 @@ import com.unciv.logic.civilization.Civilization
 import com.unciv.logic.map.mapunit.MapUnit
 import com.unciv.logic.map.tile.Tile
 import com.unciv.models.UnitActionType
-import com.unciv.ui.components.tilegroups.TileGroup
+import com.unciv.ui.components.tilegroups.TileSetStrings
 import com.unciv.ui.popups.hasOpenPopups
 
 /**
@@ -13,7 +13,8 @@ import com.unciv.ui.popups.hasOpenPopups
  * changed nothing (cancelled) is dropped there. Bounded: one order at a time, checked against one unit and tile.
  */
 internal class PortraitUnitReactions(private val holder: WorldMapHolder) {
-    private class Order(val type: UnitActionType, val unit: MapUnit, val tile: Tile, val group: TileGroup,
+    /** Keeps game values only: the tile groups it was ordered on may be rebuilt (a rotation) before it resolves */
+    private class Order(val type: UnitActionType, val unit: MapUnit, val tile: Tile, val strings: TileSetStrings,
                         val sprite: List<SpriteCopy>, val civ: Civilization, val gold: Int, val promotions: Int,
                         val pillage: List<Any?>) {
         /** The picker confirmed the build; also what runs after the hammer lands (the next unit) */
@@ -51,7 +52,8 @@ internal class PortraitUnitReactions(private val holder: WorldMapHolder) {
         val slot = holder.slotOf(group, unit.id) ?: return false
         if (!group.layerUnitArt.isVisible || !slot.spriteGroup.isVisible) return false
         val civ = unit.civ
-        pending = Order(type, unit, unit.getTile(), group, SpriteCopy.of(slot), civ, civ.gold, promotions(unit), pillageState(unit.getTile()))
+        pending = Order(type, unit, unit.getTile(), holder.currentTileSetStrings, SpriteCopy.of(slot), civ, civ.gold,
+            promotions(unit), pillageState(unit.getTile()))
         return true
     }
 
@@ -65,7 +67,8 @@ internal class PortraitUnitReactions(private val holder: WorldMapHolder) {
 
     /**
      * Plays the reaction once the order shows; returns the unit id whose stand-in plays, or null when there is none
-     * (yet). Waits while a confirmation or picker is still open.
+     * (yet). Waits while a confirmation or picker is still open. A deferred next-unit step runs exactly once, at once
+     * when nothing plays (landscape, cancelled, nothing changed).
      */
     fun resolve(): Int? {
         val order = pending ?: return null
@@ -85,11 +88,14 @@ internal class PortraitUnitReactions(private val holder: WorldMapHolder) {
     }
 
     private fun play(order: Order): Int? {
+        // Portrait only, on the map as it is now: after a rotation the stored sprite and tile group are stale
+        if (!tilted()) return null
+        val group = groupOf(order.tile) ?: return null
+        val rebuilt = holder.currentTileSetStrings !== order.strings
         val motion = holder.motion
         val unit = order.unit
         val id = unit.id
-        val group = order.group
-        val sprite = order.sprite
+        val sprite = if (!rebuilt) order.sprite else holder.slotOf(group, id)?.let { SpriteCopy.of(it) } ?: return null
         val gone = unit.isDestroyed || unit.civ != order.civ
         val clip = when (order.type) {
             in builds -> {
