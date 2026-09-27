@@ -1,6 +1,7 @@
 package com.unciv.ui.screens.worldscreen
 
 import com.badlogic.gdx.graphics.Color
+import com.badlogic.gdx.Gdx
 import com.badlogic.gdx.scenes.scene2d.Actor
 import com.badlogic.gdx.scenes.scene2d.Group
 import com.badlogic.gdx.scenes.scene2d.Touchable
@@ -43,7 +44,9 @@ internal class PortraitTileCard(
     private val cityView: CityView? = null,
     hideUnits: Boolean = false,
     spyCity: CityView? = null,
-    private val p: Float = 1f
+    private val p: Float = 1f,
+    /** Smallest touch target in this card's units: at least 48 real screen points, whatever [p] does to the art */
+    val touch: Float = 48f * p
 ) {
     companion object {
         val NAVY2: Color = Color.valueOf("1c3249")
@@ -59,6 +62,9 @@ internal class PortraitTileCard(
         fun bg(color: Color, shape: String = BaseScreen.skinStrings.roundedEdgeRectangleShape): Drawable =
             BaseScreen.skinStrings.getUiBackground("", shape, color)
 
+        /** 48 real screen points in stage units. The art scales with the 393pt canvas, a fingertip does not. */
+        fun touchPoints(screen: BaseScreen): Float = 48f * screen.stage.width / Gdx.graphics.width.coerceAtLeast(1)
+
         /** A unit in its map flag colors: outer color disc, inner color icon */
         fun unitDisc(unit: ForeignMapUnitView, iconSize: Float) = Table().apply {
             background = ImageGetter.getCircleDrawable().tint(unit.civ().getOuterColor())
@@ -68,6 +74,8 @@ internal class PortraitTileCard(
 
     private fun pt(value: Float) = value * p
     private fun font(size: Int) = (size * p).roundToInt()
+    /** 56pt rows, never shorter than [touch] */
+    val rowHeight get() = max(pt(56f), touch)
 
     private val lines = TileDescription.toMarkup(tileView, civView, hideUnits, spyCity)
     private var baseLine: FormattedLine? = null
@@ -162,7 +170,7 @@ internal class PortraitTileCard(
             block.touchable = Touchable.enabled
             block.onClick { openLink(baseLink) }
         }
-        header.add(block).growX().minHeight(pt(56f))
+        header.add(block).growX().minHeight(rowHeight)
         if (trailing != null) header.add(trailing).padLeft(pt(8f))
         return header
     }
@@ -182,11 +190,11 @@ internal class PortraitTileCard(
             chip.add(icons.image(stat.name)).size(pt(22f)).padRight(pt(8f))
             chip.add(amount(value).toLabel(Color.WHITE, font(20)))
             chip.pad(0f, pt(14f), 0f, pt(14f))
-            // The chip draws 44pt tall; its touch target keeps the 48pt minimum
+            // The chip draws 44pt tall; its touch target keeps the [touch] minimum around it
             val target = Table()
             target.touchable = Touchable.enabled
             target.name = "portrait-yield-${stat.name}"
-            target.add(chip).minWidth(pt(70f)).height(pt(44f)).pad(pt(2f), 0f, pt(2f), 0f)
+            target.add(chip).minWidth(pt(70f)).height(pt(44f))
             target.onClick { openBreakdown() }
             val width = max(chip.prefWidth, pt(70f))
             if (used > 0f && used + pt(8f) + width > maxWidth) {
@@ -194,7 +202,7 @@ internal class PortraitTileCard(
                 line = Table().left()
                 used = 0f
             }
-            line.add(target).padRight(pt(8f))
+            line.add(target).minWidth(touch).height(max(pt(48f), touch)).padRight(pt(8f))
             used += width + pt(8f)
         }
         table.add(line).left()
@@ -244,7 +252,10 @@ internal class PortraitTileCard(
         text.add(title.toLabel(Color.WHITE, font(17), hideIcons = true).apply { wrap = true }).growX().left().row()
         if (meta != null) text.add(meta.toLabel(INK2, font(13), hideIcons = true).apply { wrap = true }).growX().left().padTop(pt(2f))
         row.add(text).growX().minWidth(0f).padTop(pt(6f)).padBottom(pt(6f))
-        for (actor in end) row.add(actor).padLeft(pt(8f))
+        for (actor in end) {
+            val cell = row.add(actor).padLeft(pt(8f))
+            if (actor.touchable == Touchable.enabled && actor.listeners.size > 0) cell.minSize(touch)
+        }
         if (onTap != null) {
             row.add(ImageGetter.getImage("OtherIcons/ArrowRight").apply { color = CHEVRON }).size(pt(14f)).padLeft(pt(8f))
             row.touchable = Touchable.enabled
@@ -260,7 +271,7 @@ internal class PortraitTileCard(
         return Table().apply {
             name = "portrait-lock-pill"
             touchable = Touchable.enabled
-            add(pill).padTop(pt(9f)).padBottom(pt(9f))
+            add(pill)
             onClickSuppressive { openLink(line.link) }
         }
     }
@@ -282,7 +293,7 @@ internal class PortraitTileCard(
         val table = Table()
         fun add(row: Actor) {
             if (table.cells.size > 0) table.add(Image(ImageGetter.getWhiteDotDrawable().tint(LINE))).height(max(1f, pt(1f))).growX().row()
-            table.add(row).growX().minHeight(pt(56f)).row()
+            table.add(row).growX().minHeight(rowHeight).row()
         }
         resourceLine?.let { line ->
             val resource = tileView.getViewableResource(civView)

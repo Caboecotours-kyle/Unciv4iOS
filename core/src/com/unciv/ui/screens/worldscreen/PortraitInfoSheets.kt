@@ -44,7 +44,7 @@ internal object PortraitInfoSheets {
         val tile = civView.gameView.getTile(tileView)
         if (!tile.isExplored()) return
         InfoSheet(worldScreen) { sheet ->
-            val card = PortraitTileCard(worldScreen, tile, civView, sheet.icons, p = sheet.p)
+            val card = PortraitTileCard(worldScreen, tile, civView, sheet.icons, p = sheet.p, touch = sheet.touch)
             sheet.name = "portrait-tile-sheet"
             sheet.header(card.header(sheet.closeButton()))
             card.yields(sheet.contentWidth)?.let { sheet.body.add(it).left().padTop(sheet.pt(14f)).padBottom(sheet.pt(6f)).row() }
@@ -63,7 +63,7 @@ internal object PortraitInfoSheets {
         fun font(size: Int) = (size * p).roundToInt()
         val civView = worldScreen.selectedGameView.civView
         val tile = unit.getTile()
-        val card = PortraitTileCard(worldScreen, tile, civView, sheet.icons, hideUnits = true, p = p)
+        val card = PortraitTileCard(worldScreen, tile, civView, sheet.icons, hideUnits = true, p = p, touch = sheet.touch)
 
         val header = Table()
         header.add(PortraitTileCard.unitDisc(unit, pt(40f))).size(pt(64f)).padRight(pt(13f))
@@ -109,12 +109,12 @@ internal object PortraitInfoSheets {
         val end = if (count > 0) listOf(card.pill(count.tr(), Color(1f, 1f, 1f, .1f), Color.WHITE)) else emptyList()
         rows.add(card.row(promotionIcon, "Promotions", meta, end,
             onTap = if (own) ({ sheet.close(); worldScreen.game.pushScreen { PromotionPickerScreen(unit.getUnit()) } }) else null)
-            .apply { name = "portrait-unit-promotions" }).growX().minHeight(pt(56f)).row()
+            .apply { name = "portrait-unit-promotions" }).growX().minHeight(card.rowHeight).row()
         rows.add(Image(ImageGetter.getWhiteDotDrawable().tint(PortraitTileCard.LINE))).height(max(1f, pt(1f))).growX().row()
         val tileIcon = Table().apply { add(card.thumbnail(pt(40f), pt(36f))).size(pt(40f), pt(36f)) }
         rows.add(card.row(tileIcon, "On [${card.title}]".tr(hideIcons = true), end = listOfNotNull(card.defencePill(" " + "defense".tr())),
             onTap = { sheet.close(); showTile(worldScreen, tile) }).apply { name = "portrait-unit-tile" })
-            .growX().minHeight(pt(56f)).row()
+            .growX().minHeight(card.rowHeight).row()
         sheet.body.add(rows).growX().padTop(pt(4f)).row()
     }
 
@@ -123,6 +123,8 @@ internal object PortraitInfoSheets {
     class InfoSheet(private val world: WorldScreen, build: (InfoSheet) -> Unit) : Popup(world, Scrollability.None, 1f) {
         val p = world.safeAreaBoundsInWorld().width / 393f
         fun pt(value: Float) = value * p
+        /** Smallest touch target in stage units: 48pt of art, but never under 48 real screen points on a narrow phone */
+        val touch = max(pt(48f), PortraitTileCard.touchPoints(world))
         /** Whole units, so the rounded table layout never pushes the sheet past the safe width */
         val contentWidth = floor(world.safeAreaBoundsInWorld().width - pt(32f))
         internal val icons = PortraitStatIcons()
@@ -187,15 +189,17 @@ internal object PortraitInfoSheets {
             if (stage == null) release()
         }
 
-        /** 48pt round Close, also the back key */
+        /** 48pt round Close inside a [touch]-sized target, also the back key */
         fun closeButton(): Actor = Table().apply {
             name = "portrait-sheet-close"
             touchable = Touchable.enabled
-            background = ImageGetter.getCircleDrawable().tint(Color(1f, 1f, 1f, .1f))
-            add(ImageGetter.getImage("OtherIcons/Close").apply { color = Color.WHITE }).size(pt(18f))
+            add(Table().apply {
+                background = ImageGetter.getCircleDrawable().tint(Color(1f, 1f, 1f, .1f))
+                add(ImageGetter.getImage("OtherIcons/Close").apply { color = Color.WHITE }).size(pt(18f))
+            }).size(pt(48f))
             onActivation { close() }
             keyShortcuts.add(KeyCharAndCode.BACK)
-        }.let { button -> Table().apply { add(button).size(pt(48f)) } }
+        }.let { button -> Table().apply { add(button).size(touch) } }
 
         fun present() {
             open(force = true)
