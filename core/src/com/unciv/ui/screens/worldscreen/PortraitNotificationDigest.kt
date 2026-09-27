@@ -160,7 +160,8 @@ internal class PortraitNotificationDigest(private val world: WorldScreen) : Grou
             title.add((if (earlier) "Earlier" else "This turn").toLabel(Color.WHITE, 24)).left().row()
             title.add("${visible.size} events".toLabel(muted, 14)).left()
             add(title).growX().left()
-            add(button("×") { remove() }).size(48f)
+            // Inside this apply a bare remove() is the header's own: × then dropped the title and itself, not the sheet
+            add(button("×") { this@PortraitNotificationDigest.remove() }).size(48f)
         }
         sheet.add(header).width(365f).pad(8f, 14f, 12f, 14f).row()
         // Grab bar and header are the drag zone; swiping them down closes like ×
