@@ -10,7 +10,7 @@ import kotlin.math.max
 import kotlin.math.min
 
 internal class SeenUnit(val id: Int, val civID: String, val position: HexCoord, val landUnit: Boolean,
-                        val civilian: Boolean, val sprite: List<SpriteCopy>, val baseUnit: String = "")
+                        val civilian: Boolean, val sprite: List<SpriteCopy>, val health: Int = 100, val baseUnit: String = "")
 
 /** What the viewing civ could see on the map. Values only, so a snapshot can outlive the screen that took it. */
 internal class SeenMap(val gameId: String, val gameIdentity: Int, val civID: String, val turn: Int, val maxUnitId: Int,
@@ -31,7 +31,7 @@ internal fun WorldMapHolder.seeMap(): SeenMap {
         for (unit in listOfNotNull(tile.militaryUnit, tile.civilianUnit)) {
             val slot = group.layerUnitArt.getSpriteSlot(unit)?.takeIf { it.unitId == unit.id } ?: continue
             units[unit.id] = SeenUnit(unit.id, unit.civ().civID, tile.position(),
-                !unit.getBaseUnit().isWaterUnit, unit.isCivilian(), SpriteCopy.of(slot), baseUnit = unit.getBaseUnit().name)
+                !unit.getBaseUnit().isWaterUnit, unit.isCivilian(), SpriteCopy.of(slot), unit.unitHealth, unit.getBaseUnit().name)
         }
         if (tile.isCityCenter() && group.layerCityButton.hasButton())
             tile.owningCity()?.let { cities[it.getCity().id] = tile.position() }
@@ -162,7 +162,11 @@ internal class TurnReplay(
                         motion.play(motion.SpawnClip(delay + .25f / speed, speed, old.id, to, now.sprite, ring = false))
                     })
                 }
-                now != null -> Unit
+                // Own units that healed where they stood: green pluses and "+N"
+                now != null -> if (now.health > old.health && old.civID == viewingCiv.civID && from.isViewable(civView))
+                    tracks.add(Track(old.civID, 4, from, 1.5f) { delay, speed ->
+                        motion.play(motion.HealClip(delay, speed, from, now.health - old.health))
+                    })
                 old.id in existingIds -> tracks.add(Track(old.civID, 3, from, .25f) { delay, speed ->
                     motion.play(motion.FadeOutClip(delay, speed, from, old.sprite))
                 })

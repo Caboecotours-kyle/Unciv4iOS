@@ -702,6 +702,20 @@ internal class PortraitMotion(private val holder: WorldMapHolder) {
         }
     }
 
+    /** Healing seen at turn start: green pluses rise and "+N" floats up. */
+    inner class HealClip(delay: Float, speed: Float, private val tile: TileGroup, private val amount: Int) : Clip(delay, 1.5f, speed) {
+        private var shown = 0
+        override fun pose(t: Float) {
+            if (t < 0f || t >= length) return
+            if (shown == 0) play(FloatText(.1f, tile, "+$amount", "ffffff", "2c7a36", 1.4f))
+            val due = min(4, (t / .3f).toInt() + 1)
+            while (shown < due) {
+                play(Plus(0f, tile, (shown % 3 - 1) * 12f))
+                shown++
+            }
+        }
+    }
+
     /** An icon with a dark outline that pops in [pop] of its [length], rises [rise] from [height] and fades out. */
     inner class Emblem(delay: Float, private val tile: TileGroup, private val path: String, private val fill: String,
                        private val stroke: String, private val size: Float, length: Float, private val height: Float,
@@ -738,6 +752,23 @@ internal class PortraitMotion(private val holder: WorldMapHolder) {
             place(actor, groundX(tile) + (12f + 8f * p) * u, groundY(tile) + (50f + 26f * p) * u)
             actor.setScale(.7f + .6f * p)
             actor.color.a = 1f - p
+        }
+    }
+
+    inner class Plus(delay: Float, private val tile: TileGroup, private val dx: Float) : Effect(delay, 1.1f, 1) {
+        private val u = unitScale(tile)
+        override fun make(index: Int) = Group().apply {
+            val side = 14f * u
+            setSize(side, side)
+            val bar = side * 5f / 14f
+            for ((color, grow) in listOf("1f5c2a" to u, "6fd05a" to 0f)) {
+                addActor(ImageGetter.getWhiteDot().apply { this.color = Color.valueOf(color); setBounds((side - bar) / 2f - grow, -grow, bar + 2 * grow, side + 2 * grow) })
+                addActor(ImageGetter.getWhiteDot().apply { this.color = Color.valueOf(color); setBounds(-grow, (side - bar) / 2f - grow, side + 2 * grow, bar + 2 * grow) })
+            }
+        }
+        override fun step(index: Int, actor: Actor, p: Float) {
+            place(actor, groundX(tile) + dx * u, groundY(tile) + (30f + 30f * p) * u)
+            actor.color.a = if (p < .7f) 1f else 1f - (p - .7f) / .3f
         }
     }
 
