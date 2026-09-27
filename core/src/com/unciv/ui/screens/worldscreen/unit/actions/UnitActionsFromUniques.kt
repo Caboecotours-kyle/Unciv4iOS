@@ -495,8 +495,11 @@ object UnitActionsFromUniques {
             isCurrentAction = tile.hasImprovementInProgress(),
             action = {
                 GUI.pushScreen{ ImprovementPickerScreen(tile, unit) {
-                    if (GUI.getSettings().autoUnitCycle)
-                        GUI.getWorldScreen().switchToNextUnit()
+                    // Portrait: the next unit waits for the worker's hammer reaction
+                    GUI.getWorldScreen().mapHolder.reactions.accepted(unit.id) {
+                        if (GUI.getSettings().autoUnitCycle)
+                            GUI.getWorldScreen().switchToNextUnit()
+                    }
                 } }
             }.takeIf { couldConstruct }
         ))

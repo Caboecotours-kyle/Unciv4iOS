@@ -2,8 +2,10 @@ package com.unciv.ui.screens.worldscreen.worldmap
 
 import com.badlogic.gdx.Gdx
 import com.badlogic.gdx.graphics.Color
+import com.badlogic.gdx.graphics.GL20
 import com.badlogic.gdx.graphics.Pixmap
 import com.badlogic.gdx.graphics.Texture
+import com.badlogic.gdx.graphics.g2d.Batch
 import com.badlogic.gdx.scenes.scene2d.Action
 import com.badlogic.gdx.scenes.scene2d.Actor
 import com.badlogic.gdx.scenes.scene2d.Group
@@ -11,6 +13,7 @@ import com.badlogic.gdx.scenes.scene2d.Touchable
 import com.badlogic.gdx.scenes.scene2d.ui.Image
 import com.badlogic.gdx.scenes.scene2d.utils.Drawable
 import com.unciv.UncivGame
+import com.unciv.ui.components.extensions.toLabel
 import com.unciv.ui.components.tilegroups.TileGroup
 import com.unciv.ui.components.tilegroups.layers.GroundImage
 import com.unciv.ui.components.tilegroups.layers.TileLayerUnitSprite
@@ -78,6 +81,43 @@ internal object MotionTextures {
 }
 
 private fun ease(p: Float) = 1f - (1f - p) * (1f - p) * (1f - p)
+
+/** A copy of one sprite layer drawn additively, so raising its alpha flashes the sprite white. */
+private class FlashImage(source: Image) : Image(source.drawable) {
+    init {
+        setBounds(source.x, source.y, source.width, source.height)
+        setOrigin(source.originX, source.originY)
+        setScale(source.scaleX, source.scaleY)
+        color = Color(1f, 1f, 1f, 0f)
+        touchable = Touchable.disabled
+    }
+
+    override fun draw(batch: Batch, parentAlpha: Float) {
+        if (color.a <= 0f) return
+        val src = batch.blendSrcFunc
+        val dst = batch.blendDstFunc
+        batch.setBlendFunction(GL20.GL_SRC_ALPHA, GL20.GL_ONE)
+        super.draw(batch, parentAlpha)
+        batch.setBlendFunction(src, dst)
+    }
+}
+
+/** Mock text with a painted outline: four offset copies in [stroke] under the [fill] text, [size] in map units. */
+private fun outlinedText(text: String, fill: Color, stroke: Color, size: Float): Group {
+    fun label(color: Color) = text.toLabel(color, 18).apply {
+        setFontScale(fontScaleX * size / 18f)
+        pack()
+    }
+    val main = label(fill)
+    val offset = size * .09f
+    return Group().apply {
+        setSize(main.width, main.height)
+        setOrigin(width / 2f, height / 2f)
+        for ((dx, dy) in listOf(-offset to 0f, offset to 0f, 0f to -offset, 0f to offset))
+            addActor(label(stroke).apply { setPosition(dx, dy) })
+        addActor(main)
+    }
+}
 
 /**
  * Drives every portrait map motion from one stage action, so a skip, a projection change or leaving the
@@ -194,6 +234,7 @@ internal class PortraitMotion(private val holder: WorldMapHolder) {
             setOrigin(home.groundCenterX, home.groundCenterY)
         }
         private var hidden: Pair<TileLayerUnitSprite, UnitSpriteSlot>? = null
+        private var flashLayers: List<Image>? = null
 
         init {
             setSprite(sprite)
@@ -202,7 +243,18 @@ internal class PortraitMotion(private val holder: WorldMapHolder) {
 
         fun setSprite(sprite: List<SpriteCopy>) {
             ghost.clearChildren()
+            flashLayers = null
             for (layer in sprite) ghost.addActor(layer.toImage())
+        }
+
+        /** Brightens the sprite toward white by [amount], with additive copies of its layers made on first use */
+        fun flash(amount: Float) {
+            if (amount <= 0f && flashLayers == null) return
+            val layers = flashLayers ?: ghost.children.filterIsInstance<Image>().map { FlashImage(it) }.also { list ->
+                list.forEach { ghost.addActor(it) }
+                flashLayers = list
+            }
+            for (layer in layers) layer.color.a = amount.coerceIn(0f, 1f)
         }
 
         /** Tile updates may show the real sprite again, so this runs every frame. */
@@ -424,13 +476,13 @@ internal class PortraitMotion(private val holder: WorldMapHolder) {
         fun place(actor: Actor, x: Float, y: Float) = actor.setPosition(x - actor.width / 2f, y - actor.height / 2f)
     }
 
-    inner class Dust(delay: Float, private val tile: TileGroup) : Effect(delay, .42f, 4) {
+    inner class Dust(delay: Float, private val tile: TileGroup, private val dx: Float = 0f) : Effect(delay, .42f, 4) {
         private val u = unitScale(tile)
         override fun make(index: Int) = circle(if (index < 2) "efe6cf" else "e2d6b8", (if (index < 2) 8f else 6f) * u)
         override fun step(index: Int, actor: Actor, p: Float) {
             val side = if (index % 2 == 0) -1f else 1f
             val offset = if (index < 2) 0f else 5f * side
-            place(actor, groundX(tile) + side * (7f + 15f * ease(p)) * u + offset * u, groundY(tile) + (3f * p + if (index < 2) 0f else 2f) * u)
+            place(actor, groundX(tile) + (dx + side * (7f + 15f * ease(p)) + offset) * u, groundY(tile) + (3f * p + if (index < 2) 0f else 2f) * u)
             actor.setScale(.6f + .8f * p)
             actor.color.a = 1f - p
         }
@@ -465,12 +517,12 @@ internal class PortraitMotion(private val holder: WorldMapHolder) {
         }
     }
 
-    inner class Puff(delay: Float, private val tile: TileGroup) : Effect(delay, .56f, 7) {
+    inner class Puff(delay: Float, private val tile: TileGroup, private val dx: Float = 0f) : Effect(delay, .56f, 7) {
         private val u = unitScale(tile)
         override fun make(index: Int) = circle("f2f2ee", (10f + 2f * (index % 3)) * u)
         override fun step(index: Int, actor: Actor, p: Float) {
             val angle = 2 * PI * index / 7
-            place(actor, groundX(tile) - 8f * u + cos(angle).toFloat() * 20f * ease(p) * u,
+            place(actor, groundX(tile) + (dx - 8f) * u + cos(angle).toFloat() * 20f * ease(p) * u,
                 groundY(tile) + (18f - sin(angle).toFloat() * 12f * ease(p) + 10f * p) * u)
             actor.setScale(1.2f - .6f * p)
             actor.color.a = 1f - p
@@ -494,6 +546,209 @@ internal class PortraitMotion(private val holder: WorldMapHolder) {
             place(actor, ax + (bx - ax) * p, ay + (by - ay) * p + sin(PI * p).toFloat() * arc)
             actor.rotation = (atan2((by - ay) + arc * PI.toFloat() * cos(PI * p).toFloat(), bx - ax) * 180 / PI).toFloat()
             actor.isVisible = p < .95f
+        }
+    }
+    // Unit order reactions from the approved actions mock: each is a short whole-sprite pose on a stand-in, with
+    // its particles started once, so a skip or reduced motion lands on the plain sprite with nothing left behind.
+
+    /** The hammer rhythm of a worker starting or continuing a build: two strikes of lean in, squash and dust. */
+    inner class BuildClip(unitId: Int, tile: TileGroup, sprite: List<SpriteCopy>) :
+        GhostClip(0f, 1.4f, 1f, unitId, tile, sprite, tile) {
+        private var strikes = 0
+        override fun pose(t: Float) {
+            hideReal()
+            rest(home)
+            if (t < 0f || t >= length) return
+            val k = (t % .7f) / .7f
+            ghost.rotation = if (k < .5f) -8f * sin(k / .5f * PI).toFloat() else 0f
+            if (k > .45f && k < .6f) ghost.setScale(1.05f, .93f)
+            val struck = if (t < .315f) 0 else min(2, ((t - .315f) / .7f).toInt() + 1)
+            while (strikes < struck) {
+                strikes++
+                play(Dust(0f, home, 10f))
+            }
+        }
+    }
+
+    /** Fortify and Guard: a crouch, a yellow shield popping above with a ring, then standing again. */
+    inner class FortifyClip(unitId: Int, tile: TileGroup, sprite: List<SpriteCopy>) :
+        GhostClip(0f, 1.35f, 1f, unitId, tile, sprite, tile) {
+        private var popped = false
+        override fun pose(t: Float) {
+            hideReal()
+            rest(home)
+            if (t < 0f) return
+            val crouch = ease(((t - .2f) / .4f).coerceIn(0f, 1f)) * (1f - ease(((t - 1.05f) / .3f).coerceIn(0f, 1f)))
+            ghost.setScale(1f + .06f * crouch, 1f - .12f * crouch)
+            if (t >= .45f && t < length && !popped) {
+                popped = true
+                play(Emblem(0f, home, "OtherIcons/Shield", "ffc93c", "8c650d", 20f, .9f, 62f, 10f, 0f, .2f))
+                play(Ring(0f, home, Color.valueOf("ffc93c"), .62f))
+            }
+        }
+    }
+
+    /** Sleep: the sprite settles to its resting .8 alpha while a few z's drift up. */
+    inner class SleepClip(unitId: Int, tile: TileGroup, sprite: List<SpriteCopy>) :
+        GhostClip(0f, .6f, 1f, unitId, tile, sprite, tile) {
+        init { snore(tile) }
+        override fun pose(t: Float) {
+            hideReal()
+            rest(home)
+            ghost.color.a = 1f - .2f * ease((t / .3f).coerceIn(0f, 1f))
+        }
+    }
+
+    /** Three z's, one every .9 s: played on a sleep order and when a sleeping unit is selected, never looped. */
+    fun snore(tile: TileGroup) = repeat(3) { play(Zzz(it * .9f, tile)) }
+
+    /** Pillage: a lean and strike, two smoke puffs and the gold it brought in. */
+    inner class PillageClip(unitId: Int, tile: TileGroup, sprite: List<SpriteCopy>, private val gold: Int) :
+        GhostClip(0f, .75f, 1f, unitId, tile, sprite, tile) {
+        private var struck = false
+        override fun pose(t: Float) {
+            hideReal()
+            rest(home)
+            if (t < 0f) return
+            val p = ((t - .2f) / .5f).coerceIn(0f, 1f)
+            ghost.rotation = if (p < .5f) 12f * sin(p / .5f * PI).toFloat() else 0f
+            if (t >= .45f && t < length && !struck) {
+                struck = true
+                play(Puff(0f, home))
+                play(Puff(.2f, home, 8f))
+                if (gold > 0) play(FloatText(.3f, home, "+$gold", "ffc93c", "5a3d05", 1.3f))
+            }
+        }
+    }
+
+    /** Promotion: a white flash, gold rings and a star rising. */
+    inner class PromoteClip(unitId: Int, tile: TileGroup, sprite: List<SpriteCopy>) :
+        GhostClip(0f, .8f, 1f, unitId, tile, sprite, tile) {
+        private var ringed = false
+        override fun pose(t: Float) {
+            hideReal()
+            rest(home)
+            if (t < 0f) return
+            val h = (t - .3f) / .46f
+            flash(if (h in 0f..1f && t < length) (1f - h * 1.6f).coerceAtLeast(0f) else 0f)
+            if (t >= .3f && t < length && !ringed) {
+                ringed = true
+                play(Ring(0f, home, Color.valueOf("ffc93c"), .8f))
+                play(Ring(.15f, home, Color.valueOf("fff2b5"), .8f))
+                play(Emblem(0f, home, "OtherIcons/Star", "ffc93c", "8c650d", 19f, 1.2f, 56f, 16f, .5f, .25f))
+            }
+        }
+    }
+
+    /** Upgrade and Transform: a flash, the swap to the new unit's sprite, a pop and a ring. [unitId] is the new unit. */
+    inner class UpgradeClip(unitId: Int, tile: TileGroup, sprite: List<SpriteCopy>, private val newSprite: () -> List<SpriteCopy>?) :
+        GhostClip(0f, 1f, 1f, unitId, tile, sprite, tile) {
+        private var swapped = false
+        override fun pose(t: Float) {
+            hideReal()
+            rest(home)
+            if (t < 0f) return
+            if (t >= .52f && !swapped) {
+                swapped = true
+                newSprite()?.let { setSprite(it) }
+                if (t < length) play(Ring(0f, home, Color.WHITE, .6f))
+            }
+            val h = (t - .4f) / .46f
+            val during = h in 0f..1f && t < length
+            flash(if (during) (1f - h * 1.6f).coerceAtLeast(0f) else 0f)
+            if (during) ghost.setScale(1f + .12f * sin(h * PI).toFloat())
+        }
+    }
+
+    /** Disband and Gift: the sprite shrinks and fades into a puff. */
+    inner class VanishClip(unitId: Int, tile: TileGroup, sprite: List<SpriteCopy>) :
+        GhostClip(0f, .9f, 1f, unitId, tile, sprite, tile) {
+        private var puffed = false
+        override fun pose(t: Float) {
+            hideReal()
+            rest(home)
+            if (t < 0f) return
+            val p = ((t - .3f) / .6f).coerceIn(0f, 1f)
+            ghost.color.a = 1f - p
+            ghost.setScale(1f, 1f - .3f * p)
+            if (t >= .5f && t < length && !puffed) {
+                puffed = true
+                play(Puff(0f, home))
+            }
+        }
+    }
+
+    /** A great person (or any unit) used up by its order: a golden rise with rings, then sparkles. */
+    inner class ExpendClip(unitId: Int, tile: TileGroup, sprite: List<SpriteCopy>) :
+        GhostClip(0f, 1.4f, 1f, unitId, tile, sprite, tile) {
+        private var ringed = false
+        private var sparkled = false
+        override fun pose(t: Float) {
+            hideReal()
+            rest(home)
+            if (t < 0f) return
+            ghost.y += 14f * unitScale(home) * ease(((t - .2f) / .9f).coerceIn(0f, 1f))
+            ghost.color.a = 1f - ((t - .9f) / .5f).coerceIn(0f, 1f)
+            if (t >= length) return
+            if (t >= .2f && !ringed) {
+                ringed = true
+                play(Ring(0f, home, Color.valueOf("ffc93c"), .9f))
+                play(Ring(.25f, home, Color.valueOf("fff2b5"), .9f))
+            }
+            if (t >= .9f && !sparkled) {
+                sparkled = true
+                play(Sparkles(0f, home))
+            }
+        }
+    }
+
+    /** An icon with a dark outline that pops in [pop] of its [length], rises [rise] from [height] and fades out. */
+    inner class Emblem(delay: Float, private val tile: TileGroup, private val path: String, private val fill: String,
+                       private val stroke: String, private val size: Float, length: Float, private val height: Float,
+                       private val rise: Float, private val from: Float, private val pop: Float) : Effect(delay, length, 1) {
+        private val u = unitScale(tile)
+        override fun make(index: Int) = Group().apply {
+            val side = size * u
+            setSize(side, side)
+            setOrigin(side / 2f, side / 2f)
+            addActor(ImageGetter.getImage(path).apply { color = Color.valueOf(stroke); setBounds(-side * .1f, -side * .1f, side * 1.2f, side * 1.2f) })
+            addActor(ImageGetter.getImage(path).apply { color = Color.valueOf(fill); setBounds(0f, 0f, side, side) })
+        }
+        override fun step(index: Int, actor: Actor, p: Float) {
+            place(actor, groundX(tile), groundY(tile) + (height + rise * ease(p)) * u)
+            actor.setScale(if (p < pop) from + (1f - from) * p / pop else 1f)
+            actor.color.a = if (p < .75f) 1f else 1f - (p - .75f) / .25f
+        }
+    }
+
+    inner class FloatText(delay: Float, private val tile: TileGroup, private val text: String, private val fill: String,
+                          private val stroke: String, length: Float) : Effect(delay, length, 1) {
+        private val u = unitScale(tile)
+        override fun make(index: Int) = outlinedText(text, Color.valueOf(fill), Color.valueOf(stroke), 18f * u)
+        override fun step(index: Int, actor: Actor, p: Float) {
+            place(actor, groundX(tile), groundY(tile) + (58f + 18f * ease(p)) * u)
+            actor.color.a = if (p < .7f) 1f else 1f - (p - .7f) / .3f
+        }
+    }
+
+    inner class Zzz(delay: Float, private val tile: TileGroup) : Effect(delay, 1.6f, 1) {
+        private val u = unitScale(tile)
+        override fun make(index: Int) = outlinedText("z", Color.WHITE, Color.valueOf("132435"), 15f * u)
+        override fun step(index: Int, actor: Actor, p: Float) {
+            place(actor, groundX(tile) + (12f + 8f * p) * u, groundY(tile) + (50f + 26f * p) * u)
+            actor.setScale(.7f + .6f * p)
+            actor.color.a = 1f - p
+        }
+    }
+
+    inner class Sparkles(delay: Float, private val tile: TileGroup) : Effect(delay, .7f, 8) {
+        private val u = unitScale(tile)
+        override fun make(index: Int) = circle("ffe58f", 5.2f * u)
+        override fun step(index: Int, actor: Actor, p: Float) {
+            val angle = 2 * PI * index / 8
+            place(actor, groundX(tile) + cos(angle).toFloat() * 24f * ease(p) * u,
+                groundY(tile) + (24f - sin(angle).toFloat() * 16f * ease(p)) * u)
+            actor.color.a = 1f - p
         }
     }
 }

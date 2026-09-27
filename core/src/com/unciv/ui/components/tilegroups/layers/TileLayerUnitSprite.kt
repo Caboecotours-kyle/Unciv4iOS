@@ -92,6 +92,14 @@ class TileLayerUnitSprite(tileGroup: TileGroup, size: Float) : TileLayer(tileGro
         civilianSlot = updateSlot(civilianSlot, tileGroup.tileView.civilianUnit, isShown = isCivilianSlotShown)
         militarySlot = updateSlot(militarySlot, tileGroup.tileView.militaryUnit, isShown = isMilitarySlotShown)
         spreadSharedTile()
+        showSleep(civilianSlot, tileGroup.tileView.civilianUnit)
+        showSleep(militarySlot, tileGroup.tileView.militaryUnit)
+    }
+
+    /** Portrait: the player's sleeping units rest at .8 alpha */
+    private fun showSleep(slot: UnitSpriteSlot?, unitView: ForeignMapUnitView?) {
+        val group = slot?.spriteGroup ?: return
+        group.color.a = if (strings.projection.tilted && unitView?.tryGetMapUnitView()?.isSleeping() == true) .8f else 1f
     }
 
     private fun saturation(c: Color): Float {

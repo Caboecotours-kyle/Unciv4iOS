@@ -10,7 +10,7 @@ import kotlin.math.max
 import kotlin.math.min
 
 internal class SeenUnit(val id: Int, val civID: String, val position: HexCoord, val landUnit: Boolean,
-                        val civilian: Boolean, val sprite: List<SpriteCopy>)
+                        val civilian: Boolean, val sprite: List<SpriteCopy>, val baseUnit: String = "")
 
 /** What the viewing civ could see on the map. Values only, so a snapshot can outlive the screen that took it. */
 internal class SeenMap(val gameId: String, val gameIdentity: Int, val civID: String, val turn: Int, val maxUnitId: Int,
@@ -31,7 +31,7 @@ internal fun WorldMapHolder.seeMap(): SeenMap {
         for (unit in listOfNotNull(tile.militaryUnit, tile.civilianUnit)) {
             val slot = group.layerUnitArt.getSpriteSlot(unit)?.takeIf { it.unitId == unit.id } ?: continue
             units[unit.id] = SeenUnit(unit.id, unit.civ().civID, tile.position(),
-                !unit.getBaseUnit().isWaterUnit, unit.isCivilian(), SpriteCopy.of(slot))
+                !unit.getBaseUnit().isWaterUnit, unit.isCivilian(), SpriteCopy.of(slot), baseUnit = unit.getBaseUnit().name)
         }
         if (tile.isCityCenter() && group.layerCityButton.hasButton())
             tile.owningCity()?.let { cities[it.getCity().id] = tile.position() }

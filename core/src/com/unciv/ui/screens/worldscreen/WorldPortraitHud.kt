@@ -454,7 +454,7 @@ internal class WorldPortraitHud(
                     val image = "UnitActionIcons/${action.type.name}"
                     arcActions.add(ArcAction(if (ImageGetter.imageExists(image)) icon(image) else action.getIcon(28f),
                         action.title.tr(), action.action != null, nextUnitNote(action.type), tag = "portrait-action-${action.type.name}") {
-                        unitActions.activateAction(action, unit)
+                        activate(action, unit)
                     })
                 }
                 // One close arc from Skip. Names still appear only while a disc is held.
@@ -565,6 +565,32 @@ internal class WorldPortraitHud(
         card.touchable = if (cardShown > .5f) Touchable.enabled else Touchable.disabled
     }
 
+    /**
+     * Runs a unit order like [UnitActionsTable.activateAction], and lets the unit's reaction play first: an order that
+     * moves on to the next unit waits for it, as a hop does. Orders without a reaction go through unchanged.
+     */
+    private fun activate(action: UnitAction, unit: MapUnit) {
+        val map = world.mapHolder
+        if (!map.reactions.order(unit, action.type) || !world.game.settings.autoUnitCycle) {
+            unitActions.activateAction(action, unit)
+            map.reactions.resolve()
+            return
+        }
+        action.action!!.invoke()
+        world.shouldUpdate = true
+        map.removeUnitActionOverlay()
+        val reacting = map.reactions.resolve()
+        if (!unit.isDestroyed && !(action.type.isSkippingToNextUnit && (!unit.isMoving() || !unit.hasMovement()))) {
+            world.bottomUnitTable.shouldUpdate = true
+            return
+        }
+        if (reacting == null) return world.switchToNextUnit()
+        val table = world.bottomUnitTable
+        val selection = Triple(table.selectedUnit, table.selectedCity, table.selectedSpy)
+        map.motion.afterUnit(reacting) {
+            if (Triple(table.selectedUnit, table.selectedCity, table.selectedSpy) == selection) world.switchToNextUnit()
+        }
+    }
     private fun ease(p: Float) = 1f - (1f - p) * (1f - p) * (1f - p)
     private fun knows(civ: Civilization) = civ == world.viewingCivilization || civ.isBarbarian || world.viewingCivilization.knows(civ)
     /** Civs the player has not met stay neutral */
@@ -784,7 +810,7 @@ internal class WorldPortraitHud(
                 val tone = if (action.type == UnitActionType.DisbandUnit) dangerDisc else if (title == primary) yellow else white
                 val row = addRow(if (ImageGetter.imageExists(image)) icon(image) else action.getIcon(pt(26f)), title, enabled,
                     if (enabled) null else "Unavailable".tr(), tone, action.isCurrentAction, action.uncivSound) {
-                    unitActions.activateAction(action, unit)
+                    activate(action, unit)
                 }
                 // Same upgrade details menu the landscape action button offers, reachable even when disabled.
                 if (action is UpgradeUnitAction) {
