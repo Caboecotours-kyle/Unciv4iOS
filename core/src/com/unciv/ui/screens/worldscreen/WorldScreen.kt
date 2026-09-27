@@ -73,8 +73,10 @@ import com.unciv.ui.screens.worldscreen.topbar.WorldScreenTopBar
 import com.unciv.ui.screens.worldscreen.unit.AutoPlay
 import com.unciv.ui.screens.worldscreen.unit.UnitTable
 import com.unciv.ui.screens.worldscreen.unit.actions.UnitActionsTable
+import com.unciv.ui.screens.worldscreen.worldmap.PendingTurnReplay
 import com.unciv.ui.screens.worldscreen.worldmap.WorldMapHolder
 import com.unciv.ui.screens.worldscreen.worldmap.WorldMapTileUpdater.updateTiles
+import com.unciv.ui.screens.worldscreen.worldmap.seeMap
 import com.unciv.utils.Concurrency
 import com.unciv.utils.debug
 import com.unciv.utils.launchOnGLThread
@@ -497,6 +499,7 @@ class WorldScreen(
         // it causes a bug when we move a unit to an unexplored tile (for instance a cavalry unit which can move far)
 
         mapHolder.updateTiles(getGameViewConsideringForOfWar().civView)
+        mapHolder.startPendingTurnReplay(viewingCiv) { shouldUpdate = true }
 
         topBar.update(selectedCiv)
         if (tutorialTaskTable.isVisible)
@@ -934,6 +937,8 @@ class WorldScreen(
             pendingTurnUploadState.finishTurnProcessing()
             throw ex
         }
+        // What this civ sees now, so the next world screen can replay what changes while the turn passes
+        PendingTurnReplay.seen = if (isPortrait() && !fromAutoPlay && !autoPlay.isAutoPlaying()) mapHolder.seeMap() else null
 
         // on a separate thread so the user can explore their world while we're passing the turn
         val updateJob = try {

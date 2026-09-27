@@ -15,6 +15,7 @@ import com.unciv.ui.components.tilegroups.MapProjection
 import com.badlogic.gdx.scenes.scene2d.*
 import com.unciv.UncivGame
 import com.unciv.logic.city.City
+import com.unciv.logic.civilization.Civilization
 import com.unciv.logic.map.*
 import com.unciv.logic.map.mapunit.MapUnit
 import com.unciv.logic.map.mapunit.movement.UnitMovement
@@ -86,6 +87,7 @@ class WorldMapHolder @JvmOverloads constructor(
     private var idleAction: Action? = null
     private val portraitCombatCancels = HashSet<() -> Unit>()
     internal val motion = PortraitMotion(this)
+    internal var turnReplay: TurnReplay? = null
     /** When the camera glide started for a move ends, in [System.nanoTime] */
     private var cameraSettlesAt = 0L
     /** The map as last drawn, to notice cities founded and units bought between updates */
@@ -97,6 +99,15 @@ class WorldMapHolder @JvmOverloads constructor(
         if (Gdx.app.type == Application.ApplicationType.Desktop) this.setFlingTime(0f)
         continuousScrollingX = tileMap.mapParameters.worldWrap
         setupZoomPanListeners()
+        // While other civs' moves replay, a touch on the map only skips to the end state
+        if (gameplayInput) addCaptureListener(object : InputListener() {
+            override fun touchDown(event: InputEvent?, x: Float, y: Float, pointer: Int, button: Int): Boolean {
+                val replay = turnReplay ?: return false
+                replay.skip()
+                event?.stop()
+                return false
+            }
+        })
     }
 
     /**
@@ -760,6 +771,7 @@ class WorldMapHolder @JvmOverloads constructor(
     /** Called when the world screen hides or is disposed, so no old motion resumes on return. */
     internal fun stopUnitMotion() {
         stopBreathing()
+        turnReplay?.stop()
         motion.finishAll()
         cancelPortraitCombat()
     }
@@ -816,7 +828,7 @@ class WorldMapHolder @JvmOverloads constructor(
         val before = liveMap
         liveMap = now
         goneUnits = before?.units?.filterKeys { it !in now.units } ?: emptyMap()
-        if (before == null || before.civID != now.civID || before.gameIdentity != now.gameIdentity) return
+        if (before == null || turnReplay != null || before.civID != now.civID || before.gameIdentity != now.gameIdentity) return
         val groups = tileGroups.values.associateBy { it.tileView.position() }
         for ((id, position) in now.cities) {
             if (id in before.cities) continue
@@ -840,6 +852,20 @@ class WorldMapHolder @JvmOverloads constructor(
 
     /** The unit's sprite as last drawn, for a defeat that plays after its slot is gone. */
     internal fun liveSprite(unitId: Int) = (liveMap?.units?.get(unitId) ?: goneUnits[unitId])?.sprite
+
+    /** Starts the replay of a turn passed on the previous world screen, when it was this game seen by this civ. */
+    internal fun startPendingTurnReplay(viewingCiv: Civilization, onFinished: (showToast: Boolean) -> Unit) {
+        val before = PendingTurnReplay.seen ?: return
+        val gameInfo = worldScreen.gameInfo
+        if (before.gameIdentity == System.identityHashCode(gameInfo)) return // still the screen that passed the turn
+        PendingTurnReplay.seen = null
+        if (!currentTileSetStrings.projection.tilted || before.gameId != gameInfo.gameId || before.civID != viewingCiv.civID ||
+            gameInfo.turns !in before.turn..before.turn + 1) return
+        // Assigned before it starts: with reduced motion it also finishes inside start()
+        val replay = TurnReplay(this, before, seeMap(), viewingCiv, onFinished)
+        turnReplay = replay
+        replay.start()
+    }
 
     internal fun swapMoveUnitToTargetTile(selectedUnitView: MapUnitView, targetTileView: TileView) {
         markUnitMoveTutorialComplete(selectedUnitView)

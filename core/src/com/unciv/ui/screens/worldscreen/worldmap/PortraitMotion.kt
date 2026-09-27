@@ -159,6 +159,16 @@ internal class PortraitMotion(private val holder: WorldMapHolder) {
         }
     }
 
+    /** Runs [action] once when its time comes, or at once when motion is skipped. */
+    inner class Cue(delay: Float, private val action: () -> Unit) : Clip(delay, 0f) {
+        private var done = false
+        override fun pose(t: Float) {
+            if (t < 0f || done) return
+            done = true
+            action()
+        }
+    }
+
     private fun unitScale(group: TileGroup) = group.hexagonImageWidth / 86.6f
     private fun groundX(group: TileGroup) = group.x + group.groundCenterX
     private fun groundY(group: TileGroup) = group.y + group.groundCenterY
@@ -290,6 +300,15 @@ internal class PortraitMotion(private val holder: WorldMapHolder) {
                 puffed = true
                 play(Puff(0f, home))
             }
+        }
+    }
+
+    /** A unit that left the view, or the first half of a jump too long to hop: it fades where it stood. */
+    inner class FadeOutClip(delay: Float, speed: Float, tile: TileGroup, sprite: List<SpriteCopy>) :
+        GhostClip(delay, .25f, speed, -1, tile, sprite, null) {
+        override fun pose(t: Float) {
+            hideReal()
+            ghost.color.a = 1f - (t / length).coerceIn(0f, 1f)
         }
     }
 
