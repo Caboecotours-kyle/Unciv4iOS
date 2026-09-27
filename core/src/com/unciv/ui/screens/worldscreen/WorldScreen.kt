@@ -468,8 +468,6 @@ class WorldScreen(
             bottomUnitTable.x = safeArea.x
             unitActionsTable.x = safeArea.x
 
-            displayTutorialsOnUpdate()
-
             bottomUnitTable.update()
 
             updateSelectedCiv()
@@ -506,12 +504,14 @@ class WorldScreen(
             shouldUpdate = true
             if (showToast && isPortrait() && isPlayersTurn) portraitHud.showYourTurn(gameInfo.turns)
         }
+        // Tutorials, like turn-start dialogs, wait for the turn replay; its end, skip or stop runs another update
+        if (uiEnabled && !isReplayingTurn()) displayTutorialsOnUpdate()
 
         topBar.update(selectedCiv)
         if (tutorialTaskTable.isVisible)
             tutorialTaskTable.y = topBar.getYForTutorialTask() - tutorialTaskTable.height
 
-        if (techPolicyAndDiplomacy.update())
+        if (techPolicyAndDiplomacy.update() && !isReplayingTurn())
             displayTutorial(TutorialTrigger.OtherCivEncountered)
 
         if (uiEnabled) {
