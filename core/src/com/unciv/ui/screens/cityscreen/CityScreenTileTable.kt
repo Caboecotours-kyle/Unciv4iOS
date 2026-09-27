@@ -1,7 +1,6 @@
 package com.unciv.ui.screens.cityscreen
 
 import com.badlogic.gdx.graphics.Color
-import com.badlogic.gdx.scenes.scene2d.Touchable
 import com.badlogic.gdx.scenes.scene2d.ui.Table
 import com.badlogic.gdx.scenes.scene2d.ui.TextButton
 import com.badlogic.gdx.utils.Align
@@ -17,13 +16,14 @@ import com.unciv.ui.components.input.onClick
 import com.unciv.ui.components.extensions.toLabel
 import com.unciv.ui.components.extensions.toTextButton
 import com.unciv.ui.components.input.KeyboardBinding
+import com.unciv.ui.components.tilegroups.CityTileState
 import com.unciv.ui.images.ImageGetter
 import com.unciv.ui.popups.AnimatedMenuPopup
 import com.unciv.ui.popups.AnimatedMenuPopup.Companion.addContextMenu
 import com.unciv.ui.screens.basescreen.BaseScreen
 import com.unciv.ui.screens.civilopediascreen.FormattedLine.IconDisplay
-import com.unciv.ui.screens.civilopediascreen.FormattedLine.LinkType
 import com.unciv.ui.screens.civilopediascreen.MarkupRenderer
+import com.unciv.ui.screens.worldscreen.PortraitTileCard
 import com.unciv.view.CityView
 import com.unciv.view.TileView
 import yairm210.purity.annotations.Readonly
@@ -65,18 +65,13 @@ class CityScreenTileTable(private val cityScreen: CityScreen) : Table() {
             spyCity = if (cityScreen.isSpying) cityView else null
         )
         if (cityScreen.isPortrait()) {
-            for (line in description) {
-                val row = Table()
-                row.add(MarkupRenderer.render(listOf(line), labelWidth = 333f, iconDisplay = IconDisplay.None))
-                    .width(338f).left()
-                if (line.linkType == LinkType.Internal) {
-                    row.touchable = Touchable.enabled
-                    row.onClick { cityScreen.openCivilopedia(line.link) }
-                }
-                innerTable.add(row).width(345f)
-                    .minHeight(if (line.linkType == LinkType.Internal) 48f else 0f).fillY().left().row()
-            }
-            innerTable.add(getTileStatsTable(stats)).width(345f).left().padTop(8f).row()
+            // The map's tile sheet card, from the same markup
+            val card = PortraitTileCard(cityScreen, tileView, cityView.viewingCiv(), cityScreen.portraitStatIcons, cityView,
+                hideUnits = cityScreen.isSpying, spyCity = if (cityScreen.isSpying) cityView else null)
+            innerTable.add(card.header()).width(345f).left().row()
+            card.yields(345f)?.let { innerTable.add(it).width(345f).left().padTop(14f).padBottom(6f).row() }
+            innerTable.add(card.rows()).width(345f).padTop(4f).row()
+            addWorkAction(tileView)
         } else {
             innerTable.add(MarkupRenderer.render(description, iconDisplay = IconDisplay.None) {
                 cityScreen.openCivilopedia(it)
@@ -134,6 +129,17 @@ class CityScreenTileTable(private val cityScreen: CityScreen) : Table() {
 
         innerTable.pack()
         pack()
+    }
+
+    /** The Tiles tab card's worker toggle: Work this tile for an unworked workable tile, Unassign for a worked one */
+    private fun addWorkAction(tileView: TileView) {
+        if (cityScreen.tileStates()[tileView] != CityTileState.WORKABLE || !cityScreen.canChangeState || cityView.isPuppet()) return
+        val assign = !tileView.providesYield()
+        val button = (if (assign) "Work this tile" else "Unassign").toTextButton()
+        button.onClick { cityScreen.toggleTileWorked(tileView) }
+        if (assign && cityView.getFreePopulation() <= 0) button.disable()
+        stylePortraitButton(button, assign)
+        innerTable.add(button).width(345f).height(if (assign) 56f else 48f).padTop(12f).row()
     }
 
     private fun addInfo(text: String) {
