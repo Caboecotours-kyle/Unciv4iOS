@@ -133,12 +133,10 @@ class TileLayerResource(tileGroup: TileGroup, size: Float) : TileLayer(tileGroup
         // Get a fresh Icon if and only if necessary
         if (resourceName != null && effectiveVisible && resourceIcon == null) {
             val icon = ImageGetter.getResourcePortrait(resourceName!!, 20f, resourceAmount)
-            // Centre on tile, offset left and up
-            icon.x = tileX + (tileGroup.width - icon.width) / 2 - 22f
-            icon.y = tileY + (tileGroup.height - icon.height) / 2 + 10f
             addOwnedActor(icon)
             resourceIcon = icon
         }
+        resourceIcon?.let { placeResourceIcon(it) }
 
         resourceIcon?.isVisible = effectiveVisible
 
@@ -166,12 +164,12 @@ class TileLayerResource(tileGroup: TileGroup, size: Float) : TileLayer(tileGroup
                 goldStar.center(group)
                 group.addActor(goldStar)
 
-                // Slightly extruding out from the resource icon
-                group.setPosition(resourceIcon!!.right + 3f, resourceIcon!!.top + 3f, Align.topRight)
                 addOwnedActor(group)
 
                 resourceProvidedIcon = group
             }
+            // Slightly extruding out from the resource icon
+            resourceProvidedIcon?.setPosition(resourceIcon!!.right + 3f, resourceIcon!!.top + 3f, Align.topRight)
 
             if (!shouldResourceProvidedBeDisplayed && resourceProvidedIcon != null){
                 removeOwnedActor(resourceProvidedIcon!!)
@@ -179,6 +177,17 @@ class TileLayerResource(tileGroup: TileGroup, size: Float) : TileLayer(tileGroup
             }
             resourceProvidedIcon?.toFront()
             resourceProvidedIcon?.isVisible = effectiveVisible
+        }
+    }
+
+    /** Zoomed-out portrait pins sit on the middle of the ground hex; otherwise left and up, clear of the improvement. */
+    private fun placeResourceIcon(icon: Actor) {
+        if (tileGroup.strategicView && tileGroup.mapVerticalScale != 1f) {
+            icon.x = tileX + tileGroup.groundCenterX - icon.width / 2
+            icon.y = tileY + tileGroup.groundCenterY - icon.height / 2
+        } else {
+            icon.x = tileX + (tileGroup.width - icon.width) / 2 - 22f
+            icon.y = tileY + (tileGroup.height - icon.height) / 2 + 10f
         }
     }
 
