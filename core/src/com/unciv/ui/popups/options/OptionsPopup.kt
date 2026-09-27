@@ -2,6 +2,10 @@ package com.unciv.ui.popups.options
 
 import com.badlogic.gdx.graphics.Color
 import com.badlogic.gdx.math.Rectangle
+import com.badlogic.gdx.scenes.scene2d.Actor
+import com.badlogic.gdx.scenes.scene2d.Group
+import com.badlogic.gdx.scenes.scene2d.ui.TextField
+import com.badlogic.gdx.scenes.scene2d.utils.ChangeListener
 import com.badlogic.gdx.scenes.scene2d.ui.ScrollPane
 import com.unciv.ui.components.extensions.center
 import com.unciv.ui.components.extensions.getCloseButton
@@ -51,6 +55,8 @@ class OptionsPopup(
     private val landscapeBackground = background
     private val landscapeCardBackground = innerTable.background
     private var initialPageShown = false
+    /** Unsubmitted text of each page's fields, kept when rotation rebuilds the pages and put back when the page next opens */
+    private val drafts = HashMap<OptionsPopupPages, List<String>>()
 
     //endregion
 
@@ -98,6 +104,7 @@ class OptionsPopup(
             tabMinWidth, tabMaxWidth, if (style == null) tabMaxHeight else 0f, tabMaxHeight,
             headerFontSize = 21, backgroundColor = Color.CLEAR, capacity = 8
         )
+        tabs.onSelection { index, _, _ -> restoreDrafts(visiblePages[index]) }
 
         for (page in visiblePages) {
             val content = page.getContent(this)
@@ -132,11 +139,38 @@ class OptionsPopup(
         if (PortraitDialog.isPortrait(stageToShowOn) == (portraitStyle != null)) return
         val page = if (tabs.activePage >= 0) visiblePages[tabs.activePage] else null
         tabs.selectPage(-1, false)
+        // Pages not opened since the last rotation still hold their earlier drafts
+        for ((tabPage, tab) in pageIndex)
+            if (tabPage !in drafts) textFields(tab).takeIf { it.isNotEmpty() }?.let { fields -> drafts[tabPage] = fields.map { it.text } }
         build()
         pack()
         if (portraitStyle == null) fitOrCenterContentIntoVisibleArea()
         else fitSheet((stageToShowOn as? UncivStage)?.lastKnownVisibleArea)
         if (initialPageShown) showPage(page)
+    }
+
+    private fun textFields(tab: OptionsPopupTab): List<TextField> {
+        val fields = ArrayList<TextField>()
+        fun collect(actor: Actor?) {
+            if (actor is TextField) fields += actor
+            if (actor is Group) for (child in actor.children) collect(child)
+        }
+        collect(tab.getFixedContent())
+        collect(tab)
+        return fields
+    }
+
+    /** Puts a rebuilt page's drafts back. The fields fire their change event as typing does, so validation and
+     *  dependent buttons follow and nothing is saved that typing wouldn't have saved */
+    private fun restoreDrafts(page: OptionsPopupPages) {
+        val texts = drafts.remove(page) ?: return
+        val fields = textFields(pageIndex[page] ?: return)
+        if (fields.size != texts.size) return // a different set of fields, don't guess which draft goes where
+        for ((field, text) in fields.zip(texts)) {
+            if (field.text == text) continue
+            field.text = text
+            if (!field.programmaticChangeEvents) field.fire(ChangeListener.ChangeEvent())
+        }
     }
 
     /** Portrait sheet covers exactly the visible area */
