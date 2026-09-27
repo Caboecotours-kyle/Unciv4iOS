@@ -85,9 +85,14 @@ internal class KeyBindingsTab(
         for ((binding, widget) in bindings) {
             val label = binding.label.toLabel().apply { wrap = portrait != null }
             it.add(label).padRight(10f).minWidth(labelWidth / 2)
-            it.add(widget).row()
+            val cell = it.add(widget)
+            // Built here, after the page's portrait pass, so the key buttons get their 48pt target now
+            portrait?.let { style -> cell.minHeight(style.px(48f)).fillY() }
+            cell.row()
             widget.current = keyBindings[binding]
         }
+    }.apply {
+        portrait?.let { style -> getCell(header).minHeight(style.px(48f)) }
     }
 
     private fun onKeyHit() {
