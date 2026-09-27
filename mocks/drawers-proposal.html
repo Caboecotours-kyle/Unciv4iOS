@@ -1,0 +1,644 @@
+<!doctype html>
+<!-- Drawer / sheet system redesign. Iterates polish-proposal.html: same palette, hex map, sprite recolor, soft-sphere buttons. -->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Unciv portrait: drawers</title>
+<style>
+:root{
+  --navy:#132435;--navy2:#1c3249;--navy3:#29465d;--panel:rgba(16,31,47,.92);
+  --yellow:#ffc93c;--yellow-ink:#3a2a00;--red:#e0483e;
+  --gre:#418dfe;--ott:#1f6b35;--food:#6fd05a;--prod:#f08a2c;
+  --r:ui-rounded,"SF Pro Rounded","Nunito","Varela Round",system-ui,-apple-system,sans-serif;
+}
+*{box-sizing:border-box}
+html,body{margin:0;min-height:100%;background:#0b1622;color:#fff;font-family:var(--r);-webkit-font-smoothing:antialiased}
+body{min-height:100dvh;display:flex;flex-direction:column;align-items:center}
+button,select{font:inherit;color:inherit}
+button{border:0;cursor:pointer;background:none;padding:0}
+button:focus-visible,select:focus-visible{outline:3px solid var(--yellow);outline-offset:3px}
+
+/* Mock chrome (not product UI). */
+.chrome{width:100%;display:flex;flex-direction:column;align-items:center;gap:8px;padding:12px 14px 6px;flex:none}
+.scenes{display:flex;max-width:100%;overflow-x:auto;scrollbar-width:none;background:#16283a;border-radius:14px;padding:3px}
+.scenes::-webkit-scrollbar{display:none}
+.scenes button{color:#b7cde0;min-height:40px;padding:8px 11px;border-radius:11px;font-size:13.5px;font-weight:900;white-space:nowrap}
+.scenes button[aria-selected=true]{background:#fff;color:var(--navy)}
+.scenes .sep{width:1px;background:#33495e;margin:8px 4px;flex:none}
+.scenes .grp{align-self:center;color:#6f89a0;font-size:11.5px;font-weight:900;padding:0 6px 0 8px;white-space:nowrap}
+.tools{display:flex;align-items:center;gap:8px;flex-wrap:wrap;justify-content:center}
+.tool,.variant{height:40px;background:#1c3249;color:#fff;border-radius:12px;padding:0 13px;font-size:13.5px;font-weight:800}
+.tool[aria-pressed=true]{background:#fff;color:var(--navy)}
+.tool[hidden]{display:none}
+.caption{max-width:1240px;text-align:center;color:#b7cde0;font-size:13.5px;font-weight:700;line-height:1.35;min-height:18px}
+.caption b{color:#fff}
+.workspace{width:100%;flex:1;display:flex;align-items:flex-start;justify-content:center;gap:26px;padding:10px 12px 28px;flex-wrap:wrap}
+.col{display:flex;flex-direction:column;align-items:center;gap:10px}
+.thesis{width:calc(393px * var(--scale,1));height:56px;overflow:hidden;text-align:center;font-size:13px;font-weight:800;color:#b7cde0;line-height:1.3;min-height:34px}
+.thesis b{display:block;color:#fff;font-size:15px}
+.viewport{position:relative;flex:none;width:calc(393px * var(--scale,1));height:calc(852px * var(--scale,1))}
+.phone{position:absolute;top:0;left:0;width:393px;height:852px;overflow:hidden;border-radius:54px;background:#e4edf4;transform:scale(var(--scale,1));transform-origin:top left;box-shadow:0 0 0 10px #05090e,0 0 0 11px #2a3b4d,0 30px 60px rgba(0,0,0,.5)}
+.screen{position:absolute;inset:0;overflow:hidden}
+.phone.bare{border-radius:0;box-shadow:none}
+.workspace.narrow{padding:6px 0 24px}
+.aside{width:300px;background:#12212f;border-radius:18px;padding:16px 18px;font-size:13.5px;font-weight:700;color:#b7cde0;line-height:1.4;align-self:flex-start}
+.aside h3{margin:0 0 8px;color:#fff;font-size:15px}
+.aside ol,.aside ul{margin:0;padding-left:20px}
+.aside li{margin:0 0 6px}
+.aside li b{color:#fff}
+.aside[hidden]{display:none}
+
+/* World and HUD behind the sheets. */
+.world{position:absolute;inset:0;width:393px;height:852px}
+.status-bar{position:absolute;top:0;left:0;right:0;height:50px;display:flex;align-items:center;justify-content:space-between;padding:7px 34px 0 42px;font-size:16px;font-weight:800;z-index:9;color:#fff}
+.status-right{display:flex;align-items:center;gap:9px}
+.signal{display:flex;gap:3px;align-items:end}.signal i{width:4px;background:currentColor;border-radius:2px}
+.signal i:nth-child(1){height:6px}.signal i:nth-child(2){height:9px}.signal i:nth-child(3){height:12px}
+.battery{width:26px;height:12px;border:1.5px solid currentColor;border-radius:4px;position:relative}
+.battery::before{content:"";position:absolute;left:2px;top:2px;bottom:2px;right:5px;border-radius:1px;background:currentColor}
+.hud{position:absolute;z-index:3;top:54px;left:10px;right:10px;height:52px;background:var(--panel);border-radius:18px;display:flex;align-items:center;gap:12px;padding:0 12px;white-space:nowrap;box-shadow:0 4px 14px rgba(0,0,0,.22)}
+.hud .s{display:flex;align-items:center;gap:4px;font-size:16px;font-weight:900}
+.hud .s small{font-size:11.5px;color:#b7cde0;font-weight:800}
+.hud svg{width:18px;height:18px}
+.hud .t{margin-left:auto;display:flex;align-items:center;gap:6px;font-size:15px;font-weight:900}
+.hud .t svg{stroke:#fff;stroke-width:2.6;fill:none;stroke-linecap:round}
+.scrim{position:absolute;inset:0;background:rgb(5,12,20);opacity:.35;z-index:6}
+.home-ind{position:absolute;left:50%;bottom:8px;width:134px;height:5px;border-radius:3px;background:rgba(255,255,255,.88);transform:translateX(-50%);z-index:30}
+
+/* ============ Sheet anatomy (shared structure) ============ */
+.sheet{position:absolute;left:0;right:0;bottom:0;z-index:8;display:flex;flex-direction:column;overflow:hidden;background:var(--sheet);border-radius:var(--rad) var(--rad) 0 0;color:var(--ink);box-shadow:0 -10px 30px rgba(0,0,0,.28);max-height:calc(100% - 58px)}
+.sheet.tall{top:var(--top,60px)}
+.grab{flex:none;width:40px;height:5px;border-radius:3px;background:var(--grab);margin:8px auto 0}
+.head{flex:none;display:flex;align-items:center;gap:12px;min-height:72px;padding:6px 16px 8px 20px}
+.head .lead{flex:none;width:52px;height:52px;border-radius:50%;display:grid;place-items:center;overflow:hidden}
+.head .ttl{min-width:0;flex:1}
+.head h2{margin:0;font-size:var(--h,23px);font-weight:900;line-height:1.1;letter-spacing:-.01em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.head p{margin:3px 0 0;color:var(--ink2);font-size:14.5px;font-weight:800}
+.x,.backbtn{flex:none;width:44px;height:44px;border-radius:50%;display:grid;place-items:center;background:var(--xbg);color:var(--xink)}
+.x svg,.backbtn svg{width:18px;height:18px;stroke:currentColor;stroke-width:2.8;fill:none;stroke-linecap:round;stroke-linejoin:round}
+.body{flex:1 1 auto;min-height:0;overflow:hidden;padding-bottom:12px}
+.sheet:not(.has-foot) .body{padding-bottom:40px}
+.foot{flex:none;display:flex;align-items:center;gap:10px;padding:12px 16px 34px;background:var(--footbg)}
+.sec{display:flex;align-items:baseline;gap:8px;padding:16px 20px 8px;font-size:var(--sec-size,14.5px);font-weight:900;color:var(--sec)}
+.sec span{color:var(--ink2);font-weight:800;font-size:13.5px}
+.group{margin:0 var(--gm,0)}
+.row{position:relative;width:100%;min-height:64px;display:flex;align-items:center;gap:14px;padding:9px var(--rp,20px);text-align:left;color:var(--ink)}
+.row+.row::before{content:"";position:absolute;top:0;right:var(--rp,20px);left:calc(var(--rp,20px) + 58px);height:1px;background:var(--line)}
+.row .rt{flex:1;min-width:0}
+.row b{display:block;font-size:17px;font-weight:900;line-height:1.15}
+.row small{display:flex;align-items:center;gap:6px;flex-wrap:wrap;color:var(--ink2);font-size:13.5px;font-weight:800;margin-top:3px}
+.row small svg{width:15px;height:15px}
+.row .end{margin-left:auto;display:flex;align-items:center;gap:8px;color:var(--ink2);font-size:14.5px;font-weight:900;white-space:nowrap}
+.row .chev{width:16px;height:16px;stroke:var(--chev);stroke-width:2.8;fill:none;stroke-linecap:round;stroke-linejoin:round;flex:none}
+.row.dis b{color:var(--ink2)}
+.row.dis .disc{opacity:.5}
+.row .why{color:#ff9d8f}
+.row.sel{background:var(--selbg)}
+.row.sel .end .check{width:26px;height:26px;border-radius:50%;background:var(--yellow);display:grid;place-items:center}
+.row.sel .end .check svg{width:15px;height:15px;stroke:var(--yellow-ink);stroke-width:3.2;fill:none;stroke-linecap:round;stroke-linejoin:round}
+.row.danger b{color:var(--dangerink)}
+.disc{flex:none;width:44px;height:44px;border-radius:50%;background:var(--disc);color:#132435;display:grid;place-items:center;overflow:hidden}
+.disc svg{width:24px;height:24px}
+.disc img{width:40px;height:40px;object-fit:contain}
+.disc.yellow{background:var(--yellow)}
+.disc.hexd{background:var(--disc2);color:var(--ink)}
+.g{stroke:currentColor;stroke-width:2.2;fill:none;stroke-linecap:round;stroke-linejoin:round}
+.gf{fill:currentColor;stroke:none}
+.mini{display:inline-flex;align-items:center;gap:4px;font-weight:900;color:var(--ink)}
+.mini .md{width:22px;height:22px;border-radius:50%;background:#fff;display:grid;place-items:center;box-shadow:0 0 0 1.5px rgba(19,36,53,.35)}
+.mini .md svg{width:14px;height:14px}
+.mini>svg{width:16px;height:16px}
+.mini .md{color:#132435}.mini .md.or{color:#fff}
+.disc .em{width:44px;height:44px}
+.mini .md.or{background:#e36a12;color:#fff}
+.wonder{color:var(--wonder)}
+.pill{height:30px;padding:0 11px;border-radius:15px;display:inline-flex;align-items:center;gap:5px;font-size:13.5px;font-weight:900;white-space:nowrap}
+.pill svg{width:14px;height:14px;stroke:currentColor;stroke-width:2.5;fill:none;stroke-linecap:round}
+.pill.lock{background:var(--lockbg);color:var(--lockink)}
+.pill.good{background:var(--goodbg);color:var(--goodink)}
+.pill.plain{background:var(--fill);color:var(--ink)}
+.pill.gold{color:var(--turnink);background:none;padding:0}
+/* Switch */
+.sw{width:51px;height:31px;border-radius:16px;background:var(--swoff);position:relative;flex:none}
+.sw::after{content:"";position:absolute;top:2px;left:2px;width:27px;height:27px;border-radius:50%;background:#fff;box-shadow:0 2px 4px rgba(0,0,0,.25)}
+.sw.on{background:var(--yellow)}.sw.on::after{left:22px}
+/* Stat chips */
+.stats{display:grid;grid-template-columns:repeat(var(--n,3),1fr);gap:8px;padding:4px var(--sp,20px) 4px}
+.stat{min-height:48px;border-radius:var(--chiprad,14px);background:var(--chip);display:flex;align-items:center;justify-content:center;gap:6px;font-size:18px;font-weight:900;color:var(--ink);box-shadow:var(--chipsh,none)}
+.stat svg{width:21px;height:21px}
+.stats.boxes .stat{flex-direction:column;align-items:flex-start;justify-content:center;gap:0;padding:8px 14px;min-height:66px}
+.stats.boxes .stat b{font-size:22px}
+.stats.boxes .stat span{font-size:13px;color:var(--ink2);font-weight:800}
+.stats.strip .stat{flex-direction:column;gap:2px;min-height:58px;font-size:16px}
+/* Segmented control and filter chips */
+.seg{display:flex;margin:6px var(--sp,20px) 4px;padding:3px;border-radius:var(--segrad,14px);background:var(--segtrack);gap:2px}
+.seg button{flex:1;height:42px;border-radius:calc(var(--segrad,14px) - 3px);font-size:15px;font-weight:900;color:var(--ink2)}
+.seg button.on{background:var(--segon);color:var(--segonink);box-shadow:var(--segsh,none)}
+.chips{display:flex;gap:8px;padding:4px var(--sp,20px);flex-wrap:wrap}
+.chipf{height:44px;padding:0 18px;border-radius:22px;background:var(--fill);color:var(--ink2);font-size:15px;font-weight:900;display:flex;align-items:center;gap:6px}
+.chipf.on{background:var(--segon);color:var(--segonink);box-shadow:var(--segsh,none)}
+/* Buttons */
+.btn{height:56px;border-radius:var(--btnrad,18px);font-size:17px;font-weight:900;display:flex;align-items:center;justify-content:center;gap:8px;padding:0 20px;white-space:nowrap}
+.btn svg{width:20px;height:20px;stroke:currentColor;stroke-width:2.6;fill:none;stroke-linecap:round;stroke-linejoin:round}
+.btn.primary{background:radial-gradient(130% 190% at 28% 0%,#ffe58f 0,#ffc93c 46%,#eaa916 100%);color:var(--yellow-ink);box-shadow:0 4px 12px rgba(7,17,28,.28)}
+.btn.secondary{background:var(--secbg);color:var(--secink)}
+.btn.danger{background:var(--dangerbg);color:var(--dangerink)}
+.btn.grow{flex:1}
+.btn[disabled]{opacity:.45}
+.btn .badge{min-width:26px;height:26px;border-radius:13px;background:var(--navy);color:#fff;font-size:14px;display:grid;place-items:center;padding:0 7px}
+.stack{display:flex;flex-direction:column;gap:10px;padding:8px var(--sp,20px) 4px}
+/* Current slot (empty research / production) */
+.slot{margin:8px var(--sp,20px) 4px;min-height:64px;border-radius:var(--slotrad,18px);border:2px dashed var(--slotline);display:flex;align-items:center;gap:14px;padding:8px 14px;color:var(--ink2);font-size:16px;font-weight:900}
+.slot .ring{width:40px;height:40px;border-radius:50%;border:2px dashed var(--slotline);flex:none;display:grid;place-items:center}
+.slot .ring svg{width:18px;height:18px;stroke:var(--ink2);stroke-width:2.6;fill:none;stroke-linecap:round}
+.slot small{display:block;font-size:13.5px;font-weight:800;margin-top:2px}
+/* Empty state */
+.empty{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;padding:44px 20px 30px;color:var(--ink2);font-size:16px;font-weight:900;text-align:center}
+.empty .eico{width:72px;height:72px;border-radius:50%;background:var(--fill);display:grid;place-items:center}
+.empty .eico svg{width:32px;height:32px;stroke:var(--ink2);stroke-width:2.2;fill:none;stroke-linecap:round;stroke-linejoin:round}
+/* Tab bar footer (city) */
+.tabs{display:grid;grid-template-columns:repeat(5,1fr);gap:4px;flex:1}
+.tabs span{display:flex;flex-direction:column;align-items:center;gap:3px;padding:7px 0 6px;border-radius:16px;font-size:12px;font-weight:900;color:var(--ink2)}
+.tabs svg{width:24px;height:24px}
+.tabs span.on{background:var(--tabon);color:var(--tabonink)}
+/* Pedia */
+.shelf{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;padding:2px var(--sp,20px)}
+.card{border-radius:var(--cardrad,18px);background:var(--card);box-shadow:var(--chipsh,none);display:flex;flex-direction:column;align-items:center;justify-content:flex-end;gap:2px;padding:8px 6px 10px;height:118px;text-align:center}
+.card img{height:58px;width:64px;object-fit:contain;margin-bottom:auto}
+.card .em{margin-bottom:auto;margin-top:4px}
+.card b{font-size:15px;font-weight:900;line-height:1.1}
+.card span{font-size:12px;font-weight:800;color:var(--ink2)}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:8px;padding:2px var(--sp,20px)}
+.cat{display:flex;align-items:center;gap:10px;min-height:56px;padding:6px 10px;border-radius:var(--cardrad,16px);background:var(--card);box-shadow:var(--chipsh,none)}
+.cat .disc{width:40px;height:40px}.cat .disc svg{width:22px;height:22px}
+.cat .ct{display:block;font-size:15.5px;font-weight:900;line-height:1.1;color:var(--ink)}
+.cat .cn{display:block;font-size:13px;font-weight:800;color:var(--ink2)}
+.more{display:block;margin:10px auto 0;height:44px;padding:0 16px;font-size:15px;font-weight:900;color:var(--ink2)}
+.search{flex:1;height:52px;border-radius:26px;background:var(--fill);display:flex;align-items:center;gap:10px;padding:0 18px;color:var(--ink2);font-size:16.5px;font-weight:800}
+.search svg{width:20px;height:20px;stroke:currentColor;stroke-width:2.6;fill:none;stroke-linecap:round}
+/* Unit health */
+.hpbar{height:10px;border-radius:5px;background:var(--track);overflow:hidden;margin:6px 20px 0}
+.hpbar i{display:block;height:100%;background:linear-gradient(90deg,#6fd05a,#a6ea6b);border-radius:5px}
+.hpcap{display:flex;justify-content:space-between;padding:6px 20px 6px;color:var(--ink2);font-size:13.5px;font-weight:800}
+.quote{margin:0 20px 6px;padding:10px 14px;border-radius:16px;background:var(--fill);font-size:15px;font-weight:800;color:var(--ink);display:inline-block}
+.note{display:flex;align-items:center;gap:8px;padding:6px 20px;font-size:14px;font-weight:800;color:var(--goodink2)}
+.note svg{width:16px;height:16px;stroke:currentColor;stroke-width:2.6;fill:none;stroke-linecap:round}
+.hint{padding:6px 20px 0;color:var(--ink2);font-size:14px;font-weight:800}
+.tilehero{display:flex;align-items:center;gap:14px;padding:6px 20px 4px}
+.tilehero b{font-size:20px;font-weight:900;display:block}
+.tilehero .mini{margin-right:8px}
+.peek-chev{flex:none;width:44px;height:44px;display:grid;place-items:center;color:var(--ink2)}
+.peek-chev svg{width:20px;height:20px;stroke:currentColor;stroke-width:2.8;fill:none;stroke-linecap:round}
+
+/* ============ Direction A: Slab ============ */
+.dir-a{--sheet:#132435;--rad:28px;--ink:#fff;--ink2:#a9c0d4;--sec:#8fa9bf;--line:rgba(255,255,255,.1);--fill:#1f364d;--disc:#f2f6fa;--disc2:#1f364d;--grab:rgba(255,255,255,.32);
+  --xbg:#22394f;--xink:#fff;--chev:#6f89a0;--selbg:rgba(255,201,60,.1);--chip:#1f364d;--segtrack:#0d1b28;--segon:#fff;--segonink:#132435;
+  --secbg:#22394f;--secink:#fff;--dangerbg:rgba(224,72,62,.14);--dangerink:#ff8b80;--lockbg:rgba(255,201,60,.14);--lockink:#ffe28b;--goodbg:rgba(111,208,90,.15);--goodink:#aff2a5;--goodink2:#8ff07e;
+  --turnink:#ffc93c;--wonder:#ffd35c;--swoff:#3a546d;--slotline:#3b566f;--footbg:#132435;--track:#0b1824;--tabon:transparent;--tabonink:#fff;--card:#1f364d}
+.dir-a .foot{box-shadow:inset 0 1px 0 rgba(255,255,255,.08)}
+.dir-a .tabs span.on{position:relative}
+.dir-a .tabs span.on::after{content:"";position:absolute;top:0;left:28%;right:28%;height:3px;border-radius:2px;background:var(--yellow)}
+.dir-a .tabs span.on svg{color:var(--yellow)}
+
+/* ============ Direction B: Tray ============ */
+.dir-b{--sheet:#0c1925;--rad:24px;--ink:#fff;--ink2:#a2b9cd;--sec:#7f98ae;--line:rgba(255,255,255,.08);--fill:#1a2e43;--disc:#eef4f9;--disc2:#253f58;--grab:rgba(255,255,255,.28);
+  --xbg:#1a2e43;--xink:#dce9f4;--chev:#6a8399;--selbg:rgba(255,201,60,.1);--chip:#1a2e43;--segtrack:#1a2e43;--fill:#253f58;--segon:#34506b;--segonink:#fff;
+  --secbg:#1a2e43;--secink:#fff;--dangerbg:rgba(224,72,62,.14);--dangerink:#ff8b80;--lockbg:rgba(255,201,60,.14);--lockink:#ffe28b;--goodbg:rgba(111,208,90,.15);--goodink:#aff2a5;--goodink2:#8ff07e;
+  --turnink:#ffc93c;--wonder:#ffd35c;--swoff:#324d67;--slotline:#34506b;--footbg:#16293d;--track:#050d15;--tabon:#2b4761;--tabonink:#fff;--card:#1a2e43;
+  --gm:12px;--rp:14px;--sp:12px;--chiprad:16px;--cardrad:18px}
+.dir-b .group{background:#1a2e43;border-radius:18px;overflow:hidden}
+.dir-b .group .row.sel{background:rgba(255,201,60,.1)}
+.dir-b .sec{padding:18px 28px 8px;font-size:13.5px}
+.dir-b .foot{border-radius:22px 22px 0 0;box-shadow:0 -6px 18px rgba(0,0,0,.35);margin-top:4px}
+.dir-b .head,.dir-c .head{padding-left:26px}
+.dir-c .sec{padding-left:26px}
+.dir-b .hint,.dir-b .note,.dir-b .hpcap{padding-left:28px;padding-right:28px}
+.dir-b .hpbar{margin:6px 28px 0}
+.dir-b .quote{margin-left:12px}
+.dir-b .tilehero{margin:0 12px;padding:12px 14px;background:#1a2e43;border-radius:18px}
+.dir-b .stats .stat{background:#1a2e43}
+
+/* ============ Direction C: Paper ============ */
+.dir-c{--sheet:#f1f5f9;--rad:30px;--ink:#132435;--ink2:#5b7187;--sec:#132435;--line:rgba(19,36,53,.08);--fill:#e2e9f0;--disc:#e7eef5;--disc2:#e7eef5;--grab:rgba(19,36,53,.22);
+  --xbg:#e2e9f0;--xink:#132435;--chev:#8aa0b4;--selbg:#fff6da;--chip:#fff;--segtrack:#e2e9f0;--segon:#fff;--segonink:#132435;--segsh:0 1px 3px rgba(19,36,53,.18);
+  --secbg:#132435;--secink:#fff;--dangerbg:#fde6e3;--dangerink:#c42e24;--lockbg:#fff0c2;--lockink:#7a5800;--goodbg:#dff5d9;--goodink:#2d7a1f;--goodink2:#2d7a1f;
+  --turnink:#b07800;--wonder:#b07800;--swoff:#cdd8e2;--slotline:#b9c8d6;--footbg:#fff;--track:#dce5ed;--tabon:#132435;--tabonink:#fff;--card:#fff;
+  --chipsh:0 1px 2px rgba(19,36,53,.08),0 4px 12px rgba(19,36,53,.06);--h:26px;--sec-size:17px;--gm:12px;--rp:14px;--sp:12px;--btnrad:28px;--segrad:24px;--chiprad:16px;--cardrad:18px;--slotrad:18px}
+.dir-c .sheet{box-shadow:0 -10px 34px rgba(7,17,28,.35)}
+.dir-c .row{background:#fff;border-radius:16px;box-shadow:var(--chipsh)}
+.dir-c .group{display:flex;flex-direction:column;gap:8px}
+.dir-c .row+.row::before{display:none}
+.dir-c .row.sel{background:#fff6da;box-shadow:inset 0 0 0 2px var(--yellow)}
+.dir-c .foot{box-shadow:0 -4px 16px rgba(19,36,53,.08)}
+.dir-c .disc.yellow{background:var(--yellow)}
+.dir-c .mini .md{box-shadow:0 0 0 1.5px rgba(19,36,53,.25)}
+.dir-c .sec{padding:18px 20px 10px}
+.dir-c .head p{font-size:15px}
+.dir-c .hint,.dir-c .note,.dir-c .hpcap{padding-left:20px;padding-right:20px}
+.dir-c .tilehero{margin:0 12px;padding:12px 14px;background:#fff;border-radius:18px;box-shadow:var(--chipsh)}
+.dir-c .quote{background:#fff;box-shadow:var(--chipsh);margin-left:12px}
+.dir-c .home-ind{background:rgba(19,36,53,.85)}
+.dir-c .row .why{color:#c42e24}
+.dir-c .stat{color:#132435}
+.dir-c .stats{--faith:#8d9fb2}
+
+/* Anatomy pins (mock annotation, toggle with L). */
+.pin{position:absolute;z-index:40;width:17px;height:17px;border-radius:50%;background:#ff4d8d;color:#fff;font-size:10.5px;font-weight:900;display:grid;place-items:center;box-shadow:0 0 0 2px #fff;pointer-events:none}
+.edge-tag{position:absolute;z-index:41;right:12px;bottom:14px;height:22px;padding:0 8px;border-radius:11px;background:#ff4d8d;color:#fff;font-size:11.5px;font-weight:900;display:flex;align-items:center}
+
+/* Motion demo */
+.finger{position:absolute;z-index:45;width:44px;height:44px;border-radius:50%;background:rgba(255,255,255,.55);box-shadow:0 0 0 2px rgba(255,255,255,.9);opacity:0;pointer-events:none;transform:translate(-50%,-50%)}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%)}
+@media (max-width:680px){.chrome{padding-top:8px}.aside{width:100%;max-width:393px}}
+</style>
+</head>
+<body>
+<div class="chrome">
+  <div class="scenes" role="tablist" aria-label="Scenes" id="scenes"></div>
+  <div class="tools">
+    <select class="variant" id="variant" aria-label="Direction">
+      <option value="a">A  Slab</option><option value="b">B  Tray</option><option value="c">C  Paper</option>
+    </select>
+    <button type="button" class="tool" id="compare" aria-pressed="false">Side by side</button>
+    <button type="button" class="tool" id="labels" aria-pressed="false">Labels</button>
+    <button type="button" class="tool" id="m-open" hidden>Open</button>
+    <button type="button" class="tool" id="m-swipe" hidden>Swipe down</button>
+    <button type="button" class="tool" id="m-peek" hidden>City peek</button>
+  </div>
+  <div class="caption" id="caption" aria-live="polite"></div>
+</div>
+<main class="workspace" id="workspace"></main>
+<script>
+/* ---------- Directions ---------- */
+const DIRS={
+  a:{name:'A  Slab',thesis:'One solid navy slab. Rows sit right on it, split by hairlines.'},
+  b:{name:'B  Tray',thesis:'A deep tray of inset grouped cards. The footer is a raised layer.'},
+  c:{name:'C  Paper',thesis:'A light, lifted sheet over the dark map. Bigger titles, white row tiles.'}
+};
+
+/* ---------- Icons ---------- */
+const P={
+  close:'<path d="M6 6l12 12M18 6 6 18"/>',chev:'<path d="M9 5l7 7-7 7"/>',back:'<path d="M15 5l-7 7 7 7"/>',up:'<path d="M5 15l7-7 7 7"/>',
+  check:'<path d="M5 12.5l4.5 4.5L19 7"/>',lock:'<rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/>',
+  plus:'<path d="M12 5v14M5 12h14"/>',search:'<circle cx="10.5" cy="10.5" r="6"/><path d="M15 15l5 5"/>',
+  bell:'<path d="M6 16V11a6 6 0 0 1 12 0v5l1.5 2h-15z"/><path d="M10 20.5a2 2 0 0 0 4 0"/>',
+  menu:'<path d="M4 7h16M4 12h16M4 17h16"/>',up2:'<path d="M12 19V6m-6 6 6-6 6 6"/>',
+  shieldS:'<path d="M12 3 20 6v6c0 5-3.5 7.7-8 9-4.5-1.3-8-4-8-9V6z"/>'
+};
+const sv=(n,cls='')=>`<svg viewBox="0 0 24 24" class="${cls}" aria-hidden="true">${P[n]}</svg>`;
+/* Game glyphs drawn dark on white discs, like Unciv's icons. */
+const GL={
+  hammer:'<path class="g" d="M7 19l7-7" stroke-width="3.2"/><path class="gf" d="M10 4.5l5-1.5 5.5 5.5-2.5 2.5-2-2-3 3-3.5-3.5 3-3z"/>',
+  flag:'<path class="g" d="M6.5 21V4" stroke-width="2.6"/><path class="gf" d="M7.5 4.5c3-1.5 5 1 8 0l2.5-.5-1.5 5 1.5 4.5c-3 1.5-6-1-10.5.5z"/>',
+  eagle:'<path class="gf" d="M3 9c3-3 8-4 11-3l3-2 1.5 2 2.5.5-2 2.5c1 3-1 7-6 9l1-3.5-3 1.5 .5-3-3 .5 1.5-2.5L6 12z"/>',
+  axe:'<path class="g" d="M6 20 17 6" stroke-width="2.8"/><path class="gf" d="M12.5 4.5c3-1.5 6 .5 7 3.5l-3.5 3-4.5-3.5z"/>',
+  shield:'<path class="gf" d="M12 3 20 6v6c0 5-3.5 7.7-8 9-4.5-1.3-8-4-8-9V6z"/>',
+  stop:'<circle class="g" cx="12" cy="12" r="8"/><path class="g" d="M9 9l6 6M15 9l-6 6" stroke-width="2.6"/>',
+  skip:'<path class="g" d="M4 15c1-5 5-8 10-7l3 1" stroke-width="3"/><path class="gf" d="M15 5l6 5-6 4z"/>',
+  target:'<circle class="g" cx="12" cy="12" r="8"/><circle class="gf" cx="12" cy="12" r="4.5"/>',
+  gear:'<circle class="g" cx="12" cy="12" r="3"/><path class="g" d="M12 3v3m0 12v3M3 12h3m12 0h3M5.6 5.6l2.1 2.1m8.6 8.6 2.1 2.1m0-12.8-2.1 2.1m-8.6 8.6-2.1 2.1" stroke-width="2.6"/>',
+  amphora:'<path class="gf" d="M9 3h6v2l-1 1c3 2 4 5 3 8s-3 5-3 5v2h-4v-2s-2-2-3-5 0-6 3-8L9 5z"/><path d="M8 11h8M8 14h8" stroke="#fff" stroke-width="1.2" fill="none"/>',
+  fence:'<path class="g" d="M3 10h18M3 15h18M6 7v12M12 7v12M18 7v12" stroke-width="2.2"/><path class="gf" d="M8 6h9l2 3H7z"/>',
+  bow:'<path class="g" d="M6 4c8 2 12 8 14 16" stroke-width="2.4"/><path class="g" d="M6 4l14 16M4 12h13" stroke-width="1.8"/><path class="gf" d="M16 10l4 2-4 2z"/>',
+  pick:'<path class="g" d="M5 20l9-9" stroke-width="2.8"/><path class="g" d="M5 7c5-4 10-3 13 0" stroke-width="2.8"/><path class="gf" d="M9 17l5 3 5-2-3-4z"/>',
+  granary:'<path class="gf" d="M6 21V10c0-4 3-6 6-6s6 2 6 6v11z"/><rect x="10" y="14" width="4" height="7" fill="#fff"/>',
+  shrine:'<path class="gf" d="M3 9h18v3H3zM6 12h2v8H6zM16 12h2v8h-2zM5 6h14l1 3H4z"/>',
+  temple:'<path class="gf" d="M12 3 21 8H3zM4 9h16v2H4zM4 19h16v2H4z"/><path class="g" d="M7 12v6M10.5 12v6M13.5 12v6M17 12v6" stroke-width="1.8"/>',
+  horse:'<path class="gf" d="M8 21c0-5 2-8 2-8L6 12l2-4 3-4 2 3c4 1 6 5 5 9l-1 5z"/>',
+  mine:'<path class="g" d="M5 19 16 8M8 8l11 11" stroke-width="2.8"/><path class="gf" d="M13 4l5 1 1 5-3-1-3-3z M4 10l1-5 5-1-2 3z"/>',
+  chop:'<path class="g" d="M7 20 17 7" stroke-width="2.8"/><path class="gf" d="M13 5c2.5-2 6-1 7 1.5l-4 3.5-4-3z"/>',
+  hex:'<path class="g" d="M12 3 20 7.5v9L12 21 4 16.5v-9z" stroke-width="2.2"/>',
+  star:'<path class="gf" d="M12 3l2.7 5.6 6.1.8-4.5 4.2 1.1 6-5.4-3-5.4 3 1.1-6L3.2 9.4l6.1-.8z"/>',
+  sheep:'<path class="gf" d="M6 15c-2 0-3-2-2-4s3-2 4-2c1-2 4-3 6-2 2-1 5 0 5 3 2 0 3 2 2 4s-3 2-4 1H8z M7 15v4h1.5v-4zM15 15v4h1.5v-4z"/><circle class="gf" cx="19.5" cy="10" r="2"/>',
+  dyes:'<path class="gf" d="M12 3c2 3 2 6 0 9-2-3-2-6 0-9zM3 11c3 0 6 1 9 4-4 1-7 0-9-4zM21 11c-3 0-6 1-9 4 4 1 7 0 9-4zM11 14h2v7h-2z"/>',
+  save:'<path class="g" d="M12 4v10m-4-4 4 4 4-4" stroke-width="2.6"/><path class="g" d="M5 15v4h14v-4" stroke-width="2.6"/>',
+  load:'<path class="g" d="M3 7h7l2 2h9v10H3z" stroke-width="2.4"/>',
+  book:'<path class="g" d="M4 5c3-1 6-1 8 1 2-2 5-2 8-1v14c-3-1-6-1-8 1-2-2-5-2-8-1z M12 6v14" stroke-width="2.2"/>',
+  trophy:'<path class="gf" d="M7 3h10v5a5 5 0 0 1-10 0zM10 15h4v3h3v3H7v-3h3z"/><path class="g" d="M7 5H4c0 3 1 5 3 5M17 5h3c0 3-1 5-3 5" stroke-width="2"/>',
+  sliders:'<path class="g" d="M5 7h14M5 12h14M5 17h14" stroke-width="2.2"/><circle class="gf" cx="9" cy="7" r="2.4"/><circle class="gf" cx="15" cy="12" r="2.4"/><circle class="gf" cx="8" cy="17" r="2.4"/>',
+  newgame:'<path class="g" d="M12 3 20 7.5v9L12 21 4 16.5v-9z" stroke-width="2.2"/><path class="g" d="M12 8.5v7M8.5 12h7" stroke-width="2.4"/>',
+  home:'<path class="g" d="M4 11 12 4l8 7v9h-5v-6H9v6H4z" stroke-width="2.4"/>',
+  exit:'<path class="g" d="M14 4H5v16h9M10 12h11m-4-4 4 4-4 4" stroke-width="2.4"/>',
+  trade:'<path class="g" d="M4 8h14m-4-4 4 4-4 4M20 16H6m4-4-4 4 4 4" stroke-width="2.4"/>',
+  hand:'<path class="g" d="M7 12h3l3-3c1-1 3-1 3 1l-2 2h4a2 2 0 0 1 0 4h-2a2 2 0 0 1-2 2H7" stroke-width="2.2"/><path class="gf" d="M3 11h4v8H3z"/>',
+  down:'<path class="gf" d="M14 21c-2 0-3-1-3-3v-3H6a2 2 0 0 1-2-2l1-6c.3-1.5 1.5-2 3-2h6v11l-2 5zM16 5h4v9h-4z"/>',
+  demand:'<path class="gf" d="M6 21V10l2-1V5a1.5 1.5 0 0 1 3 0v4h1V4a1.5 1.5 0 0 1 3 0v5h1V5.5a1.5 1.5 0 0 1 3 0V15c0 4-2 6-6 6z"/>',
+  pinmap:'<path class="gf" d="M12 22s-7-7-7-12a7 7 0 0 1 14 0c0 5-7 12-7 12z"/><circle cx="12" cy="10" r="2.6" fill="#fff"/>',
+  sword:'<path class="g" d="M5 19 18 6M14 5h5v5M4 16l4 4M7 15l2 2" stroke-width="2.4"/>',
+  build:'<circle class="gf" cx="9" cy="10" r="5"/><circle cx="9" cy="10" r="2" fill="var(--sheet)"/><circle class="gf" cx="17" cy="16" r="3.5"/><circle cx="17" cy="16" r="1.4" fill="var(--sheet)"/>',
+  bldg:'<path class="gf" d="M4 20V10l8-6 8 6v10h-5v-6H9v6z"/>',
+  cit:'<path class="g" d="M6 19 16 9" stroke-width="3.2"/><path class="gf" d="M12 5l4-2 5 5-2 4z"/>',
+  buy:'<rect class="gf" x="6" y="3" width="12" height="18" rx="2"/><circle cx="12" cy="12" r="3.2" fill="var(--sheet)"/>',
+  omni:'<circle class="gf" cx="12" cy="12" r="3"/>',
+  unitsC:'<path class="gf" d="M12 3 20 6v6c0 5-3.5 7.7-8 9-4.5-1.3-8-4-8-9V6z"/>',
+  bldgC:'<path class="gf" d="M2 12 7 7l5 5v7H2zM12 12l5-5 5 5v7H12z"/><path class="gf" d="M8 11l4-4 4 4v8H8z"/>',
+  wonderC:'<path class="gf" d="M3 19 11 5l8 14zM13 19l4-7 4 7z"/>',
+  techC:'<path class="gf" d="M9 3a7 7 0 0 1 7 7l2 3h-2v3a2 2 0 0 1-2 2h-2v3H7v-5a7 7 0 0 1 2-13z"/>',
+  resC:'<rect class="gf" x="6" y="3" width="12" height="18" rx="2"/><path d="M12 9c1.5 2 1.8 3 1.8 3.8a1.8 1.8 0 0 1-3.6 0c0-.8.3-1.8 1.8-3.8z" fill="#fff"/>',
+  terC:'<path class="gf" d="M2 19c2-6 4-10 7-10 2 0 3 3 4 5 1-2 2-3 3-3 3 0 5 4 6 8z"/>',
+  impC:'<path class="g" d="M5 19 16 8M8 8l11 11" stroke-width="3"/><path class="gf" d="M13 4l5 1 1 5-3-1-3-3zM4 10l1-5 5-1-2 3z"/>',
+  civC:'<circle class="g" cx="12" cy="12" r="9" stroke-width="2"/><circle class="gf" cx="9" cy="9" r="1.8"/><circle class="gf" cx="15" cy="9" r="1.8"/><circle class="gf" cx="12" cy="8" r="1.8"/><path class="gf" d="M7 18v-5h4v5zM13 18v-5h4v5zM10 17v-6h4v6z"/>',
+  polC:'<path class="gf" d="M20 3C12 4 6 10 5 19l2 2c1-4 3-7 6-9-2 3-3 5-3 7 7-2 10-9 10-16z"/>',
+  relC:'<path class="gf" d="M8 21v-9l-2-3V5.5a1.3 1.3 0 0 1 2.6 0V9h.8V3.8a1.3 1.3 0 0 1 2.6 0V9h.8V4.5a1.3 1.3 0 0 1 2.6 0V9h.8V6a1.3 1.3 0 0 1 2.6 0v8l-3 7z"/>'
+};
+const gl=(n,c='')=>`<svg viewBox="0 0 24 24" aria-hidden="true" style="${c}">${GL[n]}</svg>`;
+const Y={
+  food:'<svg viewBox="0 0 24 24"><circle cx="12" cy="13" r="8" fill="#6fd05a"/><path d="M12 5c0-2 2-3 4-3" stroke="#3d7d2c" stroke-width="2" fill="none" stroke-linecap="round"/><circle cx="9" cy="11" r="2" fill="#a8ec8f"/></svg>',
+  prod:'<svg viewBox="0 0 24 24"><path d="M4 20l8-8" stroke="#b7682b" stroke-width="3.2" stroke-linecap="round"/><path d="M10 6l5-3 6 6-3 5z" fill="#f08a2c"/></svg>',
+  gold:'<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" fill="#ffc93c"/><circle cx="12" cy="12" r="6" fill="none" stroke="#bd8d16" stroke-width="2"/></svg>',
+  sci:'<svg viewBox="0 0 24 24"><path d="M9 3h6v6l5 9a2 2 0 0 1-2 3H6a2 2 0 0 1-2-3l5-9z" fill="#5cc8ff"/><path d="M6 15h12" stroke="#2277a0" stroke-width="2"/></svg>',
+  cult:'<svg viewBox="0 0 24 24"><path d="M8 17V5l11-2v12" stroke="#d38bff" stroke-width="2.5" fill="none"/><circle cx="6" cy="17" r="3" fill="#d38bff"/><circle cx="17" cy="15" r="3" fill="#d38bff"/></svg>',
+  faith:'<svg viewBox="0 0 24 24"><circle cx="12" cy="6" r="3" fill="var(--faith,#dfe6ee)"/><path d="M7 21l2-9h6l2 9z" fill="var(--faith,#dfe6ee)"/></svg>',
+  happy:'<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" fill="#7fcf3c"/><circle cx="9" cy="10" r="1.3" fill="#24420f"/><circle cx="15" cy="10" r="1.3" fill="#24420f"/><path d="M8 14c2 2.5 6 2.5 8 0" stroke="#24420f" stroke-width="1.8" fill="none" stroke-linecap="round"/></svg>',
+  str:'<svg viewBox="0 0 24 24"><path d="M5 19 17 7" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"/><path d="M15 4h5v5z" fill="currentColor"/></svg>',
+  mov:'<svg viewBox="0 0 24 24"><path d="M4 12h15m-6-6 6 6-6 6" stroke="currentColor" stroke-width="2.6" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>'
+};
+const emblem=(civ,size=44)=>civ==='gre'
+  ?`<svg class="em" viewBox="0 0 48 48" width="${size}" height="${size}"><circle cx="24" cy="24" r="24" fill="#418dfe"/><circle cx="24" cy="24" r="19.5" fill="#fff"/><text x="24" y="33" text-anchor="middle" font-size="27" font-weight="900" fill="#418dfe" font-family="Georgia,serif">Ω</text></svg>`
+  :`<svg class="em" viewBox="0 0 48 48" width="${size}" height="${size}"><circle cx="24" cy="24" r="24" fill="#1f6b35"/><circle cx="24" cy="24" r="20" fill="#f6f3b5"/><circle cx="21" cy="18" r="7" fill="#1f6b35"/><circle cx="24" cy="16.5" r="6" fill="#f6f3b5"/><circle cx="27" cy="29" r="7" fill="#1f6b35"/><circle cx="30" cy="27.5" r="6" fill="#f6f3b5"/></svg>`;
+const techDisc=n=>`<span class="disc" style="background:#fff;box-shadow:inset 0 0 0 2px #7a2a15;color:#6a1b0c">${gl(n,'width:28px;height:28px')}</span>`;
+const wd=n=>`<span class="disc" style="background:#ffe7a3"><img src="art/wl_${n}.png" alt=""></span>`;
+const md=(n,or)=>`<span class="md ${or?'or':''}">${gl(n)}</span>`;
+
+/* ---------- Map (copied from polish-proposal) ---------- */
+const R=50,SQ=.6,W=Math.sqrt(3)*R,DY=45,X0=-25,Y0=122;
+const TERRA={grass:['#88cd50','#7dc248','#5f9a36'],plains:['#e3ca52','#d9be47','#b39532'],coast:['#3fb5e3','#37a8d7','#2d8daf'],ocean:['#2f7ad6','#2a6fc6','#215a9c'],desert:['#eba45b','#e0974d','#b8763a'],mountain:['#a3acb6','#959ea9','#737c87']};
+const center=(c,r)=>[X0+W*(c+(r&1?.5:0)),Y0+DY*r];
+const corners=(x,y,s=1)=>Array.from({length:6},(_,i)=>{const a=(60*i-90)*Math.PI/180;return [x+R*s*Math.cos(a),y+R*SQ*s*Math.sin(a)]});
+const pts=a=>a.map(([x,y])=>`${x.toFixed(1)},${y.toFixed(1)}`).join(' ');
+const cube=(c,r)=>[c-(r-(r&1))/2,r];
+const dist=(a,b)=>{const [q,r]=cube(...a),[s,t]=cube(...b);return Math.max(Math.abs(q-s),Math.abs(r-t),Math.abs(q-s+r-t))};
+const NB=[[1,-1],[1,0],[0,1],[-1,1],[-1,0],[0,-1]];
+const nbr=(c,r,i)=>{const [q,rr]=cube(c,r),[dq,dr]=NB[i];const nr=rr+dr;return [q+dq+(nr-(nr&1))/2,nr]};
+function terrain(c,r){
+  if(r>=12&&c<=4)return 'ocean';
+  if(r>=9&&c<=2||r>=11)return 'coast';
+  if(c===5&&r===2||c===-1&&r===5)return 'mountain';
+  if(c===2&&r===3||c===3&&r===4)return 'desert';
+  if((c+r*2)%7===1||c===4&&r===5)return 'plains';
+  if(c>=5&&r<=5)return 'desert';
+  return 'grass';
+}
+function slab(c,r){
+  const [x,y]=center(c,r),cs=corners(x,y),[lit,shade,side]=TERRA[terrain(c,r)],low=p=>[p[0],p[1]+4];
+  return `<polygon points="${pts([cs[2],cs[3],low(cs[3]),low(cs[2])])}" fill="${side}"/><polygon points="${pts([cs[3],cs[4],low(cs[4]),low(cs[3])])}" fill="${side}"/><polygon points="${pts(cs)}" fill="${shade}" stroke="rgba(15,44,41,.12)" stroke-width="1.2"/><polygon points="${pts([[x,y-2],cs[4],cs[5],cs[0]])}" fill="${lit}" opacity=".78"/>`;
+}
+const art=(h,x,y,w,hh)=>`<image href="art/${h}.png" x="${x}" y="${y}" width="${w}" height="${hh}" preserveAspectRatio="xMidYMid meet"/>`;
+const DECO={'3,5':['f_forest1',-23,-34,46,46],'5,7':['f_forest2',-20,-31,42,42],'0,6':['f_forest1',-23,-34,46,46],'4,9':['f_forest2',-20,-31,42,42],'1,5':['f_hill1',-24,-26,48,40],'2,3':['f_hill1',-24,-26,48,40],'5,2':['f_mountain1',-25,-34,50,50],'-1,5':['f_mountain1',-25,-34,50,50],'4,4':['f_forest2',-20,-31,42,42],'1,1':['f_jungle1',-22,-32,44,44]};
+const RES={'2,3':['r_Sheep',6,-12,24,24],'3,6':['r_Stone',-12,-14,26,26],'1,1':['r_Bananas',6,-10,22,22]};
+function tileArt(c,r){const k=`${c},${r}`,[x,y]=center(c,r);let s='';if(DECO[k]){const [h,dx,dy,w,hh]=DECO[k];s+=art(h,x+dx,y+dy,w,hh)}if(RES[k]){const [h,dx,dy,w,hh]=RES[k];s+=art(h,x+dx,y+dy,w,hh)}return s}
+function borderPath(cc,cr,rad=1){
+  const own=(c,r)=>dist([c,r],[cc,cr])<=rad,out=[];
+  for(let r=cr-rad-1;r<=cr+rad+1;r++)for(let c=cc-rad-1;c<=cc+rad+1;c++){if(!own(c,r))continue;const cs=corners(...center(c,r),.99);
+    NB.forEach((_,i)=>{if(!own(...nbr(c,r,i)))out.push(`M${cs[i][0].toFixed(1)} ${cs[i][1].toFixed(1)}L${cs[(i+1)%6][0].toFixed(1)} ${cs[(i+1)%6][1].toFixed(1)}`)})}
+  return out.join('');
+}
+function tint(cc,cr,rad=1){let s='';for(let r=cr-rad;r<=cr+rad;r++)for(let c=cc-rad-1;c<=cc+rad+1;c++)if(dist([c,r],[cc,cr])<=rad)s+=`<polygon points="${pts(corners(...center(c,r),.97))}" fill="rgba(65,141,254,.13)"/>`;return s}
+const sprites={};
+const loadImage=src=>new Promise((ok,no)=>{const im=new Image();im.onload=()=>ok(im);im.onerror=no;im.src=src});
+async function prep(name,col=[65,141,254]){
+  const im=await loadImage(`art/${name}.png`),cv=document.createElement('canvas');cv.width=im.width;cv.height=im.height;
+  const ctx=cv.getContext('2d',{willReadFrequently:true});ctx.drawImage(im,0,0);const raw=ctx.getImageData(0,0,cv.width,cv.height).data;
+  let x0=cv.width,y0=cv.height,x1=0,y1=0;
+  for(let y=0;y<cv.height;y+=2)for(let x=0;x<cv.width;x+=2)if(raw[(y*cv.width+x)*4+3]>24){x0=Math.min(x0,x);y0=Math.min(y0,y);x1=Math.max(x1,x);y1=Math.max(y1,y)}
+  const w=x1-x0+1,h=y1-y0+1,out=ctx.createImageData(w,h),d=out.data;
+  for(let y=0;y<h;y++)for(let x=0;x<w;x++){const s=((y+y0)*cv.width+x+x0)*4,o=(y*w+x)*4;let r=raw[s],g=raw[s+1],b=raw[s+2];
+    if(g>60&&g>r*1.45&&g>b*1.45){const f=Math.min(1.15,g/255*1.08);r=col[0]*f;g=col[1]*f;b=col[2]*f}d[o]=r;d[o+1]=g;d[o+2]=b;d[o+3]=raw[s+3]}
+  const c2=document.createElement('canvas');c2.width=w;c2.height=h;c2.getContext('2d').putImageData(out,0,0);sprites[name]={src:c2.toDataURL(),ratio:w/h};
+}
+const spr=n=>sprites[n]?.src||`art/${n}.png`;
+function unitOn(name,c,r,h=50){const [x,y]=center(c,r),w=Math.round(h*(sprites[name]?.ratio||.8));return `<ellipse cx="${x}" cy="${y+2}" rx="14" ry="5" fill="rgba(0,0,0,.25)"/><ellipse cx="${x}" cy="${y+1}" rx="13" ry="4.8" fill="none" stroke="#418dfe" stroke-width="2.6"/><image href="${spr(name)}" x="${x-w/2}" y="${y-h}" width="${w}" height="${h}"/>`}
+function world(extra='',cam='',hideOver=0){
+  const t=[],d=[];
+  for(let r=-1;r<=16;r++)for(let c=-1;c<=6;c++){const [x,y]=center(c,r);if(x<-70||x>455||y<-65||y>900)continue;t.push(slab(c,r));d.push(tileArt(c,r))}
+  return `<svg class="world" viewBox="0 0 393 852"><g transform="${cam}"><rect x="-200" y="-200" width="800" height="1250" fill="#e4edf4"/>${t.join('')}${d.join('')}${extra}</g></svg>`;
+}
+const statusBar=(dark)=>`<div class="status-bar" style="color:${dark?'#132435':'#fff'}"><span>12:37</span><span class="status-right"><span class="signal"><i></i><i></i><i></i></span><span class="battery"></span></span></div>`;
+const hud=`<div class="hud"><span class="s">${Y.gold}0<small>+0</small></span><span class="s">${Y.sci}+0</span><span class="s">${Y.cult}0<small>/5</small></span><span class="s">${Y.happy}12</span><span class="s">${Y.faith}0</span><span class="t">T1${sv('menu')}</span></div>`;
+const mapBg=(u='k_warrior',c=2,r=6)=>world(unitOn(u,c,r))+statusBar()+hud;
+function cityBg(){const [x,y]=center(2,2);return world(tint(2,2)+`<path d="${borderPath(2,2)}" stroke="#418dfe" stroke-width="4" fill="none" stroke-linecap="round"/><image href="${spr('c_Ancient_medium')}" x="${x-36}" y="${y-62}" width="72" height="68"/>`,'translate(0 -6)')+statusBar(true)}
+
+/* ---------- Components ---------- */
+const X=`<button class="x" aria-label="Close">${sv('close')}</button>`;
+const head=(title,sub,lead,back)=>`<div class="grab" data-pin="1"></div><div class="head" data-pin="2">${back?`<button class="backbtn" aria-label="Back">${sv('back')}</button>`:''}${lead?`<span class="lead">${lead}</span>`:''}<div class="ttl"><h2>${title}</h2>${sub?`<p>${sub}</p>`:''}</div>${X}</div>`;
+const sec=(t,extra='',pin)=>`<div class="sec" ${pin?`data-pin="${pin}"`:''}>${t}${extra?`<span>${extra}</span>`:''}</div>`;
+const row=({disc,title,meta='',end='',chev=true,cls='',pin})=>`<div class="row ${cls}" ${pin?`data-pin="${pin}"`:''}>${disc||''}<span class="rt"><b>${title}</b>${meta?`<small>${meta}</small>`:''}</span><span class="end">${end}${chev?sv('chev','chev'):''}</span></div>`;
+const group=rows=>`<div class="group">${rows.join('')}</div>`;
+const d=(n,cls='')=>`<span class="disc ${cls}">${gl(n)}</span>`;
+const stats=(items,cls='',n)=>`<div class="stats ${cls}" style="--n:${n||items.length}" data-pin="3">${items.map(i=>`<div class="stat">${i}</div>`).join('')}</div>`;
+const seg=(items,on=0,pin=4)=>`<div class="seg" data-pin="${pin}">${items.map((t,i)=>`<button class="${i===on?'on':''}">${t}</button>`).join('')}</div>`;
+const lockPill=t=>`<span class="pill lock">${sv('lock')}${t}</span>`;
+const moveMeta=(s,m)=>`${s!=null?`<span class="mini">${Y.str}${s}</span>`:''}<span class="mini">${Y.mov}${m}</span>`;
+const cityHead=()=>head('Athens ★','Grows in 11 turns','<span style="width:52px;height:52px;border-radius:50%;background:#418dfe;display:grid;place-items:center;font-size:23px;font-weight:900;color:#fff">1</span>');
+const cityYields=()=>stats([`${Y.food}<b>2</b>`,`${Y.prod}<b>5</b>`,`${Y.gold}<b>5</b>`,`${Y.sci}<b>4</b>`,`${Y.cult}<b>1</b>`,`${Y.faith}<b>0</b>`],'strip');
+const cityTabs=on=>`<div class="foot" data-pin="14"><div class="tabs">${[['build','Build'],['bldg','Buildings'],['hex','Tiles'],['cit','Citizens'],['buy','Buy']].map(([i,l])=>`<span class="${l===on?'on':''}">${gl(i)}${l}</span>`).join('')}</div></div>`;
+const sheet=(inner,{tall,top,foot=false,id=''}={})=>`<section class="sheet ${tall?'tall':''} ${foot?'has-foot':''}" ${id?`id="${id}"`:''} style="${top!=null?`--top:${top}px`:''}" role="dialog">${inner}</section>`;
+
+/* ---------- Scenes ---------- */
+const SCENES={
+  parts:{grp:'System',label:'Parts',caption:'Lists and controls. Same content in every direction: handle, header, stat chips, segmented control, section label, list, selectable, disabled and toggle rows.',
+    bg:()=>cityBg(),html(){return sheet(cityHead()+`<div class="body">${cityYields()}${seg(['Units','Buildings','Wonders'])}${sec('Units','','5')}${group([
+      row({disc:d('hammer'),title:'Worker',meta:moveMeta(null,2),end:'14 turns',pin:6}),
+      row({disc:d('eagle'),title:'Scout',meta:moveMeta(5,2),end:'5 turns<span class="check">'+sv('check')+'</span>',chev:false,cls:'sel',pin:7}),
+      row({disc:d('flag'),title:'Settler',meta:`<span class="why">Requires at least 2 population</span>`,end:'16 turns',cls:'dis',chev:false,pin:8})])}
+      ${sec('Citizens')}${group([row({disc:`<span class="disc hexd">${Y.food}</span>`,title:'Avoid growth',end:'<span class="sw"></span>',chev:false,pin:9})])}</div>`)}},
+  actions:{grp:'System',label:'Actions',caption:'Actions. Primary is the yellow soft sphere, secondary is quiet, destructive is red text and never the thumb-default spot. The footer bar owns the bottom edge.',
+    bg:()=>mapBg(),scrim:true,html(){return sheet(head('Suleiman I','The Ottomans',`<img src="art/p_Suleiman.png" alt="" style="width:52px;height:52px;object-fit:cover;background:#f6f3b5">`)+`<div class="body">
+      ${stats([`${gl('hand','width:20px;height:20px;color:var(--ink2)')}<span style="font-size:15px">Neutral</span>&nbsp;0`,`<span style="font-size:15px">At peace</span>`],'',2)}
+      ${sec('Diplomacy','','5')}${group([
+        row({disc:d('hand'),title:'Offer Declaration of Friendship',meta:'30 turns',pin:6}),
+        row({disc:d('down'),title:'Denounce',meta:'30 turns'}),
+        row({disc:d('demand'),title:'Demands'})])}
+      <div class="stack"><button class="btn danger" data-pin="13">${gl('sword','width:20px;height:20px')}Declare war</button></div></div>
+      <div class="foot" data-pin="14"><button class="btn secondary" data-pin="12">${gl('pinmap','width:20px;height:20px')}Go to on map</button><button class="btn primary grow" data-pin="11">${gl('trade','width:20px;height:20px')}Trade</button></div>`,{foot:true})}},
+  empty:{grp:'System',label:'Empty',caption:'Empty state and footer. The header never disappears (fixes the lost "This turn" header after the game menu). Filter chips sit under the header.',
+    bg:()=>mapBg(),scrim:true,html(){return sheet(head('This turn','0 events')+`<div class="body"><div class="chips" data-pin="10"><span class="chipf on">All</span></div>
+      <div class="empty" data-pin="15"><span class="eico">${sv('bell')}</span>No events this turn</div></div>
+      <div class="foot" data-pin="14"><div class="seg" style="margin:0;flex:none;width:176px">${['Now','Earlier'].map((t,i)=>`<button class="${i?'':'on'}">${t}</button>`).join('')}</div><button class="btn primary grow">Next<span class="badge">1</span></button></div>`,{foot:true,top:390})}},
+
+  cityBuild:{grp:'Applied',label:'City · Build',caption:'City sheet, Build tab. "Pick a construction" becomes an empty production slot, not a heading. The tab bar is the footer and runs under the home bar.',
+    bg:()=>cityBg(),html(){return sheet(cityHead()+`<div class="body">${cityYields()}
+      <div class="slot"><span class="ring">${sv('plus')}</span><span>Pick a construction<small>Nothing in production</small></span></div>
+      ${sec('Units')}${group([
+        row({disc:d('hammer'),title:'Worker',meta:moveMeta(null,2),end:'14 turns'}),
+        row({disc:d('flag'),title:'Settler',meta:`<span class="why">Requires at least 2 population</span>`,end:'16 turns',cls:'dis',chev:false}),
+        row({disc:d('eagle'),title:'Scout',meta:moveMeta(5,2),end:'5 turns'}),
+        row({disc:d('axe'),title:'Warrior',meta:moveMeta(8,2),end:'8 turns'})])}</div>${cityTabs('Build')}`,{tall:true,top:238,foot:true})}},
+  cityTiles:{grp:'Applied',label:'City · Tiles',caption:'Tiles tab. Worked state is a quiet status pill, not a second button; the whole row opens the tile.',
+    bg:()=>cityBg(),html(){return sheet(cityHead()+`<div class="body">${cityYields()}<div class="hint">Tap a tile on the map or below</div>
+      ${sec('Border expansion')}${group([row({disc:d('hex','hexd'),title:'Next border tile',meta:'Grassland, Jungle, Bananas · 0/15 culture',end:'<span class="pill gold">15 turns</span>',chev:false})])}
+      ${sec('City tiles','1 of 7 worked')}${group([
+        row({disc:`<span class="disc" style="background:var(--yellow)">${gl('star','color:#fff')}</span>`,title:'Desert, Hill',meta:`<span class="mini">${Y.prod}2</span><span class="mini">${Y.food}2</span>`,end:'<span class="pill plain">City center</span>'}),
+        row({disc:`<span class="disc" style="background:var(--yellow)">${gl('dyes')}</span>`,title:'Plains, Jungle, Dyes',meta:`<span class="mini">${Y.food}2</span><span class="mini">${Y.gold}2</span>`,end:'<span class="pill good">Worked</span>'}),
+        row({disc:`<span class="disc" style="background:#b9d3e0">${gl('sheep')}</span>`,title:'Desert, Hill, Sheep',meta:`<span class="mini">${Y.prod}2</span><span class="mini">${Y.food}1</span>`,end:'<span class="pill plain" style="opacity:.8">Unworked</span>'})])}</div>${cityTabs('Tiles')}`,{tall:true,top:238,foot:true})}},
+  cityTile:{grp:'Applied',label:'City · Tile',caption:'One tile, pushed inside the city sheet. Back replaces the city badge in the same header slot; the Details popup folds into the rows.',
+    bg:()=>cityBg(),html(){return sheet(head('Desert, Hill, Sheep','Unworked',null,true)+`<div class="body">
+      ${stats([`${Y.prod}<b>2</b>`,`${Y.food}<b>1</b>`,''],'',3).replace('<div class="stat"></div>','<div></div>')}
+      ${sec('On this tile')}${group([
+        row({disc:`<span class="disc" style="background:#eba45b"><img src="art/f_desert1.png" alt=""></span>`,title:'Desert'}),
+        row({disc:`<span class="disc" style="background:#eba45b"><img src="art/f_hill1.png" alt=""></span>`,title:'Hill',meta:'+25% to unit defence'}),
+        row({disc:`<span class="disc" style="background:#b9d3e0">${gl('sheep')}</span>`,title:'Sheep',end:lockPill('Animal Husbandry')}),
+        row({disc:d('bldg','hexd'),title:'Owned by Athens',chev:false})])}</div>
+      <div class="foot"><button class="btn primary grow">Assign citizen</button></div>`,{tall:true,top:238,foot:true})}},
+  tech:{grp:'Applied',label:'Tech',caption:'Tech, Next up. The segmented control replaces the underline tabs; "Pick a tech" is an empty research slot, no longer a fake button. "See the full tree" is dropped: it repeats the Full tree tab.',
+    bg:()=>mapBg(),scrim:true,html(){const turns='<span style="font-size:17px">∞</span>&nbsp;turns';return sheet(head('Technology','+0 science per turn')+`<div class="body">${seg(['Next up','Full tree'])}
+      <div class="slot"><span class="ring">${sv('plus')}</span><span>Pick a tech<small>Nothing researching</small></span></div>
+      ${sec('Pick next')}${group([
+        row({disc:techDisc('amphora'),title:'Pottery',meta:`<span class="mini">${md('granary')}Granary</span><span class="mini">${md('shrine')}Shrine</span>`,end:turns}),
+        row({disc:techDisc('fence'),title:'Animal Husbandry',meta:`<span class="mini">${md('horse',1)}</span><span class="mini">${md('fence')}</span>`,end:turns}),
+        row({disc:techDisc('bow'),title:'Archery',meta:`<span class="mini wonder">${md('temple')}Temple of Artemis</span>`,end:turns}),
+        row({disc:techDisc('pick'),title:'Mining',meta:`<span class="mini">${md('mine',1)}</span><span class="mini">${md('chop')}</span>`,end:turns})])}
+      ${sec('Goals')}<div class="chips">${['Wonders','Units','Buildings'].map((t,i)=>`<span class="chipf ${i?'':'on'}">${t}</span>`).join('')}</div><div style="height:8px"></div>${group([
+        row({disc:wd('Temple of Artemis'),title:'Temple of Artemis',meta:'Archery',end:'1 tech'}),
+        row({disc:wd('The Pyramids'),title:'The Pyramids',meta:'Mining, Masonry',end:'2 techs'}),
+        row({disc:wd('Stonehenge'),title:'Stonehenge',meta:'Pottery, Calendar',end:'2 techs'})])}</div>`,{tall:true,top:62})}},
+  diplo:{grp:'Applied',label:'Diplomacy',caption:'Diplomacy list. Every civ is the same row (no legacy button, no stray dot); the sheet hugs its content instead of filling the screen.',
+    bg:()=>mapBg(),scrim:true,html(){return sheet(head('Diplomacy','1 civilization met')+`<div class="body">${sec('Everyone you have met')}${group([
+      row({disc:`<span class="disc" style="background:none">${emblem('gre')}</span>`,title:'Alexander',meta:'Greece, you · Score 4',chev:false}),
+      row({disc:`<span class="disc" style="background:none">${emblem('ott')}</span>`,title:'Suleiman I',meta:'The Ottomans · Neutral'})])}</div>`)}},
+  civ:{grp:'Applied',label:'Civ detail',caption:'Civ detail becomes a pushed sheet, not a legacy full screen. Every action is a full-width row, so long labels never clip; Trade takes the footer.',
+    bg:()=>mapBg(),scrim:true,html(){return sheet(head('Suleiman I','The Ottomans',`<img src="art/p_Suleiman.png" alt="" style="width:52px;height:52px;object-fit:cover;background:#f6f3b5">`,true)+`<div class="body">
+      <div class="quote">Greetings!</div>
+      ${stats([`${gl('hand','width:20px;height:20px;color:var(--ink2)')}<span style="font-size:15px">Neutral</span>&nbsp;0`,`<span style="font-size:15px">At peace</span>`],'',2)}
+      <div class="note">${sv('up2')}Years of peace have strengthened our relations</div>
+      ${group([
+        row({disc:d('hand'),title:'Offer Declaration of Friendship',meta:'30 turns'}),
+        row({disc:d('down'),title:'Denounce',meta:'30 turns'}),
+        row({disc:d('demand'),title:'Demands'}),
+        row({disc:d('pinmap'),title:'Go to on map'}),
+        row({disc:`<span class="disc" style="background:var(--dangerbg);color:var(--dangerink)">${gl('sword')}</span>`,title:'Declare war',cls:'danger'})])}</div>
+      <div class="foot"><button class="btn primary grow">${gl('trade','width:20px;height:20px')}Trade</button></div>`,{tall:true,top:96,foot:true})}},
+  notes:{grp:'Applied',label:'Notifications',caption:'Notifications, This turn. Header is part of the sheet, so it survives the game menu. Now/Earlier and Next live in the footer under the thumb.',
+    bg:()=>mapBg(),scrim:true,html(){return SCENES.empty.html()}},
+  menu:{grp:'Applied',label:'Game menu',caption:'The ≡ menu becomes a normal sheet: grouped rows with icons, Exit last in red, no Close button (handle, X, scrim tap and swipe all close).',
+    bg:()=>mapBg(),scrim:true,html(){return sheet(head('Menu')+`<div class="body">${group([
+      row({disc:d('save'),title:'Save game'}),row({disc:d('load'),title:'Load game'})])}${sec('')}${group([
+      row({disc:d('book'),title:'Civilopedia'}),row({disc:d('trophy'),title:'Victory status'}),row({disc:d('sliders'),title:'Options'})])}${sec('')}${group([
+      row({disc:d('newgame'),title:'Start new game'}),row({disc:d('home'),title:'Main menu'}),
+      row({disc:`<span class="disc" style="background:var(--dangerbg);color:var(--dangerink)">${gl('exit')}</span>`,title:'Exit',cls:'danger',chev:false})])}</div>`)}},
+  pedia:{grp:'Applied',label:'Civilopedia',caption:'Civilopedia home. Search stays pinned in the footer; shelves use the same card and row styles as every other sheet.',
+    bg:()=>mapBg(),scrim:true,html(){const cats=[['unitsC','Units',127],['bldgC','Buildings',70],['wonderC','Wonders',54],['techC','Techs',80],['resC','Resources',35],['terC','Terrains',33],['impC','Improvements',35],['civC','Civilizations',75],['polC','Policies',70],['relC','Religions',58]];
+      return sheet(head('Civilopedia')+`<div class="body">${sec('From your game')}<div class="shelf">
+        <div class="card">${emblem('gre',56)}<b>Greece</b><span>Your civilization</span></div>
+        <div class="card"><img src="${spr('k_hoplite')}" alt=""><b>Hoplite</b><span>Your unique unit</span></div>
+        <div class="card"><img src="${spr('k_companion cavalry')}" alt=""><b style="font-size:13.5px">Companion Cavalry</b><span>Your unique unit</span></div></div>
+        ${sec('Browse')}<div class="grid2">${cats.map(([i,t,n])=>`<div class="cat">${d(i)}<div><span class="ct">${t}</span><span class="cn">${n}</span></div></div>`).join('')}</div>
+        <button class="more">More categories</button></div>
+        <div class="foot"><div class="search">${sv('search')}Search every entry</div></div>`,{tall:true,top:58,foot:true})}},
+  more:{grp:'Applied',label:'Unit More',caption:'Unit More sheet. Same row as every list; Fortify keeps the yellow disc as the suggested action. The Close button goes: X, scrim and swipe already close.',
+    bg:()=>mapBg(),scrim:true,html(){return sheet(head('Warrior','',`<span style="width:52px;height:52px;border-radius:50%;background:#fff;display:grid;place-items:center;color:#418dfe">${gl('axe','width:30px;height:30px')}</span>`)+`<div class="body">${group([
+      row({disc:d('shield','yellow'),title:'Fortify',chev:false}),row({disc:d('stop'),title:'Stop movement',chev:false}),row({disc:d('eagle'),title:'Explore',chev:false}),
+      row({disc:d('skip'),title:'Skip turn',chev:false}),row({disc:d('target'),title:'Show unit destination',chev:false}),row({disc:d('gear'),title:'Automate',chev:false})])}</div>`)}},
+  tile:{grp:'Applied',label:'Tile info',caption:'Tile info. Yields are stat chips; each thing on the tile is a row that opens its Civilopedia entry.',
+    bg:()=>mapBg('k_settler',2,5),scrim:true,html(){return sheet(head('Grassland','Unowned',`<svg viewBox="0 0 64 56" width="52" height="46"><polygon points="32,6 58,19 58,39 32,52 6,39 6,19" fill="#7dc248"/><polygon points="32,6 58,19 32,30 6,19" fill="#88cd50"/><image href="art/r_Stone.png" x="18" y="10" width="28" height="28"/></svg>`)+`<div class="body">
+      ${stats([`${Y.prod}<b>1</b>`,`${Y.food}<b>2</b>`,''],'',3).replace('<div class="stat"></div>','<div></div>')}
+      ${group([row({disc:`<span class="disc">${'<img src="art/r_Stone.png" alt="">'}</span>`,title:'Stone',meta:'Bonus resource',end:lockPill('Masonry')}),
+        row({disc:`<span class="disc" style="background:#88cd50">${gl('hex','color:#fff')}</span>`,title:'Grassland'})])}</div>`)}},
+  unit:{grp:'Applied',label:'Unit info',caption:'Unit info. Health bar, three stat boxes, then rows. Same header, handle and close as every sheet.',
+    bg:()=>mapBg('k_settler',2,5),scrim:true,html(){return sheet(head('Settler','Greece · Civilian',`<span style="width:52px;height:52px;border-radius:50%;background:#fff;display:grid;place-items:center;color:#418dfe">${gl('flag','width:30px;height:30px')}</span>`)+`<div class="body">
+      <div class="hpbar"><i style="width:100%"></i></div><div class="hpcap"><span>Health</span><span>100 / 100</span></div>
+      ${stats(['<b>0</b><span>Strength</span>','<b>2/2</b><span>Movement</span>','<b>0/10</b><span>XP</span>'],'boxes')}
+      ${group([row({disc:`<span class="disc">${sv('shieldS').replace('<svg','<svg style="fill:#dfe8f0;stroke:#132435;stroke-width:2"')}</span>`,title:'Promotions',meta:'Available at 10 XP'}),
+        row({disc:`<span class="disc" style="background:#88cd50"><img src="art/f_hill1.png" alt=""></span>`,title:'On Grassland, Hill',meta:`<span class="mini">${sv('shieldS').replace('<svg','<svg style="fill:none;stroke:currentColor;stroke-width:2.4"')}+25% defense</span>`})])}</div>`)}},
+  motion:{grp:'Motion',label:'Motion',caption:'Open, swipe down, and the city peek. Use the buttons above; the tile sheet opens on load.',
+    bg:()=>mapBg('k_settler',2,5),motion:true,html(){return `<div class="scrim" style="opacity:0"></div>`+SCENES.tile.html().replace('role="dialog"','role="dialog" id="msheet" style="transform:translateY(110%)"')+`<div class="finger"></div>`}}
+};
+const LEGEND=['Grab handle, 40x5, same on every sheet','Header: lead, title, optional subtitle, close. 72pt tall','Stat chips','Segmented control','Section label','List row: disc, title, meta, trailing value, chevron','Selectable row','Disabled row with the reason in red','Toggle row','Filter chips','Primary: yellow soft sphere, 56pt','Secondary','Destructive','Footer action bar, runs under the home bar','Empty state'];
+
+/* ---------- Motion ---------- */
+/* Spring: response 0.42s, damping 0.82 (iOS-style parameters). */
+const SPR={w:2*Math.PI/.42,z:.82};SPR.wd=SPR.w*Math.sqrt(1-SPR.z*SPR.z);
+const springAt=t=>t>=.6?1:1-Math.exp(-SPR.z*SPR.w*t)*(Math.cos(SPR.wd*t)+SPR.z*SPR.w/SPR.wd*Math.sin(SPR.wd*t));
+const easeIn=p=>p*p*p,easeOut=p=>1-Math.pow(1-p,3),easeIO=p=>p<.5?4*p*p*p:1-Math.pow(-2*p+2,3)/2,seg2=(p,a,b)=>Math.min(1,Math.max(0,(p-a)/(b-a)));
+let motionRAF=0;
+function play(dur,step){cancelAnimationFrame(motionRAF);const t0=performance.now();const f=now=>{const ms=Math.min(dur,now-t0);step(ms/dur,ms);if(ms<dur)motionRAF=requestAnimationFrame(f)};motionRAF=requestAnimationFrame(f)}
+const MOTION_NOTES=`<h3>Motion spec</h3><ul>
+<li><b>Open:</b> rises from the bottom edge on a spring (response 0.42s, damping 0.82: settles, no visible bounce). Scrim fades 0 to 35% over 240ms, starting together.</li>
+<li><b>Close:</b> X, scrim tap, or swipe. 200ms ease-in down past the edge; scrim fades with it.</li>
+<li><b>Swipe down:</b> the sheet tracks the finger 1:1 from the handle or header (from the body only when it is scrolled to the top). Release past 72pt or faster than 800pt/s closes; otherwise it springs back. Scrim thins as the sheet drops.</li>
+<li><b>City sheet:</b> the only snap point. Full height or a 64pt peek (header only, map free). Swipe down collapses, swipe up or tap the header expands, X leaves the city.</li>
+<li><b>Everything else:</b> no detents. Sheets hug their content up to the status bar.</li>
+<li><b>Reduce Motion:</b> 150ms crossfade, no rise.</li></ul>`;
+const parts=()=>[...document.querySelectorAll('.screen')].map(sc=>({sc,s:sc.querySelector('#msheet'),scrim:sc.querySelector('.scrim'),f:sc.querySelector('.finger')})).filter(o=>o.s);
+function motionRun(kind){
+  const P=parts();
+  if(kind==='open')play(600,(p,ms)=>P.forEach(({s,scrim})=>{s.style.transform=`translateY(${((1-springAt(ms/1000))*100).toFixed(2)}%)`;scrim.style.opacity=(.35*Math.min(1,ms/240)).toFixed(3)}));
+  if(kind==='swipe')play(1600,p=>P.forEach(({s,scrim,f})=>{
+    const h=s.offsetHeight,top=852-h,drag=110*easeIO(seg2(p,.25,.65)),rel=easeIn(seg2(p,.65,.78)),y=drag+(h+10-drag)*rel;
+    s.style.transform=`translateY(${y.toFixed(1)}px)`;scrim.style.opacity=(.35*Math.max(0,1-y/h)).toFixed(3);
+    f.style.left='196px';f.style.top=`${top+14+drag}px`;f.style.opacity=p<.12?0:p<.25?(p-.12)/.13:p<.65?1:Math.max(0,1-(p-.65)/.08);}));
+}
+function peekRun(){
+  document.querySelectorAll('.screen').forEach(sc=>{
+    sc.innerHTML=cityBg()+SCENES.cityBuild.html().replace('role="dialog"','role="dialog" id="csheet"')+'<div class="finger"></div><div class="home-ind"></div>';
+    sc.querySelector('.head .x').insertAdjacentHTML('beforebegin',`<span class="peek-chev">${sv('up')}</span>`);
+  });
+  const P=[...document.querySelectorAll('.screen')].map(sc=>({s:sc.querySelector('#csheet'),b:sc.querySelector('#csheet .body'),ft:sc.querySelector('#csheet .foot'),c:sc.querySelector('.peek-chev'),f:sc.querySelector('.finger')}));
+  const dy=(852-238)-(13+72+34);
+  play(1600,p=>P.forEach(({s,b,ft,c,f})=>{
+    const drag=dy*.5*easeIO(seg2(p,.2,.55)),y=drag+(dy-drag)*easeOut(seg2(p,.55,.75)),k=y/dy;
+    s.style.transform=`translateY(${y.toFixed(1)}px)`;b.style.opacity=ft.style.opacity=(1-k).toFixed(3);c.style.opacity=k.toFixed(3);
+    f.style.left='196px';f.style.top=`${252+drag}px`;f.style.opacity=p<.08?0:p<.2?(p-.08)/.12:p<.55?1:Math.max(0,1-(p-.55)/.08);}));
+}
+
+/* ---------- Render ---------- */
+const state={scene:'parts',variant:'a',compare:innerWidth>=1240,labels:true};
+const ORDER=Object.keys(SCENES);
+function buildTabs(){
+  let html='',last='';
+  for(const k of ORDER){const s=SCENES[k];if(s.grp!==last){if(last)html+='<span class="sep"></span>';html+=`<span class="grp">${s.grp}</span>`;last=s.grp}
+    html+=`<button type="button" role="tab" data-scene="${k}">${s.label}</button>`}
+  document.getElementById('scenes').innerHTML=html;
+}
+function placePins(sc){
+  sc.querySelectorAll('.pin,.edge-tag').forEach(p=>p.remove());
+  if(!state.labels||SCENES[state.scene].grp!=='System')return;
+  const box=sc.getBoundingClientRect(),k=box.width/393;
+  sc.querySelectorAll('[data-pin]').forEach(el=>{const r=el.getBoundingClientRect();if(!r.height)return;
+    const p=document.createElement('span');p.className='pin';p.textContent=el.dataset.pin;
+    const n=+el.dataset.pin,x=n===1?(r.right-box.left)/k+6:Math.max(1,(r.left-box.left)/k-9),y=(r.top-box.top)/k+(n===1?-6:n===2?4:r.height/k/2-9);
+    p.style.left=x+'px';p.style.top=y+'px';sc.appendChild(p)});
+  const t=document.createElement('span');t.className='edge-tag';t.textContent='16  square edge, fill under home bar';sc.appendChild(t);
+}
+function render(){
+  const S=SCENES[state.scene],ws=document.getElementById('workspace');
+  const dirs=state.compare?['a','b','c']:[state.variant];
+  ws.innerHTML=dirs.map(v=>`<div class="col"><div class="thesis"><b>${DIRS[v].name}</b>${DIRS[v].thesis}</div><div class="viewport"><div class="phone dir-${v}"><div class="screen">${S.bg()}${S.scrim?'<div class="scrim"></div>':''}${S.html()}<div class="home-ind"></div></div></div></div></div>`).join('')
+    +(S.grp==='System'&&state.labels?`<aside class="aside"><h3>Anatomy</h3><ol>${LEGEND.map(l=>`<li>${l}</li>`).join('')}<li>Square bottom edge; the sheet color fills behind the home indicator</li></ol></aside>`:'')
+    +(S.motion?`<aside class="aside">${MOTION_NOTES}</aside>`:'');
+  document.querySelectorAll('[data-scene]').forEach(b=>b.setAttribute('aria-selected',String(b.dataset.scene===state.scene)));
+  document.getElementById('caption').innerHTML=S.caption;
+  document.getElementById('variant').value=state.variant;document.getElementById('variant').disabled=state.compare;
+  document.getElementById('compare').setAttribute('aria-pressed',String(state.compare));
+  document.getElementById('labels').setAttribute('aria-pressed',String(state.labels));
+  document.getElementById('labels').hidden=S.grp!=='System';
+  ['m-open','m-swipe','m-peek'].forEach(id=>document.getElementById(id).hidden=!S.motion);
+  fit();
+  requestAnimationFrame(()=>{document.querySelectorAll('.screen').forEach(placePins);if(S.motion){const act=new URLSearchParams(location.search).get('act');setTimeout(()=>act==='peek'?peekRun():act==='swipe'?motionRun('swipe'):motionRun('open'),250)}});
+  history.replaceState(null,'',`?scene=${state.scene}&v=${state.variant}${state.compare?'&cmp=1':''}${S.motion&&q.get('act')?'&act='+q.get('act'):''}`);
+}
+function fit(){
+  const ch=document.querySelector('.chrome'),n=state.compare?3:1,aside=document.querySelector('.aside')?1:0;
+  const h=Math.max(360,innerHeight-ch.getBoundingClientRect().height-90);
+  const w=innerWidth-40-(n-1)*26-(aside&&innerWidth>=900?326:0);
+  const narrow=innerWidth<450&&n===1,s=narrow?Math.min(1,innerWidth/393):Math.min(1,h/852,w/n/393);document.querySelectorAll('.col').forEach(c=>c.style.setProperty('--scale',s.toFixed(4)));
+  document.querySelectorAll('.phone').forEach(p=>p.classList.toggle('bare',narrow));document.getElementById('workspace').classList.toggle('narrow',narrow);
+}
+document.getElementById('scenes').addEventListener('click',e=>{const b=e.target.closest('[data-scene]');if(!b)return;state.scene=b.dataset.scene;render()});
+document.getElementById('variant').addEventListener('change',e=>{state.variant=e.target.value;render()});
+document.getElementById('compare').addEventListener('click',()=>{state.compare=!state.compare;render()});
+document.getElementById('labels').addEventListener('click',()=>{state.labels=!state.labels;render()});
+document.getElementById('m-open').addEventListener('click',()=>{render()});
+document.getElementById('m-swipe').addEventListener('click',()=>motionRun('swipe'));
+document.getElementById('m-peek').addEventListener('click',peekRun);
+addEventListener('keydown',e=>{if(e.target.tagName==='SELECT')return;if(e.key==='l'||e.key==='L'){state.labels=!state.labels;render()}
+  if(['1','2','3'].includes(e.key)){state.variant='abc'[+e.key-1];state.compare=false;render()}});
+addEventListener('resize',()=>{fit();document.querySelectorAll('.screen').forEach(placePins)});
+const q=new URLSearchParams(location.search);
+if(SCENES[q.get('scene')])state.scene=q.get('scene');if(DIRS[q.get('v')])state.variant=q.get('v');if(q.has('cmp'))state.compare=q.get('cmp')==='1';if(q.get('labels')==='0')state.labels=false;
+buildTabs();
+Promise.allSettled(['k_warrior','k_settler','k_hoplite','k_companion cavalry','c_Ancient_medium'].map(n=>prep(n))).then(()=>render());
+</script>
+</body>
+</html>
