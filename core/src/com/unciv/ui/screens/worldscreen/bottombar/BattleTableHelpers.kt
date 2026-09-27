@@ -307,11 +307,18 @@ object BattleTableHelpers {
             )
         )
         if (portrait) {
-            // A ranged shot flies an arc before the hit lands
+            // A ranged shot flies an arc before the hit lands; a defeated unit then tips over and puffs away
             val flight = if (ranged && !UncivGame.Current.settings.reduceMotion) .42f else 0f
             if (ranged) {
                 mapHolder.motion.play(mapHolder.motion.Projectile(moveActorsDuration, attackerGroup, defenderGroup))
                 if (flight > 0f) sequence.addAction(Actions.delay(flight))
+            }
+            for (combatant in listOf(attacker, defender)) {
+                if (combatant !is MapUnitCombatantView || !combatant.isDefeated() || combatant.getUnitView().isAirUnit()) continue
+                val unitId = combatant.getUnitView().id
+                val tile = mapHolder.tileGroups[combatant.getTile()] ?: continue
+                val sprite = mapHolder.liveSprite(unitId) ?: continue
+                mapHolder.motion.play(mapHolder.motion.DefeatClip(moveActorsDuration + flight, 1f, tile, sprite, unitId))
             }
         }
         sequence.addAction(

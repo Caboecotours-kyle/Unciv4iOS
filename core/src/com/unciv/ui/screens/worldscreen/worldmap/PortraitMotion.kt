@@ -268,6 +268,31 @@ internal class PortraitMotion(private val holder: WorldMapHolder) {
         }
     }
 
+    /** Flashes as it is hit, tips over about 78 degrees, fades and leaves a white puff. */
+    inner class DefeatClip(delay: Float, speed: Float, tile: TileGroup, sprite: List<SpriteCopy>, unitId: Int = -1) :
+        GhostClip(delay, speed = speed, length = .94f, unitId = unitId, home = tile, sprite = sprite, realTile = tile) {
+        private val base = ghost.children.map { it.color.cpy() }
+        private var puffed = false
+        override fun pose(t: Float) {
+            hideReal()
+            rest(home)
+            if (t < 0f) return
+            val hit = t / .46f
+            val flash = if (hit < 1f) (1f - hit * 1.6f).coerceAtLeast(0f) else 0f
+            for ((image, color) in ghost.children.zip(base)) image.color = color.cpy().lerp(Color.WHITE, flash)
+            val u = unitScale(home)
+            if (hit < 1f) ghost.x += (-8f * (1f - hit) * (1f - hit) + sin(hit * 40f) * 2.5f * (1f - hit)) * u
+            val fall = ((t - .42f) / .52f).coerceIn(0f, 1f)
+            ghost.rotation = 78f * ease(fall)
+            ghost.x -= 10f * u * ease(fall)
+            ghost.color.a = 1f - ((fall - .55f) / .45f).coerceIn(0f, 1f)
+            if (fall >= .6f && !puffed) {
+                puffed = true
+                play(Puff(0f, home))
+            }
+        }
+    }
+
     /**
      * A founded city: the settler hops in place and sinks, the city rises with dust, the border draws around
      * clockwise and the banner drops in. [territory] are the city's tiles; [settler] is optional.
@@ -407,6 +432,18 @@ internal class PortraitMotion(private val holder: WorldMapHolder) {
             val angle = PI * (.15 + .7 * index / 4.0)
             place(actor, groundX(tile) - cos(angle).toFloat() * 22f * ease(p) * u,
                 groundY(tile) + 4f * u + (sin(angle).toFloat() * 26f * p - 30f * p * p) * u)
+            actor.color.a = 1f - p
+        }
+    }
+
+    inner class Puff(delay: Float, private val tile: TileGroup) : Effect(delay, .56f, 7) {
+        private val u = unitScale(tile)
+        override fun make(index: Int) = circle("f2f2ee", (10f + 2f * (index % 3)) * u)
+        override fun step(index: Int, actor: Actor, p: Float) {
+            val angle = 2 * PI * index / 7
+            place(actor, groundX(tile) - 8f * u + cos(angle).toFloat() * 20f * ease(p) * u,
+                groundY(tile) + (18f - sin(angle).toFloat() * 12f * ease(p) + 10f * p) * u)
+            actor.setScale(1.2f - .6f * p)
             actor.color.a = 1f - p
         }
     }
