@@ -89,6 +89,8 @@ internal class PortraitMotion(private val holder: WorldMapHolder) {
         private var elapsed = 0f
         val time get() = (elapsed - delay) * speed
         open val unitId get() = -1
+        /** Runs once after [end], whether the clip played out, was skipped or was stopped */
+        var onEnd: (() -> Unit)? = null
         abstract fun pose(t: Float)
         open fun end() {}
         internal fun advance(delta: Float) { elapsed += delta }
@@ -137,6 +139,7 @@ internal class PortraitMotion(private val holder: WorldMapHolder) {
     private fun finish(clip: Clip) {
         clip.pose(clip.length)
         clip.end()
+        clip.onEnd?.let { clip.onEnd = null; it() }
     }
 
     /** Lands every clip on its end state; clips started by those endings finish at once. */
@@ -150,6 +153,13 @@ internal class PortraitMotion(private val holder: WorldMapHolder) {
             finish(clip)
         }
         stopping = false
+    }
+
+    /** Runs [action] when [unitId]'s last playing clip ends, or at once when it has none. */
+    fun afterUnit(unitId: Int, action: () -> Unit) {
+        val clip = clips.lastOrNull { it.unitId == unitId } ?: return action()
+        val previous = clip.onEnd
+        clip.onEnd = { previous?.invoke(); action() }
     }
 
     fun finishUnit(unitId: Int) {

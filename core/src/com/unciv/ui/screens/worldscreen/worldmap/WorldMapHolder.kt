@@ -639,8 +639,13 @@ class WorldMapHolder @JvmOverloads constructor(
                         moveUnitToTargetTile(selectedUnits.subList(1, selectedUnits.size), targetTileView)
                     } else removeUnitActionOverlay() //we're done here
 
-                    if (UncivGame.Current.settings.autoUnitCycle && !selectedUnitView.hasMovement())
-                        worldScreen.switchToNextUnit()
+                    if (UncivGame.Current.settings.autoUnitCycle && !selectedUnitView.hasMovement()) {
+                        // A portrait hop keeps the camera until it lands, unless the player picked another unit meanwhile
+                        if (motion.isMoving(selectedUnitView.id)) motion.afterUnit(selectedUnitView.id) {
+                            val selected = worldScreen.bottomUnitTable.selectedUnit
+                            if (selected == null || selected == selectedUnitView) worldScreen.switchToNextUnit()
+                        } else worldScreen.switchToNextUnit()
+                    }
 
                 } catch (ex: Exception) {
                     Log.error("Exception in moveUnitToTargetTile", ex)
