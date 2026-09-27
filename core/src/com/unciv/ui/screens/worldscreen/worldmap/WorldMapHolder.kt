@@ -707,7 +707,7 @@ class WorldMapHolder @JvmOverloads constructor(
 
     /** A selected sprite breathes twice on the default battery-saving setting. */
     internal fun updateSelectedUnitBreathing() {
-        if (!currentTileSetStrings.projection.tilted || !::tileGroupMap.isInitialized) {
+        if (!currentTileSetStrings.projection.tilted || !::tileGroupMap.isInitialized || UncivGame.Current.settings.reduceMotion) {
             stopBreathing()
             return
         }
