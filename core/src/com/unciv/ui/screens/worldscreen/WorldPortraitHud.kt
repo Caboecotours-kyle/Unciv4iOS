@@ -14,6 +14,7 @@ import com.badlogic.gdx.scenes.scene2d.InputListener
 import com.badlogic.gdx.scenes.scene2d.actions.Actions
 import com.badlogic.gdx.scenes.scene2d.utils.ActorGestureListener
 import com.badlogic.gdx.scenes.scene2d.utils.NinePatchDrawable
+import com.badlogic.gdx.scenes.scene2d.utils.TextureRegionDrawable
 import com.badlogic.gdx.scenes.scene2d.ui.Image
 import com.badlogic.gdx.graphics.Color
 import com.badlogic.gdx.scenes.scene2d.Actor
@@ -55,6 +56,8 @@ import com.unciv.ui.screens.worldscreen.unit.actions.UnitActionsTable
 import com.unciv.ui.screens.worldscreen.worldmap.MotionTextures
 import com.unciv.ui.screens.worldscreen.worldmap.turnOrder
 import kotlin.math.cos
+import kotlin.math.exp
+import kotlin.math.hypot
 import kotlin.math.min
 import kotlin.math.roundToInt
 import kotlin.math.sin
@@ -125,7 +128,98 @@ internal class WorldPortraitHud(
         repeat(3) { index -> add(ImageGetter.getCircle(ink)).size(5f).padRight(if (index < 2) 4f else 0f) }
     }
 
-    private class Disc(val shadowColor: Color) : Table()
+    /** Round button tones of style C "soft sphere": top-left lit radial gradient stops from the approved mock */
+    private enum class Tone(val light: String, val mid: String, val edge: String, val stop: Float) {
+        White("ffffff", "eef5fb", "cfdce8", .42f),
+        Yellow("ffe58f", "ffc93c", "e8a916", .45f),
+        Navy("2d4a66", "1c3249", "132435", .5f),
+    }
+
+    /** Gradient and soft-shadow textures, drawn once per tone and pixel size and disposed with the HUD */
+    private val discTextures = HashMap<String, Texture>()
+
+    private fun pixels(points: Float): Int {
+        val viewport = world.stage.viewport
+        val perUnit = viewport.screenWidth / viewport.worldWidth * Gdx.graphics.backBufferWidth / max(1, Gdx.graphics.width)
+        return (points * scaleX * perUnit).roundToInt().coerceIn(8, 640)
+    }
+
+    private fun discTexture(key: String, size: Int, pixel: (x: Float, y: Float, color: Color) -> Unit): Texture =
+        discTextures.getOrPut("$key/$size") {
+            val pixels = Pixmap(size, size, Pixmap.Format.RGBA8888)
+            pixels.blending = Pixmap.Blending.None
+            val color = Color()
+            for (y in 0 until size) for (x in 0 until size) {
+                pixel(x + .5f, y + .5f, color)
+                pixels.drawPixel(x, y, Color.rgba8888(color))
+            }
+            Texture(pixels).also {
+                pixels.dispose()
+                it.setFilter(Texture.TextureFilter.Linear, Texture.TextureFilter.Linear)
+            }
+        }
+
+    /** CSS radial-gradient(circle at 36% 30%, ...) reaching the farthest corner, cut to an antialiased circle */
+    private fun sphere(tone: Tone, points: Float): Texture {
+        val size = pixels(points)
+        val light = Color.valueOf(tone.light)
+        val mid = Color.valueOf(tone.mid)
+        val edge = Color.valueOf(tone.edge)
+        val reach = size * hypot(.64f, .7f)
+        return discTexture("sphere/${tone.name}", size) { x, y, color ->
+            val d = hypot(x - .36f * size, y - .3f * size) / reach
+            if (d < tone.stop) color.set(light).lerp(mid, d / tone.stop) else color.set(mid).lerp(edge, (d - tone.stop) / (1f - tone.stop))
+            color.a = (size / 2f + .5f - hypot(x - size / 2f, y - size / 2f)).coerceIn(0f, 1f)
+        }
+    }
+
+    /** CSS box-shadow blur [blur] (a Gaussian of half that deviation) around a [points] circle, in rgba(7,17,28,[alpha]) */
+    private fun softShadow(points: Float, blur: Float, alpha: Float): Texture {
+        val span = points + blur * 2.8f
+        val size = pixels(span)
+        val perPoint = size / span
+        val radius = points / 2f * perPoint
+        val sigma = blur / 2f * perPoint
+        return discTexture("shadow/$points/$blur/$alpha", size) { x, y, color ->
+            val d = hypot(x - size / 2f, y - size / 2f)
+            color.set(7f / 255f, 17f / 255f, 28f / 255f, alpha / (1f + exp(1.702f * (d - radius) / sigma)))
+        }
+    }
+
+    /** A soft-sphere disc: the shadow sits centred and slightly low, dims with the disc, and a press scales it to .94 */
+    private inner class Disc(tone: Tone, size: Float) : Table() {
+        private val big = size >= 90f
+        private val drop = if (big) 4f else 3f
+        private val blur = if (big) 12f else 9f
+        private val shade = softShadow(size, blur, if (big) .3f else .26f)
+        var pressable = true
+
+        init {
+            background = TextureRegionDrawable(TextureRegion(sphere(tone, size)))
+            touchable = Touchable.enabled
+            addListener(object : InputListener() {
+                override fun touchDown(event: InputEvent?, x: Float, y: Float, pointer: Int, button: Int): Boolean {
+                    if (!pressable || pointer != 0) return false
+                    press(true)
+                    return true
+                }
+                override fun touchUp(event: InputEvent?, x: Float, y: Float, pointer: Int, button: Int) = press(false)
+            })
+        }
+
+        private fun press(down: Boolean) {
+            isTransform = down
+            setOrigin(width / 2f, height / 2f)
+            setScale(if (down) .94f else 1f)
+        }
+
+        override fun drawBackground(batch: Batch, parentAlpha: Float, x: Float, y: Float) {
+            val margin = blur * 1.4f
+            batch.setColor(1f, 1f, 1f, color.a * parentAlpha)
+            batch.draw(shade, x - margin, y - margin - drop, width + 2f * margin, height + 2f * margin)
+            super.drawBackground(batch, parentAlpha, x, y)
+        }
+    }
     /** [note] is the side effect shown while held; [chip] stays visible (attack damage); [tag] names the disc for tutorial rings. */
     private class ArcAction(val image: Actor, val title: String, val enabled: Boolean,
         val note: String? = null, val chip: String? = null, val tag: String? = null, val activate: () -> Unit)
@@ -179,10 +273,8 @@ internal class WorldPortraitHud(
         if (type.isSkippingToNextUnit && world.game.settings.autoUnitCycle) "Next unit".tr() else null
 
     private fun disc(image: Actor, size: Float, color: Color = white, caption: String? = null,
-                     iconSize: Float = if (size >= 90f) 34f else 30f): Table {
-        val table = Disc(if (color == yellow) Color.valueOf("c9951c") else if (color == white) Color.valueOf("b9cadb") else Color.valueOf("0b1826"))
-        table.touchable = Touchable.enabled
-        table.background = ImageGetter.getCircleDrawable().tint(color)
+                     iconSize: Float = if (size >= 90f) 34f else 30f): Disc {
+        val table = Disc(if (color == yellow) Tone.Yellow else if (color == white) Tone.White else Tone.Navy, size)
         image.color = if (color == white || color == yellow) ink else Color.WHITE
         table.add(image).size(iconSize)
         if (caption != null) {
@@ -193,13 +285,7 @@ internal class WorldPortraitHud(
         return table
     }
 
-    private fun place(actor: Actor, x: Float, y: Float, width: Float, height: Float, shadowOffset: Float = 5f) {
-        if (actor is Disc) {
-            val shadow = ImageGetter.getCircle(actor.shadowColor)
-            shadow.touchable = Touchable.disabled
-            shadow.setBounds(x, y - shadowOffset, width, height)
-            addActor(shadow)
-        }
+    private fun place(actor: Actor, x: Float, y: Float, width: Float, height: Float) {
         actor.setBounds(x, y, width, height)
         addActor(actor)
     }
@@ -214,7 +300,13 @@ internal class WorldPortraitHud(
             bottom + 48f + 110f * sin(angle).toFloat() - 27f)
     }
 
-    fun dispose() { scrimTexture.dispose(); statTexture.dispose(); panelTextures.forEach { it.dispose() } }
+    fun dispose() {
+        scrimTexture.dispose()
+        statTexture.dispose()
+        panelTextures.forEach { it.dispose() }
+        discTextures.values.forEach { it.dispose() }
+        discTextures.clear()
+    }
 
     fun refresh() {
         hideCallout()
@@ -351,10 +443,12 @@ internal class WorldPortraitHud(
                 val button = disc(action.image, 54f,
                     if (index == 0 && action.enabled) yellow else white, iconSize = 28f)
                 button.name = action.tag
-                if (!action.enabled) button.color.a = .45f
-                else button.onClick { action.activate() }
+                if (!action.enabled) {
+                    button.color.a = .45f
+                    button.pressable = false
+                } else button.onClick { action.activate() }
                 holdToRead(button, action.title, action.note, action.enabled)
-                place(button, x, y, 54f, 54f, shadowOffset = 3f)
+                place(button, x, y, 54f, 54f)
                 if (action.chip != null) {
                     val chip = Table().apply {
                         background = panel(10).tint(Color.valueOf("e0524a"))
@@ -372,7 +466,7 @@ internal class WorldPortraitHud(
                 val primary = arcActions.firstOrNull()?.takeIf { it.enabled }?.title
                 more.onClick { MoreSheet(unit, actions, primary).present() }
                 holdToRead(more, "Show more".tr(), null)
-                place(more, x, y, 54f, 54f, shadowOffset = 3f)
+                place(more, x, y, 54f, 54f)
             }
         } else {
             val leader = "LeaderIcons/${civ.nation.leaderName}"
