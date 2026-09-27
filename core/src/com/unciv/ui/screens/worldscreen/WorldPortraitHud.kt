@@ -35,6 +35,7 @@ import com.unciv.ui.components.input.activate
 import com.unciv.ui.components.input.keyShortcuts
 import com.unciv.ui.components.input.onActivation
 import com.unciv.ui.components.input.onClick
+import com.unciv.ui.components.input.onClickSuppressive
 import com.unciv.ui.components.input.onLongPress
 import com.unciv.ui.components.input.onRightClick
 import com.unciv.ui.components.widgets.AutoScrollPane
@@ -322,9 +323,11 @@ internal class WorldPortraitHud(
             val close = "×".toLabel(Color.WHITE, 25).apply {
                 setAlignment(Align.center)
                 touchable = Touchable.enabled
-                onClick { world.bottomUnitTable.selectUnit(); world.shouldUpdate = true }
+                onClickSuppressive { world.bottomUnitTable.selectUnit(); world.shouldUpdate = true }
             }
             tag.add(close).size(48f)
+            tag.touchable = Touchable.enabled
+            tag.onClick { PortraitInfoSheets.showUnit(world, unitView) }
             place(tag, 10f, top - 126f, 373f, 68f)
             tutorialTop = (top - 134f) * scale + safe.y
 

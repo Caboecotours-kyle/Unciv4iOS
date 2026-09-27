@@ -40,10 +40,9 @@ import com.unciv.ui.components.tilegroups.citybutton.CityButton
 import com.unciv.ui.components.widgets.UnitIconGroup
 import com.unciv.ui.components.widgets.ZoomableScrollPane
 import com.unciv.ui.screens.basescreen.UncivStage
-import com.unciv.ui.popups.Popup
 import com.unciv.ui.screens.cityscreen.CityScreen
-import com.unciv.ui.screens.worldscreen.bottombar.TileInfoTable
 import com.unciv.ui.screens.worldscreen.UndoHandler.Companion.recordUndoCheckpoint
+import com.unciv.ui.screens.worldscreen.PortraitInfoSheets
 import com.unciv.ui.screens.worldscreen.WorldScreen
 import com.unciv.ui.screens.worldscreen.bottombar.BattleTableHelpers.battleAnimationDeferred
 import com.unciv.utils.Concurrency
@@ -256,11 +255,7 @@ class WorldMapHolder @JvmOverloads constructor(
     private fun showTileDetails(tileView: TileView) {
         if (!tileView.isExplored()) return
         selectedTile = tileView
-        Popup(worldScreen).apply {
-            name = "portrait-tile-details"
-            add(TileInfoTable(worldScreen).apply { updateTileTable(tileView) }).row()
-            addCloseButton()
-        }.open()
+        PortraitInfoSheets.showTile(worldScreen, tileView)
     }
 
     private fun portraitTileTapped(tileView: TileView) {
