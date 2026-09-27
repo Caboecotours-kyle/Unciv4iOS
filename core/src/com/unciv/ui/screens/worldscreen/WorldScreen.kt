@@ -525,7 +525,8 @@ class WorldScreen(
             autoPlay.stopAutoPlay()
         }
 
-        if (!hasOpenPopups() && !autoPlay.isAutoPlaying() && isPlayersTurn) {
+        // Turn-start dialogs wait for the turn replay so it plays on a visible map; its end runs another update
+        if (!hasOpenPopups() && !autoPlay.isAutoPlaying() && isPlayersTurn && !isReplayingTurn()) {
             when {
                 viewingCiv.shouldShowDiplomaticVotingResults() ->
                     UncivGame.Current.pushScreen{ DiplomaticVoteResultScreen(gameInfo.diplomaticVictoryVotesCast, viewingCiv) }
@@ -1195,8 +1196,10 @@ class WorldScreen(
     }
 
 
+    private fun isReplayingTurn() = mapHolder.turnReplay?.ownMovesOnly == false
+
     private fun showTutorialsOnNextTurn() {
-        if (!game.settings.showTutorials || autoPlay.isAutoPlaying()) return
+        if (!game.settings.showTutorials || autoPlay.isAutoPlaying() || isReplayingTurn()) return
         displayTutorial(TutorialTrigger.SlowStart)
         displayTutorial(TutorialTrigger.CityExpansion) { viewingCiv.cities.any { it.expansion.tilesClaimed() > 0 } }
         displayTutorial(TutorialTrigger.BarbarianEncountered) { viewingCiv.viewableTiles.any { it.getUnits().any { unit -> unit.civ.isBarbarian } } }
