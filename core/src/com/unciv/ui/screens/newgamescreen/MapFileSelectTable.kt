@@ -30,6 +30,7 @@ import com.unciv.ui.components.extensions.toTextButton
 import com.unciv.ui.components.input.onActivation
 import com.unciv.ui.components.input.onChange
 import com.unciv.ui.components.widgets.LoadingImage
+import com.unciv.ui.popups.PortraitDialog
 import com.unciv.ui.screens.basescreen.BaseScreen
 import com.unciv.ui.screens.victoryscreen.LoadMapPreview
 import com.unciv.utils.Concurrency
@@ -55,7 +56,12 @@ class MapFileSelectTable(
     private val mapCategorySelectBox = SelectBox<String>(BaseScreen.skin)
     private val mapFileSelectBox = SelectBox<MapWrapper>(BaseScreen.skin)
     private val loadingIcon = LoadingImage(30f, LoadingImage.Style(loadingColor = Color.SCARLET))
-    private val useNationsFromMapButton = "Select players from starting locations".toTextButton(SmallButtonStyle())
+    /** New game on a portrait phone: bottom-sheet pickers over the same select boxes */
+    private val portrait = newGameScreen.isPortrait()
+    private val controls by lazy { PortraitOptionControls.of(newGameScreen) }
+    private val useNationsFromMapButton =
+        if (portrait) controls.button("Select players from starting locations", PortraitDialog.Kind.Ghost) {}
+        else "Select players from starting locations".toTextButton(SmallButtonStyle())
     private val useNationsButtonCell: Cell<Actor?>
     private var mapNations = emptyList<Nation>()
     private var mapHumanPick: String? = null
@@ -82,7 +88,11 @@ class MapFileSelectTable(
 
     init {
         // Take care that this class can be instantiated cheaply and does not do heavy lifting right away - it may not be displayed at all.
-        add(Table().apply {
+        if (portrait) add(Table().apply {
+            add(controls.pickerRow(newGameScreen, "Map Mod", mapCategorySelectBox)).growX().row()
+            add(controls.pickerRow(newGameScreen, "Map file", mapFileSelectBox)).growX().padTop(controls.s(8f))
+        }).growX().padTop(controls.s(20f))
+        else add(Table().apply {
             defaults().pad(5f, 10f)  // Must stay same as in MapParametersTable
             val mapCategoryLabel = "{Map Mod}:".toLabel()
             val mapFileLabel = "{Map file}:".toLabel()
@@ -294,7 +304,8 @@ class MapFileSelectTable(
         } else {
             useNationsFromMapButton.enable()
             useNationsButtonCell.setActor(useNationsFromMapButton)
-            useNationsButtonCell.height(useNationsFromMapButton.prefHeight).padLeft(5f).padTop(10f)
+            if (portrait) useNationsButtonCell.height(controls.target).growX().padTop(controls.s(12f))
+            else useNationsButtonCell.height(useNationsFromMapButton.prefHeight).padLeft(5f).padTop(10f)
         }
 
         val mapFile = selection.fileHandle
