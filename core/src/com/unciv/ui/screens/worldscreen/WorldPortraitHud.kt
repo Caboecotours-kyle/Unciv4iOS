@@ -454,7 +454,14 @@ internal class WorldPortraitHud(
             clearChildren()
             val majors = turnOrder(world.gameInfo, world.viewingCivilization).filter { it.isMajorCiv() && it.isAlive() }
             val current = majors.indexOf(civ)
+            // Fit 373pt (the canvas less 10pt margins): the name is capped, and with many civs only a window
+            // of discs around the moving one is shown
+            val name = (if (knows(civ)) civ.civName.tr() else "Unknown".tr()).toLabel(Color.WHITE, 16).apply { setEllipsis(true) }
+            val nameWidth = min(name.prefWidth, 140f)
+            val slots = ((373f - 24f - 4f - nameWidth) / 42f).toInt().coerceIn(1, max(1, majors.size))
+            val first = (current - slots / 2).coerceIn(0, max(0, majors.size - slots))
             for ((index, major) in majors.withIndex()) {
+                if (index < first || index >= first + slots) continue
                 val disc = Table().apply { background = ImageGetter.getCircleDrawable().tint(civColor(major)) }
                 if (knows(major)) disc.add(ImageGetter.getNationIcon(major.civName).apply { color = major.nation.getInnerColor() }).size(20f)
                 else disc.add(ImageGetter.getCircle(Color(1f, 1f, 1f, .5f), 10f)).size(10f)
@@ -466,7 +473,7 @@ internal class WorldPortraitHud(
                 if (index < current) stack.color.a = .4f
                 add(stack).size(36f).padRight(6f)
             }
-            add((if (knows(civ)) civ.civName.tr() else "Unknown".tr()).toLabel(Color.WHITE, 16)).padLeft(4f)
+            add(name).width(nameWidth).padLeft(4f)
         }
 
         override fun act(delta: Float) {
