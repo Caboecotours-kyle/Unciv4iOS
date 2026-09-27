@@ -43,8 +43,9 @@ class TileLayerUnitFlag(tileGroup: TileGroup, size: Float) : TileLayer(tileGroup
         val turnsLeft = tileView.turnsToImprovement
         if (turnsLeft <= 0) return
         val improvement = tile.getTileImprovementInProgress() ?: return
+        // Same rule as the worker turn (UnitTurnManager.endTurn): only a unit that can build this improvement advances it
         val worker = listOfNotNull(tileView.civilianUnit, tileView.militaryUnit).map { it.getUnit() }
-            .firstOrNull { it.civ === viewingCiv.getCiv() && (it.cache.hasUniqueToBuildImprovements || it.canBuildImprovement(improvement)) } ?: return
+            .firstOrNull { it.civ === viewingCiv.getCiv() && it.canBuildImprovement(improvement) } ?: return
         val total = improvement.getTurnsToBuild(worker.civ, worker).coerceAtLeast(turnsLeft)
         val done = ((1f - turnsLeft.toFloat() / total) * 48f).roundToInt() / 48f
 
