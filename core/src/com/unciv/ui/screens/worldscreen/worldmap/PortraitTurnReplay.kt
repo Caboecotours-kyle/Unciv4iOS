@@ -71,6 +71,8 @@ internal class TurnReplay(
     private val after: SeenMap,
     private val viewingCiv: Civilization,
     private val onFinished: (showToast: Boolean) -> Unit,
+    /** Only the viewing civ's own units, with no turn HUD: automated moves played on the same screen */
+    val ownMovesOnly: Boolean = false,
 ) {
     var currentCiv: Civilization? = null
         private set
@@ -93,7 +95,7 @@ internal class TurnReplay(
         val plan = turnOrder(gameInfo, viewingCiv).mapNotNull { civ ->
             byCiv[civ.civID]?.sortedWith(compareBy<Track> { it.priority }.thenBy { !holder.isInView(it.tile) })
                 ?.take(8)?.let { civ to it }
-        }
+        }.filter { !ownMovesOnly || it.first == viewingCiv }
         val glides = plan.map { (_, tracks) -> if (tracks.none { holder.isInView(it.tile) }) .35f else 0f }
         val durations = plan.map { (_, tracks) -> min(1.6f, tracks.maxOf { it.natural }) }
         val lead = .3f

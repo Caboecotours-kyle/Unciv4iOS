@@ -273,7 +273,7 @@ internal class WorldPortraitHud(
                 if (skip != null) "Skip" else "Next")
         anchor.name = "portrait-next"
         anchor.onClick {
-            if (waiting) world.mapHolder.skipTurnReplay()
+            if (waiting || world.mapHolder.turnReplay != null) world.mapHolder.skipTurnReplay()
             else if (skip != null && unit != null) unitActions.activateAction(skip, unit)
             else world.nextTurnButton.activate()
         }

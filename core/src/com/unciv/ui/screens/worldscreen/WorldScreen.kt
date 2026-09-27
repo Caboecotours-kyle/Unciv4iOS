@@ -618,7 +618,7 @@ class WorldScreen(
 
     /** The civ the portrait HUD shows as moving: estimated while the turn processes, exact while it replays; null otherwise. */
     internal fun turnWaitCiv(): Civilization? {
-        mapHolder.turnReplay?.let { return it.currentCiv ?: viewingCiv }
+        mapHolder.turnReplay?.takeIf { !it.ownMovesOnly }?.let { return it.currentCiv ?: viewingCiv }
         if (!isNextTurnUpdateRunning()) return null
         return estimateMovingCiv(turnOrder(gameInfo, viewingCiv), turnProgress?.fraction ?: 0f)
     }

@@ -16,6 +16,7 @@ import com.unciv.ui.screens.pickerscreens.PolicyPickerScreen
 import com.unciv.ui.screens.pickerscreens.ReligiousBeliefsPickerScreen
 import com.unciv.ui.screens.pickerscreens.TechPickerScreen
 import com.unciv.ui.screens.worldscreen.WorldScreen
+import com.unciv.ui.screens.worldscreen.worldmap.seeMap
 import com.unciv.utils.Concurrency
 import com.unciv.utils.launchOnGLThread
 import yairm210.purity.annotations.Readonly
@@ -191,12 +192,17 @@ enum class NextTurnAction(protected val text: String, val color: Color) {
             worldScreen.isPlayersTurn = false // Disable state changes
             worldScreen.selectedGameView.civView.tryMarkMovedAutomatedUnits()
             worldScreen.nextTurnButton.disable()
+            // Portrait replays the moves, so the map as seen before them is needed
+            val before = if (worldScreen.mapHolder.currentTileSetStrings.projection.tilted) worldScreen.mapHolder.seeMap() else null
             Concurrency.run("Move automated units") {
                 worldScreen.selectedGameView.civView.tryAutomateAllUnits()
                 launchOnGLThread {
-                    worldScreen.shouldUpdate = true
-                    worldScreen.isPlayersTurn = true //Re-enable state changes
-                    worldScreen.nextTurnButton.enable()
+                    fun done() {
+                        worldScreen.shouldUpdate = true
+                        worldScreen.isPlayersTurn = true //Re-enable state changes
+                        worldScreen.nextTurnButton.enable()
+                    }
+                    if (before == null || !worldScreen.mapHolder.replayAutomatedMovesAfterUpdate(before, ::done)) done()
                 }
             }
         }

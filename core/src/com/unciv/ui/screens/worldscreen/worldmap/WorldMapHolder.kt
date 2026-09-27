@@ -771,6 +771,8 @@ class WorldMapHolder @JvmOverloads constructor(
     /** Called when the world screen hides or is disposed, so no old motion resumes on return. */
     internal fun stopUnitMotion() {
         stopBreathing()
+        // Moves still waiting for their update land at once, so the Next button comes back
+        automatedMovesSeen?.let { (_, done) -> automatedMovesSeen = null; done() }
         turnReplay?.stop()
         motion.finishAll()
         cancelPortraitCombat()
@@ -855,6 +857,13 @@ class WorldMapHolder @JvmOverloads constructor(
 
     /** Starts the replay of a turn passed on the previous world screen, when it was this game seen by this civ. */
     internal fun startPendingTurnReplay(viewingCiv: Civilization, onFinished: (showToast: Boolean) -> Unit) {
+        automatedMovesSeen?.let { (before, done) ->
+            automatedMovesSeen = null
+            val replay = TurnReplay(this, before, seeMap(), viewingCiv, { done() }, ownMovesOnly = true)
+            turnReplay = replay
+            replay.start()
+            return
+        }
         val before = PendingTurnReplay.seen ?: return
         val gameInfo = worldScreen.gameInfo
         if (before.gameIdentity == System.identityHashCode(gameInfo)) return // still the screen that passed the turn
@@ -868,6 +877,17 @@ class WorldMapHolder @JvmOverloads constructor(
     }
 
     internal fun skipTurnReplay() = turnReplay?.skip()
+
+    /** The map before "Move automated units", replayed with [done] after the next tile update shows the moves */
+    private var automatedMovesSeen: Pair<SeenMap, () -> Unit>? = null
+
+    /** Portrait only; returns false when there is nothing to replay and the caller should finish at once. */
+    internal fun replayAutomatedMovesAfterUpdate(before: SeenMap, done: () -> Unit): Boolean {
+        if (!currentTileSetStrings.projection.tilted) return false
+        automatedMovesSeen = before to done
+        worldScreen.shouldUpdate = true
+        return true
+    }
 
     internal fun swapMoveUnitToTargetTile(selectedUnitView: MapUnitView, targetTileView: TileView) {
         markUnitMoveTutorialComplete(selectedUnitView)
