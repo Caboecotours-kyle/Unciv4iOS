@@ -34,6 +34,7 @@ import com.unciv.ui.components.widgets.TranslatedSelectBox
 import com.unciv.ui.components.widgets.UncivSlider
 import com.unciv.ui.images.ImageGetter
 import com.unciv.ui.popups.Popup
+import com.unciv.ui.popups.PortraitDialog
 import com.unciv.ui.screens.basescreen.BaseScreen
 import com.unciv.ui.screens.multiplayerscreens.MultiplayerHelpers
 import com.unciv.utils.ONLINE_MULTIPLAYER_UNAVAILABLE
@@ -67,8 +68,16 @@ class GameOptionsTable(
     // Allow resetting base ruleset from outside
     private var baseRulesetSelectBox: TranslatedSelectBox? = null
 
+    /** New game on a portrait phone: [update] fills this as the Rules tab plus [portraitPlayersTable] and
+     *  [portraitModsTable], from the same widgets and setters as the landscape layout */
+    private val portraitOptions = (previousScreen as? NewGameScreen)?.isPortrait() == true
+    private val controls by lazy { PortraitOptionControls.of(previousScreen as BaseScreen) }
+    internal val portraitPlayersTable = Table()
+    internal val portraitModsTable = Table()
+
     init {
-        background = BaseScreen.skinStrings.getUiBackground("NewGameScreen/GameOptionsTable", tintColor = BaseScreen.skinStrings.skinConfig.clearColor)
+        background = if (portraitOptions) null
+            else BaseScreen.skinStrings.getUiBackground("NewGameScreen/GameOptionsTable", tintColor = BaseScreen.skinStrings.skinConfig.clearColor)
         top()
         defaults().pad(5f)
         update()
@@ -84,6 +93,7 @@ class GameOptionsTable(
             baseRulesetHash = newBaseRulesetHash
             modCheckboxes.setBaseRuleset(gameParameters.baseRuleset)
         }
+        if (portraitOptions) return updatePortrait()
 
         add(Table().apply {
             defaults().pad(5f)
@@ -159,6 +169,107 @@ class GameOptionsTable(
             add(modCheckboxes).padTop(0f).row()
 
         pack()
+    }
+
+    private fun updatePortrait() {
+        val c = controls
+        val muted = PortraitOptionControls.MUTED
+        defaults().pad(0f)
+        // The legacy builders add their widgets to throwaway tables; the portrait controls then drive those widgets
+        fun selectBox(add: Table.() -> Unit) = Table().apply(add).children.lastOrNull { it is TranslatedSelectBox } as TranslatedSelectBox?
+        fun checkBoxes(add: Table.() -> Unit) = Table().apply(add).checkBoxes()
+
+        selectBox { addDifficultySelectBox() }?.let { c.section(this, "Difficulty", c.choices(it, chips = true), gap = 12f) }
+        selectBox { addGameSpeedSelectBox() }?.let { c.section(this, "Game Speed", c.choices(it, chips = true)) }
+        selectBox { addEraSelectBox() }?.let { c.section(this, "Starting Era", c.choices(it, chips = true)) }
+        c.section(this, "Victory Conditions", c.switches(checkBoxes { addVictoryTypeCheckboxes() }))
+        Table().addMaxTurnsSlider()?.let { slider ->
+            c.section(this, null, Table().apply {
+                add(c.sliderTitle("Max Turns", slider)).growX().padBottom(c.s(4f)).row()
+                add(c.slider(slider)).growX()
+            }, gap = 40f)
+        }
+
+        val multiplayer = Table().apply { addIsOnlineMultiplayerCheckbox() }
+        c.section(this, "Multiplayer", c.switches(multiplayer.checkBoxes() + checkBoxes {
+            if (gameParameters.isOnlineMultiplayer) addAnyoneCanSpectateCheckbox()
+        }))
+        if (!UncivGame.Current.platformCapabilities.onlineMultiplayer)
+            c.section(this, null, c.label(ONLINE_MULTIPLAYER_UNAVAILABLE, 13f, muted).apply { wrap = true })
+        if (gameParameters.isOnlineMultiplayer) {
+            val durations = Table()
+            durations.addDurationSelectBox("Time until skip turn:", GameParameters::minutesUntilSkipTurn, 1, 0, 0)
+            durations.addDurationSelectBox("Total time to play:", GameParameters::minutesUntilForceResign, 3, 0, 0)
+            durations.addDurationSelectBox("Time recovered per turn:", GameParameters::minutesRecoveredPerTurn, 3, 0, 0)
+            c.section(this, null, durations)
+        }
+
+        val advanced = Table()
+        advanced.add(c.switches(checkBoxes {
+            addNoCityRazingCheckbox()
+            addNoBarbariansCheckbox()
+            addRagingBarbariansCheckbox()
+            addOneCityChallengeCheckbox()
+            addNuclearWeaponsCheckbox()
+            addEnableEspionageCheckbox()
+            addNoStartBiasCheckbox()
+            addRandomNationsPoolCheckbox()
+            addShowCivilizationStatsCheckbox()
+            if (gameParameters.showCivilizationStats == true) {
+                addShowRankingsCheckbox()
+                addShowChartsCheckbox()
+                addShowDemographicsCheckbox()
+                addCensorStatsCheckbox()
+                addShowAdditionalRankingTypesCheckbox()
+            }
+        })).growX().row()
+        if (gameParameters.enableRandomNationsPool)
+            advanced.addNationsSelectTextButton()
+        c.section(this, null, c.disclosure("gameAdvanced", "Advanced Settings", advanced), gap = 40f)
+
+        portraitPlayersTable.clear()
+        portraitPlayersTable.defaults().pad(0f)
+        c.section(portraitPlayersTable, null, c.switches(checkBoxes {
+            addRandomPlayersCheckbox()
+            addRandomCityStatesCheckbox()
+        }))
+        val counts = Table().apply {
+            background = c.panel(PortraitOptionControls.TRACK)
+            pad(0f, c.s(16f), c.s(16f), c.s(16f))
+            if (gameParameters.randomNumberOfPlayers) addMinMaxPlayersSliders()
+            if (gameParameters.randomNumberOfCityStates) addMinMaxCityStatesSliders()
+            else addCityStatesSlider()
+        }
+        if (counts.hasChildren()) c.section(portraitPlayersTable, null, counts)
+
+        portraitModsTable.clear()
+        portraitModsTable.defaults().pad(0f)
+        selectBox { addBaseRulesetSelectBox() }?.let { c.section(portraitModsTable, "Base Ruleset", c.radios(it), gap = 12f) }
+        c.section(portraitModsTable, null, modCheckboxes)
+
+        invalidateHierarchy()
+    }
+
+    private fun Table.checkBoxes(): List<CheckBox> = children.flatMap {
+        when (it) {
+            is CheckBox -> listOf(it)
+            is Table -> it.checkBoxes()
+            else -> emptyList()
+        }
+    }
+
+    /** A labelled slider: side by side in landscape, stacked full width in portrait */
+    /** Portrait shows slider values beside their titles instead of in a floating tip */
+    private val sliderTip get() = if (portraitOptions) UncivSlider.TipType.None else UncivSlider.TipType.Permanent
+
+    private fun Table.addSliderRow(text: String, slider: UncivSlider) {
+        if (portraitOptions) {
+            add(controls.sliderTitle(text, slider)).colspan(2).growX().padTop(controls.s(16f)).row()
+            add(controls.slider(slider)).colspan(2).growX().row()
+        } else {
+            add(text.toLabel()).left().expandX()
+            add(slider).padTop(10f).row()
+        }
     }
 
     private fun Table.addCheckbox(
@@ -261,7 +372,8 @@ class GameOptionsTable(
         { gameParameters.showAdditionalRankingTypes = it }
 
     private fun Table.addNationsSelectTextButton() {
-        val button = "Select nations".toTextButton()
+        val button = if (portraitOptions) controls.button("Select nations", PortraitDialog.Kind.Ghost) {}
+            else "Select nations".toTextButton()
         button.onClick {
             val popup = RandomNationPickerPopup(previousScreen, gameParameters) {
                 if (gameParameters.randomNationsPool.isEmpty()) {
@@ -272,7 +384,8 @@ class GameOptionsTable(
             popup.open()
             popup.update()
         }
-        add(button).row()
+        if (portraitOptions) add(button).growX().height(controls.target).padTop(controls.s(12f)).row()
+        else add(button).row()
     }
 
     private fun numberOfMajorCivs() = ruleset.nations.values.count {
@@ -340,7 +453,7 @@ class GameOptionsTable(
         if (maxValue < minValue) return
 
         lateinit var maxSlider: UncivSlider  // lateinit safe because the closure won't use it until the user operates a slider
-        val minSlider = UncivSlider(minValue.toFloat(), maxValue.toFloat(), 1f, initial = minField.get().toFloat()) {
+        val minSlider = UncivSlider(minValue.toFloat(), maxValue.toFloat(), 1f, initial = minField.get().toFloat(), tipType = sliderTip) {
             val newMin = it.toInt()
             minField.set(newMin)
             if (newMin > maxSlider.value.toInt()) {
@@ -350,7 +463,7 @@ class GameOptionsTable(
             onChangeCallback?.invoke()
         }
         minSlider.isDisabled = locked
-        maxSlider = UncivSlider(minValue.toFloat(), maxValue.toFloat(), 1f, initial = maxField.get().toFloat()) {
+        maxSlider = UncivSlider(minValue.toFloat(), maxValue.toFloat(), 1f, initial = maxField.get().toFloat(), tipType = sliderTip) {
             val newMax = it.toInt()
             maxField.set(newMax)
             if (newMax < minSlider.value.toInt()) {
@@ -361,10 +474,8 @@ class GameOptionsTable(
         }
         maxSlider.isDisabled = locked
 
-        add(minText.toLabel()).left().expandX()
-        add(minSlider).padTop(10f).row()
-        add(maxText.toLabel()).left().expandX()
-        add(maxSlider).padTop(10f).row()
+        addSliderRow(minText, minSlider)
+        addSliderRow(maxText, maxSlider)
     }
 
     private fun Table.addMinMaxPlayersSliders() {
@@ -386,12 +497,11 @@ class GameOptionsTable(
         val cityStatesAvailable = numberOfCityStates()
         if (cityStatesAvailable == 0) return
 
-        add("{City-States}:".toLabel()).left().expandX()
-        val slider = UncivSlider(0f, cityStatesAvailable.toFloat(), 1f, initial = gameParameters.numberOfCityStates.toFloat()) {
+        val slider = UncivSlider(0f, cityStatesAvailable.toFloat(), 1f, initial = gameParameters.numberOfCityStates.toFloat(), tipType = sliderTip) {
             gameParameters.numberOfCityStates = it.toInt()
         }
         slider.isDisabled = locked
-        add(slider).padTop(10f).row()
+        addSliderRow("{City-States}:", slider)
     }
 
     private fun Table.addMaxTurnsSlider(): UncivSlider? {
@@ -399,7 +509,7 @@ class GameOptionsTable(
             return null
 
         add("{Max Turns}:".toLabel()).left().expandX()
-        val slider = UncivSlider(100f, 1500f, 5f, initial = gameParameters.maxTurns.toFloat()) {
+        val slider = UncivSlider(100f, 1500f, 5f, initial = gameParameters.maxTurns.toFloat(), tipType = sliderTip) {
             gameParameters.maxTurns = it.toInt()
         }
         slider.isDisabled = locked
@@ -483,9 +593,16 @@ class GameOptionsTable(
         defaultHourValue: Int,
         defaultMinuteValue: Int
     ) {
-        add(title.toLabel(hideIcons = true)).right()
-
         val selector = DurationSelector(gameParameters, param, defaultDayValue, defaultHourValue, defaultMinuteValue)
+        if (portraitOptions) {
+            add(controls.label(title, 13f, PortraitOptionControls.MUTED)).colspan(3).left().padTop(controls.s(16f)).padBottom(controls.s(8f)).row()
+            // a bottom sheet per box: the select box's own drop-down rows are far below a finger's size
+            for (box in selector.boxes) add(controls.pickerRow(previousScreen as BaseScreen, title, box, showTitle = false))
+                .growX().uniformX().padRight(controls.s(8f))
+            row()
+            return
+        }
+        add(title.toLabel(hideIcons = true)).right()
 
         add(selector.dayBox)
         add(selector.hourBox)
@@ -531,7 +648,7 @@ class GameOptionsTable(
             return timeBox
         }
     }
-    private fun addVictoryTypeCheckboxes() {
+    private fun Table.addVictoryTypeCheckboxes() {
         add("{Victory Conditions}:".toLabel()).colspan(2).row()
 
         // Create a checkbox for each VictoryType existing
@@ -595,7 +712,9 @@ class GameOptionsTable(
     }
 
     private fun getModCheckboxes(isPortrait: Boolean = false): ModCheckboxTable {
-        return ModCheckboxTable(gameParameters.mods, gameParameters.baseRuleset, previousScreen as BaseScreen, isPortrait) {
+        // Runs before portraitOptions and controls are initialized
+        val minTarget = if ((previousScreen as? NewGameScreen)?.isPortrait() == true) PortraitOptionControls.of(previousScreen as BaseScreen).target else 0f
+        return ModCheckboxTable(gameParameters.mods, gameParameters.baseRuleset, previousScreen as BaseScreen, isPortrait, minTarget) {
             onChooseMod(it)
         }
     }

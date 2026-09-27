@@ -65,6 +65,8 @@ class NewGameScreen(
     private val mapOptionsTable: MapOptionsTable
     private var mapOptionsTableInitialized = false
     private var portraitView: PortraitNewGameView? = null
+    /** More options tab to reopen once a rotation brings this screen back to portrait */
+    private var pendingOptionsTab: PortraitMoreOptionsView.Tab? = null
 
     init {
         val isPortrait = isPortrait()
@@ -86,7 +88,9 @@ class NewGameScreen(
         rightSideButton.enable()  // now because PlayerPickerTable init might disable it again
         playerPickerTable = PlayerPickerTable(
             this, gameSetupInfo.gameParameters,
-            if (isNarrow) stage.width - 20f else 0f
+            if (isPortrait) PortraitOptionControls.of(this).contentWidth
+            else if (isNarrow) stage.width - 20f else 0f,
+            if (isPortrait) PortraitOptionControls.of(this).target else 0f
         )
         newGameOptionsTable = GameOptionsTable(
             this, isNarrow,
@@ -141,6 +145,9 @@ class NewGameScreen(
     }
 
     private fun closeNewGame() {
+        // Back closes the innermost layer first: a selector sheet, then More options, then this screen
+        if (PortraitOptionControls.closeSheet(stage)) return
+        if (portraitView?.closeOptions() == true) return
         mapOptionsTable.cancelBackgroundJobs()
         game.popScreen()
     }
@@ -258,7 +265,8 @@ class NewGameScreen(
     /** Subtables may need an upper limit to their width - they can ask this function. */
     // In sync with isPortrait in init, here so UI details need not know about 3-column vs 1-column layout
     internal fun getColumnWidth() = floor(
-        if (isNarrowerThan4to3()) stage.width
+        if (isPortrait()) PortraitOptionControls.of(this).contentWidth
+        else if (isNarrowerThan4to3()) stage.width
         else (stage.width - 2f) / 3f
     )
 
@@ -584,5 +592,12 @@ class NewGameScreen(
         newGameOptionsTable.update()
     }
 
-    override fun recreate(): BaseScreen = NewGameScreen(gameSetupInfo)
+    override fun recreate(): BaseScreen {
+        val optionsTab = portraitView?.openOptionsTab ?: pendingOptionsTab
+        return NewGameScreen(gameSetupInfo).apply {
+            val view = portraitView
+            if (view == null) pendingOptionsTab = optionsTab
+            else if (optionsTab != null) view.showOptions(optionsTab)
+        }
+    }
 }

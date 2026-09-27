@@ -1,6 +1,7 @@
 package com.unciv.ui.popups.options
 
 import com.badlogic.gdx.graphics.Color
+import com.badlogic.gdx.scenes.scene2d.Actor
 import com.badlogic.gdx.scenes.scene2d.ui.Cell
 import com.badlogic.gdx.scenes.scene2d.ui.CheckBox
 import com.badlogic.gdx.scenes.scene2d.ui.Label
@@ -12,6 +13,7 @@ import com.unciv.GUI
 import com.unciv.UncivGame
 import com.unciv.ui.components.extensions.addSeparator
 import com.unciv.ui.components.extensions.setFontColor
+import com.unciv.ui.components.extensions.setFontSize
 import com.unciv.ui.components.extensions.toCheckBox
 import com.unciv.ui.components.extensions.toLabel
 import com.unciv.ui.components.input.onChange
@@ -63,6 +65,9 @@ internal interface OptionsPopupHelpers {
     /** Access the active page of the TabbedPager in [OptionsPopup] */
     val activePage: OptionsPopupPages
 
+    /** Portrait look for the helpers: stacked rows in rounded cards. `null` keeps the landscape rows */
+    val portrait: OptionsPortraitStyle? get() = null
+
 
     /**
      *  Adds a header row (larger font, centered, colspan 2).
@@ -71,6 +76,11 @@ internal interface OptionsPopupHelpers {
      *  @return the [Label] cell for chaining
      */
     fun Table.addHeader(text: String): Cell<Label> {
+        portrait?.let { style ->
+            val cell = add(style.header(text))
+            cell.colspan(2).growX().pad(style.px(if (cells.size > 1) 18f else 8f), style.px(6f), style.px(8f), style.px(6f)).row()
+            return cell
+        }
         if (!children.isEmpty) // doesn't count empty cells
             addSeparator()
         val cell = add(text.toLabel(fontSize = Constants.headingFontSize))
@@ -89,11 +99,17 @@ internal interface OptionsPopupHelpers {
      *  @param action Mandatory - you'll need to write back the new value here.
      */
     fun Table.addCheckbox(text: String, initialState: Boolean, updateWorld: Boolean = false, newRow: Boolean = true, action: ((Boolean) -> Unit)) {
-        val checkbox = text.toCheckBox(initialState) {
-            action(it)
+        fun changed(value: Boolean) {
+            action(value)
             val worldScreen = GUI.getWorldScreenIfActive()
             if (updateWorld && worldScreen != null) worldScreen.shouldUpdate = true
         }
+        portrait?.let { style ->
+            // Portrait switches always take a full row
+            add(SwitchRow(style, text, initialState, ::changed)).colspan(2).growX().pad(0f).row()
+            return
+        }
+        val checkbox = text.toCheckBox(initialState, ::changed)
         if (newRow) add(checkbox).colspan(2).left().row()
         else add(checkbox).left()
     }
@@ -125,12 +141,10 @@ internal interface OptionsPopupHelpers {
      *  @see addEnumAsStringSelectBox
      */
     fun <T> Table.addSelectBox(text: String, property: KMutableProperty0<T>, items: Iterable<T>, action: ((T, T) -> Unit)? = null): SelectBox<T> {
-        add(text.toLabel()).left().fillX()
-
         val select = SelectBox<T>(BaseScreen.skin)
         select.setItems(items.toGdxArray())
         select.selected = property.get()
-        add(select).pad(10f).minWidth(rightWidgetMinWidth).right().row()
+        addLabeled(text.toLabel(), select)
 
         select.onChange {
             val oldValue = property.get()
@@ -151,9 +165,8 @@ internal interface OptionsPopupHelpers {
      *  @see addEnumAsStringSelectBox
      */
     fun Table.addTranslatedSelectBox(text: String, property: KMutableProperty0<String>, items: Iterable<String>, action: ((String) -> Unit)? = null) {
-        add(text.toLabel()).left().fillX()
         val select = TranslatedSelectBox(items as? Collection ?: items.toList(), property.get())
-        add(select).pad(10f).minWidth(rightWidgetMinWidth).right().row()
+        addLabeled(text.toLabel(), select)
 
         select.onChange {
             val newValue = select.selected.value
@@ -197,10 +210,9 @@ internal interface OptionsPopupHelpers {
     ) {
         val label = text.toLabel(Color.GRAY)
         label.wrap = true
-        add(label).left().fillX()
         val select = SelectBox<T>(BaseScreen.skin)
         select.isDisabled = true
-        add(select).pad(10f).minWidth(rightWidgetMinWidth).right().row()
+        addLabeled(label, select)
 
         Concurrency.run("Async SelectBox", CoroutineScope(dispatcher)) {
             val items = Array<T>(false, 20)
@@ -237,17 +249,25 @@ internal interface OptionsPopupHelpers {
         getTipText: ((Float) -> String)? = null,
         action: ((Float, Boolean) -> Unit)
     ): Cell<UncivSlider> {
-        add(text.toLabel()).left().fillX().padTop(5f)
-
+        val style = portrait
         // lateinit, otherwise the callback can't capture it, and by the time the callback fires this will be initialized
         lateinit var slider: UncivSlider
         slider = UncivSlider(
             min.toFloat(), max.toFloat(), step.toFloat(),
             initial = initial.toFloat(),
+            // portrait shows the value in the row instead of a tip
+            tipType = if (style == null) UncivSlider.TipType.Permanent else UncivSlider.TipType.None,
             getTipText = getTipText
         ) {
             action(it, slider.isDragging)
         }
+        if (style != null) {
+            val row = SliderRow(style, text, slider, step.toFloat(), getTipText)
+            add(row).colspan(2).growX().pad(0f).row()
+            return row.sliderCell
+        }
+
+        add(text.toLabel()).left().fillX().padTop(5f)
         val cell = add(slider).minWidth(rightWidgetMinWidth).right().pad(5f).padTop(10f)
         cell.row()
         return cell
@@ -275,6 +295,21 @@ internal interface OptionsPopupHelpers {
         }
     }
 
+    /** Label and widget: side by side in landscape, stacked in a portrait card */
+    private fun Table.addLabeled(label: Label, widget: Actor) {
+        val style = portrait
+        if (style == null) {
+            add(label).left().fillX()
+            add(widget).pad(10f).minWidth(rightWidgetMinWidth).right().row()
+            return
+        }
+        if (widget is SelectBox<*>) style.fitSelect(widget)
+        label.wrap = true
+        label.setFontSize(style.font(15f))
+        if (label.style.fontColor == Color.WHITE) label.setFontColor(OptionsPortraitStyle.INK2)
+        add(FieldRow(style, label, widget)).colspan(2).growX().pad(0f).row()
+    }
+
     /** Wrap something in a [Table] and add it to the receiver as single-cell row.
      *
      *  @receiver Destination [Table]
@@ -292,6 +327,8 @@ internal interface OptionsPopupHelpers {
 
     /** Reload the [OptionsPopup] after major changes (resolution, tileset, language, font) */
     fun reloadWorldAndOptions() {
+        // The page whose setting asked for the reload. Read now: by the time the reload runs the user may be on the portrait home or have closed Settings
+        val page = activePage
         Concurrency.run("Reload from options") {
             withGLContext {
                 // We have to run setSkin before the screen is rebuild else changing skins
@@ -307,7 +344,7 @@ internal interface OptionsPopupHelpers {
                 }
             }
             withGLContext {
-                UncivGame.Current.screen?.openOptionsPopup(activePage)
+                UncivGame.Current.screen?.openOptionsPopup(page)
             }
         }
     }
@@ -319,11 +356,12 @@ internal interface OptionsPopupHelpers {
      *  Reason: A resize _might_ relaunch the parent screen ([MainMenuScreen] is [RecreateOnResize]) and thus close this Popup - or not.
      */
     fun reopenOptions(force: Boolean = false) {
+        // Read now, as in reloadWorldAndOptions: after the delay the pager may be on the portrait home or closed
+        val page = activePage
         Concurrency.run("Reload from options") {
             delay((if (force) 0 else 100).milliseconds)
             withGLContext {
                 val screen = UncivGame.Current.screen ?: return@withGLContext
-                val page = activePage // Must be fetched before force-closing the current OptionsPopup
                 if (force) (screen.activePopup as? OptionsPopup)?.close()
                 if (screen.hasOpenPopups()) return@withGLContext // e.g. Orientation auto to fixed while auto is already the new orientation
                 screen.openOptionsPopup(page)

@@ -83,16 +83,29 @@ internal class ModCheckTab(
         if (RulesetCache.size > 10)
             fixedContent.add(searchModsTextField).colspan(3).fillX().row()
 
+        val style = portrait
         val labeledBaseSelect = Table().apply {
-            add("Check extension mods based on:".toLabel()).padRight(10f)
+            val label = "Check extension mods based on:".toLabel()
             val baseMods = listOf(MOD_CHECK_WITHOUT_BASE, MOD_CHECK_DYNAMIC_BASE) + RulesetCache.getSortedBaseRulesets()
-            modCheckBaseSelect = TranslatedSelectBox(baseMods, MOD_CHECK_DYNAMIC_BASE).apply {
+            val select = TranslatedSelectBox(baseMods, MOD_CHECK_DYNAMIC_BASE).apply {
                 selectedIndex = 1
                 onChange { runAction() }
             }
-            add(modCheckBaseSelect)
+            modCheckBaseSelect = select
+            if (style == null) {
+                add(label).padRight(10f)
+                add(select)
+                return@apply
+            }
+            // Portrait: label over a page-wide select, so the fixed header (as wide as the pager) never scrolls sideways
+            val width = optionsPopup.tabMinWidth - 2 * fixedContent.defaults().padLeft
+            label.wrap = true
+            add(label).width(width).row()
+            add(select).width(width).minHeight(style.px(48f)).padTop(style.px(10f))
+            style.fitSelect(select)
         }
         fixedContent.add(labeledBaseSelect).colspan(3).row()
+        if (style != null) fixedContent.getCell(reloadModsButton).minHeight(style.px(48f))
 
         add(modCheckResultTable)
     }

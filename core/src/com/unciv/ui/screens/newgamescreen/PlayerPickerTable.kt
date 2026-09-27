@@ -2,7 +2,9 @@ package com.unciv.ui.screens.newgamescreen
 
 import com.badlogic.gdx.Gdx
 import com.badlogic.gdx.graphics.Color
+import com.badlogic.gdx.scenes.scene2d.Actor
 import com.badlogic.gdx.scenes.scene2d.Touchable
+import com.badlogic.gdx.scenes.scene2d.ui.Cell
 import com.badlogic.gdx.scenes.scene2d.ui.Table
 import com.badlogic.gdx.utils.Align
 import com.unciv.Constants
@@ -50,11 +52,13 @@ import com.unciv.ui.components.widgets.AutoScrollPane as ScrollPane
  * @param previousScreen A [Screen][BaseScreen] where the player table is inserted, should provide [GameSetupInfo] as property, updated when a player is added/deleted/changed
  * @param gameParameters contains info about number of players.
  * @param blockWidth sets a width for the Civ "blocks". If too small a third of the stage is used.
+ * @param minTarget Portrait only: the smallest tap target, in stage units. 0 keeps the landscape sizes.
  */
 class PlayerPickerTable(
     val previousScreen: IPreviousScreen,
     var gameParameters: GameParameters,
-    blockWidth: Float = 0f
+    blockWidth: Float = 0f,
+    private val minTarget: Float = 0f
 ): Table() {
     val playerListTable = Table()
     val civBlocksWidth = if (blockWidth <= 10f) previousScreen.stage.width / 3 - 5f else blockWidth
@@ -74,10 +78,18 @@ class PlayerPickerTable(
 
         top()
         gameParameters.shufflePlayerOrder = false
-        add("Shuffle Civ Order at Start".toCheckBox(false) { gameParameters.shufflePlayerOrder = it }).padTop(5f).padBottom(5f).row()
+        add("Shuffle Civ Order at Start".toCheckBox(false) { gameParameters.shufflePlayerOrder = it }).tapHeight().padTop(5f).padBottom(5f).row()
         add(ScrollPane(playerListTable).apply { setOverscroll(false, false) }).width(civBlocksWidth)
         update()
         background = BaseScreen.skinStrings.getUiBackground("NewGameScreen/PlayerPickerTable", tintColor = BaseScreen.skinStrings.skinConfig.clearColor)
+    }
+
+    private fun <T : Actor> Cell<T>.tapHeight(): Cell<T> = if (minTarget > 0f) minHeight(minTarget) else this
+
+    /** In portrait, this square icon centred in a [minTarget] square that takes its taps */
+    private fun Actor.tapTarget(): Actor = if (minTarget <= 0f) this else Table().also {
+        it.touchable = Touchable.enabled
+        it.add(this).pad(((minTarget - width) / 2).coerceAtLeast(0f))
     }
 
     /**
@@ -114,6 +126,7 @@ class PlayerPickerTable(
             val addPlayerButton = "+".toLabel(ImageGetter.CHARCOAL, 30)
                 .apply { this.setAlignment(Align.center) }
                 .surroundWithCircle(50f)
+                .tapTarget()
                 .onClick {
                     // no random mode - add first not spectator civ if still available
                     val player = if (noRandom || isRandomNumberOfPlayers) {
@@ -195,10 +208,10 @@ class PlayerPickerTable(
         )
 
         val nationTable = getNationTable(player)
-        playerTable.add(nationTable).left()
+        playerTable.add(nationTable).left().tapHeight()
 
         val playerTypeTextButton = player.playerType.name.toTextButton()
-        playerTable.add(playerTypeTextButton).width(100f).pad(5f).right()
+        playerTable.add(playerTypeTextButton).width(100f).tapHeight().pad(5f).right()
         fun updatePlayerTypeButtonEnabled() {
             // This could be written much shorter with logical operators - I think this is readable
             playerTypeTextButton.isEnabled = when {
@@ -228,6 +241,7 @@ class PlayerPickerTable(
         if (!locked) {
             playerTable.add("-".toLabel(ImageGetter.CHARCOAL, 30, Align.center)
                 .surroundWithCircle(40f)
+                .tapTarget()
                 .onClick {
                     gameParameters.players.remove(player)
                     update()
@@ -245,7 +259,7 @@ class PlayerPickerTable(
         row()
 
         val playerIdTextField = UncivTextField("Please input Player ID!", player.playerId)
-        add(playerIdTextField).colspan(2).fillX().pad(5f)
+        add(playerIdTextField).colspan(2).fillX().tapHeight().pad(5f)
         val errorLabel = "✘".toLabel(Color.RED)
         add(errorLabel).pad(5f).row()
 
@@ -273,14 +287,14 @@ class PlayerPickerTable(
             playerIdTextField.text = currentUserId
             onPlayerIdTextUpdated()
         }
-        add(setCurrentUserButton).colspan(3).fillX().pad(5f).row()
+        add(setCurrentUserButton).colspan(3).fillX().tapHeight().pad(5f).row()
 
         val copyFromClipboardButton = "Player ID from clipboard".toTextButton()
         copyFromClipboardButton.onClick {
             playerIdTextField.text = Gdx.app.clipboard.contents
             onPlayerIdTextUpdated()
         }
-        add(copyFromClipboardButton).right().colspan(3).fillX().pad(5f).row()
+        add(copyFromClipboardButton).right().colspan(3).fillX().tapHeight().pad(5f).row()
 
         //check if friends list is empty before adding the select friend button
         if (friendList.listOfFriends.isNotEmpty()) {
@@ -288,7 +302,7 @@ class PlayerPickerTable(
             selectPlayerFromFriendsList.onClick {
                 popupFriendPicker(player)
             }
-            add(selectPlayerFromFriendsList).left().colspan(3).fillX().pad(5f)
+            add(selectPlayerFromFriendsList).left().colspan(3).fillX().tapHeight().pad(5f)
         }
     }
 

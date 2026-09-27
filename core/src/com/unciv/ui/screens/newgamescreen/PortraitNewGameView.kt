@@ -28,7 +28,6 @@ import com.unciv.models.translations.tr
 import com.unciv.ui.components.extensions.toLabel
 import com.unciv.ui.components.widgets.AutoScrollPane
 import com.unciv.ui.images.ImageGetter
-import com.unciv.ui.popups.Popup
 import com.unciv.ui.screens.worldscreen.BackgroundActor
 import com.unciv.ui.components.input.onClick
 import kotlin.math.max
@@ -339,22 +338,31 @@ internal class PortraitNewGameView(
         refresh(force = true)
     }
 
-    private fun showSettings(section: String) {
-        val popup = Popup(screen, Popup.Scrollability.All, 1f)
-        popup.addGoodSizedLabel(when (section) {
-            "map" -> "Map"
-            "players" -> "Players"
-            "rules" -> "Game rules"
-            else -> "More options"
-        }, px(23f)).row()
-        val width = screen.stage.width - 24f * unit
-        if (section == "map" || section == "all") popup.add(mapOptions).width(width).row()
-        if (section == "rules" || section == "players" || section == "all")
-            popup.add(gameOptions).width(width).row()
-        if (section == "players" || section == "all") popup.add(players).width(width).row()
-        if (section == "all") popup.add(gameOptions.modCheckboxes).width(width).row()
-        popup.addCloseButton("Done") { refresh(force = true) }.row()
-        popup.open()
+    private var moreOptions: PortraitMoreOptionsView? = null
+
+    private fun showSettings(section: String) = showOptions(when (section) {
+        "map" -> PortraitMoreOptionsView.Tab.Map
+        "rules" -> PortraitMoreOptionsView.Tab.Rules
+        "players" -> PortraitMoreOptionsView.Tab.Players
+        else -> null
+    })
+
+    /** Opens More options on [tab], or on the tab last used when null */
+    fun showOptions(tab: PortraitMoreOptionsView.Tab?) {
+        val view = moreOptions
+            ?: PortraitMoreOptionsView(screen, gameOptions, mapOptions, players) { refresh(force = true) }
+                .also { moreOptions = it }
+        view.open(tab)
+    }
+
+    /** The More options tab on screen, null while it is closed */
+    val openOptionsTab get() = moreOptions?.takeIf { it.isOpen }?.tab
+
+    /** Closes More options if open, returns whether it was */
+    fun closeOptions(): Boolean {
+        val view = moreOptions?.takeIf { it.isOpen } ?: return false
+        view.close()
+        return true
     }
 
     private fun panel(radiusPx: Float, tint: Color): NinePatchDrawable {

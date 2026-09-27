@@ -60,16 +60,26 @@ class MapOptionsTable(private val newGameScreen: NewGameScreen) : Table() {
             newGameScreen.updateTables()
         }
 
+        val portrait = newGameScreen.isPortrait()
+        if (portrait) mapTypeSpecificTable.defaults().growX()
         // activate once, so the MapGeneratedMainType.generated controls show
         updateOnMapTypeChange()
 
         mapTypeSelectBox.onChange { updateOnMapTypeChange() }
 
-        val mapTypeSelectWrapper = Table()  // wrap to center-align Label and SelectBox easier
-        mapTypeSelectWrapper.add("{Map Type}:".toLabel()).left().expandX()
-        mapTypeSelectWrapper.add(mapTypeSelectBox).right()
-        add(mapTypeSelectWrapper).pad(10f).fillX().row()
-        add(mapTypeSpecificTable).row()
+        if (portrait) {
+            // More options Map tab: the page supplies background and margins
+            background = null
+            val controls = PortraitOptionControls.of(newGameScreen)
+            controls.section(this, "Map Type", controls.choices(mapTypeSelectBox), gap = 12f)
+            add(mapTypeSpecificTable).colspan(2).width(controls.contentWidth).row()
+        } else {
+            val mapTypeSelectWrapper = Table()  // wrap to center-align Label and SelectBox easier
+            mapTypeSelectWrapper.add("{Map Type}:".toLabel()).left().expandX()
+            mapTypeSelectWrapper.add(mapTypeSelectBox).right()
+            add(mapTypeSelectWrapper).pad(10f).fillX().row()
+            add(mapTypeSpecificTable).row()
+        }
     }
 
     internal fun getSelectedScenario(): ScenarioSelectTable.ScenarioData? {

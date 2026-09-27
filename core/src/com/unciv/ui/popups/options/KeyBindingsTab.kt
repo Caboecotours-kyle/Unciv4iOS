@@ -1,5 +1,6 @@
 package com.unciv.ui.popups.options
 
+import com.unciv.Constants
 import com.unciv.GUI
 import com.unciv.models.translations.tr
 import com.unciv.ui.components.extensions.toLabel
@@ -59,8 +60,11 @@ internal class KeyBindingsTab(
         clear()
         add(disclaimer).center().row()
 
-        for ((category, bindings) in groupedWidgets)
-            add(getCategoryWidget(category, bindings)).row()
+        for ((category, bindings) in groupedWidgets) {
+            val cell = add(getCategoryWidget(category, bindings))
+            if (portrait != null) cell.growX()
+            cell.row()
+        }
     }
 
     private fun getCategoryWidget(
@@ -68,18 +72,27 @@ internal class KeyBindingsTab(
         bindings: LinkedHashMap<KeyboardBinding, KeyCapturingButton>
     ) = ExpanderTab(
         category.label,
+        fontSize = portrait?.font(17.5f) ?: Constants.headingFontSize,
         startsOutOpened = false,
         defaultPad = 0f,
         headerPad = 5f,
         // expanderWidth = labelWidth,
+        // Portrait: any fixed width skips measuring the unwrapped content, the page width decides
+        expanderWidth = if (portrait != null) 1f else 0f,
         persistenceID = "KeyBindings." + category.name
     ) {
         it.defaults().padTop(5f)
         for ((binding, widget) in bindings) {
-            it.add(binding.label.toLabel()).padRight(10f).minWidth(labelWidth / 2)
-            it.add(widget).row()
+            val label = binding.label.toLabel().apply { wrap = portrait != null }
+            it.add(label).padRight(10f).minWidth(labelWidth / 2)
+            val cell = it.add(widget)
+            // Built here, after the page's portrait pass, so the key buttons get their 48pt target now
+            portrait?.let { style -> cell.minHeight(style.px(48f)).fillY() }
+            cell.row()
             widget.current = keyBindings[binding]
         }
+    }.apply {
+        portrait?.let { style -> getCell(header).minHeight(style.px(48f)) }
     }
 
     private fun onKeyHit() {

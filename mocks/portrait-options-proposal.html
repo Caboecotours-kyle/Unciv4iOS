@@ -1,0 +1,668 @@
+<!doctype html>
+<!--
+Approved 2026-09-26, with Details labels replacing the book icon. Portrait redesign of three legacy phone pages: improvement picker, Settings, new-game More options.
+Built on the approved language: navy panels, yellow primary, bold rounded type, 48px targets, sticky thumb actions.
+Prototype only. Nothing here talks to a game. Map preview is a drawn stand-in, not Unciv's generator.
+Improvement icons are the generated art in mocks/art; Road and Railroad are drawn because no sprite exists yet.
+-->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Unciv Portrait: options pages proposal</title>
+<style>
+:root{
+  --navy:#132435; --navy2:#1c3249; --panel:rgba(16,31,47,.9); --line:rgba(255,255,255,.1);
+  --card:#182d43; --card2:#213a55; --well:#0d1d2d;
+  --ink:#fff; --ink2:#b7cde0; --ink3:#7f9ab2;
+  --yellow:#ffc93c; --yellow-ink:#3a2a00; --red:#ff7a6e; --redbg:rgba(224,82,74,.16); --warn:#ffb14a;
+  --food:#6fd05a; --gold:#ffc93c; --sci:#5cc8ff;
+  --r:ui-rounded,"SF Pro Rounded","Nunito","Varela Round",system-ui,-apple-system,sans-serif;
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+html,body{height:100%;background:#0b1622;color:var(--ink);font-family:var(--r);-webkit-font-smoothing:antialiased}
+body{display:flex;flex-direction:column;align-items:center;overflow:hidden}
+button{font:inherit;color:inherit;background:none;border:0;cursor:pointer;text-align:inherit}
+a{color:inherit}
+svg.i{width:22px;height:22px;flex:none;fill:none;stroke:currentColor;stroke-width:2.4;stroke-linecap:round;stroke-linejoin:round}
+
+/* canvas chrome, outside the phone */
+.chrome{width:100%;display:flex;flex-direction:column;align-items:center;gap:6px;padding:10px 10px 8px;flex:none}
+.crow{display:flex;flex-wrap:wrap;gap:6px 10px;justify-content:center;align-items:center;max-width:100%}
+.proto{background:#ff5d8f;color:#2a0613;font-weight:900;font-size:12.5px;letter-spacing:.06em;padding:6px 10px;border-radius:9px;text-transform:uppercase}
+.ctitle{font-weight:900;font-size:15px}
+.seg{display:flex;background:#16283a;border-radius:14px;padding:3px;max-width:100%;overflow-x:auto;scrollbar-width:none}
+.seg::-webkit-scrollbar{display:none}
+.seg button{min-height:40px;padding:8px 12px;border-radius:11px;font-weight:800;font-size:15px;color:var(--ink2);white-space:nowrap}
+.seg button[aria-pressed=true]{background:#fff;color:var(--navy)}
+.links{display:flex;flex-wrap:wrap;gap:4px 6px;justify-content:center;max-width:980px}
+.links a{font-size:13px;font-weight:800;color:var(--ink2);text-decoration:none;padding:6px 10px;border-radius:9px;background:#132536;min-height:32px;display:inline-flex;align-items:center}
+.links a.on{background:#2a4460;color:#fff}
+.thesis{text-align:center;font-size:13px;color:var(--ink2);font-weight:600;max-width:760px;line-height:1.35;padding:0 8px}
+.stagewrap{flex:1;width:100%;display:flex;align-items:flex-start;justify-content:center;min-height:0;overflow:hidden;padding-top:8px}
+.device{position:relative;transform-origin:top center;border-radius:48px;overflow:hidden;flex:none;
+  box-shadow:0 0 0 10px #05090e,0 0 0 11px #2a3b4d,0 30px 60px rgba(0,0,0,.5)}
+.device.w320{border-radius:10px}
+
+/* phone screen */
+.screen{position:absolute;inset:0;display:flex;flex-direction:column;overflow:hidden;background:radial-gradient(120% 60% at 50% 0%,#1b3450 0%,#0f2133 55%,#0b1828 100%)}
+.device{--sbh:50px;--hb:24px}
+.device.w320{--sbh:22px;--hb:0px}
+.sbar{height:var(--sbh);flex:none;display:flex;justify-content:space-between;align-items:center;padding:0 30px 0 36px;font-weight:800;font-size:16px}
+.device.w320 .sbar{padding:0 10px;font-size:12.5px}
+.sbar .bat{width:25px;height:12px;border:1.5px solid #fff;border-radius:4px;position:relative}
+.sbar .bat::after{content:"";position:absolute;inset:1.5px;right:5px;background:#fff;border-radius:1.5px}
+.hd{flex:none;display:flex;align-items:center;gap:6px;padding:4px 8px 8px}
+.hd h1{flex:1;min-width:0;font-size:21px;font-weight:900;line-height:1.15;overflow-wrap:anywhere}
+.hd h1.c{text-align:center}
+.ib{width:48px;height:48px;border-radius:50%;display:grid;place-items:center;background:rgba(255,255,255,.08);flex:none}
+.ib.ghost{background:none}
+.body{flex:1;min-height:0;overflow-y:auto;overflow-x:hidden;padding:2px 12px 24px;overscroll-behavior:contain;scrollbar-width:none}
+.body::-webkit-scrollbar{display:none}
+.ft{flex:none;background:var(--panel);-webkit-backdrop-filter:blur(12px);backdrop-filter:blur(12px);padding:12px 12px calc(12px + var(--hb));border-top:1px solid var(--line);box-shadow:0 -10px 24px rgba(0,0,0,.28);position:relative;z-index:2}
+.frow{display:flex;gap:10px;align-items:stretch}
+.btn{min-height:56px;border-radius:18px;font-weight:900;font-size:18px;display:flex;align-items:center;justify-content:center;gap:8px;padding:6px 16px;text-align:center;line-height:1.15;min-width:0;overflow-wrap:anywhere}
+.btn.grow{flex:1}
+.btn.y{background:var(--yellow);color:var(--yellow-ink);box-shadow:0 4px 0 #c9951c}
+.btn.n{background:#264262;box-shadow:0 4px 0 #0b1826}
+.btn.sq{width:56px;padding:0;flex:none}
+.btn.bad{background:var(--redbg);color:var(--red);box-shadow:inset 0 0 0 2px rgba(255,122,110,.5)}
+.btn:active{transform:translateY(2px)}
+.small{font-size:13.5px;font-weight:700;color:var(--ink2);line-height:1.35}
+
+/* shared list pieces */
+.gt{font-size:13.5px;font-weight:900;color:var(--ink3);letter-spacing:.04em;text-transform:uppercase;margin:18px 6px 8px}
+.gt:first-child{margin-top:8px}
+.grp{background:var(--card);border-radius:20px;overflow:hidden}
+.grp>*+*{border-top:1px solid var(--line)}
+.row{display:flex;align-items:center;gap:12px;min-height:56px;padding:8px 12px 8px 16px;width:100%;font-size:16.5px;font-weight:800;line-height:1.25}
+.row .lab{flex:1;min-width:0;overflow-wrap:anywhere}
+.row .lab small{display:block;font-size:13.5px;font-weight:700;color:var(--ink2);margin-top:2px}
+.row .val{color:var(--ink2);font-weight:800;font-size:15.5px;text-align:right;flex:none;max-width:45%;overflow-wrap:anywhere}
+.row .chev{color:var(--ink3)}
+.tog{width:52px;height:32px;border-radius:16px;background:#304a66;position:relative;flex:none;transition:background .15s}
+.tog::after{content:"";position:absolute;top:3px;left:3px;width:26px;height:26px;border-radius:50%;background:#fff;transition:transform .15s;box-shadow:0 2px 4px rgba(0,0,0,.3)}
+[aria-checked=true] .tog{background:var(--yellow)}
+[aria-checked=true] .tog::after{transform:translateX(20px)}
+.pseg{display:flex;background:var(--well);border-radius:16px;padding:4px;gap:4px}
+.pseg button{flex:1;min-width:0;min-height:48px;border-radius:12px;font-weight:800;font-size:15px;color:var(--ink2);text-align:center;padding:4px 4px;line-height:1.1;overflow-wrap:anywhere}
+.pseg button[aria-pressed=true]{background:#fff;color:var(--navy)}
+.chips{display:flex;flex-wrap:wrap;gap:8px}
+.chip{min-height:48px;padding:0 16px;border-radius:24px;background:#223a54;font-weight:800;font-size:15.5px;display:inline-flex;align-items:center;gap:6px}
+.chip[aria-pressed=true]{background:#fff;color:var(--navy)}
+.field{padding:12px 12px 14px 16px}
+.field>.fl{font-size:15px;font-weight:900;color:var(--ink2);margin-bottom:10px;display:flex;align-items:baseline;justify-content:space-between;gap:8px}
+.field>.fl b{color:#fff;font-size:17px}
+.slide{display:flex;align-items:center;gap:6px}
+.slide .ib{background:#223a54}
+input[type=range]{-webkit-appearance:none;appearance:none;flex:1;min-width:0;height:48px;background:transparent}
+input[type=range]::-webkit-slider-runnable-track{height:8px;border-radius:4px;background:#304a66}
+input[type=range]::-moz-range-track{height:8px;border-radius:4px;background:#304a66}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:30px;height:30px;border-radius:50%;background:var(--yellow);margin-top:-11px;box-shadow:0 3px 0 #c9951c}
+input[type=range]::-moz-range-thumb{width:30px;height:30px;border:0;border-radius:50%;background:var(--yellow);box-shadow:0 3px 0 #c9951c}
+input[type=range]:focus-visible{outline:3px solid var(--yellow);outline-offset:2px;border-radius:8px}
+.note{display:flex;gap:10px;align-items:flex-start;padding:12px 14px;border-radius:16px;background:rgba(255,177,74,.12);color:#ffd9a3;font-size:14px;font-weight:700;line-height:1.35;margin-top:10px}
+.note svg{width:20px;height:20px;color:var(--warn);margin-top:1px}
+
+/* improvement picker */
+.ctx{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin:0 2px 4px;font-size:15px;font-weight:800;color:var(--ink2)}
+.ctx .chip{min-height:44px;background:#264262;color:#fff}
+.ctx .flag{width:20px;height:20px;border-radius:50%;background:#5cc8ff;box-shadow:inset 0 -3px 0 rgba(0,0,0,.25);flex:none}
+.improw{display:flex;align-items:stretch;gap:0;background:var(--card);border-radius:22px;border:2.5px solid transparent;margin-bottom:10px;overflow:hidden}
+.improw.sel{border-color:var(--yellow);background:var(--card2)}
+.impmain{flex:1;min-width:0;display:flex;align-items:center;gap:12px;padding:10px 4px 10px 10px;min-height:80px}
+.ipic{width:58px;height:58px;border-radius:18px;background:#2d4866;display:grid;place-items:center;flex:none;overflow:hidden;box-shadow:inset 0 -4px 0 rgba(0,0,0,.18)}
+.ipic img{width:56px;height:56px;object-fit:contain}
+.ipic svg{width:44px;height:44px}
+.improw.locked .ipic{background:#243a52}
+.improw.locked .ipic img,.improw.locked .ipic svg{opacity:.62;filter:saturate(.55)}
+.iname{font-size:18px;font-weight:900;line-height:1.2;overflow-wrap:anywhere}
+.tags{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}
+.tag{display:inline-flex;align-items:center;gap:4px;font-size:13.5px;font-weight:800;padding:4px 8px;border-radius:9px;background:rgba(255,255,255,.08);color:var(--ink2);line-height:1.15}
+.tag svg{width:14px;height:14px;stroke-width:2.6}
+.tag img{width:18px;height:18px;object-fit:contain;margin:-2px 0}
+.tag.food{color:var(--food);background:rgba(111,208,90,.14)}
+.tag.neg{color:var(--red);background:var(--redbg)}
+.tag.ok{color:#1d3a10;background:var(--food)}
+.tag.lock{color:#dce8f3;background:#314c6b}
+.tag.res{color:#ffe7a8;background:rgba(255,201,60,.14)}
+.tag.prog{color:var(--yellow-ink);background:var(--yellow)}
+.pbtn{width:78px;flex:none;display:grid;place-items:center;color:#fff;font-size:14.5px;font-weight:900;border-left:1px solid var(--line)}
+.pbtn span{display:grid;place-items:center;min-height:44px;padding:0 10px;border-radius:14px;background:#264262}
+.btn.det{flex:none;padding:6px 18px}
+.inprog{background:linear-gradient(135deg,#2c4a2a,#1d3450);border-radius:22px;padding:14px;margin:6px 0 4px;display:flex;flex-direction:column;gap:12px}
+.inprog .top{display:flex;gap:12px;align-items:center}
+.fsum{display:flex;gap:12px;align-items:center;margin-bottom:10px}
+.fsum .ipic{width:48px;height:48px;border-radius:14px}
+.fsum .ipic img{width:46px;height:46px}
+.fsum .ipic svg{width:36px;height:36px}
+.fsum .iname{font-size:19px}
+.fwarn{display:flex;gap:8px;align-items:flex-start;color:#ffd9a3;font-size:14.5px;font-weight:800;line-height:1.3;background:rgba(255,177,74,.13);border-radius:14px;padding:10px 12px;margin:-2px 0 10px}
+.fwarn svg{width:19px;height:19px;color:var(--warn);flex:none;margin-top:1px}
+.flock{display:flex;gap:10px;align-items:center;font-size:15px;font-weight:800;color:var(--ink2);margin:-2px 0 10px;line-height:1.3}
+.flock .tpic{width:40px;height:40px;border-radius:50%;background:#1a4a6a;display:grid;place-items:center;flex:none;overflow:hidden;color:var(--sci)}
+.flock .tpic img{width:40px;height:40px;object-fit:cover}
+
+/* overlays inside the phone */
+.scrim{position:absolute;inset:0;background:rgba(6,14,22,.55);z-index:5;animation:fade .15s both}
+.sheet{position:absolute;left:0;right:0;bottom:0;max-height:84%;display:flex;flex-direction:column;background:#132a40;border-radius:28px 28px 0 0;z-index:6;box-shadow:0 -14px 40px rgba(0,0,0,.4);animation:up .2s ease-out both;padding-bottom:var(--hb)}
+.sheet .sh{display:flex;align-items:center;gap:8px;padding:8px 8px 6px 18px;flex:none}
+.sheet .sh h2{flex:1;min-width:0;font-size:19px;font-weight:900;line-height:1.2}
+.sheet .sb{overflow-y:auto;padding:0 12px 14px;min-height:0}
+.grab{width:40px;height:5px;border-radius:3px;background:rgba(255,255,255,.25);margin:8px auto 0;flex:none}
+.card{position:absolute;left:12px;right:12px;bottom:calc(16px + var(--hb));background:#16304a;border-radius:26px;padding:18px 14px 14px;z-index:6;box-shadow:0 14px 40px rgba(0,0,0,.45);animation:up .2s ease-out both}
+.card h2{font-size:20px;font-weight:900;line-height:1.25;overflow-wrap:anywhere}
+.card p{margin:6px 0 14px}
+.toast{position:absolute;left:14px;right:14px;z-index:9;background:#fff;color:var(--navy);border-radius:16px;padding:12px 14px;font-weight:800;font-size:15px;line-height:1.3;box-shadow:0 10px 26px rgba(0,0,0,.35);display:flex;gap:10px;align-items:flex-start;pointer-events:none;opacity:0;transform:translateY(8px);transition:opacity .18s,transform .18s}
+.toast.on{opacity:1;transform:none}
+.toast b{display:block;font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:#c2185b}
+@keyframes up{from{transform:translateY(30px);opacity:0}to{transform:none;opacity:1}}
+@keyframes fade{from{opacity:0}to{opacity:1}}
+@media (prefers-reduced-motion:reduce){.scrim,.sheet,.card{animation:none}.toast,.tog,.tog::after{transition:none}}
+.pedia-hero{display:flex;gap:14px;align-items:center;padding:4px 4px 14px}
+.pedia-hero .ipic{width:84px;height:84px;border-radius:24px}
+.pedia-hero .ipic img{width:80px;height:80px}
+.pedia-hero .ipic svg{width:62px;height:62px}
+.kicker{font-size:12.5px;font-weight:900;color:var(--sci);letter-spacing:.06em;text-transform:uppercase}
+
+/* settings */
+.cat{display:flex;align-items:center;gap:14px;min-height:64px;padding:8px 12px 8px 12px;width:100%;font-size:17.5px;font-weight:900}
+.cat .cic{width:42px;height:42px;border-radius:13px;display:grid;place-items:center;flex:none;color:#fff}
+.cat .lab{flex:1;min-width:0;overflow-wrap:anywhere;line-height:1.2}
+.cat .lab small{display:block;font-size:13px;font-weight:700;color:var(--ink2);margin-top:2px}
+.cond{font-size:12px;font-weight:900;color:var(--ink2);background:rgba(255,255,255,.08);border-radius:8px;padding:3px 7px;margin-left:4px;vertical-align:2px;white-space:nowrap}
+.bignum{min-width:44px;text-align:center;font-size:22px;font-weight:900}
+.kbd{min-width:44px;height:36px;padding:0 10px;border-radius:10px;background:#0d1d2d;box-shadow:inset 0 -3px 0 rgba(0,0,0,.35);display:inline-grid;place-items:center;font-weight:900;font-size:15px;color:#fff;flex:none}
+.radio{width:26px;height:26px;border-radius:50%;box-shadow:inset 0 0 0 2.5px #4a6886;flex:none;display:grid;place-items:center}
+[aria-checked=true] .radio{box-shadow:inset 0 0 0 8px var(--yellow)}
+
+/* more options */
+.tabs{display:flex;gap:4px;background:var(--well);border-radius:18px;padding:4px;margin:0 12px 8px;flex:none}
+.tabs button{flex:1;min-width:0;min-height:48px;border-radius:14px;font-weight:900;font-size:15.5px;color:var(--ink2);text-align:center;padding:0 2px;overflow-wrap:anywhere;line-height:1.1}
+.tabs button[aria-selected=true]{background:#fff;color:var(--navy)}
+.prev{position:relative;border-radius:18px;overflow:hidden;background:#1f5ea8;margin:0}
+.prev canvas{display:block;width:100%;height:auto}
+.prev .pl{position:absolute;left:10px;top:8px;font-size:13px;font-weight:900;background:rgba(10,22,34,.7);padding:4px 8px;border-radius:8px}
+.prev .pr{position:absolute;right:10px;top:8px;font-size:12.5px;font-weight:900;background:rgba(10,22,34,.7);padding:4px 8px;border-radius:8px;color:var(--yellow)}
+.prev .qm{position:absolute;inset:0;display:grid;place-items:center;font-size:15px;font-weight:900;color:#fff;background:rgba(10,22,34,.55);text-align:center;padding:12px}
+.seedrow{display:flex;gap:8px;align-items:center}
+.seedrow input{flex:1;min-width:0;height:52px;border-radius:14px;border:0;background:var(--well);color:#fff;font:inherit;font-weight:900;font-size:18px;padding:0 14px}
+.seedrow input:focus{outline:3px solid var(--yellow)}
+.disc-btn{display:flex;align-items:center;gap:12px;width:100%;min-height:60px;padding:8px 14px;border-radius:20px;background:var(--card);font-size:17.5px;font-weight:900;margin-top:14px}
+.disc-btn .lab{flex:1;min-width:0}
+.disc-btn .lab small{display:block;font-size:13px;font-weight:700;color:var(--ink2)}
+.disc-btn svg.chev{transition:transform .15s}
+.disc-btn[aria-expanded=true] svg.chev{transform:rotate(90deg)}
+.step{display:flex;align-items:center;gap:4px;flex:none}
+.step .ib{background:#223a54}
+.pport{width:46px;height:46px;border-radius:50%;overflow:hidden;background:#2f7fe0;flex:none;display:grid;place-items:center;font-weight:900;font-size:20px}
+.pport img{width:46px;height:46px;object-fit:cover}
+.opt-sum{font-size:13.5px;font-weight:800;color:var(--ink2);margin:0 2px 10px;line-height:1.3;overflow-wrap:anywhere}
+</style>
+</head>
+<body>
+<div class="chrome">
+  <div class="crow">
+    <span class="proto">Prototype, not the game</span>
+    <span class="ctitle">Legacy phone pages, portrait redesign</span>
+  </div>
+  <div class="crow">
+    <div class="seg" id="sceneSeg" role="group" aria-label="Page">
+      <button data-scene="imp">Improvement picker</button>
+      <button data-scene="set">Settings</button>
+      <button data-scene="opt">More options</button>
+    </div>
+    <div class="seg" id="wSeg" role="group" aria-label="Phone width">
+      <button data-w="320">320</button><button data-w="393">393</button><button data-w="430">430</button>
+    </div>
+  </div>
+  <nav class="links" id="links" aria-label="Deep links"></nav>
+  <div class="thesis" id="thesis"></div>
+</div>
+<div class="stagewrap" id="stagewrap">
+  <div class="device" id="device"><div class="screen" id="screen"></div></div>
+</div>
+
+<script>
+/* ---------- icons ---------- */
+const P={
+  back:'<path d="M15 5l-7 7 7 7"/>',
+  close:'<path d="M6 6l12 12M18 6L6 18"/>',
+  chev:'<path d="M9 5l7 7-7 7"/>',
+  info:'<circle cx="12" cy="12" r="9"/><path d="M12 11v6M12 7.6v.1"/>',
+  lock:'<rect x="5" y="11" width="14" height="10" rx="2.5"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/>',
+  hour:'<path d="M7 3h10M7 21h10M8 3c0 5 8 5 8 9s-8 4-8 9M16 3c0 5-8 5-8 9s8 4 8 9"/>',
+  check:'<path d="M5 12.5l4.5 4.5L19 7"/>',
+  warn:'<path d="M12 3.5l9.5 17h-19z"/><path d="M12 10v5M12 17.8v.1"/>',
+  book:'<path d="M5 4.5A1.5 1.5 0 0 1 6.5 3H19v15H6.5A1.5 1.5 0 0 0 5 19.5z"/><path d="M5 19.5A1.5 1.5 0 0 0 6.5 21H19"/>',
+  dice:'<rect x="4" y="4" width="16" height="16" rx="3.5"/><path d="M8.5 8.5h.01M15.5 15.5h.01M12 12h.01M15.5 8.5h.01M8.5 15.5h.01"/>',
+  reset:'<path d="M4 12a8 8 0 1 0 2.4-5.7"/><path d="M4 4v4.5h4.5"/>',
+  plus:'<path d="M12 5v14M5 12h14"/>',
+  minus:'<path d="M5 12h14"/>',
+  stop:'<rect x="6" y="6" width="12" height="12" rx="2.5"/>',
+  hammer:'<path d="M13 7l4 4M4 20l9-9M11 5l3-2 7 7-2 3z"/>',
+  city:'<path d="M4 21V10l5-3v14M9 21V5l6-2v18M15 21V9l5 2v10M3 21h18"/>',
+  about:'<circle cx="12" cy="12" r="9"/><path d="M12 11v6M12 7.6v.1"/>',
+  display:'<rect x="3" y="4" width="18" height="12.5" rx="2.5"/><path d="M8.5 20.5h7M12 16.5v4"/>',
+  gameplay:'<path d="M6 21V4h11l-2.5 4.2L17 12.5H6"/>',
+  auto:'<path d="M4 9.5h13l-3.5-3.5M20 14.5H7l3.5 3.5"/>',
+  lang:'<circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c3.2 3.2 3.2 14.8 0 18M12 3c-3.2 3.2-3.2 14.8 0 18"/>',
+  sound:'<path d="M4 9.5h4l5-4.5v14l-5-4.5H4z"/><path d="M16.5 9a4.2 4.2 0 0 1 0 6M19 6.5a8 8 0 0 1 0 11"/>',
+  adv:'<path d="M4 7h9M17 7h3M4 17h3M11 17h9"/><circle cx="15" cy="7" r="2.2"/><circle cx="9" cy="17" r="2.2"/>',
+  mp:'<circle cx="9" cy="8" r="3.4"/><path d="M3 20c0-3.6 2.7-6 6-6s6 2.4 6 6"/><circle cx="17.3" cy="9" r="2.6"/><path d="M16.5 14.2c2.7.3 4.5 2.4 4.5 5.3"/>',
+  keys:'<rect x="2.5" y="6" width="19" height="12.5" rx="2.5"/><path d="M6.5 10h.01M10 10h.01M14 10h.01M17.5 10h.01M8 14.5h8"/>',
+  bug:'<rect x="7.5" y="8" width="9" height="12.5" rx="4.5"/><path d="M9.5 8a2.5 2.5 0 0 1 5 0M3.5 13h4M16.5 13h4M4.5 8.5l3 2M19.5 8.5l-3 2M4.5 19l3-2M19.5 19l-3-2M12 11v9"/>',
+  map:'<path d="M3.5 6.5l5.5-2.5 6 2.5 5.5-2.5v13.5l-5.5 2.5-6-2.5-5.5 2.5z"/><path d="M9 4v13.5M15 6.5V20"/>',
+  folder:'<path d="M3.5 7a2 2 0 0 1 2-2h4l2 2.5h7a2 2 0 0 1 2 2V18a2 2 0 0 1-2 2h-13a2 2 0 0 1-2-2z"/>',
+};
+const ic=(n,extra='')=>`<svg class="i ${extra}" viewBox="0 0 24 24" aria-hidden="true">${P[n]}</svg>`;
+const ROAD='<svg viewBox="0 0 48 48" aria-hidden="true"><path d="M8 40L20 8h8l12 32z" fill="#8a929c"/><path d="M8 40L20 8h3L14 40z" fill="#a9b0b8"/><path d="M24 12v5M24 22v6M24 33v6" stroke="#f3f7fa" stroke-width="3" stroke-linecap="round"/></svg>';
+const RAIL='<svg viewBox="0 0 48 48" aria-hidden="true"><path d="M11 12h26M10 19h28M9 26h30M8 33h32M7 40h34" stroke="#9a6a43" stroke-width="4" stroke-linecap="round"/><path d="M17 8l-6 34M31 8l6 34" stroke="#d4dbe2" stroke-width="3.5" stroke-linecap="round"/></svg>';
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+
+/* ---------- data (from the audit inventory) ---------- */
+const IMPS=[
+  {id:'farm',name:'Farm',turns:5,img:'art/i_Farm.png',ok:true,fx:[['food','+1 Food']]},
+  {id:'tp',name:'Trading post',turns:5,img:'art/i_Trading%20post.png',ok:false,req:'Guilds'},
+  {id:'camp',name:'Camp',turns:5,img:'art/i_Camp.png',ok:false,req:'Trapping',provides:'Ivory'},
+  {id:'fort',name:'Fort',turns:4,img:'art/i_Fort.png',ok:false,req:'Engineering'},
+  {id:'road',name:'Road',turns:3,svg:ROAD,ok:false,req:'The Wheel',reqImg:'art/t_The%20Wheel.png',fx:[['neg','−1 Gold maintenance']]},
+  {id:'rail',name:'Railroad',turns:3,svg:RAIL,ok:false,req:'Railroad',fx:[['neg','−2 Gold maintenance']]},
+];
+const SAMPLE_OLD='Plantation'; // sample existing improvement for the replacement state
+const GEN_TYPES=['Pangaea','Continent and islands','Two continents','Three continents','Four corners','Archipelago','Inner sea','Perlin','Fractal','Lakes','Smoothed random','Empty'];
+const SIZES=['Tiny','Small','Medium','Large','Huge','Custom'];
+const ADV=[ // key, label, min, max, step, default
+  ['elev','Elevation',0.1,2,0.1,0.7],
+  ['tint','Temperature intensity',0,1,0.05,0.6],
+  ['tshift','Temperature shift',-0.4,0.4,0.05,0],
+  ['resr','Resource richness',0,0.5,0.01,0.1],
+  ['veg','Vegetation richness',0,1,0.05,0.4],
+  ['rare','Rare features richness',0,0.5,0.01,0.05],
+  ['coast','Max coast extension',0,5,1,2],
+  ['biome','Biome areas extension',1,15,1,6],
+  ['water','Water level',-0.4,0.4,0.02,0],
+];
+const advDefaults=()=>Object.fromEntries(ADV.map(a=>[a[0],a[5]]));
+
+/* ---------- state ---------- */
+const S={
+  scene:'imp', w:393,
+  imp:{mode:'default', sel:'farm', pedia:null, confirm:false},
+  set:{page:'home', all:false,
+    g:{idle:true,cycle:false,skip:true,auto:true,dist:false,single:false,long:true,trade:true,confirm:false}, notif:5,
+    d:{yields:true,res:true,anim:true,minimap:6,font:'Medium'}, a:{prod:false,workers:true,start:false},
+    lang:'English', snd:{fx:70,music:50,city:40}, adv:{autosave:5,easter:true}, mp:{sound:true,every:'1 min'}, dbg:{coords:false}},
+  opt:{tab:'map', src:'generated', shape:'rect', gen:'Pangaea', size:'Medium', cw:44, ch:28, rad:20, res:'Default',
+    t:{strat:false,legend:false,ruins:false,wonders:false,wrap:true}, advOpen:false, seed:482915, adv:advDefaults(), sheet:false, file:'sample-1',
+    diff:'Prince', speed:'Standard', era:'Ancient', vic:{Domination:true,Science:true,Cultural:true,Diplomatic:true,Time:true},
+    barb:true, raging:false, occ:false, cs:6, players:['Random','Random','Random'], base:'Civ V: Gods & Kings'}
+};
+
+/* ---------- deep links ---------- */
+const LINKS={
+  imp:[['default','Default'],['locked','Locked pick'],['replace','Replacement warning'],['cancel','Cancel order'],['pedia','Civilopedia']],
+  set:[['home','Home'],['home-all','Home + conditional pages'],['gameplay','Gameplay'],['display','Display'],['automation','Automation'],['language','Language'],['sound','Sound'],['advanced','Advanced'],['about','About'],['multiplayer','Multiplayer'],['keys','Keys'],['moderrors','Mod errors'],['debug','Debug']],
+  opt:[['map','Map'],['map-adv','Map, advanced open'],['map-custom','Custom size'],['map-gen','Generation picker'],['map-random','Random source'],['map-file','From file'],['rules','Rules'],['players','Players'],['mods','Mods']],
+};
+const THESIS={
+  imp:'Picks, cancels and Civilopedia links end in a prototype toast. Only the six improvements from the audit are listed; yields and requirements are the ones it captured.',
+  set:'Gameplay holds all nine real switches and the 3 to 15 turn log slider. Other pages hold sample controls that show the pattern, not the full inventory.',
+  opt:'Map mirrors the real fields and advanced sliders. Rules, Players and Mods hold sample controls. The preview is a drawn stand-in, not Unciv’s generator.',
+};
+let sub='default';
+function applySub(scene,s){
+  S.scene=scene; sub=s;
+  if(scene==='imp'){
+    Object.assign(S.imp,{mode:'default',sel:'farm',pedia:null,confirm:false});
+    if(s==='locked') S.imp.sel='camp';
+    if(s==='replace') S.imp.mode='replace';
+    if(s==='cancel') S.imp.mode='cancel';
+    if(s==='pedia') S.imp.pedia='farm';
+  }
+  if(scene==='set'){ S.set.all = s==='home-all'; S.set.page = s==='home-all'?'home':s; }
+  if(scene==='opt'){
+    const o=S.opt; o.sheet=false; o.advOpen=false;
+    if(s.startsWith('map')){o.tab='map'; o.src='generated'; if(o.size==='Custom'&&s!=='map-custom') o.size='Medium';}
+    else o.tab=s;
+    if(s==='map-adv') o.advOpen=true;
+    if(s==='map-custom') o.size='Custom';
+    if(s==='map-gen') o.sheet=true;
+    if(s==='map-random') o.src='random';
+    if(s==='map-file') o.src='file';
+  }
+}
+function parseHash(){
+  const m=location.hash.match(/^#(imp|set|opt)(?:\/([\w-]+))?(?:@(320|393|430))?$/);
+  if(m){ S.w=+(m[3]||S.w); applySub(m[1], m[2]||LINKS[m[1]][0][0]); }
+  else applySub('imp','default');
+}
+const hashFor=(scene,s,w=S.w)=>`#${scene}/${s}@${w}`;
+function syncHash(s){ sub=s; history.replaceState(null,'',hashFor(S.scene,s)); renderChrome(); }
+
+/* ---------- chrome ---------- */
+function renderChrome(){
+  document.querySelectorAll('#sceneSeg button').forEach(b=>b.setAttribute('aria-pressed',b.dataset.scene===S.scene));
+  document.querySelectorAll('#wSeg button').forEach(b=>b.setAttribute('aria-pressed',+b.dataset.w===S.w));
+  document.getElementById('links').innerHTML=LINKS[S.scene].map(([k,l])=>`<a href="${hashFor(S.scene,k)}" class="${k===sub?'on':''}">${l}</a>`).join('');
+  document.getElementById('thesis').textContent=THESIS[S.scene];
+}
+document.getElementById('sceneSeg').onclick=e=>{const b=e.target.closest('button'); if(b) location.hash=hashFor(b.dataset.scene,LINKS[b.dataset.scene][0][0]);};
+document.getElementById('wSeg').onclick=e=>{const b=e.target.closest('button'); if(b) location.hash=hashFor(S.scene,sub,b.dataset.w);};
+addEventListener('hashchange',()=>{parseHash(); render(true);});
+
+/* ---------- toast ---------- */
+let toastT;
+function toast(msg){
+  const t=document.getElementById('toast'); if(!t) return;
+  t.innerHTML=`${ic('info')}<div><b>Prototype only</b>${esc(msg)}</div>`;
+  const ft=document.querySelector('.ft'); t.style.bottom=((ft?ft.offsetHeight:0)+12)+'px';
+  t.classList.add('on'); clearTimeout(toastT); toastT=setTimeout(()=>t.classList.remove('on'),2600);
+}
+
+/* ---------- shared builders ---------- */
+const sbar=()=>`<div class="sbar"><span>9:41</span><span class="bat"></span></div>`;
+const sw=(act,key,label,on,sub='')=>`<button class="row" role="switch" aria-checked="${on}" data-act="${act}" data-k="${key}"><span class="lab">${label}${sub?`<small>${sub}</small>`:''}</span><span class="tog"></span></button>`;
+const radioRow=(act,key,label,on,sub='')=>`<button class="row" role="radio" aria-checked="${on}" data-act="${act}" data-k="${esc(key)}"><span class="lab">${label}${sub?`<small>${sub}</small>`:''}</span><span class="radio"></span></button>`;
+const pseg=(act,opts,cur,label)=>`<div class="pseg" role="group" aria-label="${label}">${opts.map(([k,l])=>`<button data-act="${act}" data-k="${esc(k)}" aria-pressed="${k===cur}">${l}</button>`).join('')}</div>`;
+const chips=(act,opts,cur,label)=>`<div class="chips" role="group" aria-label="${label}">${opts.map(k=>`<button class="chip" data-act="${act}" data-k="${esc(k)}" aria-pressed="${k===cur}">${k}</button>`).join('')}</div>`;
+const fmt=(v,step)=>step>=1?String(Math.round(v)):(Math.round(v*100)/100).toFixed(step<0.05?2:2).replace(/0$/,'').replace(/\.$/,'');
+const slider=(act,key,label,min,max,step,val,unit='')=>`<div class="field"><div class="fl"><span>${label}</span><b data-out="${act}:${key}">${fmt(val,step)}${unit}</b></div><div class="slide"><button class="ib" data-act="${act}-step" data-k="${key}" data-d="-1" aria-label="Decrease ${label}">${ic('minus')}</button><input type="range" min="${min}" max="${max}" step="${step}" value="${val}" data-act="${act}" data-k="${key}" aria-label="${label}"><button class="ib" data-act="${act}-step" data-k="${key}" data-d="1" aria-label="Increase ${label}">${ic('plus')}</button></div></div>`;
+const head=(title,{back=null,close=null,center=false}={})=>`<header class="hd">${back?`<button class="ib" data-act="${back}" aria-label="Back">${ic('back')}</button>`:(close&&center?'<span style="width:48px;flex:none"></span>':'')}<h1 class="${center?'c':''}">${title}</h1>${close?`<button class="ib" data-act="${close}" aria-label="Close">${ic('close')}</button>`:(back&&center?'<span style="width:48px;flex:none"></span>':'')}</header>`;
+
+/* ---------- improvement picker ---------- */
+const pic=m=>`<span class="ipic">${m.img?`<img src="${m.img}" alt="">`:m.svg}</span>`;
+function impTags(m,inFooter){
+  const t=[`<span class="tag">${ic('hour')}${m.turns} turns</span>`];
+  (m.fx||[]).forEach(([c,l])=>t.push(`<span class="tag ${c}">${l}</span>`));
+  if(m.provides) t.push(`<span class="tag res"><img src="art/r_${m.provides}.png" alt="">Provides ${m.provides}</span>`);
+  if(!inFooter){
+    if(S.imp.mode==='cancel'&&m.id==='farm') t.unshift(`<span class="tag prog">In progress</span>`);
+    else if(m.ok) t.unshift(`<span class="tag ok">${ic('check')}Available</span>`);
+    else t.unshift(`<span class="tag lock">${ic('lock')}${m.req}</span>`);
+  }
+  return t.join('');
+}
+function impCard(m){
+  const sel=S.imp.sel===m.id;
+  return `<div class="improw ${sel?'sel':''} ${m.ok?'':'locked'}"><button class="impmain" data-act="imp-sel" data-k="${m.id}" aria-pressed="${sel}">${pic(m)}<span style="min-width:0;flex:1"><span class="iname">${m.name}</span><span class="tags">${impTags(m)}</span></span></button><button class="pbtn" data-act="imp-pedia" data-k="${m.id}" aria-label="${m.name} details in Civilopedia"><span>Details</span></button></div>`;
+}
+function renderImp(){
+  const I=S.imp, m=IMPS.find(x=>x.id===I.sel);
+  let body=`<div class="ctx"><span>Tile owned by</span><span class="chip" style="pointer-events:none"><span class="flag"></span>Greece (you)</span><button class="chip" data-act="toast" data-msg="Would open Athens.">${ic('city')}Athens</button></div>`;
+  if(I.mode==='replace') body+=`<div class="note">${ic('warn')}<span>This tile already has a ${SAMPLE_OLD} (sample state). Building here replaces it.</span></div>`;
+  if(I.mode==='cancel') body+=`<div class="inprog"><div class="top">${pic(IMPS[0])}<div style="min-width:0"><div class="kicker" style="color:#b8e35a">Current order</div><div class="iname">Building Farm</div><div class="small">2 turns left (sample state)</div></div></div><button class="btn bad" data-act="imp-cancel">${ic('stop')}Cancel improvement order</button></div>`;
+  body+=`<div class="gt">Available now</div>`+IMPS.filter(x=>x.ok).map(impCard).join('');
+  body+=`<div class="gt">Needs research</div>`+IMPS.filter(x=>!x.ok).map(impCard).join('');
+  let foot=`<div class="fsum">${pic(m)}<div style="min-width:0;flex:1"><div class="iname">${m.name}</div><div class="tags">${impTags(m,true)}</div></div></div>`;
+  if(m.ok){
+    const replacing=I.mode==='replace', building=I.mode==='cancel'&&m.id==='farm';
+    if(replacing) foot+=`<div class="fwarn">${ic('warn')}<span>Replaces the ${SAMPLE_OLD} on this tile.</span></div>`;
+    const label=building?'Already building':replacing?`Replace with ${m.name}`:`Build ${m.name}`;
+    foot+=`<div class="frow"><button class="btn n det" data-act="imp-pedia" data-k="${m.id}" aria-label="${m.name} details in Civilopedia">Details</button><button class="btn y grow" data-act="imp-build" ${building?'disabled style="opacity:.5"':''}>${ic('hammer')}${label}</button></div>`;
+  } else {
+    foot+=`<div class="flock"><span class="tpic">${m.reqImg?`<img src="${m.reqImg}" alt="">`:ic('lock')}</span><span>Research <b style="color:#fff">${m.req}</b> to build this.</span></div>`;
+    foot+=`<div class="frow"><button class="btn n det" data-act="imp-pedia" data-k="${m.id}" aria-label="${m.name} details in Civilopedia">Details</button><button class="btn n grow" data-act="toast" data-msg="Would open ${m.req} in the tech tree.">Show ${m.req} in tech tree</button></div>`;
+  }
+  let ov='';
+  if(I.confirm) ov=`<div class="scrim" data-act="imp-confirm-no"></div><div class="card" role="dialog" aria-label="Replace improvement"><h2>Replace ${SAMPLE_OLD} with ${m.name}?</h2><p class="small">The ${SAMPLE_OLD} and what it gives this tile are removed when the ${m.name} is done.</p><div class="frow"><button class="btn n grow" data-act="imp-confirm-no">Keep it</button><button class="btn y grow" data-act="imp-confirm-yes">Replace</button></div></div>`;
+  if(I.pedia){
+    const p=IMPS.find(x=>x.id===I.pedia);
+    ov=`<div class="scrim" data-act="imp-pedia-close"></div><div class="sheet" role="dialog" aria-label="Civilopedia"><div class="grab"></div><div class="sh"><h2 class="kicker" style="font-size:13px">Civilopedia</h2><button class="ib" data-act="imp-pedia-close" aria-label="Close">${ic('close')}</button></div><div class="sb"><div class="pedia-hero">${pic(p)}<div style="min-width:0"><div class="iname" style="font-size:24px">${p.name}</div><div class="tags">${impTags(p,true)}</div></div></div><div class="grp">${p.ok?'':`<div class="row"><span class="lab">Requires<small>Technology</small></span><span class="val">${p.req}</span></div>`}<div class="row"><span class="lab">Turns to build</span><span class="val">${p.turns}</span></div></div><p class="small" style="margin:12px 4px">Short summary here; the full entry keeps Unciv’s Civilopedia text and links.</p><button class="btn n" style="width:100%" data-act="toast" data-msg="Would open the full ${p.name} entry.">${ic('book')}Open full entry</button></div></div>`;
+  }
+  return head('Pick improvement',{close:'toast-close'})+`<main class="body" id="body">${body}</main><footer class="ft">${foot}</footer>${ov}`;
+}
+
+/* ---------- settings ---------- */
+const CATS=[
+  ['about','About','about','#6d8bab'],['display','Display','display','#2f7fe0'],['gameplay','Gameplay','gameplay','#43a047'],
+  ['automation','Automation','auto','#8e5bd6'],['language','Language','lang','#00a2b8'],['sound','Sound','sound','#e0784a'],['advanced','Advanced','adv','#5a6b7d'],
+];
+const CCATS=[
+  ['multiplayer','Multiplayer','mp','#d84b8f','Multiplayer on'],['keys','Keys','keys','#7a8b3a','Keyboard attached'],
+  ['moderrors','Mod errors','warn','#d0453c','Mods have errors'],['debug','Debug','bug','#44525f','Debug mode'],
+];
+const TITLES=Object.fromEntries([...CATS,...CCATS].map(c=>[c[0],c[1]]));
+const catRow=c=>`<button class="cat" data-act="set-page" data-k="${c[0]}"><span class="cic" style="background:${c[3]}">${ic(c[2])}</span><span class="lab">${c[1]}${c[4]?`<small>Shown when: ${c[4]}</small>`:''}</span>${ic('chev','chev')}</button>`;
+function setPage(p){
+  const s=S.set;
+  switch(p){
+    case 'home':
+      return `<div class="grp">${CATS.map(catRow).join('')}</div>`+(s.all?`<div class="gt">Only when they apply</div><div class="grp">${CCATS.map(catRow).join('')}</div>`:'');
+    case 'gameplay': {
+      const g=s.g;
+      return `<div class="gt">Unit cycling</div><div class="grp">${sw('set-g','idle','Check for idle units',g.idle)}${sw('set-g','cycle','‘Next unit’ cycles idle units',g.cycle)}${sw('set-g','skip','Small skip / cycle unit button',g.skip)}${sw('set-g','auto','Auto unit cycle',g.auto)}${sw('set-g','dist','Cycle idle units by distance',g.dist)}</div>`
+      +`<div class="gt">Moving units</div><div class="grp">${sw('set-g','single','Move with a single tap',g.single)}${sw('set-g','long','Move with a long tap',g.long)}</div>`
+      +`<div class="gt">Trade and turns</div><div class="grp">${sw('set-g','trade','Order trade offers by amount',g.trade)}${sw('set-g','confirm','Confirm before next turn',g.confirm)}${slider('set-notif','n','Notification log keeps',3,15,1,s.notif,' turns')}</div>`;
+    }
+    case 'display': return `<div class="gt">Map</div><div class="grp">${sw('set-d','yields','Show tile yields',s.d.yields)}${sw('set-d','res','Show resources and improvements',s.d.res)}${sw('set-d','anim','Unit animations',s.d.anim)}${slider('set-dmini','minimap','Minimap size',0,10,1,s.d.minimap)}</div><div class="gt">Text</div><div class="grp"><div class="field"><div class="fl"><span>Font size</span></div>${pseg('set-font',[['Small','Small'],['Medium','Medium'],['Large','Large']],s.d.font,'Font size')}</div></div>`;
+    case 'automation': return `<div class="gt">Cities and workers</div><div class="grp">${sw('set-a','prod','Auto-assign city production',s.a.prod)}${sw('set-a','workers','Automated workers may replace improvements',s.a.workers)}${sw('set-a','start','Automated units move at turn start',s.a.start)}</div>`;
+    case 'language': return `<div class="gt">Language</div><div class="grp" role="radiogroup">${['English','Español','Français','Deutsch','Português','Italiano','日本語','简体中文'].map(l=>radioRow('set-lang',l,l,s.lang===l)).join('')}</div>`;
+    case 'sound': return `<div class="gt">Volume</div><div class="grp">${slider('set-snd','fx','Sound effects',0,100,5,s.snd.fx,'%')}${slider('set-snd','music','Music',0,100,5,s.snd.music,'%')}${slider('set-snd','city','City ambience',0,100,5,s.snd.city,'%')}</div>`;
+    case 'advanced': return `<div class="gt">Saves</div><div class="grp"><div class="row"><span class="lab">Autosave every</span><span class="step"><button class="ib" data-act="set-auto" data-d="-1" aria-label="Fewer turns">${ic('minus')}</button><span class="bignum">${s.adv.autosave}</span><button class="ib" data-act="set-auto" data-d="1" aria-label="More turns">${ic('plus')}</button></span></div></div><div class="gt">Other</div><div class="grp">${sw('set-adv','easter','Easter eggs',s.adv.easter)}<button class="row" data-act="toast" data-msg="Would open font picker."><span class="lab">Font family</span><span class="val">Default</span>${ic('chev','chev')}</button></div>`;
+    case 'about': return `<div class="grp"><div class="row"><span class="lab">Version</span><span class="val">Portrait prototype</span></div><button class="row" data-act="toast" data-msg="Would open the Unciv site."><span class="lab">Website and credits</span>${ic('chev','chev')}</button><button class="row" data-act="toast" data-msg="Would open the license text."><span class="lab">License</span>${ic('chev','chev')}</button></div>`;
+    case 'multiplayer': return `<div class="gt">Server</div><div class="grp"><button class="row" data-act="toast" data-msg="Would open server address entry."><span class="lab">Server address<small>Default Unciv server</small></span>${ic('chev','chev')}</button></div><div class="gt">Turn checks</div><div class="grp"><div class="field"><div class="fl"><span>Check for my turn every</span></div>${pseg('set-mpevery',[['30 s','30 s'],['1 min','1 min'],['5 min','5 min']],s.mp.every,'Check interval')}</div>${sw('set-mp','sound','Sound when it’s my turn',s.mp.sound)}</div>`;
+    case 'keys': return `<div class="gt">Map</div><div class="grp">${[['Next turn','N'],['Next unit','Space'],['Zoom in','+'],['Zoom out','−'],['Tech tree','T']].map(([l,k])=>`<button class="row" data-act="toast" data-msg="Would wait for a new key for ${l}."><span class="lab">${l}</span><span class="kbd">${k}</span></button>`).join('')}</div>`;
+    case 'moderrors': return `<div class="note">${ic('warn')}<span>Sample errors. The real page lists what the loaded mods report.</span></div><div class="gt">Sample mod</div><div class="grp"><div class="row"><span class="lab">Unknown resource “Spice”<small>Used by an improvement</small></span></div><div class="row"><span class="lab">Missing icon for a unit<small>Warning only</small></span></div></div>`;
+    case 'debug': return `<div class="grp">${sw('set-dbg','coords','Show tile coordinates',s.dbg.coords)}<button class="row" data-act="toast" data-msg="Would open the console."><span class="lab">Open console</span>${ic('chev','chev')}</button></div>`;
+  }
+  return '';
+}
+function renderSet(){
+  const p=S.set.page;
+  const hd=p==='home'?head('Settings',{close:'toast-close'}):head(TITLES[p]||'Settings',{back:'set-home',close:'toast-close'});
+  return `${hd}<main class="body" id="body">${setPage(p)}</main><footer class="ft"><div class="frow">${p==='home'?'':`<button class="btn n grow" data-act="set-home">All settings</button>`}<button class="btn y grow" data-act="toast-close">Done</button></div></footer>`;
+}
+
+/* ---------- more options ---------- */
+function mapTab(){
+  const o=S.opt;
+  let h=`<div class="gt">Map source</div>${pseg('opt-src',[['generated','Generated'],['random','Random'],['file','From file']],o.src,'Map source')}`;
+  if(o.src==='file'){
+    h+=`<div class="gt">Saved maps</div><div class="grp" role="radiogroup">${[['sample-1','Sample map A','Saved maps show here'],['sample-2','Sample map B','Sample entry']].map(([k,l,s])=>radioRow('opt-file',k,l,o.file===k,s)).join('')}</div><button class="disc-btn" data-act="toast" data-msg="Would open the file picker.">${ic('folder')}<span class="lab">Load a map file</span>${ic('chev','chev')}</button>`;
+    return h;
+  }
+  if(o.src==='generated'){
+    h+=`<div class="gt">Shape</div>${pseg('opt-shape',[['rect','Rectangular'],['hex','Hexagonal']],o.shape,'Map shape')}`;
+    h+=`<div class="gt">Generation</div><div class="grp"><button class="row" data-act="opt-sheet"><span class="lab">Map type</span><span class="val">${o.gen}</span>${ic('chev','chev')}</button></div>`;
+  }
+  h+=`<div class="gt">Preview</div><div class="prev"><canvas id="prev" width="600" height="340" aria-label="Example map preview"></canvas><span class="pl">Example map</span>${o.t.wrap?'<span class="pr">Wraps east to west</span>':''}${o.src==='random'?'<div class="qm">Shape and map type are rolled when the game starts</div>':''}</div>`;
+  h+=`<div class="gt">World size</div>${chips('opt-size',SIZES,o.size,'World size')}`;
+  if(o.size==='Custom'){
+    h+=o.shape==='rect'
+      ?`<div class="grp" style="margin-top:10px">${slider('opt-dim','cw','Width',10,120,1,o.cw,' tiles')}${slider('opt-dim','ch','Height',10,80,1,o.ch,' tiles')}</div>`
+      :`<div class="grp" style="margin-top:10px">${slider('opt-dim','rad','Radius',5,60,1,o.rad,' tiles')}</div>`;
+  }
+  h+=`<div class="gt">Resources</div>${pseg('opt-res',[['Sparse','Sparse'],['Default','Default'],['Abundant','Abundant']],o.res,'Resource setting')}`;
+  h+=`<div class="gt">Start and world</div><div class="grp">${sw('opt-t','strat','Strategic balance',o.t.strat)}${sw('opt-t','legend','Legendary start',o.t.legend)}${sw('opt-t','ruins','No ancient ruins',o.t.ruins)}${sw('opt-t','wonders','No natural wonders',o.t.wonders)}${sw('opt-t','wrap','World wrap',o.t.wrap)}</div>`;
+  if(o.t.wrap) h+=`<div class="note">${ic('warn')}<span>World wrap uses a lot of memory. Large wrapped maps can crash on phones.</span></div>`;
+  if(o.src==='generated'){
+    h+=`<button class="disc-btn" data-act="opt-adv" aria-expanded="${o.advOpen}">${ic('adv')}<span class="lab">Advanced<small>Seed, climate, richness, water</small></span>${ic('chev','chev')}</button>`;
+    if(o.advOpen){
+      h+=`<div class="grp" style="margin-top:10px"><div class="field"><div class="fl"><span>Seed</span></div><div class="seedrow"><input id="seed" inputmode="numeric" value="${o.seed}" aria-label="Seed"><button class="btn n sq" data-act="opt-dice" aria-label="Random seed">${ic('dice')}</button></div></div>${ADV.map(a=>slider('opt-adv-v',a[0],a[1],a[2],a[3],a[4],o.adv[a[0]])).join('')}<div class="field"><button class="btn n" style="width:100%" data-act="opt-reset">${ic('reset')}Reset to defaults</button></div></div>`;
+    }
+  }
+  return h;
+}
+function rulesTab(){
+  const o=S.opt;
+  return `<div class="gt">Difficulty</div>${chips('opt-diff',['Settler','Chieftain','Warlord','Prince','King','Emperor','Immortal','Deity'],o.diff,'Difficulty')}`
+  +`<div class="gt">Game speed</div>${chips('opt-speed',['Quick','Standard','Epic','Marathon'],o.speed,'Game speed')}`
+  +`<div class="gt">Starting era</div>${chips('opt-era',['Ancient','Classical','Medieval','Renaissance','Industrial','Modern'],o.era,'Starting era')}`
+  +`<div class="gt">Victory types</div><div class="grp">${Object.keys(o.vic).map(k=>sw('opt-vic',k,k,o.vic[k])).join('')}</div>`
+  +`<div class="gt">Barbarians and challenge</div><div class="grp">${sw('opt-b','barb','Barbarians',o.barb)}${sw('opt-b','raging','Raging barbarians',o.raging)}${sw('opt-b','occ','One city challenge',o.occ)}</div>`;
+}
+function playersTab(){
+  const o=S.opt;
+  return `<div class="gt">Players</div><div class="grp"><div class="row"><span class="pport"><img src="art/p_Alexander.png" alt=""></span><span class="lab">Greece<small>You, human</small></span></div>${o.players.map((p,i)=>`<div class="row"><span class="pport" style="background:#3a526c">?</span><span class="lab">${p}<small>AI</small></span><button class="ib ghost" data-act="opt-rmp" data-k="${i}" aria-label="Remove player">${ic('close')}</button></div>`).join('')}</div>`
+  +`<button class="disc-btn" data-act="opt-addp">${ic('plus')}<span class="lab">Add AI player</span></button>`
+  +`<div class="gt">City-states</div><div class="grp"><div class="row"><span class="lab">Number of city-states</span><span class="step"><button class="ib" data-act="opt-cs" data-d="-1" aria-label="Fewer">${ic('minus')}</button><span class="bignum">${o.cs}</span><button class="ib" data-act="opt-cs" data-d="1" aria-label="More">${ic('plus')}</button></span></div></div>`;
+}
+function modsTab(){
+  const o=S.opt;
+  return `<div class="gt">Base ruleset</div><div class="grp" role="radiogroup">${['Civ V: Gods & Kings','Civ V: Vanilla'].map(b=>radioRow('opt-base',b,esc(b),o.base===b)).join('')}</div>`
+  +`<div class="gt">Extension mods</div><div class="grp"><div class="row"><span class="lab">No extension mods installed<small>Installed mods appear here as switches</small></span></div></div>`
+  +`<button class="disc-btn" data-act="toast" data-msg="Would open the mod browser.">${ic('plus')}<span class="lab">Get mods</span>${ic('chev','chev')}</button>`;
+}
+function optSummary(){
+  const o=S.opt, size=o.size==='Custom'?(o.shape==='rect'?`${o.cw}×${o.ch}`:`radius ${o.rad}`):o.size;
+  const map=o.src==='file'?'Saved map':o.src==='random'?`Random map, ${size}`:`${o.gen}, ${size}`;
+  return `${map} · ${o.players.length+1} players · ${o.cs} city-states · ${o.diff}`;
+}
+function renderOpt(){
+  const o=S.opt;
+  const tabs=`<div class="tabs" role="tablist">${[['map','Map'],['rules','Rules'],['players','Players'],['mods','Mods']].map(([k,l])=>`<button role="tab" aria-selected="${o.tab===k}" data-act="opt-tab" data-k="${k}">${l}</button>`).join('')}</div>`;
+  const body={map:mapTab,rules:rulesTab,players:playersTab,mods:modsTab}[o.tab]();
+  const foot=`<div class="opt-sum">${esc(optSummary())}</div><div class="frow"><button class="btn y grow" data-act="toast-close">Done</button></div>`;
+  let ov='';
+  if(o.sheet) ov=`<div class="scrim" data-act="opt-sheet-close"></div><div class="sheet" role="dialog" aria-label="Map type"><div class="grab"></div><div class="sh"><h2>Map type</h2><button class="ib" data-act="opt-sheet-close" aria-label="Close">${ic('close')}</button></div><div class="sb"><div class="grp" role="radiogroup">${GEN_TYPES.map(g=>radioRow('opt-gen',g,g,o.gen===g)).join('')}</div></div></div>`;
+  return head('More options',{back:'toast-back'})+tabs+`<main class="body" id="body">${body}</main><footer class="ft">${foot}</footer>${ov}`;
+}
+
+/* ---------- map preview (stand-in, not the game's generator) ---------- */
+function rng(seed){let a=seed>>>0;return()=>{a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296;};}
+function noiseFn(r,n){const g=[];for(let i=0;i<(n+1)*(n+1);i++)g.push(r());const s=t=>t*t*(3-2*t);
+  return(x,y)=>{x*=n;y*=n;const xi=Math.min(n-1,Math.floor(x)),yi=Math.min(n-1,Math.floor(y)),xf=s(x-xi),yf=s(y-yi),q=(i,j)=>g[j*(n+1)+i];
+    return q(xi,yi)*(1-xf)*(1-yf)+q(xi+1,yi)*xf*(1-yf)+q(xi,yi+1)*(1-xf)*yf+q(xi+1,yi+1)*xf*yf;};}
+function blob(x,y,cx,cy,r){const d=Math.hypot((x-cx)*1.3,y-cy);return 1-d/r;}
+function landValue(gen,x,y,n1,n2){
+  const n=n1(x,y)-.5, f=n2(x,y)-.5;
+  switch(gen){
+    case 'Pangaea': return blob(x,y,.5,.5,.42)+n*.7+f*.3-.1;
+    case 'Continent and islands': return Math.max(blob(x,y,.38,.5,.33),f*1.6-.25)+n*.5-.1;
+    case 'Two continents': return Math.max(blob(x,y,.27,.5,.3),blob(x,y,.73,.5,.3))+n*.6-.1;
+    case 'Three continents': return Math.max(blob(x,y,.22,.35,.24),blob(x,y,.72,.3,.24),blob(x,y,.5,.75,.24))+n*.6-.1;
+    case 'Four corners': return Math.max(blob(x,y,.18,.22,.24),blob(x,y,.82,.22,.24),blob(x,y,.18,.78,.24),blob(x,y,.82,.78,.24))+n*.5-.1;
+    case 'Archipelago': return f*2.2+n*.4-.35;
+    case 'Inner sea': return -blob(x,y,.5,.5,.36)+n*.6+.05;
+    case 'Perlin': return n*1.8;
+    case 'Fractal': return n*1.3+f*1.0;
+    case 'Lakes': return .35+f*1.4;
+    case 'Smoothed random': return n*1.4+.02;
+    case 'Empty': return -1;
+  }
+  return n;
+}
+function drawPreview(){
+  const cv=document.getElementById('prev'); if(!cv) return;
+  const o=S.opt, a=o.adv, ctx=cv.getContext('2d'), W=cv.width, H=cv.height;
+  ctx.fillStyle='#1f5ea8'; ctx.fillRect(0,0,W,H);
+  const base={Tiny:[18,11,7],Small:[22,14,9],Medium:[28,17,11],Large:[34,21,13],Huge:[40,25,15]};
+  let cols,rows,rad;
+  if(o.size==='Custom'){cols=Math.max(8,Math.round(o.cw/1.6));rows=Math.max(6,Math.round(o.ch/1.6));rad=Math.max(4,Math.round(o.rad/1.8));}
+  else [cols,rows,rad]=base[o.size];
+  const gi=GEN_TYPES.indexOf(o.gen)+1, r=rng((o.seed|0)*31+gi*7919), n1=noiseFn(r,4), n2=noiseFn(r,9), n3=noiseFn(r,6);
+  const cells=[];
+  if(o.shape==='rect'||o.src==='random'){for(let j=0;j<rows;j++)for(let i=0;i<cols;i++)cells.push([i+(j%2?.5:0),j*.866]);}
+  else{for(let q=-rad;q<=rad;q++)for(let s=Math.max(-rad,-q-rad);s<=Math.min(rad,-q+rad);s++)cells.push([q+s*.5,s*.866]);}
+  let minx=1e9,maxx=-1e9,miny=1e9,maxy=-1e9;cells.forEach(([x,y])=>{minx=Math.min(minx,x);maxx=Math.max(maxx,x);miny=Math.min(miny,y);maxy=Math.max(maxy,y);});
+  const pad=18, sc=Math.min((W-2*pad)/(maxx-minx+1),(H-2*pad-10)/(maxy-miny+1.15)), ox=(W-(maxx-minx)*sc)/2, oy=(H-(maxy-miny)*sc)/2+6, hr=sc*.58;
+  const pal={ocean:'#2f7ad6',coast:'#3fb5e3',grass:'#88cd50',plains:'#e3ca52',desert:'#eba45b',tundra:'#bdb993',snow:'#f3f7fa',mountain:'#a3acb6',forest:'#4f9a3a'};
+  const thr=a.water;
+  cells.forEach(([x,y])=>{
+    const u=(x-minx)/(maxx-minx||1), v=(y-miny)/(maxy-miny||1);
+    const val=landValue(o.src==='random'?'Smoothed random':o.gen,u,v,n1,n2)-thr;
+    let c;
+    if(val<=0) c=val>-.12-(a.coast*.02)?pal.coast:pal.ocean;
+    else{
+      const lat=Math.abs(v-.5)*2, temp=1-lat*(.6+a.tint*.8)+a.tshift+(n3(u,v)-.5)*.3;
+      if(val>.55/Math.max(.2,a.elev)*.6+.25) c=pal.mountain;
+      else if(temp<.12) c=pal.snow; else if(temp<.3) c=pal.tundra; else if(temp>.9) c=pal.desert; else if(temp>.62) c=pal.plains;
+      else c=n2(v,u)<a.veg*.9?pal.forest:pal.grass;
+    }
+    const cx=ox+(x-minx)*sc, cy=oy+(y-miny)*sc;
+    ctx.beginPath();for(let k=0;k<6;k++){const an=Math.PI/3*k+Math.PI/6;ctx.lineTo(cx+hr*Math.cos(an),cy+hr*Math.sin(an));}ctx.closePath();
+    ctx.fillStyle=c;ctx.fill();ctx.strokeStyle='rgba(0,0,0,.12)';ctx.lineWidth=1;ctx.stroke();
+  });
+}
+
+/* ---------- actions ---------- */
+function act(el,ev){
+  const a=el.dataset.act, k=el.dataset.k, s=S.set, o=S.opt, I=S.imp;
+  switch(a){
+    case 'toast': toast(el.dataset.msg); return;
+    case 'toast-close': toast('Would close this page and return to the game.'); return;
+    case 'toast-back': toast('Would return to the new game screen.'); return;
+    case 'imp-sel': I.sel=k; break;
+    case 'imp-pedia': I.pedia=k; break;
+    case 'imp-pedia-close': I.pedia=null; break;
+    case 'imp-build': if(I.mode==='replace'){I.confirm=true;break;} toast(`Would order the worker to build a ${IMPS.find(x=>x.id===I.sel).name}.`); return;
+    case 'imp-confirm-no': I.confirm=false; break;
+    case 'imp-confirm-yes': I.confirm=false; render(); toast(`Would replace the ${SAMPLE_OLD} with a ${IMPS.find(x=>x.id===I.sel).name}.`); return;
+    case 'imp-cancel': I.mode='default'; render(); toast('Would cancel the Farm order. The worker is free again.'); return;
+    case 'set-page': s.page=k; render(); document.getElementById('body').scrollTop=0; syncHash(k); return;
+    case 'set-home': s.page='home'; render(); syncHash(s.all?'home-all':'home'); return;
+    case 'set-g': s.g[k]=!s.g[k]; break;
+    case 'set-d': s.d[k]=!s.d[k]; break;
+    case 'set-a': s.a[k]=!s.a[k]; break;
+    case 'set-adv': s.adv[k]=!s.adv[k]; break;
+    case 'set-mp': s.mp[k]=!s.mp[k]; break;
+    case 'set-dbg': s.dbg[k]=!s.dbg[k]; break;
+    case 'set-font': s.d.font=k; break;
+    case 'set-mpevery': s.mp.every=k; break;
+    case 'set-lang': s.lang=k; break;
+    case 'set-auto': s.adv.autosave=Math.max(1,Math.min(20,s.adv.autosave+ +el.dataset.d)); break;
+    case 'opt-tab': o.tab=k; o.sheet=false; render(); document.getElementById('body').scrollTop=0; syncHash(k); return;
+    case 'opt-src': o.src=k; render(); syncHash(k==='generated'?'map':'map-'+k); return;
+    case 'opt-shape': o.shape=k; break;
+    case 'opt-sheet': o.sheet=true; break;
+    case 'opt-sheet-close': o.sheet=false; break;
+    case 'opt-gen': o.gen=k; o.sheet=false; break;
+    case 'opt-size': o.size=k; break;
+    case 'opt-res': o.res=k; break;
+    case 'opt-t': o.t[k]=!o.t[k]; break;
+    case 'opt-adv': o.advOpen=!o.advOpen; break;
+    case 'opt-dice': o.seed=Math.floor(Math.random()*999999); break;
+    case 'opt-reset': o.adv=advDefaults(); break;
+    case 'opt-file': o.file=k; break;
+    case 'opt-diff': o.diff=k; break;
+    case 'opt-speed': o.speed=k; break;
+    case 'opt-era': o.era=k; break;
+    case 'opt-vic': o.vic[k]=!o.vic[k]; break;
+    case 'opt-b': o[k]=!o[k]; break;
+    case 'opt-cs': o.cs=Math.max(0,Math.min(20,o.cs+ +el.dataset.d)); break;
+    case 'opt-addp': if(o.players.length<11) o.players.push('Random'); else {toast('Would warn: player limit reached.');return;} break;
+    case 'opt-rmp': o.players.splice(+k,1); break;
+    case 'opt-base': o.base=k; break;
+    default:
+      if(a&&a.endsWith('-step')){ const inp=el.parentNode.querySelector('input[type=range]'); const st=+inp.step; inp.value=(+inp.value+st*+el.dataset.d).toFixed(4); onRange(inp); return; }
+      return;
+  }
+  render();
+}
+function onRange(inp){
+  const a=inp.dataset.act,k=inp.dataset.k,v=+inp.value;
+  if(a==='set-notif') S.set.notif=v;
+  if(a==='set-dmini') S.set.d.minimap=v;
+  if(a==='set-snd') S.set.snd[k]=v;
+  if(a==='opt-dim') S.opt[k]=v;
+  if(a==='opt-adv-v') S.opt.adv[k]=v;
+  const out=document.querySelector(`[data-out="${a}:${k}"]`);
+  if(out){const unit=out.textContent.replace(/^[-\d.]+/,''); out.textContent=fmt(v,+inp.step)+unit;}
+  if(a.startsWith('opt')){ drawPreview(); const sm=document.querySelector('.opt-sum'); if(sm) sm.textContent=optSummary(); }
+}
+
+/* ---------- render ---------- */
+const DIMS={320:568,393:852,430:932};
+function render(resetScroll){
+  const scr=document.getElementById('screen'), old=document.getElementById('body'), st=resetScroll?0:(old?old.scrollTop:0);
+  const dev=document.getElementById('device');
+  dev.className='device w'+S.w; dev.style.width=S.w+'px'; dev.style.height=DIMS[S.w]+'px';
+  scr.innerHTML=sbar()+({imp:renderImp,set:renderSet,opt:renderOpt}[S.scene]())+'<div class="toast" id="toast" role="status" aria-live="polite"></div>';
+  const b=document.getElementById('body'); if(b) b.scrollTop=st;
+  drawPreview(); renderChrome(); fit();
+}
+function fit(){
+  const wrap=document.getElementById('stagewrap'), dev=document.getElementById('device');
+  const sc=Math.min(1,(wrap.clientHeight-24)/DIMS[S.w],(wrap.clientWidth-28)/S.w);
+  dev.style.transform=`scale(${sc})`; dev.style.marginBottom=`${-(1-sc)*DIMS[S.w]}px`;
+}
+const scrEl=document.getElementById('screen');
+scrEl.addEventListener('click',e=>{const el=e.target.closest('[data-act]'); if(el&&el.tagName!=='INPUT'&&!el.disabled) act(el,e);});
+scrEl.addEventListener('input',e=>{if(e.target.type==='range') onRange(e.target);});
+scrEl.addEventListener('change',e=>{if(e.target.id==='seed'){const v=parseInt(e.target.value.replace(/\D/g,''),10); S.opt.seed=isNaN(v)?0:v; render();}});
+addEventListener('resize',fit);
+parseHash(); render(true);
+</script>
+</body>
+</html>

@@ -42,7 +42,10 @@ internal class ScenarioSelectTable(private val newGameScreen: NewGameScreen) : T
         scenarioSelectBox = TranslatedSelectBox(scenarios.keys.sorted(), scenarios.keys.first())
         scenarioSelectBox!!.onChange { selectScenario() }
         clear()
-        add(scenarioSelectBox)
+        if (newGameScreen.isPortrait())
+            add(PortraitOptionControls.of(newGameScreen).pickerRow(newGameScreen, "Scenario", scenarioSelectBox!!))
+                .growX().padTop(PortraitOptionControls.of(newGameScreen).s(20f))
+        else add(scenarioSelectBox)
     }
 
     fun selectScenario() {
