@@ -947,9 +947,11 @@ class WorldMapHolder @JvmOverloads constructor(
                     val selectedUnitView = unitsWhoCanMoveThere.keys.first()
                     for (unitView in unitsWhoCanMoveThere.keys) {
                         val previousTileView = unitView.getTile()
+                        // Every tile walked this turn; the shortest path above only holds turn endpoints
+                        val path = if (!currentTileSetStrings.projection.tilted) emptyList()
+                            else try { unitView.getPathToTile(tileView) } catch (_: Exception) { emptyList() }
                         unitView.tryHeadTowards(tileView)
-                        val path = unitMovementPaths[unitView].orEmpty()
-                        if (currentTileSetStrings.projection.tilted && unitView.getTile() != previousTileView)
+                        if (unitView.getTile() != previousTileView)
                             animatePortraitMovement(previousTileView, unitView, path.take(path.indexOf(unitView.getTile()) + 1))
                     }
                     worldScreen.bottomUnitTable.selectUnit(selectedUnitView) // keep moved unit selected
