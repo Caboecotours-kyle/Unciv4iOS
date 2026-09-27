@@ -145,6 +145,8 @@ class NewGameScreen(
     }
 
     private fun closeNewGame() {
+        // Back closes the innermost layer first: a selector sheet, then More options, then this screen
+        if (PortraitOptionControls.closeSheet(stage)) return
         if (portraitView?.closeOptions() == true) return
         mapOptionsTable.cancelBackgroundJobs()
         game.popScreen()

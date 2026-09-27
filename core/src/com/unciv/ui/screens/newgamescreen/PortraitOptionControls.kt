@@ -3,6 +3,7 @@ package com.unciv.ui.screens.newgamescreen
 import com.badlogic.gdx.graphics.Color
 import com.badlogic.gdx.scenes.scene2d.Actor
 import com.badlogic.gdx.scenes.scene2d.Group
+import com.badlogic.gdx.scenes.scene2d.Stage
 import com.badlogic.gdx.scenes.scene2d.Touchable
 import com.badlogic.gdx.scenes.scene2d.ui.CheckBox
 import com.badlogic.gdx.scenes.scene2d.ui.Label
@@ -44,6 +45,13 @@ internal class PortraitOptionControls(val unit: Float) {
         val INK: Color = Color.valueOf("132435")
 
         fun of(screen: BaseScreen) = PortraitOptionControls(PortraitDialog.scale(screen.stage))
+
+        /** Closes the topmost bottom sheet on [stage], for Back; returns whether there was one */
+        fun closeSheet(stage: Stage): Boolean {
+            val sheet = stage.root.children.lastOrNull { it is SheetOverlay } ?: return false
+            sheet.remove()
+            return true
+        }
     }
 
     /** Disclosures stay open while their owning table rebuilds itself */
@@ -178,7 +186,7 @@ internal class PortraitOptionControls(val unit: Float) {
         if (showTitle) row.add(label(title, 16f)).left().padLeft(s(16f))
         row.add(value).growX().minWidth(0f).right().padLeft(s(if (showTitle) 12f else 8f)).padRight(s(8f))
         row.add(ImageGetter.getImage("OtherIcons/ArrowRight", MUTED)).size(s(14f)).padRight(s(16f))
-        row.onClick { if (!box.isDisabled) openSheet(screen, title, box) }
+        row.onClick { if (!box.isDisabled) openSheet(screen, title, box, row) }
         return Table().apply { add(row).growX().minHeight(target) }
     }
 
@@ -405,11 +413,29 @@ internal class PortraitOptionControls(val unit: Float) {
     }
 
     /** Bottom sheet listing every entry of [box], dismissed by picking, the close disc, or the scrim */
-    private fun openSheet(screen: BaseScreen, title: String, box: SelectBox<*>) {
+    /** A bottom sheet over the Stage, open only while [owner], the row that opened it, is shown */
+    private class SheetOverlay(private val owner: Actor) : Group() {
+        override fun act(delta: Float) {
+            super.act(delta)
+            if (!owner.isShown()) remove()
+        }
+
+        private fun Actor.isShown(): Boolean {
+            if (stage == null) return false
+            var actor: Actor? = this
+            while (actor != null) {
+                if (!actor.isVisible) return false
+                actor = actor.parent
+            }
+            return true
+        }
+    }
+
+    private fun openSheet(screen: BaseScreen, title: String, box: SelectBox<*>, owner: Actor) {
         val stage = screen.stage
         val canvas = screen.portraitCanvasBounds()
         val safe = screen.safeAreaBoundsInWorld()
-        val overlay = Group().apply { setBounds(canvas.x, canvas.y, canvas.width, canvas.height) }
+        val overlay = SheetOverlay(owner).apply { setBounds(canvas.x, canvas.y, canvas.width, canvas.height) }
         val scrim = ImageGetter.getWhiteDot().apply {
             color = Color(10f / 255f, 22f / 255f, 34f / 255f, .6f)
             setBounds(0f, 0f, canvas.width, canvas.height)
