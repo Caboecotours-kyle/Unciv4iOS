@@ -1,7 +1,10 @@
 package com.unciv.ui.components.tilegroups.layers
 
+import com.badlogic.gdx.graphics.Color
 import com.badlogic.gdx.scenes.scene2d.ui.Table
 import com.badlogic.gdx.scenes.scene2d.Group
+import com.badlogic.gdx.scenes.scene2d.Touchable
+import com.badlogic.gdx.scenes.scene2d.ui.Image
 import com.badlogic.gdx.utils.Align
 import com.unciv.UncivGame
 import com.unciv.view.CivView
@@ -14,6 +17,8 @@ import com.unciv.ui.components.tilegroups.TileGroup
 import com.unciv.ui.components.widgets.UnitIconGroup
 import com.unciv.ui.images.ImageGetter
 import com.unciv.ui.screens.basescreen.BaseScreen
+import com.unciv.ui.screens.worldscreen.worldmap.MotionTextures
+import kotlin.math.roundToInt
 
 /** The unit flag is the symbol that appears behind the map unit - circle regularly, shield when defending, etc */
 class TileLayerUnitFlag(tileGroup: TileGroup, size: Float) : TileLayer(tileGroup, size) {
@@ -22,9 +27,54 @@ class TileLayerUnitFlag(tileGroup: TileGroup, size: Float) : TileLayer(tileGroup
     private var militaryUnitIcon: UnitIconGroup? = null
     private val portraitWrappers = HashMap<UnitIconGroup, Group>()
 
+    /** Portrait: a ring on a tile an own unit is building on, filled by the share done, with the turns left */
+    private var progressBadge: Group? = null
+
     private fun clearSlots() {
         civilianUnitIcon?.let { removeOwnedActor(portraitWrappers.remove(it) ?: it) }
         militaryUnitIcon?.let { removeOwnedActor(portraitWrappers.remove(it) ?: it) }
+        progressBadge?.let { removeOwnedActor(it) }
+        progressBadge = null
+    }
+
+    private fun updateProgressBadge(viewingCiv: CivView?) {
+        if (!strings.projection.tilted || viewingCiv == null || !isViewable(viewingCiv)) return
+        val tileView = tileGroup.tileView
+        val turnsLeft = tileView.turnsToImprovement
+        if (turnsLeft <= 0) return
+        val improvement = tile.getTileImprovementInProgress() ?: return
+        val worker = listOfNotNull(tileView.civilianUnit, tileView.militaryUnit).map { it.getUnit() }
+            .firstOrNull { it.civ === viewingCiv.getCiv() && (it.cache.hasUniqueToBuildImprovements || it.canBuildImprovement(improvement)) } ?: return
+        val total = improvement.getTurnsToBuild(worker.civ, worker).coerceAtLeast(turnsLeft)
+        val done = ((1f - turnsLeft.toFloat() / total) * 48f).roundToInt() / 48f
+
+        // Drawn at the mock's 34 pt and scaled with the hex; the inner group is what strategic view hides
+        val badge = Group().apply {
+            setSize(34f, 34f)
+            touchable = Touchable.disabled
+            addActor(ImageGetter.getCircle(Color.valueOf("132435"), 30f).apply { setPosition(2f, 2f) })
+            val ring = 28.44f
+            addActor(Image(MotionTextures.ring(18f)).apply { setBounds(17f - ring / 2f, 17f - ring / 2f, ring, ring); color = Color(1f, 1f, 1f, .18f) })
+            if (done > 0f) addActor(Image(MotionTextures.ring(18f, done)).apply {
+                setBounds(17f - ring / 2f, 17f - ring / 2f, ring, ring); color = Color.valueOf("ffc93c") })
+            addActor(turnsLeft.tr().toLabel(Color.WHITE, 12, Align.center).apply { setBounds(0f, 0f, 34f, 34f) })
+            setOrigin(17f, 17f)
+            setScale(tileGroup.hexagonImageWidth / 86.6f)
+        }
+        val wrapper = Group().apply {
+            touchable = Touchable.disabled
+            setSize(34f, 34f)
+            setPosition(tileX + tileGroup.groundCenterX - 17f, tileY + tileGroup.groundCenterY - 26f * badge.scaleY - 17f)
+            addActor(badge)
+        }
+        progressBadge = wrapper
+        addOwnedActor(wrapper)
+        updateBadgeVisibility()
+    }
+
+    /** Hidden in strategic view, where the scaled-up flags already fill the hex */
+    private fun updateBadgeVisibility() {
+        progressBadge?.children?.firstOrNull()?.isVisible = !tileGroup.strategicView
     }
 
     private val flagsAboveSprites
@@ -117,6 +167,7 @@ class TileLayerUnitFlag(tileGroup: TileGroup, size: Float) : TileLayer(tileGroup
 
     fun updatePortraitScale() {
         if (!strings.projection.tilted) return
+        updateBadgeVisibility()
         for ((slot, icon) in listOf(0 to civilianUnitIcon, 1 to militaryUnitIcon)) {
             if (icon == null) continue
             portraitWrappers.getValue(icon).setScale(if (tileGroup.strategicView) 22f / 14f * tileGroup.portraitPointScale else 1f)
@@ -154,6 +205,7 @@ class TileLayerUnitFlag(tileGroup: TileGroup, size: Float) : TileLayer(tileGroup
     override fun doUpdate(viewingCiv: CivView?) {
         clearSlots()
         fillSlots(viewingCiv)
+        updateProgressBadge(viewingCiv)
 
         if (viewingCiv != null) {
             val shouldBeHighlighted = tileGroup.tileView.getVisibleUnits().any { it.civ().isAtWarWith(viewingCiv) }
@@ -171,6 +223,6 @@ class TileLayerUnitFlag(tileGroup: TileGroup, size: Float) : TileLayer(tileGroup
     }
 
     override fun determineVisibility() {
-        isVisible = civilianUnitIcon != null || militaryUnitIcon != null
+        isVisible = civilianUnitIcon != null || militaryUnitIcon != null || progressBadge != null
     }
 }
