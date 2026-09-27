@@ -28,10 +28,15 @@ import com.unciv.view.CityView
 import com.unciv.view.TileView
 import yairm210.purity.annotations.Readonly
 import kotlin.math.roundToInt
+import kotlin.math.max
 
 class CityScreenTileTable(private val cityScreen: CityScreen) : Table() {
     private val innerTable = Table()
     val cityView: CityView = cityScreen.cityView
+    /** 48 real screen points in stage units, for the buy menu that sits on the stage itself */
+    private val stageTouch = max(48f, PortraitTileCard.touchPoints(cityScreen))
+    /** The same in the portrait sheet's 393pt units, which the city sheet scales to the safe width */
+    private val touch = max(48f, stageTouch * 393f / cityScreen.safeAreaBoundsInWorld().width)
 
     init {
         innerTable.background = BaseScreen.skinStrings.getUiBackground(
@@ -67,7 +72,7 @@ class CityScreenTileTable(private val cityScreen: CityScreen) : Table() {
         if (cityScreen.isPortrait()) {
             // The map's tile sheet card, from the same markup
             val card = PortraitTileCard(cityScreen, tileView, cityView.viewingCiv(), cityScreen.portraitStatIcons, cityView,
-                hideUnits = cityScreen.isSpying, spyCity = if (cityScreen.isSpying) cityView else null)
+                hideUnits = cityScreen.isSpying, spyCity = if (cityScreen.isSpying) cityView else null, touch = touch)
             innerTable.add(card.header()).width(345f).left().row()
             card.yields(345f)?.let { innerTable.add(it).width(345f).left().padTop(14f).padBottom(6f).row() }
             innerTable.add(card.rows()).width(345f).padTop(4f).row()
@@ -139,7 +144,7 @@ class CityScreenTileTable(private val cityScreen: CityScreen) : Table() {
         button.onClick { cityScreen.toggleTileWorked(tileView) }
         if (assign && cityView.getFreePopulation() <= 0) button.disable()
         stylePortraitButton(button, assign)
-        innerTable.add(button).width(345f).height(if (assign) 56f else 48f).padTop(12f).row()
+        innerTable.add(button).width(345f).height(max(if (assign) 56f else 48f, touch)).padTop(12f).row()
     }
 
     private fun addInfo(text: String) {
@@ -151,7 +156,7 @@ class CityScreenTileTable(private val cityScreen: CityScreen) : Table() {
     private fun addAction(button: TextButton, primary: Boolean = false) {
         if (cityScreen.isPortrait()) {
             stylePortraitButton(button, primary)
-            innerTable.add(button).width(345f).height(48f).padTop(8f).row()
+            innerTable.add(button).width(345f).height(touch).padTop(8f).row()
         } else innerTable.add(button).padTop(5f).row()
     }
 
@@ -189,7 +194,7 @@ class CityScreenTileTable(private val cityScreen: CityScreen) : Table() {
                 val balance = "Currently you have [${cityView.viewingCiv().gold}] [Gold].".toLabel(alignment = Align.center)
                 if (cityScreen.isPortrait()) {
                     balance.wrap = true
-                    add(balance).width(333f).minHeight(48f).row()
+                    add(balance).width(333f).minHeight(stageTouch).row()
                 } else add(balance).growX().row()
                 for (ring in 0..maxRing) {
                     val count = counts[ring]
@@ -200,7 +205,7 @@ class CityScreenTileTable(private val cityScreen: CityScreen) : Table() {
                     button.isDisabled = cost > cityView.viewingCiv().gold
                     if (cityScreen.isPortrait()) {
                         button.label.wrap = true
-                        add(button).width(333f).height(48f).row()
+                        add(button).width(333f).height(stageTouch).row()
                     } else add(button).row()
                 }
             }
