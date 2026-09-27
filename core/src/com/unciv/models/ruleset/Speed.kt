@@ -84,7 +84,7 @@ class Speed : RulesetObject() {
     }
 
     companion object {
-        const val DEFAULT: String = "Quick"
+        const val DEFAULT: String = "Blitz"
         const val DEFAULTFORSIMULATION: String = "Standard"
     }
 
