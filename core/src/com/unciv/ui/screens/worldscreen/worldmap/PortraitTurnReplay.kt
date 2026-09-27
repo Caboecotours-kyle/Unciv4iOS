@@ -151,21 +151,28 @@ internal class TurnReplay(
         for (old in before.units.values) {
             val from = groups[old.position] ?: continue
             val now = after.units[old.id]
+            // Own units heal at turn start, before any automated move: green pluses and "+N" where they end up
+            val healed = if (now != null && old.civID == viewingCiv.civID) (now.health - old.health).coerceAtLeast(0) else 0
             when {
                 now != null && now.position != old.position -> {
                     val to = groups[now.position] ?: continue
                     val path = findPath(old, from, to)
-                    if (path != null) tracks.add(Track(old.civID, 3, to, (path.size - 1) * .34f) { delay, speed ->
-                        motion.play(motion.HopClip(delay, speed, old.id, path, old.sprite, old.landUnit, { now.sprite }, .34f))
-                    }) else tracks.add(Track(old.civID, 3, to, .5f) { delay, speed ->
-                        motion.play(motion.FadeOutClip(delay, speed, from, old.sprite))
-                        motion.play(motion.SpawnClip(delay + .25f / speed, speed, old.id, to, now.sprite, ring = false))
+                    val move = if (path != null) (path.size - 1) * .34f else .55f
+                    val heal = healed > 0 && to.isViewable(civView)
+                    val natural = (if (path != null) move else .5f) + if (heal) 1.5f else 0f
+                    tracks.add(Track(old.civID, 3, to, natural) { delay, speed ->
+                        if (path != null)
+                            motion.play(motion.HopClip(delay, speed, old.id, path, old.sprite, old.landUnit, { now.sprite }, .34f))
+                        else {
+                            motion.play(motion.FadeOutClip(delay, speed, from, old.sprite))
+                            motion.play(motion.SpawnClip(delay + .25f / speed, speed, old.id, to, now.sprite, ring = false))
+                        }
+                        if (heal) motion.play(motion.HealClip(delay + move / speed, speed, to, healed))
                     })
                 }
-                // Own units that healed where they stood: green pluses and "+N"
-                now != null -> if (now.health > old.health && old.civID == viewingCiv.civID && from.isViewable(civView))
+                now != null -> if (healed > 0 && from.isViewable(civView))
                     tracks.add(Track(old.civID, 4, from, 1.5f) { delay, speed ->
-                        motion.play(motion.HealClip(delay, speed, from, now.health - old.health))
+                        motion.play(motion.HealClip(delay, speed, from, healed))
                     })
                 old.id in existingIds -> tracks.add(Track(old.civID, 3, from, .25f) { delay, speed ->
                     motion.play(motion.FadeOutClip(delay, speed, from, old.sprite))
