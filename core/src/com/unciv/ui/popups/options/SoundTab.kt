@@ -2,12 +2,14 @@ package com.unciv.ui.popups.options
 
 import com.badlogic.gdx.graphics.Color
 import com.badlogic.gdx.scenes.scene2d.ui.Table
+import com.unciv.models.UncivSound
 import com.unciv.ui.audio.MusicTrackChooserFlags
 import com.unciv.ui.components.extensions.MusicControls
 import com.unciv.ui.components.extensions.disable
 import com.unciv.ui.components.extensions.toLabel
 import com.unciv.ui.components.extensions.toTextButton
 import com.unciv.ui.components.input.onClick
+import com.unciv.ui.components.widgets.UncivSlider
 import com.unciv.utils.Concurrency
 import com.unciv.utils.DEFAULT_MUSIC_DOWNLOAD_UNAVAILABLE
 import com.unciv.utils.launchOnGLThread
@@ -36,6 +38,22 @@ internal class SoundTab(
         }
 
         super.lateInitialize()
+    }
+
+    /** Portrait: the volume label stacks over its slider instead of squeezing beside it */
+    override fun Table.addVolumeSlider(text: String, initial: Float, silent: Boolean, onChange: (Float) -> Unit) {
+        val style = portrait
+            // Kotlin can't call super on a member extension, so landscape goes through the plain default
+            ?: return with(object : MusicControls {}) { this@addVolumeSlider.addVolumeSlider(text, initial, silent, onChange) }
+        val slider = UncivSlider(
+            0f, 1.0f, 0.05f,
+            initial = initial,
+            sound = if (silent) UncivSound.Silent else UncivSound.Slider,
+            tipType = UncivSlider.TipType.None,
+            getTipText = UncivSlider::formatPercent,
+            onChange = onChange
+        )
+        add(SliderRow(style, text, slider, 0.05f, UncivSlider::formatPercent)).colspan(2).growX().pad(0f).row()
     }
 
     private fun addDownloadMusic() {

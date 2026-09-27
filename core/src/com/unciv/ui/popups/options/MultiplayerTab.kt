@@ -240,8 +240,11 @@ internal class MultiplayerTab(
                 }
             }
 
+            // Portrait: the status text wraps beside the button instead of widening the page
+            if (portrait != null) authStatusLabel.wrap = true
             val passwordStatusTable = Table().apply {
-                add(authStatusLabel)
+                val statusCell = add(authStatusLabel)
+                if (portrait != null) statusCell.growX()
                 add(passwordButton.onClick {
                     val serverUrl = validatedServerUrl ?: return@onClick
                     val targetServer = game.onlineMultiplayer.serverFor(serverUrl).apply {
@@ -251,7 +254,9 @@ internal class MultiplayerTab(
                 }).padLeft(16f)
             }
 
-            serverIpTable.add(passwordStatusTable).colspan(2).row()
+            val statusTableCell = serverIpTable.add(passwordStatusTable).colspan(2)
+            if (portrait != null) statusTableCell.growX()
+            statusTableCell.row()
         }
 
         add(serverIpTable).colspan(2).fillX().row()
