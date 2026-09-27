@@ -31,6 +31,8 @@ class NextTurnProgress(
 
     private var progress = -1
     private var progressMax = 0
+    /** Share of the turn processed so far, for the portrait HUD's guess of which civ is moving */
+    internal val fraction get() = if (progressMax == 0) 0f else progress.coerceIn(0, progressMax).toFloat() / progressMax
     private var isDirty = false
     private var barWidth = 0f
 

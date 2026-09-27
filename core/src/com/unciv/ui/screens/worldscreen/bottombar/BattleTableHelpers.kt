@@ -187,7 +187,7 @@ object BattleTableHelpers {
 
 
     /** The animation for the Damage labels */
-    private class DamageLabelAnimation(actor: WidgetGroup, private val portrait: Boolean,
+    private class DamageLabelAnimation(actor: WidgetGroup, private val portrait: Boolean, private val still: Boolean,
                                        private val onFinished: () -> Unit) :
         TemporalAction(if (portrait) 0.75f else damageLabelDuration) {
         val startX = actor.x
@@ -212,7 +212,7 @@ object BattleTableHelpers {
 
         override fun update(percent: Float) {
             actor.color.a = Interpolation.fade.apply(1f - percent)
-            actor.setPosition(startX, startY + percent * if (portrait) 32f else damageLabelDisplacement)
+            actor.setPosition(startX, startY + percent * if (still) 0f else if (portrait) 32f else damageLabelDisplacement)
             if (portrait) Gdx.graphics.requestRendering()
         }
         override fun end() {
@@ -236,6 +236,8 @@ object BattleTableHelpers {
     ) {
         val portrait = mapHolder.currentTileSetStrings.projection.tilted
         if (portrait) mapHolder.preparePortraitCombat()
+        // Reduced motion keeps sprites in their final pose; only the damage numbers show
+        val still = portrait && UncivGame.Current.settings.reduceMotion
         val defenderStillEnemy = defender.getCivInfo() != attacker.getCivInfo()
         fun getMapActorsForCombatant(combatant: CombatantView): Sequence<Actor> =
             sequence {
@@ -286,7 +288,7 @@ object BattleTableHelpers {
             mapHolder.finishPortraitCombat(cancelCombat)
         }
         fun addDamageLabel(damage: Int, target: Actor) {
-            createDamageLabel(damage, target, portrait) { label ->
+            createDamageLabel(damage, target, portrait, still) { label ->
                 labels.remove(label)
                 completeCombat()
             }?.let { labels.add(it) }
@@ -298,7 +300,7 @@ object BattleTableHelpers {
         val defenderFrames = AttackAnimationAction(defender,
             if (damageToAttacker != 0) getMapActorsForCombatant(attacker).toList() else listOf(),
             mapHolder.currentTileSetStrings)
-        sequence.addAction(
+        if (!still) sequence.addAction(
             Actions.parallel(
                 MoveActorsAction(actorsToMove, attackVectorWorldCoords),
                 *if (portrait && attacker is MapUnitCombatantView)
@@ -306,6 +308,21 @@ object BattleTableHelpers {
                 else emptyArray()
             )
         )
+        if (portrait) {
+            // A ranged shot flies an arc before the hit lands; a defeated unit then tips over and puffs away
+            val flight = if (ranged && !UncivGame.Current.settings.reduceMotion) .42f else 0f
+            if (ranged) {
+                mapHolder.motion.play(mapHolder.motion.Projectile(moveActorsDuration, attackerGroup, defenderGroup))
+                if (flight > 0f) sequence.addAction(Actions.delay(flight))
+            }
+            for (combatant in listOf(attacker, defender)) {
+                if (combatant !is MapUnitCombatantView || !combatant.isDefeated() || combatant.getUnitView().isAirUnit()) continue
+                val unitId = combatant.getUnitView().id
+                val tile = mapHolder.tileGroups[combatant.getTile()] ?: continue
+                val sprite = mapHolder.liveSprite(unitId) ?: continue
+                mapHolder.motion.play(mapHolder.motion.DefeatClip(moveActorsDuration + flight, 1f, tile, sprite, unitId))
+            }
+        }
         sequence.addAction(
                 Actions.run {
                     addDamageLabel(damageToAttacker, attackerGroup)
@@ -313,7 +330,7 @@ object BattleTableHelpers {
                         addDamageLabel(damageToDefender, defenderGroup)
                 }
         )
-        sequence.addAction(
+        if (!still) sequence.addAction(
                 Actions.parallel( // While the unit is moving back to its normal position, we flash the damages on both units
                     MoveActorsAction(actorsToMove, attackVectorWorldCoords.cpy().scl(-1f)),
                     *if (portrait && attacker is MapUnitCombatantView)
@@ -357,7 +374,7 @@ object BattleTableHelpers {
         if (portrait) Gdx.graphics.requestRendering()
     }
 
-    private fun createDamageLabel(damage: Int, target: Actor, portrait: Boolean,
+    private fun createDamageLabel(damage: Int, target: Actor, portrait: Boolean, still: Boolean,
                                   onFinished: (WidgetGroup) -> Unit): WidgetGroup? {
         if (damage == 0) return null
 
@@ -366,7 +383,7 @@ object BattleTableHelpers {
         container.setPosition(targetRight.x, targetRight.y, Align.center)
         target.stage.addActor(container)
 
-        container.addAction(DamageLabelAnimation(container, portrait) { onFinished(container) })
+        container.addAction(DamageLabelAnimation(container, portrait, still) { onFinished(container) })
         return container
     }
 

@@ -19,8 +19,10 @@ import com.badlogic.gdx.graphics.Color
 import com.badlogic.gdx.scenes.scene2d.Actor
 import com.badlogic.gdx.scenes.scene2d.Group
 import com.badlogic.gdx.scenes.scene2d.Touchable
+import com.badlogic.gdx.scenes.scene2d.ui.Stack
 import com.badlogic.gdx.scenes.scene2d.ui.Table
 import com.badlogic.gdx.utils.Align
+import com.unciv.logic.civilization.Civilization
 import com.unciv.logic.map.mapunit.MapUnit
 import com.unciv.models.UncivSound
 import com.unciv.models.UnitAction
@@ -33,6 +35,7 @@ import com.unciv.ui.components.input.activate
 import com.unciv.ui.components.input.keyShortcuts
 import com.unciv.ui.components.input.onActivation
 import com.unciv.ui.components.input.onClick
+import com.unciv.ui.components.input.onClickSuppressive
 import com.unciv.ui.components.input.onLongPress
 import com.unciv.ui.components.input.onRightClick
 import com.unciv.ui.components.widgets.AutoScrollPane
@@ -49,6 +52,8 @@ import com.unciv.ui.screens.worldscreen.mainmenu.WorldScreenMenuPopup
 import com.unciv.ui.screens.worldscreen.status.NextTurnAction
 import com.unciv.ui.screens.worldscreen.unit.actions.UnitActions
 import com.unciv.ui.screens.worldscreen.unit.actions.UnitActionsTable
+import com.unciv.ui.screens.worldscreen.worldmap.MotionTextures
+import com.unciv.ui.screens.worldscreen.worldmap.turnOrder
 import kotlin.math.cos
 import kotlin.math.min
 import kotlin.math.roundToInt
@@ -86,6 +91,12 @@ internal class WorldPortraitHud(
     private var zoomExpanded = false
     var tutorialTop = 0f
         private set
+    /** Turn HUD pieces outlive [refresh], which rebuilds everything else */
+    private var turnStrip: TurnStrip? = null
+    private var turnToast: Actor? = null
+    private var turnPulse: Actor? = null
+    private var hudTop = 0f
+    private var anchorBottom = 0f
 
     init { touchable = Touchable.childrenOnly }
 
@@ -255,23 +266,30 @@ internal class WorldPortraitHud(
 
         val actions = if (unit != null && world.canChangeState)
             UnitActions.getUnitActions(unit).sortedWith(compareBy<com.unciv.models.UnitAction> { UnitActions.getActionDefaultPage(unit, it.type) }.thenByDescending { it.useFrequency }).toList() else emptyList()
-        val skip = actions.firstOrNull { it.type == UnitActionType.Skip && it.action != null }
-        val anchor = disc(icon(if (skip != null) "UnitActionIcons/Skip" else "OtherIcons/ForwardArrow"), 96f, yellow,
-            if (skip != null) "Skip" else "Next")
+        // While other civs move, Next waits: navy, with a ring turning in the moving civ's color
+        val waiting = world.turnWaitCiv() != null
+        val skip = if (waiting) null else actions.firstOrNull { it.type == UnitActionType.Skip && it.action != null }
+        val anchor = if (waiting) disc(icon("OtherIcons/ForwardArrow"), 96f, Color.valueOf("1c3249"), "Wait")
+            else disc(icon(if (skip != null) "UnitActionIcons/Skip" else "OtherIcons/ForwardArrow"), 96f, yellow,
+                if (skip != null) "Skip" else "Next")
         anchor.name = "portrait-next"
         anchor.onClick {
-            if (skip != null && unit != null) unitActions.activateAction(skip, unit)
+            if (waiting || world.mapHolder.turnReplay != null) world.mapHolder.skipTurnReplay()
+            else if (skip != null && unit != null) unitActions.activateAction(skip, unit)
             else world.nextTurnButton.activate()
         }
         if (skip != null) holdToRead(anchor, skip.title.tr(), nextUnitNote(skip.type))
-        else holdToRead(anchor, world.nextTurnButton.label.text.toString(), null, !world.nextTurnButton.isDisabled)
+        else if (!waiting) holdToRead(anchor, world.nextTurnButton.label.text.toString(), null, !world.nextTurnButton.isDisabled)
         place(anchor, 277f, bottom, 96f, 96f)
+        if (waiting) place(WaitRing(), 271f, bottom - 6f, 108f, 108f)
+        hudTop = top
+        anchorBottom = bottom
         val dueUnits = world.selectedGameView.civView.dueUnitsCount()
         val pendingChoices = NextTurnAction.entries.count {
             it.ordinal in NextTurnAction.PickGreatPerson.ordinal until NextTurnAction.NextUnit.ordinal && it.isChoice(world)
         }
         val decisionCount = dueUnits + pendingChoices
-        if (decisionCount > 0 && world.isPlayersTurn) {
+        if (decisionCount > 0 && world.isPlayersTurn && !waiting) {
             val badge = Table().apply {
                 background = ImageGetter.getCircleDrawable().tint(ink)
                 add(decisionCount.toString().toLabel(Color.WHITE, 14))
@@ -305,9 +323,11 @@ internal class WorldPortraitHud(
             val close = "×".toLabel(Color.WHITE, 25).apply {
                 setAlignment(Align.center)
                 touchable = Touchable.enabled
-                onClick { world.bottomUnitTable.selectUnit(); world.shouldUpdate = true }
+                onClickSuppressive { world.bottomUnitTable.selectUnit(); world.shouldUpdate = true }
             }
             tag.add(close).size(48f)
+            tag.touchable = Touchable.enabled
+            tag.onClick { PortraitInfoSheets.showUnit(world, unitView) }
             place(tag, 10f, top - 126f, 373f, 68f)
             tutorialTop = (top - 134f) * scale + safe.y
 
@@ -390,6 +410,143 @@ internal class WorldPortraitHud(
                 place(control, 10f, zoomY - (index + 1) * 56f, 56f, 52f)
             }
         }
+        // A replay picks up the strip the previous screen showed while the turn processed, so it does not slide in twice
+        if (waiting && turnStrip == null) turnStrip = TurnStrip(slideIn = world.mapHolder.turnReplay == null)
+        for (actor in listOfNotNull(turnStrip, turnToast, turnPulse)) addActor(actor)
+    }
+
+    private val reduceMotion get() = world.game.settings.reduceMotion
+    private fun ease(p: Float) = 1f - (1f - p) * (1f - p) * (1f - p)
+    private fun knows(civ: Civilization) = civ == world.viewingCivilization || civ.isBarbarian || world.viewingCivilization.knows(civ)
+    /** Civs the player has not met stay neutral */
+    private fun civColor(civ: Civilization): Color {
+        if (!knows(civ)) return Color.valueOf("496077")
+        val outer = civ.nation.getOuterColor()
+        return if (outer.r + outer.g + outer.b > 2.6f) civ.nation.getInnerColor() else outer
+    }
+
+    private inner class WaitRing : Image(MotionTextures.ring(6f, .22f)) {
+        init { touchable = Touchable.disabled }
+        override fun act(delta: Float) {
+            super.act(delta)
+            setOrigin(width / 2f, height / 2f)
+            world.turnWaitCiv()?.let { color = civColor(it) }
+            if (reduceMotion) return
+            rotation -= 360f * delta
+            Gdx.graphics.requestRendering()
+        }
+    }
+
+    /** One disc per major civ in turn order: done ones dimmed, the moving one ringed, then its name. */
+    private inner class TurnStrip(slideIn: Boolean) : Table() {
+        private var shown: Civilization? = null
+        private var age = if (slideIn) 0f else 1f
+        private var leaving = false
+
+        init {
+            background = panel(26)
+            touchable = Touchable.disabled
+            pad(0f, 8f, 0f, 16f)
+        }
+
+        private fun show(civ: Civilization) {
+            shown = civ
+            clearChildren()
+            val majors = turnOrder(world.gameInfo, world.viewingCivilization).filter { it.isMajorCiv() && it.isAlive() }
+            val current = majors.indexOf(civ)
+            // Fit 373pt (the canvas less 10pt margins): the name is capped, and with many civs only a window
+            // of discs around the moving one is shown
+            val name = (if (knows(civ)) civ.civName.tr() else "Unknown".tr()).toLabel(Color.WHITE, 16).apply { setEllipsis(true) }
+            val nameWidth = min(name.prefWidth, 140f)
+            val slots = ((373f - 24f - 4f - nameWidth) / 42f).toInt().coerceIn(1, max(1, majors.size))
+            val first = (current - slots / 2).coerceIn(0, max(0, majors.size - slots))
+            for ((index, major) in majors.withIndex()) {
+                if (index < first || index >= first + slots) continue
+                val disc = Table().apply { background = ImageGetter.getCircleDrawable().tint(civColor(major)) }
+                if (knows(major)) disc.add(ImageGetter.getNationIcon(major.civName).apply { color = major.nation.getInnerColor() }).size(20f)
+                else disc.add(ImageGetter.getCircle(Color(1f, 1f, 1f, .5f), 10f)).size(10f)
+                val stack = Stack(disc)
+                if (index == current) stack.add(Image(MotionTextures.ring(12f)))
+                stack.isTransform = true
+                stack.setOrigin(18f, 18f)
+                if (index == current) stack.setScale(1.12f)
+                if (index < current) stack.color.a = .4f
+                add(stack).size(36f).padRight(6f)
+            }
+            add(name).width(nameWidth).padLeft(4f)
+        }
+
+        override fun act(delta: Float) {
+            super.act(delta)
+            val civ = world.turnWaitCiv()
+            if ((civ == null) != leaving) {
+                // Waiting ended, or a new turn started while the strip was still leaving
+                leaving = civ == null
+                age = 0f
+            }
+            if (civ != null && civ != shown) show(civ)
+            age += delta
+            val p = if (reduceMotion) 1f else (age / if (leaving) .26f else .3f).coerceIn(0f, 1f)
+            setSize(prefWidth, 52f)
+            setPosition((393f - width) / 2f, hudTop - 118f + 30f * if (leaving) ease(p) else 1f - ease(p))
+            color.a = if (leaving) 1f - p else min(1f, p * 2f)
+            if (leaving && p >= 1f) {
+                remove()
+                if (turnStrip === this) turnStrip = null
+                return
+            }
+            Gdx.graphics.requestRendering()
+        }
+    }
+
+    /** After the replay: a yellow toast drops in for about 1.5 s and Next pulses once. */
+    fun showYourTurn(turn: Int) {
+        turnToast?.remove()
+        turnPulse?.remove()
+        val toast = object : Table() {
+            private var age = 0f
+            override fun act(delta: Float) {
+                super.act(delta)
+                age += delta
+                val enter = if (reduceMotion) 1f else (age / .3f).coerceIn(0f, 1f)
+                val leave = if (reduceMotion) (if (age >= 2.1f) 1f else 0f) else ((age - 1.8f) / .3f).coerceIn(0f, 1f)
+                setPosition((393f - width) / 2f, hudTop - 122f + 30f * (1f - ease(enter)) + 30f * leave)
+                color.a = min(1f, enter * 2f) * (1f - leave)
+                if (leave >= 1f) {
+                    remove()
+                    if (turnToast === this) turnToast = null
+                } else Gdx.graphics.requestRendering()
+            }
+        }
+        toast.background = panel(28).tint(yellow)
+        toast.touchable = Touchable.disabled
+        toast.add("Your turn".tr().toLabel(ink, 19)).padLeft(24f)
+        toast.add("T$turn".toLabel(ink.cpy().apply { a = .7f }, 14)).padLeft(10f).padRight(24f)
+        toast.setSize(toast.prefWidth, 56f)
+        toast.color.a = 0f
+        turnToast = toast
+        addActor(toast)
+        if (reduceMotion) return
+        val pulse = object : Image(MotionTextures.ring(8f)) {
+            private var age = 0f
+            override fun act(delta: Float) {
+                super.act(delta)
+                age += delta
+                val p = ((age - .05f) / .7f).coerceIn(0f, 1f)
+                setOrigin(width / 2f, height / 2f)
+                setScale(1f + .45f * p)
+                color.a = if (p <= 0f) 0f else 1f - p
+                if (p >= 1f) {
+                    remove()
+                    if (turnPulse === this) turnPulse = null
+                } else Gdx.graphics.requestRendering()
+            }
+        }
+        pulse.color = yellow.cpy().apply { a = 0f }
+        pulse.touchable = Touchable.disabled
+        pulse.setBounds(277f, anchorBottom, 96f, 96f)
+        turnPulse = pulse
+        addActor(pulse)
     }
 
     /** Same colors as the unit's map flag: outer color disc, inner color icon (Greece reads blue on white). */

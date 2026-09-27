@@ -1,0 +1,545 @@
+<!doctype html>
+<!-- Motion set and info sheets. Iterates motion-proposal.html: same palette, hex grammar, sprite recolor and HUD. -->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Unciv portrait: motion and info</title>
+<style>
+:root{
+  --navy:#132435;--navy2:#1c3249;--navy3:#29465d;--panel:rgba(16,31,47,.92);--sheet:rgba(16,31,47,.97);--line:rgba(255,255,255,.12);
+  --ink:#fff;--ink2:#b7cde0;--yellow:#ffc93c;--yellow-ink:#3a2a00;--lock:#ffe28b;
+  --gre:#418dfe;--mon:#ff7800;--bar:#c8261f;--food:#6fd05a;--prod:#f08a2c;--gold:#ffc93c;
+  --r:ui-rounded,"SF Pro Rounded","Nunito","Varela Round",system-ui,-apple-system,sans-serif;
+}
+*{box-sizing:border-box}
+html,body{margin:0;min-height:100%;background:#0b1622;color:var(--ink);font-family:var(--r);-webkit-font-smoothing:antialiased}
+body{min-height:100dvh;display:flex;flex-direction:column;align-items:center;overflow:hidden}
+button,select{font:inherit;color:inherit}
+button{border:0;cursor:pointer;background:none}
+button:focus-visible,select:focus-visible{outline:3px solid var(--yellow);outline-offset:3px}
+.chrome{width:100%;display:flex;align-items:center;justify-content:center;gap:8px 14px;flex-wrap:wrap;padding:12px 14px 8px;flex:none;z-index:2}
+.scenes{display:flex;max-width:100%;overflow-x:auto;scrollbar-width:none;background:#16283a;border-radius:14px;padding:3px}
+.scenes::-webkit-scrollbar{display:none}
+.scenes button{color:var(--ink2);min-height:42px;padding:8px 12px;border-radius:11px;font-size:14px;font-weight:900;white-space:nowrap}
+.scenes button[aria-selected=true]{background:#fff;color:var(--navy)}
+.scenes .sep{width:1px;background:#33495e;margin:8px 4px;flex:none}
+.tools{display:flex;align-items:center;gap:8px}
+.tool,.variant{height:42px;background:#1c3249;color:#fff;border-radius:12px;padding:0 13px;font-size:13.5px;font-weight:800}
+.tool{display:flex;align-items:center;gap:7px}
+.tool svg{width:18px;height:18px}
+.variant[hidden]{display:none}
+.motion-switch{display:flex;align-items:center;gap:7px;font-size:13.5px;font-weight:800;color:var(--ink2);cursor:pointer;white-space:nowrap}
+.motion-switch input{appearance:none;width:38px;height:24px;background:#496077;border-radius:12px;position:relative;margin:0;cursor:pointer}
+.motion-switch input::after{content:"";position:absolute;width:18px;height:18px;border-radius:50%;background:#fff;top:3px;left:3px;transition:transform .18s}
+.motion-switch input:checked{background:var(--yellow)}
+.motion-switch input:checked::after{transform:translateX(14px)}
+.caption{width:100%;text-align:center;min-height:18px;color:var(--ink2);font-size:13px;font-weight:700}
+.workspace{width:100%;flex:1;min-height:0;display:flex;align-items:flex-start;justify-content:center;padding:8px 12px 24px;overflow:hidden}
+.viewport{position:relative;flex:none;width:calc(393px * var(--scale,1));height:calc(852px * var(--scale,1))}
+.phone{position:absolute;top:0;left:0;width:393px;height:852px;overflow:hidden;border-radius:54px;background:#e4edf4;transform:scale(var(--scale,1));transform-origin:top left;box-shadow:0 0 0 10px #05090e,0 0 0 11px #2a3b4d,0 30px 60px rgba(0,0,0,.5)}
+.phone.bare{border-radius:0;box-shadow:none}
+.screen{position:absolute;inset:0;overflow:hidden}
+.world{position:absolute;inset:0;width:393px;height:852px}
+.world text{font-family:var(--r)}
+.world .selected{fill:none;stroke:#fff;stroke-width:3.5;stroke-linejoin:round;filter:drop-shadow(0 2px 2px rgba(0,0,0,.5))}
+.world .border{stroke:var(--gre);stroke-width:4;stroke-linecap:round;fill:none}
+.top-shade{position:absolute;top:0;left:0;right:0;height:130px;background:linear-gradient(rgba(10,22,34,.6),transparent);pointer-events:none}
+.bottom-shade{position:absolute;left:0;right:0;bottom:0;height:330px;background:linear-gradient(transparent,rgba(10,22,34,.5) 55%,rgba(10,22,34,.85));pointer-events:none}
+.status-bar{position:absolute;top:0;left:0;right:0;height:50px;display:flex;align-items:center;justify-content:space-between;padding:7px 34px 0 42px;font-size:16px;font-weight:800;z-index:9}
+.signal{display:flex;gap:3px;align-items:end}.signal i{width:4px;background:#fff;border-radius:2px}
+.signal i:nth-child(1){height:6px}.signal i:nth-child(2){height:9px}.signal i:nth-child(3){height:12px}
+.status-right{display:flex;align-items:center;gap:9px}
+.battery{width:26px;height:12px;border:1.5px solid #fff;border-radius:4px;position:relative}
+.battery::before{content:"";position:absolute;left:2px;top:2px;bottom:2px;right:5px;border-radius:1px;background:#fff}
+.stats{position:absolute;z-index:4;top:54px;left:10px;right:10px;height:50px;background:var(--panel);border-radius:16px;display:flex;align-items:center;gap:13px;padding:0 13px;box-shadow:0 4px 14px rgba(0,0,0,.22);white-space:nowrap}
+.stat{display:flex;align-items:center;gap:5px;font-size:17px;font-weight:900}
+.stat small{font-size:12px;color:var(--ink2);font-weight:700}
+.stat svg{width:19px;height:19px}
+.stats .turn{margin-left:auto;background:rgba(255,255,255,.1);height:38px;border-radius:12px;padding:0 10px;display:grid;place-items:center;font-size:14px;font-weight:900}
+.unit-head{position:absolute;z-index:4;left:10px;right:10px;top:112px;background:var(--panel);border-radius:18px;display:flex;align-items:center;gap:12px;padding:10px;min-height:72px;box-shadow:0 6px 18px rgba(0,0,0,.25);text-align:left}
+.avatar{width:49px;height:49px;border-radius:50%;background:var(--gre);display:grid;place-items:center;flex:none;overflow:hidden;box-shadow:inset 0 -4px 0 rgba(0,0,0,.2)}
+.avatar img{width:47px;height:47px;object-fit:contain;transform:translateY(5px)}
+.unit-head strong{display:block;font-size:19px;font-weight:900;line-height:1.1}
+.sub{color:var(--ink2);font-size:14px;font-weight:800;margin-top:3px}
+.head-right{margin-left:auto;display:flex;align-items:center;gap:8px;font-size:13px;font-weight:900;color:#aaf19d}
+.head-right svg{width:18px;height:18px;stroke:var(--ink2);stroke-width:2.5;fill:none;stroke-linecap:round}
+/* Unit dock: the approved arc from Skip. */
+.dock{position:absolute;left:0;right:0;bottom:0;height:235px;z-index:5}
+.action{position:absolute;width:54px;height:54px;border-radius:50%;background:#eef5fb;color:var(--navy);display:grid;place-items:center;box-shadow:0 4px 0 #b9cadb,0 8px 17px rgba(0,0,0,.24)}
+.action svg{width:26px;height:26px;stroke:currentColor;stroke-width:2.5;fill:none;stroke-linecap:round;stroke-linejoin:round}
+.action.a1{right:149px;bottom:55px}.action.a2{right:131px;bottom:117px}.action.a3{right:80px;bottom:157px}.action.a4{right:16px;bottom:163px}
+.action.active{box-shadow:0 0 0 3px var(--yellow),0 4px 0 #b9cadb,0 8px 17px rgba(0,0,0,.24)}
+.big{position:absolute;right:18px;bottom:34px;width:96px;height:96px;border-radius:50%;background:var(--yellow);color:var(--yellow-ink);box-shadow:0 5px 0 #c9951c,0 10px 20px rgba(0,0,0,.27);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;font-size:15px;font-weight:900;transition:background .25s,color .25s,box-shadow .25s}
+.big svg{width:32px;height:32px;stroke:currentColor;stroke-width:2.7;fill:none;stroke-linecap:round;stroke-linejoin:round}
+.big .badge{position:absolute;top:-3px;right:-3px;width:30px;height:30px;border-radius:50%;background:var(--navy);color:#fff;display:grid;place-items:center;font-size:14px;border:2px solid #0b1622}
+/* Waiting: the Next disc becomes a quiet navy clock ring while others move. */
+.big.waiting{background:#1c3249;color:#dce9f4;box-shadow:0 5px 0 #0c1824,0 10px 20px rgba(0,0,0,.27);cursor:default}
+.big .ring{position:absolute;inset:-6px;width:108px;height:108px;overflow:visible;opacity:0;transition:opacity .2s}
+.big.waiting .ring{opacity:1}
+.big .ring circle{fill:none;stroke:var(--mon);stroke-width:5;stroke-linecap:round;stroke-dasharray:70 270;transform-origin:54px 54px}
+.big .pulse{position:absolute;inset:0;border-radius:50%;border:4px solid var(--yellow);opacity:0}
+.left-disc{position:absolute;bottom:40px;width:66px;height:66px;border-radius:50%;background:var(--navy2);display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:12px;font-weight:800;color:#dce9f4;box-shadow:0 6px 14px rgba(0,0,0,.25)}
+.left-disc svg{width:26px;height:26px;stroke:#dce9f4;stroke-width:2.2;fill:none;stroke-linecap:round;stroke-linejoin:round}
+/* Turn strip: only while other civs move. */
+.turn-strip{opacity:0;position:absolute;z-index:6;top:112px;left:50%;height:52px;border-radius:26px;background:var(--panel);display:flex;align-items:center;gap:10px;padding:0 16px 0 8px;box-shadow:0 6px 18px rgba(0,0,0,.25);transform:translate(-50%,-90px);white-space:nowrap}
+.turn-strip .civs{display:flex;gap:6px}
+.turn-strip .civ{width:36px;height:36px;border-radius:50%;display:grid;place-items:center;border:3px solid transparent;transition:transform .25s,opacity .25s,border-color .25s}
+.turn-strip .civ svg{width:18px;height:18px}
+.turn-strip .civ.done{opacity:.4}
+.turn-strip .civ.now{border-color:#fff;transform:scale(1.12)}
+.turn-strip strong{font-size:16px;font-weight:900}
+.toast{opacity:0;position:absolute;z-index:7;left:50%;top:120px;height:56px;padding:0 24px;border-radius:28px;background:var(--yellow);color:var(--yellow-ink);display:flex;align-items:center;gap:10px;font-size:19px;font-weight:900;transform:translate(-50%,-110px);box-shadow:0 6px 0 #c9951c,0 12px 24px rgba(0,0,0,.3);white-space:nowrap}
+.toast small{font-size:14px;opacity:.7}
+.map-chip{position:absolute;z-index:3;height:30px;padding:0 12px;border-radius:15px;background:var(--navy);color:#fff;display:flex;align-items:center;gap:6px;font-size:13px;font-weight:900;white-space:nowrap;transform:translate(-50%,0);box-shadow:0 4px 10px rgba(0,0,0,.25);opacity:0}
+.city-banner{position:absolute;z-index:3;height:28px;border-radius:14px;background:#fff;color:var(--navy);display:flex;align-items:center;gap:6px;padding:0 10px 0 3px;font-size:15px;font-weight:900;transform:translate(-50%,0);box-shadow:0 3px 8px rgba(0,0,0,.25);white-space:nowrap}
+.city-banner span{width:22px;height:22px;border-radius:50%;display:grid;place-items:center;background:var(--gre);color:#fff;font-size:13px}
+/* Info sheets. */
+.sheet{position:absolute;left:0;right:0;bottom:0;z-index:8;background:var(--sheet);border-radius:28px 28px 0 0;box-shadow:0 -10px 30px rgba(0,0,0,.32);padding:0 16px 30px;transition:transform .42s cubic-bezier(.16,1,.3,1)}
+.sheet.closed{transform:translateY(105%)}
+.grab{width:44px;height:5px;background:rgba(255,255,255,.34);border-radius:4px;margin:9px auto 12px}
+.sheet-head{display:flex;align-items:center;gap:13px}
+.sheet-head strong{display:block;font-size:22px;font-weight:900;line-height:1.1}
+.close{width:48px;height:48px;border-radius:50%;background:rgba(255,255,255,.1);display:grid;place-items:center;margin-left:auto;flex:none}
+.close svg{width:20px;height:20px;stroke:#fff;stroke-width:2.6;stroke-linecap:round}
+.hex-thumb{width:64px;height:56px;flex:none;overflow:visible}
+.yields{display:flex;gap:8px;margin:14px 0 6px}
+.yield{height:44px;min-width:70px;padding:0 14px;border-radius:14px;background:var(--navy2);display:flex;align-items:center;gap:8px;font-size:20px;font-weight:900}
+.yield svg{width:22px;height:22px}
+.rows{margin-top:4px}
+.row{width:100%;min-height:56px;display:flex;align-items:center;gap:12px;border-bottom:1px solid var(--line);text-align:left;font-size:17px;font-weight:850}
+.row:last-child{border-bottom:0}
+.row .ico{width:40px;height:40px;border-radius:12px;background:var(--navy2);display:grid;place-items:center;flex:none;overflow:hidden}
+.row .ico img{width:36px;height:36px;object-fit:contain}
+.row .ico.round{border-radius:50%;background:var(--gre)}
+.row .ico.round img{transform:translateY(4px)}
+.row .ico svg{width:22px;height:22px;stroke:#dce9f4;stroke-width:2.3;fill:none;stroke-linecap:round;stroke-linejoin:round}
+.row .meta{display:block;color:var(--ink2);font-size:13px;font-weight:800;margin-top:2px}
+.row .end{margin-left:auto;display:flex;align-items:center;gap:8px;color:var(--ink2);font-size:14px;font-weight:900;white-space:nowrap}
+.row .chev{width:16px;height:16px;stroke:#6f89a0;stroke-width:2.6;fill:none;stroke-linecap:round;stroke-linejoin:round;flex:none}
+.pill{height:30px;padding:0 10px;border-radius:10px;display:flex;align-items:center;gap:5px;font-size:13px;font-weight:900}
+.pill.lock{background:rgba(255,201,60,.16);color:var(--lock)}
+.pill.lock svg{width:14px;height:14px;stroke:var(--lock);stroke-width:2.4;fill:none}
+.pill.good{background:rgba(111,208,90,.15);color:#aff2a5}
+.pill.plain{background:rgba(255,255,255,.1);color:#fff}
+.hp{width:84px;height:8px;border-radius:4px;background:#0c1824;overflow:hidden}
+.hp i{display:block;height:100%;background:#6fd05a;border-radius:4px}
+.stat-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:14px 0 8px}
+.stat-box{background:var(--navy2);border-radius:15px;padding:10px 12px;min-height:68px}
+.stat-box b{display:block;font-size:22px;font-weight:900}
+.stat-box span{color:var(--ink2);font-size:13px;font-weight:800}
+.hpbar{height:12px;border-radius:6px;background:#0c1824;overflow:hidden;margin-top:12px}
+.hpbar i{display:block;height:100%;width:74%;background:linear-gradient(90deg,#6fd05a,#a6ea6b);border-radius:6px}
+.hp-caption{display:flex;justify-content:space-between;margin-top:6px;color:var(--ink2);font-size:13px;font-weight:800}
+.primary{width:100%;height:56px;border-radius:18px;background:var(--yellow);color:var(--yellow-ink);font-size:18px;font-weight:900;margin-top:12px;box-shadow:0 4px 0 #c9951c}
+/* City sheet, matched to the shipped 4.23.0 layout. */
+.city-sheet{position:absolute;left:0;right:0;bottom:0;top:250px;z-index:8;background:var(--sheet);border-radius:28px 28px 0 0;box-shadow:0 -10px 30px rgba(0,0,0,.32);overflow:hidden}
+.city-top{padding:0 16px}
+.city-title{display:flex;align-items:center;gap:12px}
+.pop{width:52px;height:52px;border-radius:50%;background:var(--gre);display:grid;place-items:center;font-size:22px;font-weight:900;flex:none}
+.city-title strong{font-size:24px;font-weight:900;display:block;line-height:1.1}
+.city-yields{display:grid;grid-template-columns:repeat(6,1fr);text-align:center;padding:12px 0 10px;border-bottom:1px solid var(--line);font-size:16px;font-weight:900}
+.city-yields svg{width:22px;height:22px;display:block;margin:0 auto 3px}
+.city-body{padding:12px 16px 0}
+.back{height:44px;border-radius:12px;background:rgba(255,255,255,.07);display:flex;align-items:center;gap:6px;padding:0 12px;font-size:15px;font-weight:900;color:var(--ink2);width:auto}
+.back svg{width:16px;height:16px;stroke:currentColor;stroke-width:2.6;fill:none;stroke-linecap:round}
+.tile-hero{display:flex;align-items:center;gap:13px;margin-top:8px}
+.tile-hero strong{font-size:21px;font-weight:900;display:block}
+.tabbar{position:absolute;left:10px;right:10px;bottom:14px;height:76px;border-radius:22px;background:#1a2e42;display:grid;grid-template-columns:repeat(5,1fr);align-items:center;text-align:center;font-size:12px;font-weight:800;color:var(--ink2)}
+.tabbar span{display:flex;flex-direction:column;align-items:center;gap:4px;padding:8px 0;border-radius:16px;margin:0 3px}
+.tabbar span.on{background:var(--navy3);color:#fff}
+.tabbar svg{width:24px;height:24px;stroke:currentColor;stroke-width:2.2;fill:none;stroke-linecap:round;stroke-linejoin:round}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%)}
+@media (max-width:680px){.chrome{padding-top:8px;gap:6px 8px}.tools{width:100%;justify-content:center}}
+</style>
+</head>
+<body>
+<div class="chrome">
+  <div class="scenes" role="tablist" aria-label="Proposal scenes">
+    <button type="button" role="tab" data-scene="move">Move</button>
+    <button type="button" role="tab" data-scene="turns">Their turn</button>
+    <button type="button" role="tab" data-scene="spawn">Spawn</button>
+    <button type="button" role="tab" data-scene="embark">Embark</button>
+    <button type="button" role="tab" data-scene="combat">Combat</button>
+    <button type="button" role="tab" data-scene="settle">Settle</button>
+    <span class="sep" aria-hidden="true"></span>
+    <button type="button" role="tab" data-scene="tile">Tile info</button>
+    <button type="button" role="tab" data-scene="unit">Unit info</button>
+    <button type="button" role="tab" data-scene="citytile">City tile</button>
+  </div>
+  <div class="tools">
+    <button type="button" class="tool" id="replay"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 12a8 8 0 1 1-2.4-5.7M20 4v5h-5"/></svg>Replay</button>
+    <select class="variant" id="variant" aria-label="Variant" hidden></select>
+    <label class="motion-switch"><input type="checkbox" id="reduce">Reduce motion</label>
+  </div>
+  <div class="caption" id="caption" aria-live="polite"></div>
+</div>
+<main class="workspace"><div class="viewport" id="viewport"><div class="phone" id="phone"><div class="screen" id="screen"></div></div></div></main>
+<div id="announce" class="sr" aria-live="polite"></div>
+<script>
+const CAPTION={
+  move:'Camera settles first, then the unit hops each tile of its path. 0.34 s per tile, dust on the final landing.',
+  turns:'Next turns into a waiting ring. The strip shows whose turn it is; visible enemy moves hop the same way. Your turn lands with one pulse.',
+  spawn:'A trained unit rises out of the city with a ring, then hops to its free tile. The city banner confirms it.',
+  embark:'Hopping onto water swaps to the boat with a splash; the boat bobs. Disembarking plays it in reverse.',
+  combat:'Melee lunges, ranged fires an arc, a defeated unit tips over and puffs away.',
+  settle:'The Settler hops in place, the city rises with dust, then its border draws out and the banner drops in.',
+  tile:'Tap a tile: a sheet rises in thumb reach with yields first. Every row opens its Civilopedia entry.',
+  unit:'Tap the unit card: the same sheet shows health, strength, moves and experience.',
+  citytile:'Inside the city, a tile uses the same card, with Work this tile as the one clear action.'
+};
+const VARIANTS={combat:[['melee','Melee'],['ranged','Ranged'],['defeat','Defeat']],embark:[['embark','Embark'],['disembark','Disembark']]};
+const ICON={
+  move:'<path d="M4 12h15m-6-6 6 6-6 6"/>',
+  attack:'<path d="M12 3v5m0 8v5M3 12h5m8 0h5"/><circle cx="12" cy="12" r="3"/>',
+  fortify:'<path d="M12 3 20 6v6c0 5-3.5 7.7-8 9-4.5-1.3-8-4-8-9V6z"/>',
+  more:'<circle cx="5" cy="12" r="1.5" fill="currentColor" stroke="none"/><circle cx="12" cy="12" r="1.5" fill="currentColor" stroke="none"/><circle cx="19" cy="12" r="1.5" fill="currentColor" stroke="none"/>',
+  skip:'<path d="M4.5 12a7.5 7.5 0 0 1 12.8-5.3L20 9.4M20 4v5.4h-5.4"/><path d="M19.5 12a7.5 7.5 0 0 1-12.8 5.3L4 14.6M4 20v-5.4h5.4"/>',
+  next:'<path d="M8 5v14l11-7z" fill="currentColor"/>',
+  close:'<path d="M5 5l14 14M19 5 5 19"/>',
+  flag:'<path d="M6 21V4m0 1h11l-2 4 2 4H6"/>',
+  sleep:'<path d="M20 14A8 8 0 1 1 10 4a6 6 0 0 0 10 10z"/>',
+  chev:'<path d="M9 5l7 7-7 7"/>',
+  back:'<path d="M15 5l-7 7 7 7"/>',
+  lock:'<rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/>',
+  shield:'<path d="M12 3 20 6v6c0 5-3.5 7.7-8 9-4.5-1.3-8-4-8-9V6z"/>',
+  water:'<path d="M12 3s6 7 6 11a6 6 0 0 1-12 0c0-4 6-11 6-11z"/>',
+  chat:'<path d="M4 6h11v8H8l-4 3z"/><path d="M15 9h5v8l-3-2h-5v-1"/>',
+  flask:'<path d="M9 3h6M10 3v6l-5 9a2 2 0 0 0 2 3h10a2 2 0 0 0 2-3l-5-9V3"/>',
+  build:'<circle cx="12" cy="12" r="3"/><path d="M12 3v3m0 12v3M3 12h3m12 0h3M5.6 5.6l2.1 2.1m8.6 8.6 2.1 2.1m0-12.8-2.1 2.1m-8.6 8.6-2.1 2.1"/>',
+  bldg:'<path d="M4 20V9l8-5 8 5v11M9 20v-6h6v6"/>',
+  hex:'<path d="M12 3 20 7.5v9L12 21 4 16.5v-9z"/>',
+  cit:'<circle cx="12" cy="8" r="3.5"/><path d="M5 20c1-4 4-6 7-6s6 2 7 6"/>',
+  buy:'<rect x="6" y="3" width="12" height="18" rx="3"/><path d="M12 8v8m-2.5-6h4a1.5 1.5 0 0 1 0 3h-3a1.5 1.5 0 0 0 0 3h4"/>'
+};
+const icon=n=>`<svg viewBox="0 0 24 24" aria-hidden="true">${ICON[n]}</svg>`;
+const Y={
+  food:'<svg viewBox="0 0 24 24"><circle cx="12" cy="13" r="8" fill="#6fd05a"/><path d="M12 5c0-2 2-3 4-3" stroke="#3d7d2c" stroke-width="2" fill="none" stroke-linecap="round"/><circle cx="9" cy="11" r="2" fill="#a8ec8f"/></svg>',
+  prod:'<svg viewBox="0 0 24 24"><path d="M4 20l8-8" stroke="#b7682b" stroke-width="3.2" stroke-linecap="round"/><path d="M10 6l5-3 6 6-3 5z" fill="#f08a2c"/></svg>',
+  gold:'<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" fill="#ffc93c"/><circle cx="12" cy="12" r="6" fill="none" stroke="#bd8d16" stroke-width="2"/></svg>',
+  sci:'<svg viewBox="0 0 24 24"><path d="M9 3h6v6l5 9a2 2 0 0 1-2 3H6a2 2 0 0 1-2-3l5-9z" fill="#5cc8ff"/><path d="M6 15h12" stroke="#2277a0" stroke-width="2"/></svg>',
+  cult:'<svg viewBox="0 0 24 24"><path d="M8 17V5l11-2v12" stroke="#d38bff" stroke-width="2.5" fill="none"/><circle cx="6" cy="17" r="3" fill="#d38bff"/><circle cx="17" cy="15" r="3" fill="#d38bff"/></svg>',
+  faith:'<svg viewBox="0 0 24 24"><circle cx="12" cy="6" r="3" fill="#f2efe6"/><path d="M7 21l2-9h6l2 9z" fill="#f2efe6"/></svg>'
+};
+const CIV={gre:[65,141,254],mon:[255,120,0],bar:[200,38,31]};
+const CIVHEX={gre:'#418dfe',mon:'#ff7800',bar:'#c8261f',bab:'#1b353f',egy:'#5300d0'};
+
+const screen=document.getElementById('screen');
+const R=50,SQ=.6,W=Math.sqrt(3)*R,DY=45,X0=-25,Y0=122;
+const TERRA={grass:['#88cd50','#7dc248','#5f9a36'],plains:['#e3ca52','#d9be47','#b39532'],coast:['#3fb5e3','#37a8d7','#2d8daf'],ocean:['#2f7ad6','#2a6fc6','#215a9c'],desert:['#eba45b','#e0974d','#b8763a'],mountain:['#a3acb6','#959ea9','#737c87']};
+const key=(c,r)=>`${c},${r}`;
+const center=(c,r)=>[X0+W*(c+(r&1?.5:0)),Y0+DY*r];
+const corners=(x,y,s=1)=>Array.from({length:6},(_,i)=>{const a=(60*i-90)*Math.PI/180;return [x+R*s*Math.cos(a),y+R*SQ*s*Math.sin(a)]});
+const pts=a=>a.map(([x,y])=>`${x.toFixed(1)},${y.toFixed(1)}`).join(' ');
+const cube=(c,r)=>[c-(r-(r&1))/2,r];
+const dist=(a,b)=>{const [q,r]=cube(...a),[s,t]=cube(...b);return Math.max(Math.abs(q-s),Math.abs(r-t),Math.abs(q-s+r-t))};
+const DIRS=[[1,-1],[1,0],[0,1],[-1,1],[-1,0],[0,-1]];
+const nbr=(c,r,i)=>{const [q,rr]=cube(c,r),[dq,dr]=DIRS[i];const nr=rr+dr;return [q+dq+(nr-(nr&1))/2,nr]};
+function terrain(c,r){
+  if(r>=12&&c<=4)return 'ocean';
+  if(r>=9&&c<=2||r>=11)return 'coast';
+  if(c===5&&r===2||c===-1&&r===5)return 'mountain';
+  if(c===2&&r===3||c===3&&r===4)return 'desert';
+  if((c+r*2)%7===1||c===4&&r===5)return 'plains';
+  if(c>=5&&r<=5)return 'desert';
+  return 'grass';
+}
+function slab(c,r){
+  const [x,y]=center(c,r),cs=corners(x,y),[lit,shade,side]=TERRA[terrain(c,r)],low=p=>[p[0],p[1]+4];
+  return `<polygon points="${pts([cs[2],cs[3],low(cs[3]),low(cs[2])])}" fill="${side}"/><polygon points="${pts([cs[3],cs[4],low(cs[4]),low(cs[3])])}" fill="${side}"/><polygon points="${pts(cs)}" fill="${shade}" stroke="rgba(15,44,41,.12)" stroke-width="1.2"/><polygon points="${pts([[x,y-2],cs[4],cs[5],cs[0]])}" fill="${lit}" opacity=".78"/>`;
+}
+const art=(h,x,y,w,hh)=>`<image href="art/${h}.png" x="${x}" y="${y}" width="${w}" height="${hh}" preserveAspectRatio="xMidYMid meet"/>`;
+const DECO={'3,5':['f_forest1',-23,-34,46,46],'5,7':['f_forest2',-20,-31,42,42],'0,6':['f_forest1',-23,-34,46,46],'4,9':['f_forest2',-20,-31,42,42],'1,5':['f_hill1',-24,-26,48,40],'2,3':['f_hill1',-24,-26,48,40],'5,2':['f_mountain1',-25,-34,50,50],'-1,5':['f_mountain1',-25,-34,50,50],'4,4':['f_forest2',-20,-31,42,42]};
+const RES={'3,5':['r_Deer',4,-14,24,24],'2,3':['r_Sheep',6,-12,24,24]};
+function tileArt(c,r,hide){
+  const k=key(c,r);if(hide&&hide.includes(k))return '';
+  const [x,y]=center(c,r);let s='';
+  if(DECO[k]){const [h,dx,dy,w,hh]=DECO[k];s+=art(h,x+dx,y+dy,w,hh)}
+  if(RES[k]){const [h,dx,dy,w,hh]=RES[k];s+=art(h,x+dx,y+dy,w,hh)}
+  return s;
+}
+function world(extra='',hide=[]){
+  const t=[],d=[];
+  for(let r=-1;r<=16;r++)for(let c=-1;c<=6;c++){const [x,y]=center(c,r);if(x<-70||x>455||y<-65||y>900)continue;t.push(slab(c,r));d.push(tileArt(c,r,hide))}
+  return `<svg class="world" viewBox="0 0 393 852"><g id="cam"><rect x="-200" y="-200" width="800" height="1250" fill="#e4edf4"/>${t.join('')}${d.join('')}${extra}<g id="units"></g><g id="fx"></g></g></svg>`;
+}
+function borderPath(cc,cr,rad=1){
+  const own=(c,r)=>dist([c,r],[cc,cr])<=rad,out=[];
+  for(let r=cr-rad-1;r<=cr+rad+1;r++)for(let c=cc-rad-1;c<=cc+rad+1;c++){
+    if(!own(c,r))continue;const cs=corners(...center(c,r),.99);
+    DIRS.forEach((_,i)=>{if(!own(...nbr(c,r,i)))out.push(`M${cs[i][0].toFixed(1)} ${cs[i][1].toFixed(1)}L${cs[(i+1)%6][0].toFixed(1)} ${cs[(i+1)%6][1].toFixed(1)}`)});
+  }
+  return out.join('');
+}
+function tint(cc,cr,rad=1){let s='';for(let r=cr-rad;r<=cr+rad;r++)for(let c=cc-rad-1;c<=cc+rad+1;c++)if(dist([c,r],[cc,cr])<=rad)s+=`<polygon points="${pts(corners(...center(c,r),.97))}" fill="rgba(65,141,254,.13)"/>`;return s}
+
+/* Sprites: key green recolored per civ, plus a white flash copy. */
+const sprites={};
+const loadImage=src=>new Promise((ok,no)=>{const im=new Image();im.onload=()=>ok(im);im.onerror=no;im.src=src});
+async function prep(name){
+  const im=await loadImage(`art/${name}.png`),cv=document.createElement('canvas');cv.width=im.width;cv.height=im.height;
+  const ctx=cv.getContext('2d',{willReadFrequently:true});ctx.drawImage(im,0,0);const raw=ctx.getImageData(0,0,cv.width,cv.height).data;
+  let x0=cv.width,y0=cv.height,x1=0,y1=0;
+  for(let y=0;y<cv.height;y++)for(let x=0;x<cv.width;x++)if(raw[(y*cv.width+x)*4+3]>24){x0=Math.min(x0,x);y0=Math.min(y0,y);x1=Math.max(x1,x);y1=Math.max(y1,y)}
+  const w=x1-x0+1,h=y1-y0+1;sprites[name]={ratio:w/h};
+  for(const [civ,col] of [...Object.entries(CIV),['white',null]]){
+    const out=ctx.createImageData(w,h),d=out.data;
+    for(let y=0;y<h;y++)for(let x=0;x<w;x++){
+      const s=((y+y0)*cv.width+x+x0)*4,o=(y*w+x)*4;let r=raw[s],g=raw[s+1],b=raw[s+2];
+      if(!col){r=g=b=255}else if(g>60&&g>r*1.45&&g>b*1.45){const f=Math.min(1.15,g/255*1.08);r=col[0]*f;g=col[1]*f;b=col[2]*f}
+      d[o]=r;d[o+1]=g;d[o+2]=b;d[o+3]=raw[s+3];
+    }
+    const c2=document.createElement('canvas');c2.width=w;c2.height=h;c2.getContext('2d').putImageData(out,0,0);sprites[name][civ]=c2.toDataURL();
+  }
+}
+const spr=(n,civ='gre')=>sprites[n]?.[civ]||`art/${n}.png`;
+
+/* Unit actors drawn into #units and posed every frame. */
+let units={};
+function addUnit(id,name,civ,c,r,opts={}){
+  const [x,y]=center(c,r),h=opts.h||50,w=Math.round(h*(sprites[name]?.ratio||1));
+  const g=document.createElementNS('http://www.w3.org/2000/svg','g');
+  g.innerHTML=`<ellipse class="shadow" cx="0" cy="2" rx="14" ry="5" fill="rgba(0,0,0,.25)"/><ellipse cx="0" cy="1" rx="13" ry="4.8" fill="none" stroke="${CIVHEX[civ]}" stroke-width="2.6"/><g class="body"><image class="sprite" href="${spr(name,civ)}" x="${-w/2}" y="${-h}" width="${w}" height="${h}"/><image class="flash" href="${spr(name,'white')}" x="${-w/2}" y="${-h}" width="${w}" height="${h}" opacity="0"/></g>`;
+  document.getElementById('units').appendChild(g);
+  units[id]={g,name,civ,x,y,bx:x,by:y,sx:1,sy:1,lean:0,op:1,flip:opts.flip?-1:1,rot:0,h,w};
+  return units[id];
+}
+function setSprite(u,name){const w=Math.round(u.h*(sprites[name]?.ratio||1));u.name=name;u.w=w;const [a,b]=u.g.querySelectorAll('image');for(const [im,civ] of [[a,u.civ],[b,'white']]){im.setAttribute('href',spr(name,civ));im.setAttribute('x',-w/2);im.setAttribute('width',w)}}
+function pose(u){
+  u.g.setAttribute('transform',`translate(${u.x.toFixed(2)} ${u.y.toFixed(2)}) rotate(${u.rot.toFixed(2)}) scale(${(u.sx*u.flip).toFixed(3)} ${u.sy.toFixed(3)})`);
+  u.g.querySelector('.body').setAttribute('transform',`skewX(${u.lean.toFixed(2)})`);u.g.setAttribute('opacity',u.op.toFixed(3));
+}
+const ease=p=>1-Math.pow(1-p,3),clamp=(v,a=0,b=1)=>Math.max(a,Math.min(b,v)),lerp=(a,b,p)=>a+(b-a)*p;
+/* One hop: crouch, airborne arc with lean, squash landing. Returns the pose for progress q. */
+function hop(q,from,to,lift=20){
+  const dir=to[0]>=from[0]?-1:1;
+  if(q<.14){const k=q/.14;return {x:from[0],y:from[1],sx:1+.08*k,sy:1-.14*k,lean:0}}
+  if(q<.86){const k=(q-.14)/.72;return {x:lerp(from[0],to[0],ease(k)),y:lerp(from[1],to[1],ease(k))-Math.sin(Math.PI*k)*lift,sx:.95,sy:1.07,lean:6*dir}}
+  const k=(q-.86)/.14;return {x:to[0],y:to[1],sx:1+.1*Math.sin(k*Math.PI),sy:1-.16*Math.sin(k*Math.PI),lean:0};
+}
+function path(u,tiles,t,start,per){
+  const hops=tiles.length-1;if(t<start)return false;const i=Math.min(hops-1,Math.floor((t-start)/per)),q=clamp((t-start-i*per)/per);
+  if(t>=start+hops*per){const [x,y]=center(...tiles[hops]);Object.assign(u,{x,y,sx:1,sy:1,lean:0});return true}
+  Object.assign(u,hop(q,center(...tiles[i]),center(...tiles[i+1])));return false;
+}
+function breathe(u,t){if(state.reduce)return;const b=Math.sin(t/420);u.sx*=1-b*.012;u.sy*=1+b*.022}
+
+/* Effects. */
+let fx=[];
+function effect(markup,start,dur,step){const g=document.createElementNS('http://www.w3.org/2000/svg','g');g.innerHTML=markup;g.setAttribute('opacity','0');document.getElementById('fx').appendChild(g);fx.push({g,start,dur,step})}
+function dust(x,y,at){for(const dir of [-1,1])effect('<circle r="4" fill="#efe6cf"/><circle cx="5" cy="-2" r="3" fill="#e2d6b8"/>',at,420,(g,p)=>{g.setAttribute('transform',`translate(${x+dir*(7+15*ease(p))} ${y-3*p}) scale(${(.6+.8*p).toFixed(2)})`);g.setAttribute('opacity',1-p)})}
+function ringFx(x,y,at,color='#fff',dur=620){effect(`<ellipse rx="20" ry="8" fill="none" stroke="${color}" stroke-width="3"/>`,at,dur,(g,p)=>{g.setAttribute('transform',`translate(${x} ${y}) scale(${(1+1.6*ease(p)).toFixed(2)})`);g.setAttribute('opacity',1-p)})}
+function splash(x,y,at){for(let i=0;i<5;i++){const a=-Math.PI*(.15+.7*i/4);effect('<circle r="3.2" fill="#e8f7ff"/>',at,480,(g,p)=>{g.setAttribute('transform',`translate(${x+Math.cos(a)*22*ease(p)} ${y+Math.sin(a)*26*p+30*p*p})`);g.setAttribute('opacity',1-p)})}ringFx(x,y,at,'#e8f7ff',700);ringFx(x,y,at+160,'#bfeaff',700)}
+function damage(x,y,at,n){effect(`<text text-anchor="middle" font-size="19" font-weight="900" fill="#fff" stroke="#a8322c" stroke-width="4" paint-order="stroke">−${n}</text>`,at,1000,(g,p)=>{const pop=p<.18?.4+p/.18:p<.3?1.4-.4*(p-.18)/.12:1;g.setAttribute('transform',`translate(${x} ${y-54-20*ease(p)}) scale(${pop})`);g.setAttribute('opacity',p<.7?1:1-(p-.7)/.3)})}
+function slash(x,y,at){effect('<path d="M-8 -18Q 9 -26 18 -10" stroke="#fff" stroke-width="4" fill="none" stroke-linecap="round"/>',at,260,(g,p)=>{g.setAttribute('transform',`translate(${x} ${y})`);g.setAttribute('opacity',1-p)})}
+function puff(x,y,at){for(let i=0;i<7;i++){const a=Math.PI*2*i/7;effect(`<circle r="${5+i%3}" fill="#f2f2ee"/>`,at,560,(g,p)=>{g.setAttribute('transform',`translate(${x+Math.cos(a)*20*ease(p)} ${y-18+Math.sin(a)*12*ease(p)-10*p}) scale(${(1.2-.6*p).toFixed(2)})`);g.setAttribute('opacity',1-p)})}}
+function flash(u,t,at){const im=u.g.querySelector('.flash');const h=(t-at)/460;im.setAttribute('opacity',h<0||h>1?0:String(Math.max(0,1-h*1.6)));return h}
+
+/* HUD pieces. */
+const statsBar=turn=>`<div class="stats"><div class="stat">${Y.gold}39<small>+3</small></div><div class="stat">${Y.sci}+4</div><div class="stat">${Y.cult}3<small>/15</small></div><div class="turn" id="turn">T${turn}</div></div>`;
+const statusBar=`<div class="status-bar"><span>10:53</span><span class="status-right"><span class="signal"><i></i><i></i><i></i></span><span class="battery"></span></span></div>`;
+const LABEL={'k_embarkedunit-military':'Warrior'};
+const unitHead=(name,sub,right='100 HP',civ='gre',tap=false)=>`<button type="button" class="unit-head" ${tap?'id="open-unit"':''}><span class="avatar" style="background:${CIVHEX[civ]}"><img src="${spr(name,civ)}" alt=""></span><span><strong>${LABEL[name]||name.replace('k_','').replace(/^./,m=>m.toUpperCase())}</strong><span class="sub">${sub}</span></span><span class="head-right" id="health">${right}${tap?icon('chev'):''}</span></button>`;
+const unitDock=(a=['move','attack','fortify','more'],active)=>`<div class="dock">${a.map((n,i)=>`<button class="action a${i+1} ${active===n?'active':''}" aria-label="${n}">${icon(n)}</button>`).join('')}<button class="big" aria-label="Skip unit">${icon('skip')}Skip</button></div>`;
+const nextDock=badge=>`<div class="dock"><div class="left-disc" style="left:18px">${icon('chat')}Civ</div><div class="left-disc" style="left:94px">${icon('flask')}Research</div><button class="big" id="next" aria-label="Next turn"><svg class="ring" viewBox="0 0 108 108"><circle cx="54" cy="54" r="51"/></svg><span class="pulse"></span>${icon('next')}<span id="next-label">Next</span>${badge?`<span class="badge">${badge}</span>`:''}</button></div>`;
+const closeBtn=id=>`<button class="close" id="${id}" aria-label="Close">${icon('close')}</button>`;
+function hexThumb(terr,deco,res){
+  const [lit,shade,side]=TERRA[terr];const cs=corners(32,30,.62).map(([x,y])=>[x,y]);const low=p=>[p[0],p[1]+4];
+  return `<svg class="hex-thumb" viewBox="0 0 64 56"><polygon points="${pts([cs[2],cs[3],low(cs[3]),low(cs[2])])}" fill="${side}"/><polygon points="${pts([cs[3],cs[4],low(cs[4]),low(cs[3])])}" fill="${side}"/><polygon points="${pts(cs)}" fill="${shade}"/><polygon points="${pts([[32,28],cs[4],cs[5],cs[0]])}" fill="${lit}" opacity=".78"/>${deco?`<image href="art/${deco}.png" x="12" y="0" width="38" height="38"/>`:''}${res?`<image href="art/${res}.png" x="34" y="14" width="22" height="22"/>`:''}</svg>`;
+}
+const row=(ico,title,meta,end,round)=>`<button type="button" class="row"><span class="ico ${round?'round':''}">${ico}</span><span>${title}${meta?`<span class="meta">${meta}</span>`:''}</span><span class="end">${end||''}<svg class="chev" viewBox="0 0 24 24">${ICON.chev}</svg></span></button>`;
+const img=h=>`<img src="art/${h}.png" alt="">`;
+const lockPill=tech=>`<span class="pill lock"><svg viewBox="0 0 24 24">${ICON.lock}</svg>${tech}</span>`;
+
+function tileSheet(){
+  return `<div class="sheet ${state.sheetOpen?'':'closed'}" id="sheet" role="dialog" aria-label="Tile details"><div class="grab"></div>
+    <div class="sheet-head">${hexThumb('grass','f_forest1','r_Deer')}<div><strong>Grassland, Forest</strong><span class="sub">Unowned · Fresh water</span></div>${closeBtn('close-sheet')}</div>
+    <div class="yields"><div class="yield">${Y.food}2</div><div class="yield">${Y.prod}1</div></div>
+    <div class="rows">
+      ${row(img('r_Deer'),'Deer','Bonus resource',lockPill('Trapping'))}
+      ${row(img('f_forest1'),'Forest','',`<span class="pill plain">${icon('shield').replace('<svg','<svg style="width:14px;height:14px;stroke:#fff;stroke-width:2.4;fill:none"')}+25%</span>`)}
+      ${row(`<img src="${spr('k_warrior')}" alt="">`,'Warrior','Greece · 8 strength',`<span class="hp"><i style="width:100%"></i></span>`,true)}
+    </div></div>`;
+}
+function unitSheet(){
+  return `<div class="sheet ${state.sheetOpen?'':'closed'}" id="sheet" role="dialog" aria-label="Unit details"><div class="grab"></div>
+    <div class="sheet-head"><span class="avatar" style="width:64px;height:64px"><img src="${spr('k_warrior')}" alt="" style="width:60px;height:60px"></span><div><strong>Warrior</strong><span class="sub">Greece · Melee</span></div>${closeBtn('close-sheet')}</div>
+    <div class="hpbar"><i></i></div><div class="hp-caption"><span>Health</span><span>74 / 100</span></div>
+    <div class="stat-grid"><div class="stat-box"><b>8</b><span>Strength</span></div><div class="stat-box"><b>2/2</b><span>Moves</span></div><div class="stat-box"><b>5/10</b><span>XP</span></div></div>
+    <div class="rows">
+      ${row(`<svg viewBox="0 0 24 24">${ICON.shield}</svg>`,'Promotions','Available at 10 XP','')}
+      ${row(hexThumb('grass','f_forest1').replace('class="hex-thumb"','style="width:40px;height:36px"'),'On Grassland, Forest','','<span class="pill plain">+25% defense</span>')}
+    </div></div>`;
+}
+function citySheet(){
+  const tabs=[['build','Build'],['bldg','Buildings'],['hex','Tiles'],['cit','Citizens'],['buy','Buy']];
+  return `<div class="city-sheet"><div class="grab"></div><div class="city-top">
+    <div class="city-title"><span class="pop">1</span><div><strong>Athens ★</strong><span class="sub">Grows in 11 turns</span></div>${closeBtn('x')}</div>
+    <div class="city-yields"><span>${Y.food}2</span><span>${Y.prod}5</span><span>${Y.gold}5</span><span>${Y.sci}4</span><span>${Y.cult}1</span><span>${Y.faith}0</span></div></div>
+    <div class="city-body">
+      <button class="back">${icon('back')}Tiles</button>
+      <div class="tile-hero">${hexThumb('desert','f_hill1','r_Sheep')}<div><strong>Desert, Hill</strong><span class="sub">Sheep · Unworked</span></div></div>
+      <div class="yields"><div class="yield">${Y.prod}2</div><div class="yield">${Y.food}1</div></div>
+      <div class="rows">
+        ${row(img('r_Sheep'),'Sheep','',lockPill('Animal Husbandry'))}
+        ${row(img('f_hill1'),'Hill','','<span class="pill plain">+25% defense</span>')}
+      </div>
+      <button class="primary">Work this tile</button>
+    </div>
+    <div class="tabbar">${tabs.map(([i,l])=>`<span class="${l==='Tiles'?'on':''}">${icon(i)}${l}</span>`).join('')}</div></div>`;
+}
+
+/* Scenes: build markup once, then drive by elapsed time. */
+const state={scene:'move',variant:'',reduce:matchMedia('(prefers-reduced-motion: reduce)').matches,start:0,sheetOpen:true,done:{}};
+const SCENES={
+  move:{
+    html(){return world()+`<div class="top-shade"></div><div class="bottom-shade"></div>`+statusBar+statsBar(3)+unitHead('k_warrior','Strength 8 · Move 2/2')+unitDock(undefined,'move')},
+    setup(){addUnit('w','k_warrior','gre',1,7);state.path=[[1,7],[2,7],[3,7]]},
+    frame(t){
+      const u=units.w,cam=document.getElementById('cam');const pan=clamp((t-150)/320);cam.setAttribute('transform',`translate(${(-30*ease(pan)).toFixed(1)} 0)`);
+      if(path(u,state.path,t,520,340)&&!state.done.dust){state.done.dust=1;dust(...center(3,7),t)}
+      if(t<520||t>520+2*340)breathe(u,t);
+      if(t>520+2*340)document.getElementById('health').textContent='0/2 moves';
+    },
+    final(){const [x,y]=center(3,7);Object.assign(units.w,{x,y});document.getElementById('cam').setAttribute('transform','translate(-30 0)')}
+  },
+  turns:{
+    html(){return world()+`<div class="top-shade"></div><div class="bottom-shade"></div>`+statusBar+statsBar(3)+`<div class="turn-strip" id="strip"><div class="civs">${['gre','mon','bab','egy'].map(c=>`<span class="civ" data-civ="${c}" style="background:${CIVHEX[c]}"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="5" fill="#fff" opacity=".9"/></svg></span>`).join('')}</div><strong id="strip-name">Mongolia</strong></div><div class="toast" id="toast">Your turn <small>T4</small></div>`+nextDock()},
+    setup(){addUnit('g','k_warrior','gre',1,7);addUnit('m','k_horseman','mon',4,5,{flip:true});state.path=[[4,5],[3,5],[2,5]]},
+    frame(t){
+      const next=document.getElementById('next'),strip=document.getElementById('strip'),toast=document.getElementById('toast');
+      const waiting=t>300&&t<3900;next.classList.toggle('waiting',waiting);document.getElementById('next-label').textContent=waiting?'Wait':'Next';
+      next.querySelector('.ring circle').style.transform=`rotate(${(t*.36)%360}deg)`;
+      const sIn=clamp((t-300)/300),sOut=clamp((t-3700)/260);strip.style.transform=`translate(-50%,${(-30+30*ease(sIn)-30*sOut).toFixed(1)}px)`;strip.style.opacity=clamp(sIn*2)*(1-sOut);
+      const who=t<1000?1:t<2700?1:t<3200?2:3;const name=['Greece','Mongolia','Babylon','Egypt'][who];document.getElementById('strip-name').textContent=name;
+      strip.querySelectorAll('.civ').forEach((el,i)=>{el.classList.toggle('done',i<who);el.classList.toggle('now',i===who)});
+      const cam=document.getElementById('cam');const glide=clamp((t-700)/400)-clamp((t-2800)/500);cam.setAttribute('transform',`translate(${(-30*ease(clamp(glide))).toFixed(1)} ${(40*ease(clamp(glide))).toFixed(1)})`);
+      const m=units.m;if(path(m,state.path,t,1150,360)&&!state.done.d){state.done.d=1;dust(...center(2,5),t)}
+      if(t<1150||t>1870)breathe(m,t);breathe(units.g,t);
+      const tIn=clamp((t-3950)/300),tOut=clamp((t-5400)/300);toast.style.transform=`translate(-50%,${(-30+30*ease(tIn)-30*tOut).toFixed(1)}px)`;toast.style.opacity=clamp(tIn*2)*(1-tOut);
+      if(t>3900){document.getElementById('turn').textContent='T4';const p=clamp((t-3950)/700);const pl=next.querySelector('.pulse');pl.style.opacity=p>0&&p<1?1-p:0;pl.style.transform=`scale(${1+.45*p})`}
+    },
+    final(){const [x,y]=center(2,5);Object.assign(units.m,{x,y});document.getElementById('turn').textContent='T4'}
+  },
+  spawn:{
+    html(){const [x,y]=center(2,6);return world(tint(2,6)+`<path class="border" d="${borderPath(2,6)}"/>`+`<image href="${spr('c_Ancient_medium')}" x="${x-34}" y="${y-59}" width="68" height="64"/>`,['2,6'])+`<div class="city-banner" style="left:${x}px;top:${y+16}px"><span>2</span>Athens</div><div class="map-chip" id="chip" style="left:${x}px;top:${y-92}px">${icon('build').replace('<svg','<svg style="width:15px;height:15px;stroke:#fff;stroke-width:2.2;fill:none"')}Warrior ready</div><div class="top-shade"></div><div class="bottom-shade"></div>`+statusBar+statsBar(4)+nextDock(1)},
+    setup(){const u=addUnit('w','k_warrior','gre',2,6);u.op=0;state.path=[[2,6],[3,6]]},
+    frame(t){
+      const u=units.w,[x,y]=center(2,6),rise=clamp((t-500)/420);
+      if(t>=500&&!state.done.r){state.done.r=1;ringFx(x,y,t,'#ffc93c',700)}
+      if(t<1200){u.op=clamp(rise*2);u.x=x;u.y=y+14*(1-ease(rise));u.sx=.5+.5*ease(rise)+(rise>.8?.08*Math.sin((rise-.8)/.2*Math.PI):0);u.sy=.3+.7*ease(rise)}
+      else if(path(u,state.path,t,1300,360)&&!state.done.d){state.done.d=1;dust(...center(3,6),t)}
+      if(t>1700)breathe(u,t);
+      const chip=document.getElementById('chip'),c=clamp((t-700)/250)-clamp((t-2600)/300);chip.style.opacity=c;chip.style.transform=`translate(-50%,${(8-8*ease(clamp(c))).toFixed(1)}px)`;
+    },
+    final(){const [x,y]=center(3,6);Object.assign(units.w,{x,y,op:1})}
+  },
+  embark:{
+    html(){return world()+`<div class="top-shade"></div><div class="bottom-shade"></div>`+statusBar+statsBar(5)+unitHead(state.variant==='disembark'?'k_embarkedunit-military':'k_warrior','Strength 8 · Move 2/2')+unitDock(undefined,'move')},
+    setup(){const land=[3,9],sea=[2,9];state.path=state.variant==='disembark'?[sea,land]:[land,sea];const u=addUnit('w',state.variant==='disembark'?'k_embarkedunit-military':'k_warrior','gre',...state.path[0],{flip:state.variant!=='disembark'})},
+    frame(t){
+      const u=units.w,dis=state.variant==='disembark',to=center(...state.path[1]);
+      const landed=path(u,state.path,t,450,560);
+      if(t>450+560*.5&&!state.done.s){state.done.s=1;setSprite(u,dis?'k_warrior':'k_embarkedunit-military')}
+      if(landed&&!state.done.fx){state.done.fx=1;dis?dust(...to,t):splash(to[0],to[1]-4,t)}
+      if(u.name.includes('embarked')&&(t<450||landed)&&!state.reduce){u.y+=Math.sin(t/380)*2.2;u.rot=Math.sin(t/520)*3}else u.rot=0;
+      if(!u.name.includes('embarked')&&(t<450||landed))breathe(u,t);
+    },
+    final(){const to=center(...state.path[1]);Object.assign(units.w,{x:to[0],y:to[1]});setSprite(units.w,state.variant==='disembark'?'k_warrior':'k_embarkedunit-military')}
+  },
+  combat:{
+    html(){const ranged=state.variant==='ranged';return world()+`<div class="top-shade"></div><div class="bottom-shade"></div>`+statusBar+statsBar(6)+unitHead(ranged?'k_archer':'k_hoplite',ranged?'Ranged 7 · Range 2':'Strength 11 · Move 2/2')+unitDock(undefined,'attack')},
+    setup(){const v=state.variant;addUnit('b','k_warrior','bar',1,7);if(v==='ranged')addUnit('a','k_archer','gre',3,7,{flip:true});else addUnit('a','k_hoplite','gre',2,7,{flip:true})},
+    frame(t){
+      const a=units.a,b=units.b,v=state.variant,[bx,by]=center(1,7);let hitAt;
+      if(v==='ranged'){
+        const draw=clamp((t-300)/250);a.sx=1-.05*draw;a.lean=-6*draw*(1-clamp((t-560)/200));
+        if(t>=560&&!state.done.arrow){state.done.arrow=1;const [ax,ay]=[a.x-10,a.y-30];effect('<path d="M-9 0h16m-5-4 6 4-6 4" stroke="#3a2a14" stroke-width="2.6" fill="none" stroke-linecap="round"/>',t,420,(g,p)=>{const x=lerp(ax,bx+6,p),y=lerp(ay,by-26,p)-Math.sin(Math.PI*p)*46,ang=Math.atan2((by-26-ay)-46*Math.PI*Math.cos(Math.PI*p),bx+6-ax)*180/Math.PI;g.setAttribute('transform',`translate(${x} ${y}) rotate(${ang})`);g.setAttribute('opacity',p<.95?1:0)})}
+        hitAt=980;
+      }else{
+        const p=clamp((t-300)/760);const hx=center(2,7)[0];
+        if(p<.32){a.x=hx+5*(p/.32);a.lean=-10*(p/.32)}else if(p<.46){const q=(p-.32)/.14;a.x=hx+5-29*ease(q);a.lean=14*q;if(v!=='ranged')setSprite(a,'k_hoplite_attack')}else{const q=(p-.46)/.54;a.x=hx-24*(1-ease(q));a.lean=14*(1-ease(q));if(q>.5)setSprite(a,'k_hoplite')}
+        hitAt=300+760*.44;
+      }
+      if(t>=hitAt&&!state.done.hit){state.done.hit=1;damage(bx,by,t,v==='defeat'?100:26);slash(bx,by,t)}
+      const h=flash(b,t,hitAt);b.x=bx;b.y=by;b.sx=1;b.sy=1;b.rot=0;
+      if(h>=0&&h<=1){b.x+=-8*Math.pow(1-h,2)+Math.sin(h*40)*2.5*(1-h);b.sy=1-.08*(1-h)}
+      if(v==='defeat'){const f=clamp((t-hitAt-420)/520);b.rot=-78*ease(f);b.x=bx-10*ease(f);b.op=1-clamp((f-.55)/.45);if(f>=.6&&!state.done.p){state.done.p=1;puff(bx-8,by,t)}}
+      else{if(t<hitAt||h>1)breathe(b,t);if(v==='melee'||v==='ranged')b.op=1}
+      if(t<300||t>1500)breathe(a,t);
+    },
+    final(){const [bx,by]=center(1,7);if(state.variant==='defeat')units.b.op=0;damage(bx,by,performance.now(),state.variant==='defeat'?100:26)}
+  },
+  settle:{
+    html(){const [x,y]=center(2,6);return world(`<g id="terr" opacity="0">${tint(2,6)}</g><path id="bpath" class="border" d="${borderPath(2,6)}" pathLength="1" stroke-dasharray="1" stroke-dashoffset="1"/><g id="city" opacity="0"><image href="${spr('c_Ancient_medium')}" x="${x-34}" y="${y-59}" width="68" height="64"/></g>`)+`<div class="city-banner" id="banner" style="left:${x}px;top:${y+16}px;opacity:0"><span>1</span>Athens</div><div class="top-shade"></div><div class="bottom-shade"></div>`+statusBar+statsBar(1)+unitHead('k_settler','Move 2/2')+unitDock(['flag','sleep','more'],'flag')},
+    setup(){addUnit('s','k_settler','gre',2,6)},
+    frame(t){
+      const s=units.s,[x,y]=center(2,6);
+      const h=clamp((t-250)/420);if(t<670){Object.assign(s,hop(h,[x,y],[x,y],16))}
+      const sink=clamp((t-670)/260);if(t>=670){s.sy=1-ease(sink);s.sx=1+.3*sink;s.op=1-sink}
+      if(t>=760&&!state.done.d){state.done.d=1;dust(x,y,t);ringFx(x,y,t,'#efe6cf',700)}
+      const rise=clamp((t-760)/480),city=document.getElementById('city');const over=rise<1?(ease(rise)+.12*Math.sin(rise*Math.PI)):1;
+      city.setAttribute('opacity',clamp(rise*3));city.setAttribute('transform',`translate(${x} ${y}) scale(${(.7+.3*over).toFixed(3)} ${over.toFixed(3)}) translate(${-x} ${-y})`);
+      const b=clamp((t-1250)/700);document.getElementById('bpath').setAttribute('stroke-dashoffset',(1-ease(b)).toFixed(3));document.getElementById('terr').setAttribute('opacity',ease(b));
+      const bn=clamp((t-1700)/320),ban=document.getElementById('banner');ban.style.opacity=bn;ban.style.transform=`translate(-50%,${(-14*(1-ease(bn))).toFixed(1)}px)`;
+      if(t<250)breathe(s,t);
+    },
+    final(){units.s.op=0;const [x,y]=center(2,6);document.getElementById('city').setAttribute('opacity',1);document.getElementById('bpath').setAttribute('stroke-dashoffset',0);document.getElementById('terr').setAttribute('opacity',1);const b=document.getElementById('banner');b.style.opacity=1}
+  },
+  tile:{
+    html(){const [x,y]=center(3,5);return world(`<polygon class="selected" points="${pts(corners(x,y,.84))}"/>`)+`<div class="top-shade"></div>`+statusBar+statsBar(3)+tileSheet()},
+    setup(){addUnit('w','k_warrior','gre',3,5)},
+    frame(t){breathe(units.w,t)},still:true
+  },
+  unit:{
+    html(){return world()+`<div class="top-shade"></div>`+statusBar+statsBar(3)+unitHead('k_warrior','Strength 8 · Move 2/2','74 HP','gre',true)+unitSheet()},
+    setup(){addUnit('w','k_warrior','gre',3,5)},
+    frame(t){breathe(units.w,t)},still:true
+  },
+  citytile:{
+    html(){const [x,y]=center(2,2);return world(tint(2,2)+`<path class="border" d="${borderPath(2,2)}"/><image href="${spr('c_Ancient_medium')}" x="${x-34}" y="${y-59}" width="68" height="64"/><polygon class="selected" points="${pts(corners(...center(2,3),.84))}"/>`)+statusBar+citySheet()},
+    setup(){document.getElementById('cam').setAttribute('transform','translate(0 -30)')},frame(){},still:true
+  }
+};
+function render(){
+  const S=SCENES[state.scene];units={};fx=[];state.done={};state.sheetOpen=true;
+  const vs=VARIANTS[state.scene],sel=document.getElementById('variant');sel.hidden=!vs;
+  if(vs){if(!vs.some(v=>v[0]===state.variant))state.variant=vs[0][0];sel.innerHTML=vs.map(([v,l])=>`<option value="${v}" ${v===state.variant?'selected':''}>${l}</option>`).join('')}else state.variant='';
+  screen.innerHTML=S.html();S.setup();
+  document.querySelectorAll('[data-scene]').forEach(b=>b.setAttribute('aria-selected',String(b.dataset.scene===state.scene)));
+  document.getElementById('caption').textContent=CAPTION[state.scene];
+  state.start=performance.now();
+  if(state.reduce&&S.final){S.frame(1e5);S.final();fx.forEach(f=>f.g.remove());fx=[]}
+  for(const u of Object.values(units))pose(u);
+  history.replaceState(null,'',`?scene=${state.scene}${state.variant?'&v='+state.variant:''}`);
+}
+function tick(now){
+  const S=SCENES[state.scene],t=FREEZE??now-state.start;if(FREEZE!=null)now=state.start+FREEZE;
+  if(!state.reduce||S.still){for(const u of Object.values(units)){u.sx=1;u.sy=1;u.lean=0}S.frame(t)}
+  for(const u of Object.values(units))pose(u);
+  fx=fx.filter(f=>{const p=(now-state.start-(f.start>1e6?f.start-state.start:f.start))/f.dur;if(!f.g.isConnected)return false;if(p<0)return true;if(p>=1){f.g.remove();return false}f.step(f.g,p);return true});
+  requestAnimationFrame(tick);
+}
+function fit(){
+  const ch=document.querySelector('.chrome'),ws=document.querySelector('.workspace');
+  const h=Math.max(400,innerHeight-ch.getBoundingClientRect().height-34),w=ws.clientWidth-28;
+  const s=Math.min(1,h/852,w/393);document.getElementById('viewport').style.setProperty('--scale',s.toFixed(4));
+  document.getElementById('phone').classList.toggle('bare',s>.99&&innerWidth<450);
+}
+document.querySelector('.scenes').addEventListener('click',e=>{const b=e.target.closest('[data-scene]');if(!b)return;state.scene=b.dataset.scene;render()});
+document.getElementById('replay').addEventListener('click',render);
+document.getElementById('variant').addEventListener('change',e=>{state.variant=e.target.value;render()});
+document.getElementById('reduce').addEventListener('change',e=>{state.reduce=e.target.checked;render()});
+screen.addEventListener('click',e=>{
+  if(e.target.closest('#close-sheet')){state.sheetOpen=false;document.getElementById('sheet').classList.add('closed');return}
+  if(e.target.closest('#open-unit')&&document.getElementById('sheet')){state.sheetOpen=true;document.getElementById('sheet').classList.remove('closed')}
+});
+addEventListener('resize',fit);
+const q=new URLSearchParams(location.search);const FREEZE=q.get('t')?+q.get('t'):null;if(SCENES[q.get('scene')])state.scene=q.get('scene');if(q.get('v'))state.variant=q.get('v');
+document.getElementById('reduce').checked=state.reduce;
+Promise.allSettled(['k_warrior','k_horseman','k_hoplite','k_hoplite_attack','k_archer','k_settler','k_embarkedunit-military','c_Ancient_medium'].map(prep)).then(rs=>{
+  rs.forEach((r,i)=>{if(r.status==='rejected')console.warn('sprite missing',i,r.reason)});render();fit();requestAnimationFrame(tick);
+});
+</script>
+</body>
+</html>

@@ -73,8 +73,12 @@ import com.unciv.ui.screens.worldscreen.topbar.WorldScreenTopBar
 import com.unciv.ui.screens.worldscreen.unit.AutoPlay
 import com.unciv.ui.screens.worldscreen.unit.UnitTable
 import com.unciv.ui.screens.worldscreen.unit.actions.UnitActionsTable
+import com.unciv.ui.screens.worldscreen.worldmap.PendingTurnReplay
 import com.unciv.ui.screens.worldscreen.worldmap.WorldMapHolder
 import com.unciv.ui.screens.worldscreen.worldmap.WorldMapTileUpdater.updateTiles
+import com.unciv.ui.screens.worldscreen.worldmap.estimateMovingCiv
+import com.unciv.ui.screens.worldscreen.worldmap.seeMap
+import com.unciv.ui.screens.worldscreen.worldmap.turnOrder
 import com.unciv.utils.Concurrency
 import com.unciv.utils.debug
 import com.unciv.utils.launchOnGLThread
@@ -175,6 +179,7 @@ class WorldScreen(
     private val portraitTutorialTask = PortraitTutorialTask(this)
 
     private var nextTurnUpdateJob: Job? = null
+    private var turnProgress: NextTurnProgress? = null
 
     private val events = EventBus.EventReceiver()
 
@@ -463,8 +468,6 @@ class WorldScreen(
             bottomUnitTable.x = safeArea.x
             unitActionsTable.x = safeArea.x
 
-            displayTutorialsOnUpdate()
-
             bottomUnitTable.update()
 
             updateSelectedCiv()
@@ -497,12 +500,18 @@ class WorldScreen(
         // it causes a bug when we move a unit to an unexplored tile (for instance a cavalry unit which can move far)
 
         mapHolder.updateTiles(getGameViewConsideringForOfWar().civView)
+        mapHolder.startPendingTurnReplay(viewingCiv) { showToast ->
+            shouldUpdate = true
+            if (showToast && isPortrait() && isPlayersTurn) portraitHud.showYourTurn(gameInfo.turns)
+        }
+        // Tutorials, like turn-start dialogs, wait for the turn replay; its end, skip or stop runs another update
+        if (uiEnabled && !isReplayingTurn()) displayTutorialsOnUpdate()
 
         topBar.update(selectedCiv)
         if (tutorialTaskTable.isVisible)
             tutorialTaskTable.y = topBar.getYForTutorialTask() - tutorialTaskTable.height
 
-        if (techPolicyAndDiplomacy.update())
+        if (techPolicyAndDiplomacy.update() && !isReplayingTurn())
             displayTutorial(TutorialTrigger.OtherCivEncountered)
 
         if (uiEnabled) {
@@ -516,7 +525,8 @@ class WorldScreen(
             autoPlay.stopAutoPlay()
         }
 
-        if (!hasOpenPopups() && !autoPlay.isAutoPlaying() && isPlayersTurn) {
+        // Turn-start dialogs wait for the turn replay so it plays on a visible map; its end runs another update
+        if (!hasOpenPopups() && !autoPlay.isAutoPlaying() && isPlayersTurn && !isReplayingTurn()) {
             when {
                 viewingCiv.shouldShowDiplomaticVotingResults() ->
                     UncivGame.Current.pushScreen{ DiplomaticVoteResultScreen(gameInfo.diplomaticVictoryVotesCast, viewingCiv) }
@@ -604,6 +614,15 @@ class WorldScreen(
 
     @Readonly
     internal fun hasPendingFreeGreatPerson() = viewingCiv.greatPeople.freeGreatPeople > 0
+
+    internal val viewingCivilization get() = viewingCiv
+
+    /** The civ the portrait HUD shows as moving: estimated while the turn processes, exact while it replays; null otherwise. */
+    internal fun turnWaitCiv(): Civilization? {
+        mapHolder.turnReplay?.takeIf { !it.ownMovesOnly }?.let { return it.currentCiv ?: viewingCiv }
+        if (!isNextTurnUpdateRunning()) return null
+        return estimateMovingCiv(turnOrder(gameInfo, viewingCiv), turnProgress?.fraction ?: 0f)
+    }
 
     internal fun openGreatPersonPicker() {
         deferFreeGreatPersonPicker = false
@@ -934,6 +953,9 @@ class WorldScreen(
             pendingTurnUploadState.finishTurnProcessing()
             throw ex
         }
+        turnProgress = progressBar
+        // What this civ sees now, so the next world screen can replay what changes while the turn passes
+        PendingTurnReplay.seen = if (isPortrait() && !fromAutoPlay && !autoPlay.isAutoPlaying()) mapHolder.seeMap() else null
 
         // on a separate thread so the user can explore their world while we're passing the turn
         val updateJob = try {
@@ -1174,8 +1196,10 @@ class WorldScreen(
     }
 
 
+    private fun isReplayingTurn() = mapHolder.turnReplay?.ownMovesOnly == false
+
     private fun showTutorialsOnNextTurn() {
-        if (!game.settings.showTutorials || autoPlay.isAutoPlaying()) return
+        if (!game.settings.showTutorials || autoPlay.isAutoPlaying() || isReplayingTurn()) return
         displayTutorial(TutorialTrigger.SlowStart)
         displayTutorial(TutorialTrigger.CityExpansion) { viewingCiv.cities.any { it.expansion.tilesClaimed() > 0 } }
         displayTutorial(TutorialTrigger.BarbarianEncountered) { viewingCiv.viewableTiles.any { it.getUnits().any { unit -> unit.civ.isBarbarian } } }

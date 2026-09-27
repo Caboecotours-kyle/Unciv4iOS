@@ -69,6 +69,7 @@ internal class DisplayTab(
         addCheckbox("Show zoom buttons in world screen", settings::showZoomButtons, true)
         addCheckbox("Never close popups by clicking outside", settings::forbidPopupClickBehindToClose)
         addCheckbox("Use circles to indicate movable tiles", settings::useCirclesToIndicateMovableTiles, updateWorld = true)
+        addCheckbox("Reduce motion", settings::reduceMotion)
         addPediaUnitArtSizeSlider()
 
         addHeader("Visual Hints")

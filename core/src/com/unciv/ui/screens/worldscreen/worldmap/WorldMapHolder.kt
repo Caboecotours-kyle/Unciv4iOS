@@ -5,7 +5,6 @@ import com.badlogic.gdx.Gdx
 import com.badlogic.gdx.graphics.Color
 import com.badlogic.gdx.graphics.g2d.Batch
 import com.badlogic.gdx.scenes.scene2d.actions.Actions
-import com.badlogic.gdx.scenes.scene2d.actions.TemporalAction
 import com.badlogic.gdx.scenes.scene2d.ui.Image
 import com.badlogic.gdx.scenes.scene2d.ui.Table
 import com.badlogic.gdx.utils.Align
@@ -16,6 +15,7 @@ import com.unciv.ui.components.tilegroups.MapProjection
 import com.badlogic.gdx.scenes.scene2d.*
 import com.unciv.UncivGame
 import com.unciv.logic.city.City
+import com.unciv.logic.civilization.Civilization
 import com.unciv.logic.map.*
 import com.unciv.logic.map.mapunit.MapUnit
 import com.unciv.logic.map.mapunit.movement.UnitMovement
@@ -35,17 +35,14 @@ import com.unciv.ui.components.tilegroups.TileGroup
 import com.unciv.ui.components.tilegroups.TileGroupMap
 import com.unciv.ui.components.tilegroups.TileSetStrings
 import com.unciv.ui.components.tilegroups.WorldTileGroup
-import com.unciv.ui.components.tilegroups.layers.TileLayerUnitSprite
 import com.unciv.ui.components.tilegroups.layers.UnitSpriteSlot
-import com.unciv.ui.images.ImageGetter
 import com.unciv.ui.components.tilegroups.citybutton.CityButton
 import com.unciv.ui.components.widgets.UnitIconGroup
 import com.unciv.ui.components.widgets.ZoomableScrollPane
 import com.unciv.ui.screens.basescreen.UncivStage
-import com.unciv.ui.popups.Popup
 import com.unciv.ui.screens.cityscreen.CityScreen
-import com.unciv.ui.screens.worldscreen.bottombar.TileInfoTable
 import com.unciv.ui.screens.worldscreen.UndoHandler.Companion.recordUndoCheckpoint
+import com.unciv.ui.screens.worldscreen.PortraitInfoSheets
 import com.unciv.ui.screens.worldscreen.WorldScreen
 import com.unciv.ui.screens.worldscreen.bottombar.BattleTableHelpers.battleAnimationDeferred
 import com.unciv.utils.Concurrency
@@ -87,24 +84,29 @@ class WorldMapHolder @JvmOverloads constructor(
     private var idleSlot: UnitSpriteSlot? = null
     private var idlePose: UnitSpritePose? = null
     private var idleAction: Action? = null
-    private val movingUnits = HashMap<Int, MovingUnit>()
-    private val landingDust = HashSet<Image>()
     private val portraitCombatCancels = HashSet<() -> Unit>()
-
-    private class MovingUnit(
-        val id: Int,
-        val civName: String,
-        val actor: Group,
-    ) {
-        var pose: UnitSpritePose? = null
-        var hiddenSlot: UnitSpriteSlot? = null
-        var hiddenLayer: TileLayerUnitSprite? = null
-    }
+    internal val motion = PortraitMotion(this)
+    internal var turnReplay: TurnReplay? = null
+    /** When the camera glide started for a move ends, in [System.nanoTime] */
+    private var cameraSettlesAt = 0L
+    /** The map as last drawn, to notice cities founded and units bought between updates */
+    private var liveMap: SeenMap? = null
+    /** Units that vanished in the latest update: a defeat may be animated just after its slot went away */
+    private var goneUnits: Map<Int, SeenUnit> = emptyMap()
 
     init {
         if (Gdx.app.type == Application.ApplicationType.Desktop) this.setFlingTime(0f)
         continuousScrollingX = tileMap.mapParameters.worldWrap
         setupZoomPanListeners()
+        // While other civs' moves replay, a touch on the map only skips to the end state
+        if (gameplayInput) addCaptureListener(object : InputListener() {
+            override fun touchDown(event: InputEvent?, x: Float, y: Float, pointer: Int, button: Int): Boolean {
+                val replay = turnReplay ?: return false
+                replay.skip()
+                event?.stop()
+                return false
+            }
+        })
     }
 
     /**
@@ -253,11 +255,7 @@ class WorldMapHolder @JvmOverloads constructor(
     private fun showTileDetails(tileView: TileView) {
         if (!tileView.isExplored()) return
         selectedTile = tileView
-        Popup(worldScreen).apply {
-            name = "portrait-tile-details"
-            add(TileInfoTable(worldScreen).apply { updateTileTable(tileView) }).row()
-            addCloseButton()
-        }.open()
+        PortraitInfoSheets.showTile(worldScreen, tileView)
     }
 
     private fun portraitTileTapped(tileView: TileView) {
@@ -329,11 +327,36 @@ class WorldMapHolder @JvmOverloads constructor(
         }
     }
 
+    /** Portrait moves ease the camera to their destination first, so the hops play where the player looks. */
     private fun zoomToMoveTarget(tileView: TileView) {
-        if (!currentTileSetStrings.projection.tilted || !touchRowsAreSmall()) return
-        zoom(tileGroupMap.getDefaultZoom(worldScreen.stage.viewport))
-        setCenterPosition(tileView.position(), immediately = true, selectUnit = false)
+        if (!currentTileSetStrings.projection.tilted) return
+        if (touchRowsAreSmall()) zoom(tileGroupMap.getDefaultZoom(worldScreen.stage.viewport))
+        val group = tileGroups[tileView] ?: return
+        if (isInView(group)) return
+        val glide = glideTo(group.x + group.groundCenterX, group.y + group.groundCenterY, .3f)
+        cameraSettlesAt = max(cameraSettlesAt, System.nanoTime() + (glide * 1e9f).toLong())
     }
+
+    /** True when [group]'s ground point sits in the part of the phone the portrait HUD leaves open. */
+    internal fun isInView(group: TileGroup): Boolean {
+        val point = tileGroupMap.localToStageCoordinates(Vector2(group.x + group.groundCenterX, group.y + group.groundCenterY))
+        val safe = worldScreen.safeAreaBoundsInWorld()
+        return point.x in safe.x + safe.width * .08f..safe.x + safe.width * .92f &&
+            point.y in safe.y + safe.height * .3f..safe.y + safe.height * .82f
+    }
+
+    /** Eases the camera to a point on the map over [seconds]; returns how long the glide takes. */
+    internal fun glideTo(x: Float, y: Float, seconds: Float): Float {
+        if (UncivGame.Current.settings.reduceMotion) {
+            scrollTo(x, maxY - y, immediately = true)
+            return 0f
+        }
+        if (!scrollTo(x, maxY - y)) return 0f
+        (actions.lastOrNull { it is ScrollToAction } as? ScrollToAction)?.duration = seconds
+        return seconds
+    }
+
+    internal fun slotOf(group: TileGroup, unitId: Int): UnitSpriteSlot? = group.layerUnitArt.getSpriteSlot(unitId)
 
     private fun addClickListener() {
         // ActivationListener-like listener to allow us to create only one listener for the entire worldmapholder instead of one per tile
@@ -616,8 +639,18 @@ class WorldMapHolder @JvmOverloads constructor(
                         moveUnitToTargetTile(selectedUnits.subList(1, selectedUnits.size), targetTileView)
                     } else removeUnitActionOverlay() //we're done here
 
-                    if (UncivGame.Current.settings.autoUnitCycle && !selectedUnitView.hasMovement())
-                        worldScreen.switchToNextUnit()
+                    if (UncivGame.Current.settings.autoUnitCycle && !selectedUnitView.hasMovement()) {
+                        // A portrait hop keeps the camera until it lands; any selection the player makes meanwhile
+                        // (unit, city, spy or none) cancels the cycle
+                        if (motion.isMoving(selectedUnitView.id)) {
+                            val table = worldScreen.bottomUnitTable
+                            val selection = Triple(table.selectedUnit, table.selectedCity, table.selectedSpy)
+                            motion.afterUnit(selectedUnitView.id) {
+                                if (Triple(table.selectedUnit, table.selectedCity, table.selectedSpy) == selection)
+                                    worldScreen.switchToNextUnit()
+                            }
+                        } else worldScreen.switchToNextUnit()
+                    }
 
                 } catch (ex: Exception) {
                     Log.error("Exception in moveUnitToTargetTile", ex)
@@ -633,7 +666,7 @@ class WorldMapHolder @JvmOverloads constructor(
         pathToTile: List<TileView>
     ) {
         if (currentTileSetStrings.projection.tilted) {
-            animatePortraitMovement(previousTileView, selectedUnit, targetTileView, pathToTile)
+            animatePortraitMovement(previousTileView, selectedUnit, pathToTile)
             return
         }
         val tileGroup = tileGroups[previousTileView]!!
@@ -679,7 +712,7 @@ class WorldMapHolder @JvmOverloads constructor(
 
     /** A selected sprite breathes twice on the default battery-saving setting. */
     internal fun updateSelectedUnitBreathing() {
-        if (!currentTileSetStrings.projection.tilted || !::tileGroupMap.isInitialized) {
+        if (!currentTileSetStrings.projection.tilted || !::tileGroupMap.isInitialized || UncivGame.Current.settings.reduceMotion) {
             stopBreathing()
             return
         }
@@ -692,7 +725,7 @@ class WorldMapHolder @JvmOverloads constructor(
         val slot = layer.getSpriteSlot(unit)
         if (slot == null || slot.unitId != unit.id || unit.hasDisappeared() ||
             !layer.isVisible || !slot.spriteGroup.isVisible || slot.spriteGroup.stage !== worldScreen.stage ||
-            movingUnits.containsKey(unit.id) || portraitCombatCancels.isNotEmpty()
+            motion.isMoving(unit.id) || portraitCombatCancels.isNotEmpty()
         ) {
             stopBreathing()
             return
@@ -709,7 +742,7 @@ class WorldMapHolder @JvmOverloads constructor(
             private var elapsed = 0f
             override fun act(delta: Float): Boolean {
                 if (idleSlot !== slot || slot.unitId != unit.id || unit.hasDisappeared() ||
-                    movingUnits.containsKey(unit.id) || !layer.isVisible || !slot.spriteGroup.isVisible ||
+                    motion.isMoving(unit.id) || !layer.isVisible || !slot.spriteGroup.isVisible ||
                     !pose.isAttachedTo(slot.spriteGroup)
                 ) {
                     stopBreathing()
@@ -743,9 +776,10 @@ class WorldMapHolder @JvmOverloads constructor(
     /** Called when the world screen hides or is disposed, so no old motion resumes on return. */
     internal fun stopUnitMotion() {
         stopBreathing()
-        for (moving in movingUnits.values.toList()) finishPortraitMove(moving)
-        for (puff in landingDust) puff.remove()
-        landingDust.clear()
+        // Moves still waiting for their update land at once, so the Next button comes back
+        automatedMovesSeen?.let { (_, done) -> automatedMovesSeen = null; done() }
+        turnReplay?.stop()
+        motion.finishAll()
         cancelPortraitCombat()
     }
 
@@ -770,155 +804,94 @@ class WorldMapHolder @JvmOverloads constructor(
         for (cancel in active) cancel()
     }
 
-    private fun revealPortraitMoveTarget(moving: MovingUnit) {
-        val slot = moving.hiddenSlot
-        val layer = moving.hiddenLayer
-        if (slot != null && layer != null && slot.unitId == moving.id && layer.isVisible &&
-            !layer.tileGroup.strategicView && slot.spriteGroup.parent != null
-        ) slot.spriteGroup.isVisible = true
-        moving.hiddenSlot = null
-        moving.hiddenLayer = null
-    }
-
-    private fun finishPortraitMove(moving: MovingUnit) {
-        if (movingUnits[moving.id] !== moving) return
-        movingUnits.remove(moving.id)
-        moving.actor.clearActions()
-        moving.pose?.let { it.restorePose(); it.restorePosition() }
-        moving.actor.remove()
-        revealPortraitMoveTarget(moving)
-        worldScreen.shouldUpdate = true
-        Gdx.graphics.requestRendering()
-    }
-
     private fun animatePortraitMovement(
         previousTileView: TileView,
         unit: MapUnitView,
-        targetTileView: TileView,
         pathToTile: List<TileView>,
     ) {
         if (pathToTile.isEmpty() || unit.hasDisappeared()) return
         cancelPortraitCombat()
         stopBreathing()
-        val previous = movingUnits[unit.id]
-        val moving = if (previous != null && previous.civName == unit.civName) {
-            previous.actor.clearActions()
-            previous.pose?.let { it.restorePose(); it.restorePosition() }
-            revealPortraitMoveTarget(previous)
-            previous
-        } else {
-            if (previous != null) finishPortraitMove(previous)
-            val tileGroup = tileGroups[previousTileView] ?: return
-            val slot = tileGroup.layerUnitArt.getSpriteSlot(unit) ?: return
-            if (slot.unitId != unit.id || !tileGroup.layerUnitArt.isVisible || !slot.spriteGroup.isVisible) return
-            val actor = Group().apply {
-                setPosition(tileGroup.x, tileGroup.y)
-                touchable = Touchable.disabled
-            }
-            for (image in slot.spriteGroup.children.toList()) actor.addActor(image)
-            tileGroupMap.addActor(actor)
-            MovingUnit(unit.id, unit.civName, actor).also { movingUnits[unit.id] = it }
-        }
-
-        val destination = tileGroups[targetTileView] ?: run { finishPortraitMove(moving); return }
-        val sequence = Actions.sequence()
-        sequence.addAction(Actions.run {
-            if (movingUnits[unit.id] !== moving) return@run
-            val layer = destination.layerUnitArt
-            val slot = layer.getSpriteSlot(unit)
-            if (slot == null || slot.unitId != unit.id || !layer.isVisible || destination.strategicView ||
-                unit.hasDisappeared() || unit.civName != moving.civName
-            ) {
-                finishPortraitMove(moving)
-                return@run
-            }
-            slot.spriteGroup.isVisible = false
-            moving.hiddenSlot = slot
-            moving.hiddenLayer = layer
-        })
-        val hopDuration = min(0.5f, 1.2f / pathToTile.size)
-        for (tileView in pathToTile) {
-            val tileGroup = tileGroups[tileView] ?: continue
-            sequence.addAction(object : TemporalAction(hopDuration) {
-                private var startX = 0f
-                private var startY = 0f
-                private lateinit var pose: UnitSpritePose
-
-                override fun begin() {
-                    startX = moving.actor.x
-                    startY = moving.actor.y
-                    pose = UnitSpritePose(moving.actor.children.filterIsInstance<Image>())
-                    moving.pose = pose
-                }
-
-                override fun act(delta: Float): Boolean {
-                    if (movingUnits[unit.id] !== moving || unit.hasDisappeared() ||
-                        unit.civName != moving.civName || destination.strategicView ||
-                        !moving.hiddenLayer.orFalseVisible()
-                    ) {
-                        finishPortraitMove(moving)
-                        return true
-                    }
-                    return super.act(delta)
-                }
-
-                override fun update(percent: Float) {
-                    val travel = Interpolation.smooth.apply(percent)
-                    moving.actor.setPosition(startX + (tileGroup.x - startX) * travel,
-                        startY + (tileGroup.y - startY) * travel)
-                    val crouch = when {
-                        percent < 0.18f -> percent / 0.18f
-                        percent > 0.82f -> sin(((percent - 0.82f) / 0.18f * Math.PI).toFloat())
-                        else -> 0f
-                    }
-                    val airborne = if (percent in 0.18f..0.82f)
-                        sin(((percent - 0.18f) / 0.64f * Math.PI).toFloat()) else 0f
-                    val lean = if (tileGroup.x >= startX) -1f else 1f
-                    pose.apply(1f + 0.10f * crouch - 0.035f * airborne,
-                        1f - 0.15f * crouch + 0.07f * airborne,
-                        lean * 5f * airborne, tileGroup.width * 0.20f * airborne)
-                    Gdx.graphics.requestRendering()
-                }
-
-                override fun end() {
-                    pose.restorePose()
-                    pose.restorePosition()
-                    if (movingUnits[unit.id] === moving) addLandingDust(tileGroup)
-                }
-            })
-        }
-        sequence.addAction(Actions.run { finishPortraitMove(moving) })
-        moving.actor.addAction(sequence)
-        Gdx.graphics.requestRendering()
+        motion.finishUnit(unit.id)
+        val start = tileGroups[previousTileView] ?: return
+        val slot = slotOf(start, unit.id) ?: return
+        if (!start.layerUnitArt.isVisible || !slot.spriteGroup.isVisible) return
+        val path = listOf(start) + pathToTile.mapNotNull { tileGroups[it] }
+        if (path.size < 2) return
+        val destination = path.last()
+        val wait = ((cameraSettlesAt - System.nanoTime()) / 1e9f).coerceAtLeast(0f)
+        motion.play(motion.HopClip(wait, 1f, unit.id, path, SpriteCopy.of(slot), !unit.getBaseUnit().isWaterUnit,
+            { slotOf(destination, unit.id)?.let { SpriteCopy.of(it) } }, min(.34f, 2.4f / (path.size - 1))))
     }
 
-    private fun TileLayerUnitSprite?.orFalseVisible() = this?.isVisible == true
-
-    private fun addLandingDust(tileGroup: TileGroup) {
-        val groundX = tileGroup.x + tileGroup.groundCenterX
-        val groundY = tileGroup.y + tileGroup.groundCenterY - 2f
-        for (side in listOf(-1f, 1f)) {
-            val puff = ImageGetter.getWhiteDot().apply {
-                setSize(4f, 4f)
-                setPosition(groundX - 2f, groundY - 2f)
-                color = Color.valueOf("e9dfc4")
-                touchable = Touchable.disabled
-            }
-            tileGroupMap.addActor(puff)
-            landingDust.add(puff)
-            puff.addAction(object : TemporalAction(0.28f) {
-                override fun update(percent: Float) {
-                    puff.setPosition(groundX - 2f + side * 14f * percent, groundY - 2f + 4f * percent)
-                    puff.color.a = 1f - percent
-                    Gdx.graphics.requestRendering()
-                }
-                override fun end() {
-                    puff.remove()
-                    landingDust.remove(puff)
-                }
-            })
+    /** Called after each tile update: a city founded or a unit bought since the last one plays its motion. */
+    internal fun observeMapChanges() {
+        if (!currentTileSetStrings.projection.tilted) {
+            liveMap = null
+            goneUnits = emptyMap()
+            return
         }
-        Gdx.graphics.requestRendering()
+        val now = seeMap()
+        val before = liveMap
+        liveMap = now
+        goneUnits = before?.units?.filterKeys { it !in now.units } ?: emptyMap()
+        if (before == null || turnReplay != null || before.civID != now.civID || before.gameIdentity != now.gameIdentity) return
+        val groups = tileGroups.values.associateBy { it.tileView.position() }
+        for ((id, position) in now.cities) {
+            if (id in before.cities) continue
+            val city = worldScreen.gameInfo.getCities().firstOrNull { it.id == id } ?: continue
+            val center = groups[position] ?: continue
+            if (city.turnAcquired != worldScreen.gameInfo.turns) continue
+            val settler = before.units.values.firstOrNull {
+                it.position == position && it.civilian && it.civID == city.civ.civID && it.id !in now.units
+            }?.sprite
+            motion.play(motion.SettleClip(0f, 1f, center, city.getTiles().mapNotNull { groups[it.position] }.toList(), settler))
+        }
+        for (unit in now.units.values) {
+            if (unit.id <= before.maxUnitId || unit.civID != now.civID) continue
+            val tile = groups[unit.position] ?: continue
+            // An upgrade replaces a unit on the same tile; only a bought or produced unit rises
+            if (!tile.tileView.isCityCenter() || before.units.values.any {
+                    it.civID == unit.civID && it.position == unit.position && it.id !in now.units }) continue
+            motion.play(motion.SpawnClip(0f, 1f, unit.id, tile, unit.sprite, ring = true))
+        }
+    }
+
+    /** The unit's sprite as last drawn, for a defeat that plays after its slot is gone. */
+    internal fun liveSprite(unitId: Int) = (liveMap?.units?.get(unitId) ?: goneUnits[unitId])?.sprite
+
+    /** Starts the replay of a turn passed on the previous world screen, when it was this game seen by this civ. */
+    internal fun startPendingTurnReplay(viewingCiv: Civilization, onFinished: (showToast: Boolean) -> Unit) {
+        automatedMovesSeen?.let { (before, done) ->
+            automatedMovesSeen = null
+            val replay = TurnReplay(this, before, seeMap(), viewingCiv, { done() }, ownMovesOnly = true)
+            turnReplay = replay
+            replay.start()
+            return
+        }
+        val before = PendingTurnReplay.seen ?: return
+        val gameInfo = worldScreen.gameInfo
+        if (before.gameIdentity == System.identityHashCode(gameInfo)) return // still the screen that passed the turn
+        PendingTurnReplay.seen = null
+        if (!currentTileSetStrings.projection.tilted || before.gameId != gameInfo.gameId || before.civID != viewingCiv.civID ||
+            gameInfo.turns !in before.turn..before.turn + 1) return
+        // Assigned before it starts: with reduced motion it also finishes inside start()
+        val replay = TurnReplay(this, before, seeMap(), viewingCiv, onFinished)
+        turnReplay = replay
+        replay.start()
+    }
+
+    internal fun skipTurnReplay() = turnReplay?.skip()
+
+    /** The map before "Move automated units", replayed with [done] after the next tile update shows the moves */
+    private var automatedMovesSeen: Pair<SeenMap, () -> Unit>? = null
+
+    /** Portrait only; returns false when there is nothing to replay and the caller should finish at once. */
+    internal fun replayAutomatedMovesAfterUpdate(before: SeenMap, done: () -> Unit): Boolean {
+        if (!currentTileSetStrings.projection.tilted) return false
+        automatedMovesSeen = before to done
+        worldScreen.shouldUpdate = true
+        return true
     }
 
     internal fun swapMoveUnitToTargetTile(selectedUnitView: MapUnitView, targetTileView: TileView) {
@@ -978,7 +951,13 @@ class WorldMapHolder @JvmOverloads constructor(
                     // single turn instant move
                     val selectedUnitView = unitsWhoCanMoveThere.keys.first()
                     for (unitView in unitsWhoCanMoveThere.keys) {
+                        val previousTileView = unitView.getTile()
+                        // Every tile walked this turn; the shortest path above only holds turn endpoints
+                        val path = if (!currentTileSetStrings.projection.tilted) emptyList()
+                            else try { unitView.getPathToTile(tileView) } catch (_: Exception) { emptyList() }
                         unitView.tryHeadTowards(tileView)
+                        if (unitView.getTile() != previousTileView)
+                            animatePortraitMovement(previousTileView, unitView, path.take(path.indexOf(unitView.getTile()) + 1))
                     }
                     worldScreen.bottomUnitTable.selectUnit(selectedUnitView) // keep moved unit selected
                 } else {

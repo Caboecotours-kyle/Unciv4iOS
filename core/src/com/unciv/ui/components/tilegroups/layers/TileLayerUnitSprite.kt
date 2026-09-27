@@ -24,6 +24,9 @@ class TileLayerUnitSprite(tileGroup: TileGroup, size: Float) : TileLayer(tileGro
 
     fun getSpriteSlot(unitView: ForeignMapUnitView) = if (unitView.isCivilian()) civilianSlot else militarySlot
 
+    /** The slot still drawing [unitId], even after the unit itself has left this tile */
+    fun getSpriteSlot(unitId: Int) = civilianSlot?.takeIf { it.unitId == unitId } ?: militarySlot?.takeIf { it.unitId == unitId }
+
     private fun updateSlot(currentSlot: UnitSpriteSlot?, unitView: ForeignMapUnitView?, isShown: Boolean): UnitSpriteSlot? {
 
         var location = ""
