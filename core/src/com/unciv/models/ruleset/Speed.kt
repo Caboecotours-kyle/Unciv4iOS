@@ -84,8 +84,14 @@ class Speed : RulesetObject() {
     }
 
     companion object {
-        const val DEFAULT: String = "Blitz"
+        /** Serialized default: saves omit a speed equal to this, so it must stay "Quick". */
+        const val DEFAULT: String = "Quick"
+        /** What a first new game starts on; remembered setups keep their own speed. */
+        const val NEW_GAME: String = "Rapid"
         const val DEFAULTFORSIMULATION: String = "Standard"
+
+        /** Time victory limit that fits the speed's year schedule. */
+        fun defaultMaxTurns(speed: String) = if (speed == NEW_GAME) 200 else 500
     }
 
     // Note: Speed uniques will be treated as part of GlobalUniques

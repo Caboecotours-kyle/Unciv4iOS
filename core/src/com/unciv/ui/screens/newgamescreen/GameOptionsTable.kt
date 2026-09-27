@@ -13,6 +13,7 @@ import com.unciv.models.metadata.GameParameters
 import com.unciv.models.metadata.Player
 import com.unciv.models.ruleset.Ruleset
 import com.unciv.models.ruleset.RulesetCache
+import com.unciv.models.ruleset.Speed
 import com.unciv.models.ruleset.nation.Nation
 import com.unciv.models.ruleset.unique.GameContext
 import com.unciv.models.ruleset.unique.UniqueType
@@ -504,6 +505,8 @@ class GameOptionsTable(
         addSliderRow("{City-States}:", slider)
     }
 
+    private var maxTurnsSlider: UncivSlider? = null
+
     private fun Table.addMaxTurnsSlider(): UncivSlider? {
         if (gameParameters.victoryTypes.none { ruleset.victories[it]?.enablesMaxTurns() == true })
             return null
@@ -515,6 +518,7 @@ class GameOptionsTable(
         slider.isDisabled = locked
         val snapValues = floatArrayOf(100f,150f,200f,250f,300f,350f,400f,450f,500f,550f,600f,650f,700f,750f,800f,900f,1000f,1250f,1500f)
         slider.setSnapToValues(threshold = 125f, *snapValues)
+        maxTurnsSlider = slider
         return slider
     }
 
@@ -571,8 +575,16 @@ class GameOptionsTable(
     }
 
     private fun Table.addGameSpeedSelectBox() {
-        addSelectBox("{Game Speed}:", ruleset.speeds.values.map { it.name }, gameParameters.speed)
-        { gameParameters.speed = it; null }
+        addSelectBox("{Game Speed}:", ruleset.speeds.values.map { it.name }, gameParameters.speed) {
+            val previous = gameParameters.speed
+            gameParameters.speed = it
+            // Keep the time limit matched to the speed unless the player set it by hand
+            if (previous != it && gameParameters.maxTurns == Speed.defaultMaxTurns(previous)) {
+                gameParameters.maxTurns = Speed.defaultMaxTurns(it)
+                maxTurnsSlider?.value = gameParameters.maxTurns.toFloat()
+            }
+            null
+        }
     }
 
     private fun Table.addEraSelectBox() {
