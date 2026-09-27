@@ -100,6 +100,13 @@ internal class WorldPortraitHud(
     private var turnPulse: Actor? = null
     private var hudTop = 0f
     private var anchorBottom = 0f
+    /** The unit card and its action arc, kept across [refresh] while they fade out for the turn strip */
+    private var unitLayer: Group? = null
+    /** 1 while the unit controls show, easing to 0 while other civs move; negative until the first [refresh] */
+    private var unitShown = -1f
+    /** The unit card on its own also steps aside while the "Your turn" toast holds its slot */
+    private var unitCard: Actor? = null
+    private var cardShown = 1f
 
     init { touchable = Touchable.childrenOnly }
 
@@ -285,9 +292,9 @@ internal class WorldPortraitHud(
         return table
     }
 
-    private fun place(actor: Actor, x: Float, y: Float, width: Float, height: Float) {
+    private fun place(actor: Actor, x: Float, y: Float, width: Float, height: Float, into: Group = this) {
         actor.setBounds(x, y, width, height)
-        addActor(actor)
+        into.addActor(actor)
     }
 
     private fun signed(value: Int) = if (value >= 0) "+$value" else value.toString()
@@ -391,82 +398,97 @@ internal class WorldPortraitHud(
         }
         tutorialTop = (top - 58f) * scale + safe.y
 
+        // While other civs move, the unit card and its arc fade aside and the turn strip takes the card slot
+        if (unitShown < 0f) unitShown = if (waiting) 0f else 1f
+        val units = if (waiting) unitLayer?.takeIf { unitShown > 0f } else if (unit != null) Group().apply { isTransform = false } else null
+        unitLayer = units
+        if (!waiting) unitCard = null
+        if (units != null) {
+            units.setSize(393f, height)
+            units.touchable = if (waiting) Touchable.disabled else Touchable.childrenOnly
+            units.color.a = unitShown
+            addActor(units)
+        }
         if (unit != null && unitView != null) {
-            val tag = Table().apply { background = panel(); pad(10f) }
-            tag.add(unitPortrait(unit, 30f)).size(46f).padRight(12f)
-            val text = Table()
-            text.add(world.bottomUnitTable.nameLabelText.toLabel(Color.WHITE, 18)).left().row()
-            val base = unit.baseUnit
-            val values = Table()
-            fun unitStat(name: String, value: String) {
-                values.add(statIcon(name)).size(16f).padRight(3f)
-                values.add(value.toLabel(Color.WHITE, 14)).padRight(8f)
-            }
-            if (base.strength > 0) unitStat("Strength", base.strength.toString())
-            if (base.rangedStrength > 0) unitStat("Ranged", base.rangedStrength.toString())
-            unitStat("Movement", unitView.getMovementString())
-            values.add("${unit.health} HP".toLabel(Color.WHITE, 14))
-            text.add(values).left()
-            tag.add(text).expandX().left()
-            if (dueUnits > 0) {
-                val position = civ.units.getDueUnits().toList().indexOf(unit) + 1
-                if (position > 0) tag.add("$position / $dueUnits".toLabel(Color.valueOf("b7cde0"), 13)).padLeft(4f)
-            }
-            val close = "×".toLabel(Color.WHITE, 25).apply {
-                setAlignment(Align.center)
-                touchable = Touchable.enabled
-                onClickSuppressive { world.bottomUnitTable.selectUnit(); world.shouldUpdate = true }
-            }
-            tag.add(close).size(48f)
-            tag.touchable = Touchable.enabled
-            tag.onClick { PortraitInfoSheets.showUnit(world, unitView) }
-            place(tag, 10f, top - 126f, 373f, 68f)
             tutorialTop = (top - 134f) * scale + safe.y
-
-            val arcActions = mutableListOf<ArcAction>()
-            battle.portraitAttackButton?.let { attack ->
-                val damage = battle.portraitDamagePreview
-                arcActions.add(ArcAction(icon("OtherIcons/CrosshairB"), attack.text.toString(),
-                    !attack.isDisabled, damage, damage) { attack.activate() })
-            }
-            for (action in actions.filter { it.type != UnitActionType.Skip }.take(3 - arcActions.size)) {
-                val image = "UnitActionIcons/${action.type.name}"
-                arcActions.add(ArcAction(if (ImageGetter.imageExists(image)) icon(image) else action.getIcon(28f),
-                    action.title.tr(), action.action != null, nextUnitNote(action.type), tag = "portrait-action-${action.type.name}") {
-                    unitActions.activateAction(action, unit)
-                })
-            }
-            // One close arc from Skip. Names still appear only while a disc is held.
-            val actionCount = min(3, arcActions.size) + if (actions.isNotEmpty()) 1 else 0
-            for ((index, action) in arcActions.take(3).withIndex()) {
-                val (x, y) = actionArcPosition(index, actionCount, bottom)
-                val button = disc(action.image, 54f,
-                    if (index == 0 && action.enabled) yellow else white, iconSize = 28f)
-                button.name = action.tag
-                if (!action.enabled) {
-                    button.color.a = .45f
-                    button.pressable = false
-                } else button.onClick { action.activate() }
-                holdToRead(button, action.title, action.note, action.enabled)
-                place(button, x, y, 54f, 54f)
-                if (action.chip != null) {
-                    val chip = Table().apply {
-                        background = panel(10).tint(Color.valueOf("e0524a"))
-                        touchable = Touchable.disabled
-                        add(action.chip.toLabel(Color.WHITE, 13)).pad(3f, 8f, 3f, 8f)
-                        pack()
-                    }
-                    place(chip, x + 27f - chip.width / 2f, y - chip.height - 4f, chip.width, chip.height)
+            if (units != null && !waiting) {
+                val tag = Table().apply { background = panel(); pad(10f) }
+                tag.add(unitPortrait(unit, 30f)).size(46f).padRight(12f)
+                val text = Table()
+                text.add(world.bottomUnitTable.nameLabelText.toLabel(Color.WHITE, 18)).left().row()
+                val base = unit.baseUnit
+                val values = Table()
+                fun unitStat(name: String, value: String) {
+                    values.add(statIcon(name)).size(16f).padRight(3f)
+                    values.add(value.toLabel(Color.WHITE, 14)).padRight(8f)
                 }
-            }
-            if (actions.isNotEmpty()) {
-                val (x, y) = actionArcPosition(min(3, arcActions.size), actionCount, bottom)
-                val more = disc(moreGlyph(), 54f, iconSize = 28f)
-                more.name = "portrait-more"
-                val primary = arcActions.firstOrNull()?.takeIf { it.enabled }?.title
-                more.onClick { MoreSheet(unit, actions, primary).present() }
-                holdToRead(more, "Show more".tr(), null)
-                place(more, x, y, 54f, 54f)
+                if (base.strength > 0) unitStat("Strength", base.strength.toString())
+                if (base.rangedStrength > 0) unitStat("Ranged", base.rangedStrength.toString())
+                unitStat("Movement", unitView.getMovementString())
+                values.add("${unit.health} HP".toLabel(Color.WHITE, 14))
+                text.add(values).left()
+                tag.add(text).expandX().left()
+                if (dueUnits > 0) {
+                    val position = civ.units.getDueUnits().toList().indexOf(unit) + 1
+                    if (position > 0) tag.add("$position / $dueUnits".toLabel(Color.valueOf("b7cde0"), 13)).padLeft(4f)
+                }
+                val close = "×".toLabel(Color.WHITE, 25).apply {
+                    setAlignment(Align.center)
+                    touchable = Touchable.enabled
+                    onClickSuppressive { world.bottomUnitTable.selectUnit(); world.shouldUpdate = true }
+                }
+                tag.add(close).size(48f)
+                tag.touchable = Touchable.enabled
+                tag.onClick { PortraitInfoSheets.showUnit(world, unitView) }
+                place(tag, 10f, top - 126f, 373f, 68f, units)
+                unitCard = tag
+                showCard()
+
+                val arcActions = mutableListOf<ArcAction>()
+                battle.portraitAttackButton?.let { attack ->
+                    val damage = battle.portraitDamagePreview
+                    arcActions.add(ArcAction(icon("OtherIcons/CrosshairB"), attack.text.toString(),
+                        !attack.isDisabled, damage, damage) { attack.activate() })
+                }
+                for (action in actions.filter { it.type != UnitActionType.Skip }.take(3 - arcActions.size)) {
+                    val image = "UnitActionIcons/${action.type.name}"
+                    arcActions.add(ArcAction(if (ImageGetter.imageExists(image)) icon(image) else action.getIcon(28f),
+                        action.title.tr(), action.action != null, nextUnitNote(action.type), tag = "portrait-action-${action.type.name}") {
+                        unitActions.activateAction(action, unit)
+                    })
+                }
+                // One close arc from Skip. Names still appear only while a disc is held.
+                val actionCount = min(3, arcActions.size) + if (actions.isNotEmpty()) 1 else 0
+                for ((index, action) in arcActions.take(3).withIndex()) {
+                    val (x, y) = actionArcPosition(index, actionCount, bottom)
+                    val button = disc(action.image, 54f,
+                        if (index == 0 && action.enabled) yellow else white, iconSize = 28f)
+                    button.name = action.tag
+                    if (!action.enabled) {
+                        button.color.a = .45f
+                        button.pressable = false
+                    } else button.onClick { action.activate() }
+                    holdToRead(button, action.title, action.note, action.enabled)
+                    place(button, x, y, 54f, 54f, units)
+                    if (action.chip != null) {
+                        val chip = Table().apply {
+                            background = panel(10).tint(Color.valueOf("e0524a"))
+                            touchable = Touchable.disabled
+                            add(action.chip.toLabel(Color.WHITE, 13)).pad(3f, 8f, 3f, 8f)
+                            pack()
+                        }
+                        place(chip, x + 27f - chip.width / 2f, y - chip.height - 4f, chip.width, chip.height, units)
+                    }
+                }
+                if (actions.isNotEmpty()) {
+                    val (x, y) = actionArcPosition(min(3, arcActions.size), actionCount, bottom)
+                    val more = disc(moreGlyph(), 54f, iconSize = 28f)
+                    more.name = "portrait-more"
+                    val primary = arcActions.firstOrNull()?.takeIf { it.enabled }?.title
+                    more.onClick { MoreSheet(unit, actions, primary).present() }
+                    holdToRead(more, "Show more".tr(), null)
+                    place(more, x, y, 54f, 54f, units)
+                }
             }
         } else {
             val leader = "LeaderIcons/${civ.nation.leaderName}"
@@ -510,6 +532,39 @@ internal class WorldPortraitHud(
     }
 
     private val reduceMotion get() = world.game.settings.reduceMotion
+
+    override fun act(delta: Float) {
+        super.act(delta)
+        if (unitShown < 0f) return
+        // A long frame (a screen update) slows the fades instead of skipping them
+        val step = min(delta, 1f / 30f) / .18f
+        fun approach(value: Float, target: Float) =
+            if (reduceMotion) target else if (target < value) max(target, value - step) else min(target, value + step)
+        val cardTarget = if (turnToast != null) 0f else 1f
+        if (cardShown != cardTarget) {
+            cardShown = approach(cardShown, cardTarget)
+            showCard()
+            Gdx.graphics.requestRendering()
+        }
+        val waiting = world.mapHolder.turnReplay?.ownMovesOnly == false || world.isNextTurnUpdateRunning()
+        val target = if (waiting) 0f else 1f
+        if (unitShown == target) return
+        unitShown = approach(unitShown, target)
+        val layer = unitLayer ?: return
+        layer.color.a = unitShown
+        if (unitShown <= 0f) {
+            layer.remove()
+            unitLayer = null
+            unitCard = null
+        } else Gdx.graphics.requestRendering()
+    }
+
+    private fun showCard() {
+        val card = unitCard ?: return
+        card.color.a = cardShown
+        card.touchable = if (cardShown > .5f) Touchable.enabled else Touchable.disabled
+    }
+
     private fun ease(p: Float) = 1f - (1f - p) * (1f - p) * (1f - p)
     private fun knows(civ: Civilization) = civ == world.viewingCivilization || civ.isBarbarian || world.viewingCivilization.knows(civ)
     /** Civs the player has not met stay neutral */
