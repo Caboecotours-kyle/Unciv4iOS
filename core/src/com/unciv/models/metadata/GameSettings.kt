@@ -83,6 +83,8 @@ class GameSettings {
     var showResourcesAndImprovements = false // the tileset draws resources and improvements as sprites
     var showPixelImprovements = true
     var unitIconOpacity = 1f // default corresponds to fully opaque
+    /** Map and turn animations jump to their end state */
+    var reduceMotion = false
 
     //// Performance
     var continuousRendering = false
