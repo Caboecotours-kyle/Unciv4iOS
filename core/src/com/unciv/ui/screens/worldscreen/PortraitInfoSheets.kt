@@ -14,6 +14,8 @@ import com.badlogic.gdx.scenes.scene2d.ui.Image
 import com.badlogic.gdx.scenes.scene2d.ui.Table
 import com.badlogic.gdx.scenes.scene2d.utils.ActorGestureListener
 import com.badlogic.gdx.scenes.scene2d.utils.NinePatchDrawable
+import com.unciv.models.translations.tr
+import com.unciv.ui.components.extensions.toLabel
 import com.unciv.ui.components.input.KeyCharAndCode
 import com.unciv.ui.components.input.keyShortcuts
 import com.unciv.ui.components.input.onActivation
@@ -22,6 +24,8 @@ import com.unciv.ui.images.ImageGetter
 import com.unciv.ui.images.PortraitStatIcons
 import com.unciv.ui.popups.Popup
 import com.unciv.ui.screens.basescreen.portraitCanvasBounds
+import com.unciv.ui.screens.pickerscreens.PromotionPickerScreen
+import com.unciv.view.MapUnitView
 import com.unciv.view.TileView
 import kotlin.math.floor
 import kotlin.math.max
@@ -29,7 +33,7 @@ import kotlin.math.min
 import kotlin.math.roundToInt
 import kotlin.math.sqrt
 
-/** Portrait tile info as the accepted navy bottom sheet (see WorldPortraitHud's More drawer). */
+/** Portrait tile and unit info as the accepted navy bottom sheet (see WorldPortraitHud's More drawer). */
 internal object PortraitInfoSheets {
     /** The map's tile details: [PortraitTileCard] in a sheet. */
     fun showTile(worldScreen: WorldScreen, tileView: TileView) {
@@ -44,6 +48,72 @@ internal object PortraitInfoSheets {
             card.yields(sheet.contentWidth)?.let { sheet.body.add(it).left().padTop(sheet.pt(14f)).padBottom(sheet.pt(6f)).row() }
             sheet.body.add(card.rows()).growX().padTop(sheet.pt(4f)).row()
         }.present()
+    }
+
+    /** Health, strength, moves, experience, promotions and the tile a unit stands on. */
+    fun showUnit(worldScreen: WorldScreen, unitView: MapUnitView) {
+        InfoSheet(worldScreen) { sheet -> sheet.name = "portrait-unit-sheet"; unitContent(worldScreen, unitView, sheet) }.present()
+    }
+
+    private fun unitContent(worldScreen: WorldScreen, unit: MapUnitView, sheet: InfoSheet) {
+        val p = sheet.p
+        fun pt(value: Float) = value * p
+        fun font(size: Int) = (size * p).roundToInt()
+        val civView = worldScreen.selectedGameView.civView
+        val tile = unit.getTile()
+        val card = PortraitTileCard(worldScreen, tile, civView, sheet.icons, hideUnits = true, p = p)
+
+        val header = Table()
+        header.add(PortraitTileCard.unitDisc(unit, pt(40f))).size(pt(64f)).padRight(pt(13f))
+        val text = Table().left()
+        text.add(unit.displayName().toLabel(Color.WHITE, font(22), hideIcons = true).apply { wrap = true }).growX().left().row()
+        val base = unit.getBaseUnit()
+        text.add("${unit.civName.tr(hideIcons = true)} · ${base.unitType.tr(hideIcons = true)}"
+            .toLabel(PortraitTileCard.INK2, font(14), hideIcons = true).apply { wrap = true }).growX().left().padTop(pt(3f))
+        header.add(text).growX().minWidth(0f)
+        header.add(sheet.closeButton()).padLeft(pt(8f))
+        sheet.header(header)
+
+        val health = unit.unitHealth.coerceIn(0, 100)
+        val bar = card.healthBar(health, sheet.contentWidth, pt(12f))
+        sheet.body.add(bar).growX().height(pt(12f)).padTop(pt(12f)).row()
+        val caption = Table()
+        caption.add("Health".toLabel(PortraitTileCard.INK2, font(13))).expandX().left()
+        caption.add("$health / 100".toLabel(PortraitTileCard.INK2, font(13))).padRight(pt(2f))
+        sheet.body.add(caption).growX().padTop(pt(6f)).row()
+
+        val promotions = unit.getPromotions()
+        val strength = if (base.rangedStrength > 0) base.rangedStrength to "Ranged strength" else base.strength to "Strength"
+        val grid = Table()
+        for ((index, stat) in listOf(strength.first.tr() to strength.second, unit.getMovementString() to "Movement",
+                "${promotions.XP}/${promotions.xpForNextPromotion()}" to "XP").withIndex()) {
+            val box = Table().top().left()
+            box.background = PortraitTileCard.bg(PortraitTileCard.NAVY2)
+            box.add(stat.first.toLabel(Color.WHITE, font(22))).left().row()
+            box.add(stat.second.toLabel(PortraitTileCard.INK2, font(13)).apply { wrap = true }).growX().left()
+            box.pad(pt(10f), pt(12f), pt(10f), pt(12f))
+            grid.add(box).uniformX().growX().minHeight(pt(68f)).fillY().padLeft(if (index > 0) pt(8f) else 0f)
+        }
+        sheet.body.add(grid).growX().padTop(pt(14f)).padBottom(pt(8f)).row()
+
+        val rows = Table()
+        val own = civView.isOwnerOf(unit) && !civView.isSpectator()
+        val count = promotions.promotions.size
+        val promotionIcon = Table().apply {
+            background = PortraitTileCard.bg(PortraitTileCard.NAVY2)
+            add(ImageGetter.getImage("OtherIcons/Shield").apply { color = Color.valueOf("dce9f4") }).size(pt(22f))
+        }
+        val meta = if (count > 0) null else "Available at [${promotions.xpForNextPromotion()}] XP"
+        val end = if (count > 0) listOf(card.pill(count.tr(), Color(1f, 1f, 1f, .1f), Color.WHITE)) else emptyList()
+        rows.add(card.row(promotionIcon, "Promotions", meta, end,
+            onTap = if (own) ({ sheet.close(); worldScreen.game.pushScreen { PromotionPickerScreen(unit.getUnit()) } }) else null)
+            .apply { name = "portrait-unit-promotions" }).growX().minHeight(pt(56f)).row()
+        rows.add(Image(ImageGetter.getWhiteDotDrawable().tint(PortraitTileCard.LINE))).height(max(1f, pt(1f))).growX().row()
+        val tileIcon = Table().apply { add(card.thumbnail(pt(40f), pt(36f))).size(pt(40f), pt(36f)) }
+        rows.add(card.row(tileIcon, "On [${card.title}]".tr(hideIcons = true), end = listOfNotNull(card.defencePill(" " + "defense".tr())),
+            onTap = { sheet.close(); showTile(worldScreen, tile) }).apply { name = "portrait-unit-tile" })
+            .growX().minHeight(pt(56f)).row()
+        sheet.body.add(rows).growX().padTop(pt(4f)).row()
     }
 
     /** One navy bottom sheet: grab handle, 28pt top radius, swipe or Close to dismiss, click-behind closes,
