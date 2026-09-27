@@ -8,6 +8,7 @@ import com.badlogic.gdx.graphics.g2d.NinePatch
 import com.badlogic.gdx.math.Rectangle
 import com.badlogic.gdx.scenes.scene2d.Actor
 import com.badlogic.gdx.scenes.scene2d.InputEvent
+import com.badlogic.gdx.scenes.scene2d.Stage
 import com.badlogic.gdx.scenes.scene2d.Touchable
 import com.badlogic.gdx.scenes.scene2d.actions.Actions
 import com.badlogic.gdx.scenes.scene2d.ui.Image
@@ -140,7 +141,7 @@ internal object PortraitInfoSheets {
             innerTable.pad(0f).defaults().pad(0f)
             getCell(innerTable)?.expand()?.bottom()
             clickBehindToClose = true
-            closeListeners.add { icons.dispose(); panelTexture.dispose() }
+            closeListeners.add { release() }
 
             val top = Table()
             top.touchable = Touchable.enabled
@@ -169,6 +170,22 @@ internal object PortraitInfoSheets {
         }
 
         fun header(actor: Actor) { headerTable.add(actor).growX() }
+
+        private var released = false
+
+        /** Frees the sheet's own textures once, whether it closes normally or its stage goes away with a replaced screen */
+        private fun release() {
+            if (released) return
+            released = true
+            icons.dispose()
+            panelTexture.dispose()
+        }
+
+        /** Screen disposal clears the stage without [close]; leaving the stage is the one exit every path shares */
+        override fun setStage(stage: Stage?) {
+            super.setStage(stage)
+            if (stage == null) release()
+        }
 
         /** 48pt round Close, also the back key */
         fun closeButton(): Actor = Table().apply {
