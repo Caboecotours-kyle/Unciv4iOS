@@ -27,6 +27,7 @@ import com.unciv.ui.screens.basescreen.portraitCanvasBounds
 import com.unciv.ui.screens.pickerscreens.PromotionPickerScreen
 import com.unciv.view.MapUnitView
 import com.unciv.view.TileView
+import kotlin.math.ceil
 import kotlin.math.floor
 import kotlin.math.max
 import kotlin.math.min
@@ -187,9 +188,9 @@ internal object PortraitInfoSheets {
         /** Full safe width, pinned to the bottom */
         private fun fit() {
             val safe = world.safeAreaBoundsInWorld()
-            pad(0f).padLeft(safe.x).padBottom(safe.y).padRight(world.stage.width - safe.x - safe.width)
-            // An explicit whole width: a grown cell rounds its fractional stage width up past the safe edge
-            getCell(innerTable)?.width(floor(safe.width))
+            // Whole units inside the safe area: table layout rounds fractional pads and widths past its edges
+            pad(0f).padLeft(ceil(safe.x)).padBottom(ceil(safe.y)).padRight(world.stage.width - safe.x - safe.width)
+            getCell(innerTable)?.width(floor(safe.x + safe.width) - ceil(safe.x))
             invalidate()
         }
 
