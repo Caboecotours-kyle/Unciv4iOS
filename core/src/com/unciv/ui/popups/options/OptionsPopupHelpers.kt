@@ -326,6 +326,8 @@ internal interface OptionsPopupHelpers {
 
     /** Reload the [OptionsPopup] after major changes (resolution, tileset, language, font) */
     fun reloadWorldAndOptions() {
+        // The page whose setting asked for the reload. Read now: by the time the reload runs the user may be on the portrait home or have closed Settings
+        val page = activePage
         Concurrency.run("Reload from options") {
             withGLContext {
                 // We have to run setSkin before the screen is rebuild else changing skins
@@ -341,7 +343,7 @@ internal interface OptionsPopupHelpers {
                 }
             }
             withGLContext {
-                UncivGame.Current.screen?.openOptionsPopup(activePage)
+                UncivGame.Current.screen?.openOptionsPopup(page)
             }
         }
     }
@@ -353,11 +355,12 @@ internal interface OptionsPopupHelpers {
      *  Reason: A resize _might_ relaunch the parent screen ([MainMenuScreen] is [RecreateOnResize]) and thus close this Popup - or not.
      */
     fun reopenOptions(force: Boolean = false) {
+        // Read now, as in reloadWorldAndOptions: after the delay the pager may be on the portrait home or closed
+        val page = activePage
         Concurrency.run("Reload from options") {
             delay((if (force) 0 else 100).milliseconds)
             withGLContext {
                 val screen = UncivGame.Current.screen ?: return@withGLContext
-                val page = activePage // Must be fetched before force-closing the current OptionsPopup
                 if (force) (screen.activePopup as? OptionsPopup)?.close()
                 if (screen.hasOpenPopups()) return@withGLContext // e.g. Orientation auto to fixed while auto is already the new orientation
                 screen.openOptionsPopup(page)
