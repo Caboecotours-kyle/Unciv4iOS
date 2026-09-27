@@ -1,5 +1,7 @@
 package com.unciv.ui.screens.newgamescreen
 
+import com.badlogic.gdx.scenes.scene2d.Actor
+import com.badlogic.gdx.scenes.scene2d.ui.Cell
 import com.badlogic.gdx.scenes.scene2d.ui.CheckBox
 import com.badlogic.gdx.scenes.scene2d.ui.Table
 import com.unciv.models.metadata.BaseRuleset
@@ -26,6 +28,7 @@ import com.unciv.utils.Concurrency
  * @param initialBaseRuleset The selected base Ruleset, only for running mod checks against. Use [setBaseRuleset] to change on the fly.
  * @param screen Parent screen, used only to show [ToastPopup]s
  * @param isPortrait Used only for minor layout tweaks, arrangement is always vertical
+ * @param minTarget Portrait new game only: the smallest tap target, in stage units. 0 keeps the landscape sizes.
  * @param onUpdate Callback, parameter is the mod name, called after any checks that may prevent mod selection succeed.
  */
 class ModCheckboxTable(
@@ -33,6 +36,7 @@ class ModCheckboxTable(
     initialBaseRuleset: String,
     private val screen: BaseScreen,
     isPortrait: Boolean = false,
+    private val minTarget: Float = 0f,
     private val onUpdate: (String) -> Unit
 ): Table() {
     private var baseRulesetName = ""
@@ -71,6 +75,8 @@ class ModCheckboxTable(
         setBaseRuleset(initialBaseRuleset)
     }
 
+    private fun <T : Actor> Cell<T>.tapHeight(): Cell<T> = if (minTarget > 0f) minHeight(minTarget) else this
+
     fun updateSelection() {
         savedModcheckResult = null
         disableChangeEvents = true
@@ -108,7 +114,7 @@ class ModCheckboxTable(
             val searchModsTextField = UncivTextField("Search mods")
             
             if (compatibleMods.size > 10) 
-                it.add(searchModsTextField).row()
+                it.add(searchModsTextField).tapHeight().row()
             
             val modsTable = Table()
             modsTable.defaults().pad(5f)
@@ -119,10 +125,14 @@ class ModCheckboxTable(
                 val searchText = searchModsTextField.text.lowercase()
                 for (mod in compatibleMods)
                     if (searchText.isEmpty() || mod.mod.name.lowercase().contains(searchText))
-                        modsTable.add(mod.widget).left().row()
+                        modsTable.add(mod.widget).left().tapHeight().row()
             }
             populateModsTable()
             searchModsTextField.onChange { populateModsTable() }
+        }.apply {
+            // Taller header, same glyphs centred in it
+            val extra = (minTarget - header.prefHeight) / 2
+            if (extra > 0f) header.padTop(header.padTop + extra).padBottom(header.padBottom + extra)
         }).padTop(expanderPadTop).growX().row()
 
         disableIncompatibleMods()
