@@ -48,6 +48,19 @@ internal fun turnOrder(gameInfo: GameInfo, viewingCiv: Civilization): List<Civil
     return all.drop(start) + all.take(start)
 }
 
+/** Turn progress counts city steps in turn order, so the civ whose cities are being processed is a fair guess of who moves. */
+internal fun estimateMovingCiv(order: List<Civilization>, fraction: Float): Civilization? {
+    val others = order.drop(1).filter { it.isAlive() && !it.isSpectator() }
+    if (others.isEmpty()) return order.firstOrNull()
+    val totalCities = order.sumOf { it.cities.size }
+    var step = fraction * (3 + totalCities * 2) - 1 - order.first().cities.size
+    for (civ in others) {
+        step -= civ.cities.size * 2
+        if (step < 0f) return civ
+    }
+    return others.last()
+}
+
 /**
  * Plays back, civ by civ in turn order, what visibly changed while the turn passed: hops, spawns, founded cities
  * and defeated units. Bounded to 8 animated units and 1.6 s per civ and 6 s overall; a tap skips to the end.

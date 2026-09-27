@@ -867,6 +867,8 @@ class WorldMapHolder @JvmOverloads constructor(
         replay.start()
     }
 
+    internal fun skipTurnReplay() = turnReplay?.skip()
+
     internal fun swapMoveUnitToTargetTile(selectedUnitView: MapUnitView, targetTileView: TileView) {
         markUnitMoveTutorialComplete(selectedUnitView)
         selectedUnitView.trySwapMoveToTile(targetTileView, keepEscorting = true)

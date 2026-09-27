@@ -76,7 +76,9 @@ import com.unciv.ui.screens.worldscreen.unit.actions.UnitActionsTable
 import com.unciv.ui.screens.worldscreen.worldmap.PendingTurnReplay
 import com.unciv.ui.screens.worldscreen.worldmap.WorldMapHolder
 import com.unciv.ui.screens.worldscreen.worldmap.WorldMapTileUpdater.updateTiles
+import com.unciv.ui.screens.worldscreen.worldmap.estimateMovingCiv
 import com.unciv.ui.screens.worldscreen.worldmap.seeMap
+import com.unciv.ui.screens.worldscreen.worldmap.turnOrder
 import com.unciv.utils.Concurrency
 import com.unciv.utils.debug
 import com.unciv.utils.launchOnGLThread
@@ -177,6 +179,7 @@ class WorldScreen(
     private val portraitTutorialTask = PortraitTutorialTask(this)
 
     private var nextTurnUpdateJob: Job? = null
+    private var turnProgress: NextTurnProgress? = null
 
     private val events = EventBus.EventReceiver()
 
@@ -499,7 +502,10 @@ class WorldScreen(
         // it causes a bug when we move a unit to an unexplored tile (for instance a cavalry unit which can move far)
 
         mapHolder.updateTiles(getGameViewConsideringForOfWar().civView)
-        mapHolder.startPendingTurnReplay(viewingCiv) { shouldUpdate = true }
+        mapHolder.startPendingTurnReplay(viewingCiv) { showToast ->
+            shouldUpdate = true
+            if (showToast && isPortrait() && isPlayersTurn) portraitHud.showYourTurn(gameInfo.turns)
+        }
 
         topBar.update(selectedCiv)
         if (tutorialTaskTable.isVisible)
@@ -607,6 +613,15 @@ class WorldScreen(
 
     @Readonly
     internal fun hasPendingFreeGreatPerson() = viewingCiv.greatPeople.freeGreatPeople > 0
+
+    internal val viewingCivilization get() = viewingCiv
+
+    /** The civ the portrait HUD shows as moving: estimated while the turn processes, exact while it replays; null otherwise. */
+    internal fun turnWaitCiv(): Civilization? {
+        mapHolder.turnReplay?.let { return it.currentCiv ?: viewingCiv }
+        if (!isNextTurnUpdateRunning()) return null
+        return estimateMovingCiv(turnOrder(gameInfo, viewingCiv), turnProgress?.fraction ?: 0f)
+    }
 
     internal fun openGreatPersonPicker() {
         deferFreeGreatPersonPicker = false
@@ -937,6 +952,7 @@ class WorldScreen(
             pendingTurnUploadState.finishTurnProcessing()
             throw ex
         }
+        turnProgress = progressBar
         // What this civ sees now, so the next world screen can replay what changes while the turn passes
         PendingTurnReplay.seen = if (isPortrait() && !fromAutoPlay && !autoPlay.isAutoPlaying()) mapHolder.seeMap() else null
 
