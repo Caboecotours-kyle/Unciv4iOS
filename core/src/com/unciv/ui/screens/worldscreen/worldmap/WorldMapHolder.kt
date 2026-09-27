@@ -640,10 +640,15 @@ class WorldMapHolder @JvmOverloads constructor(
                     } else removeUnitActionOverlay() //we're done here
 
                     if (UncivGame.Current.settings.autoUnitCycle && !selectedUnitView.hasMovement()) {
-                        // A portrait hop keeps the camera until it lands, unless the player picked another unit meanwhile
-                        if (motion.isMoving(selectedUnitView.id)) motion.afterUnit(selectedUnitView.id) {
-                            val selected = worldScreen.bottomUnitTable.selectedUnit
-                            if (selected == null || selected == selectedUnitView) worldScreen.switchToNextUnit()
+                        // A portrait hop keeps the camera until it lands; any selection the player makes meanwhile
+                        // (unit, city, spy or none) cancels the cycle
+                        if (motion.isMoving(selectedUnitView.id)) {
+                            val table = worldScreen.bottomUnitTable
+                            val selection = Triple(table.selectedUnit, table.selectedCity, table.selectedSpy)
+                            motion.afterUnit(selectedUnitView.id) {
+                                if (Triple(table.selectedUnit, table.selectedCity, table.selectedSpy) == selection)
+                                    worldScreen.switchToNextUnit()
+                            }
                         } else worldScreen.switchToNextUnit()
                     }
 
