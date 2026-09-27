@@ -303,6 +303,7 @@ internal interface OptionsPopupHelpers {
             add(widget).pad(10f).minWidth(rightWidgetMinWidth).right().row()
             return
         }
+        if (widget is SelectBox<*>) style.fitSelect(widget)
         label.wrap = true
         label.setFontSize(style.font(15f))
         if (label.style.fontColor == Color.WHITE) label.setFontColor(OptionsPortraitStyle.INK2)

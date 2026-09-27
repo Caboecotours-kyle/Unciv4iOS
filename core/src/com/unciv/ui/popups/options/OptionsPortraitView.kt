@@ -8,6 +8,7 @@ import com.badlogic.gdx.scenes.scene2d.Stage
 import com.badlogic.gdx.scenes.scene2d.Touchable
 import com.badlogic.gdx.scenes.scene2d.ui.Cell
 import com.badlogic.gdx.scenes.scene2d.ui.Label
+import com.badlogic.gdx.scenes.scene2d.ui.SelectBox
 import com.badlogic.gdx.scenes.scene2d.ui.Slider
 import com.badlogic.gdx.scenes.scene2d.ui.Table
 import com.badlogic.gdx.scenes.scene2d.ui.TextButton
@@ -71,6 +72,31 @@ internal class OptionsPortraitStyle(stage: Stage) {
             label.setAlignment(Align.center)
             onClick(action)
         }
+    }
+
+    /** Opened select menus get 48pt rows. Only this box gets the copied style, the skin's shared style is untouched */
+    fun fitSelect(select: SelectBox<*>) {
+        val list = select.style.listStyle
+        val selection = list.selection
+        if (selection is TallRow) return
+        // Same row height List computes: font height plus the selection drawable's padding
+        val rowHeight = list.font.capHeight - list.font.descent * 2 + selection.topHeight + selection.bottomHeight
+        val extra = (px(48f) - rowHeight) / 2
+        if (extra <= 0f) return
+        select.style = SelectBox.SelectBoxStyle(select.style).apply {
+            listStyle = com.badlogic.gdx.scenes.scene2d.ui.List.ListStyle(listStyle).apply { this.selection = TallRow(selection, extra) }
+        }
+        // The dropdown sizes itself from the list's cached row height, so refresh it now or the first open shows ~2 rows
+        select.list.validate()
+    }
+
+    /** [inner] drawn as is, with [extra] more padding above and below its content */
+    private class TallRow(private val inner: Drawable, extra: Float) : BaseDrawable(inner) {
+        init {
+            topHeight += extra
+            bottomHeight += extra
+        }
+        override fun draw(batch: Batch, x: Float, y: Float, width: Float, height: Float) = inner.draw(batch, x, y, width, height)
     }
 
     fun disc(icon: String, action: () -> Unit) = ImageGetter.getImage(icon)
