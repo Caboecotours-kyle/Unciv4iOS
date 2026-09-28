@@ -60,7 +60,9 @@ internal object PortraitMoveRange {
         val thisTurn = HashSet<TileView>(reachable).apply { add(unitTile) }
         // Out of moves: nothing to ring, and the pathfinder has no route either
         if (thisTurn.size > 1) {
-            val nextTurn = nextTurnReach(unitView).filterTo(HashSet()) { it !in thisTurn }
+            // Found afresh on every update: a single search, cheap enough (about 12 ms for a partly moved tank on a railroad
+            // map), and nothing it depends on (escorts, promotions, city ownership, roads, fog) can go stale
+            val nextTurn = unitView.getReachableTilesNextTurn().filterTo(HashSet()) { it !in thisTurn }
             val civ = worldScreen.selectedGameView.civView
             for ((tileView, group) in tileGroups) {
                 if (tileView in thisTurn || tileView in attackable) continue
@@ -74,32 +76,6 @@ internal object PortraitMoveRange {
         }
         showPortraitAttack(attackable)
         showRoute(unitView)
-    }
-
-    /** The last unit's next-turn reach and the state it was found in: preview and selection refreshes reuse it */
-    private var nextTurnKey = ""
-    private var nextTurnTiles: List<TileView> = emptyList()
-
-    /** [MapUnitView.getReachableTilesNextTurn], found again only when something it depends on may have changed: the
-     *  unit, its tile, its moves, its turn, where and how far its civ's units stand (their moves also reveal the map
-     *  and block tiles) and its diplomatic standing (war, open borders). Other civs only move between turns. */
-    private fun WorldMapHolder.nextTurnReach(unitView: MapUnitView): List<TileView> {
-        val unit = unitView.getUnit()
-        val civ = unit.civ
-        var units = 0L
-        for (other in civ.units.getCivUnits())
-            units = (units * 31 + other.id) * 31 + other.currentTile.zeroBasedIndex * 31L + other.currentMovement.toRawBits()
-        var diplomacy = 0L
-        for (manager in civ.diplomacy.values)
-            diplomacy = diplomacy * 31 + manager.otherCivName.hashCode() * 4L + manager.diplomaticStatus.ordinal * 2L +
-                if (manager.hasOpenBorders) 1 else 0
-        val key = "${System.identityHashCode(unitView.getTile().getTileMap())} ${civ.gameInfo.turns} ${unit.id} " +
-            "${unit.currentTile.zeroBasedIndex} ${unit.currentMovement} ${unit.getMaxMovement()} $units $diplomacy"
-        if (key != nextTurnKey) {
-            nextTurnTiles = unitView.getReachableTilesNextTurn()
-            nextTurnKey = key
-        }
-        return nextTurnTiles
     }
 
     /** Enemies the selected unit can attack: a red hex under them, ringed in red; the crosshair stays */
