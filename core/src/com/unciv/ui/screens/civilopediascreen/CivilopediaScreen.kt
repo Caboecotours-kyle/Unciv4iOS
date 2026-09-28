@@ -435,6 +435,7 @@ class CivilopediaScreen(
 
         setPortraitSearchFooter()
         sheet.fit()
+        scrollBodyTo(null, top = true) // a rebuilt view starts at its top, not at the last view's offset
     }
 
     /** The category's entries as tray rows grouped by sub-category, the one you came from ticked */
@@ -469,6 +470,7 @@ class CivilopediaScreen(
         }).apply { setScrollingDisabled(false, true); setOverscroll(false, false) })
         setPortraitSearchFooter()
         sheet.fit()
+        scrollBodyTo(null, top = true) // a rebuilt view starts at its top, not at the last view's offset
     }
 
     private fun showPortraitEntry(entry: CivilopediaEntry) {
@@ -565,6 +567,7 @@ class CivilopediaScreen(
             }
             if (count == 0) sheet.addToBody(sheet.emptyState("OtherIcons/Search", "No results"))
             sheet.fit()
+            scrollBodyTo(null, top = true) // a rebuilt view starts at its top, not at the last view's offset
         }
         search.add(field).growX().height(sheet.touch)
         val clear = "×".toLabel(TrayColors.INK2, sheet.font(24f)).apply {
