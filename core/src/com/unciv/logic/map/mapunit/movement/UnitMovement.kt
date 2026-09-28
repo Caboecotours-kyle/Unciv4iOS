@@ -364,7 +364,10 @@ class UnitMovement(val unit: MapUnit) {
     /**
      * Tiles the unit can end its move on next turn but not this turn. This is the second turn of the classic
      * [getShortestPath] search, with its caches and rules, so each of these is a destination the classic search reaches
-     * in two turns. It is the classic search whatever the A* setting, so repeated calls agree.
+     * in two turns.
+     *
+     * Empty with A* pathfinding on: A* ranks routes by its own rules (zone of control, escorts), so a classic set could
+     * promise a tile its orders take three turns to reach, and its cached search cannot be asked the same question twice.
      *
      * [getShortestPath] floods a full turn of movement out of every tile it can stop on this turn, never re-entering
      * those tiles. Its second-turn tiles are those next to a tile one of these floods reaches with movement to spare, so
@@ -375,7 +378,8 @@ class UnitMovement(val unit: MapUnit) {
      */
     @Readonly @Suppress("purity") // shares the edge-key helper classicMovementToTilesAtPosition uses
     fun getReachableTilesNextTurn(): Set<Tile> {
-        if (unit.cache.cannotMove || unit.baseUnit.isAirUnit() || unit.isPreparingParadrop()) return emptySet()
+        if (unit.cache.cannotMove || unit.baseUnit.isAirUnit() || unit.isPreparingParadrop()
+            || UncivGame.Current.settings.useAStarPathfinding) return emptySet()
         val currentTile = unit.getTile()
         val tileCount = currentTile.tileMap.tileList.size
         val passThroughCache = ArrayList<Boolean?>(tileCount)
