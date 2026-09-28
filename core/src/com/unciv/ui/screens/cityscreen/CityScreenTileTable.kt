@@ -18,6 +18,7 @@ import com.unciv.ui.components.input.onClick
 import com.unciv.ui.components.extensions.toLabel
 import com.unciv.ui.components.extensions.toTextButton
 import com.unciv.ui.components.input.KeyboardBinding
+import com.unciv.ui.components.input.keyShortcuts
 import com.unciv.ui.components.tilegroups.CityTileState
 import com.unciv.ui.images.ImageGetter
 import com.unciv.ui.popups.AnimatedMenuPopup
@@ -183,10 +184,14 @@ class CityScreenTileTable(private val cityScreen: CityScreen, private val tray: 
             val enabled = cityScreen.canChangeState && cityView.viewingCiv().hasStatToBuy(Stat.Gold, goldCostOfTile)
             lateinit var buyTileButton: Table
             buyTileButton = trayButton(tray, "Buy for [$goldCostOfTile] gold", TraySheet.ButtonKind.Primary, enabled) {
+                // Like the legacy button's disable(): one purchase prompt per button, by tap or key
                 buyTileButton.touchable = Touchable.disabled
+                buyTileButton.keyShortcuts.clear()
                 cityScreen.askToBuyTile(tileView)
             }
             buyTileButton.name = "portrait-buy-tile-button"
+            // The legacy button's shortcut; a disabled legacy button was inactive, so bind only when the button is live
+            if (enabled) buyTileButton.keyShortcuts.add(KeyboardBinding.BuyTile)
             buyTileButton.addContextMenu { TileBuyMenu(buyTileButton) }
             trayActions += buyTileButton
         }
