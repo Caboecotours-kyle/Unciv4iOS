@@ -332,6 +332,9 @@ class TileGroupMap<T: TileGroup>(
             super.act(delta)
     }
 
+    /** Adds [actor] over every map layer but under the direct children added before it (move buttons and the like) */
+    fun addAboveLayers(actor: Actor) = addActorAt(allMapLayers.size, actor)
+
     /** An overview can keep its own direct-child city markers interactive without game actions. */
     fun disableGameplayInput() {
         for (layer in allMapLayers) layer.touchable = Touchable.disabled

@@ -384,6 +384,24 @@ class UnitMovement(val unit: MapUnit) {
     }
 
     /**
+     * Every tile walked along [turnEnds], the turn-by-turn path [getShortestPath] returns, starting after the unit's tile.
+     * A leg that cannot be retraced (A* pathfinding, or the map changed) stays a single step to its turn's end.
+     */
+    @Readonly
+    fun getStepsAlongPath(turnEnds: List<Tile>): List<Tile> {
+        @LocalState val steps = ArrayList<Tile>()
+        var from = unit.getTile()
+        for ((turn, end) in turnEnds.withIndex()) {
+            val leg = if (UncivGame.Current.settings.useAStarPathfinding) null
+                else if (turn == 0) getDistanceToTiles()
+                else getMovementToTilesAtPosition(from.position, unit.getMaxMovement().toFloat(), false)
+            if (leg != null && leg.containsKey(end)) steps.addAll(leg.getPathToTile(end)) else steps.add(end)
+            from = end
+        }
+        return steps
+    }
+
+    /**
      * @param includeOtherEscortUnit determines whether or not this method will also check its the other escort unit if it has one
      * Leave it as default unless you know what [getReachableTilesInCurrentTurn] does.
      */

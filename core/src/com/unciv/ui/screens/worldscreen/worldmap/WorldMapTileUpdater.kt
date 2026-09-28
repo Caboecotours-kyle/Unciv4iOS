@@ -23,6 +23,8 @@ object WorldMapTileUpdater {
         // General update of all tiles
         for (tileGroup in tileGroups.values)
             tileGroup.update(civView)
+        portraitRouteTarget = null
+        setMoveRoute(null)
 
         // Update tiles according to selected unit/city
         val unitTable = worldScreen.bottomUnitTable
@@ -49,7 +51,7 @@ object WorldMapTileUpdater {
         }
 
         // Same as below - randomly, tileGroups doesn't seem to contain the selected tile, and this doesn't seem reproducible
-        tileGroups[selectedTile]?.layerOverlay?.showHighlight(Color.WHITE)
+        if (selectedTile != portraitRouteTarget) tileGroups[selectedTile]?.layerOverlay?.showHighlight(Color.WHITE)
 
         zoom(scaleX) // zoom to current scale, to set the size of the city buttons after "next turn"
         updateSelectedUnitBreathing()
@@ -171,7 +173,7 @@ object WorldMapTileUpdater {
 
         // Z-Layer: 3
         // Movement paths
-        if (unitMovementPaths.containsKey(unitView)) {
+        if (!portraitRange && unitMovementPaths.containsKey(unitView)) {
             for (tileView in unitMovementPaths[unitView]!!) {
                 tileGroups[tileView]!!.layerOverlay.showHighlight(Color.SKY, 0.8f)
             }
@@ -188,7 +190,7 @@ object WorldMapTileUpdater {
 
         // Z-Layer: 5
         // Highlight movement destination tile
-        if (unitView.isMoving()) {
+        if (!portraitRange && unitView.isMoving()) {
             tileGroups[unitView.getMovementDestination()]!!.layerOverlay.showHighlight(Color.WHITE, 0.7f)
         }
 

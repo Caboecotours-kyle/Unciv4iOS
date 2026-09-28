@@ -5,8 +5,10 @@ import com.badlogic.gdx.graphics.g2d.Batch
 import com.badlogic.gdx.graphics.g2d.TextureRegion
 import com.badlogic.gdx.math.Vector2
 import com.badlogic.gdx.scenes.scene2d.Actor
+import com.badlogic.gdx.scenes.scene2d.Group
 import com.badlogic.gdx.scenes.scene2d.Touchable
 import com.badlogic.gdx.scenes.scene2d.ui.Image
+import com.unciv.ui.components.extensions.toLabel
 import com.unciv.ui.components.tilegroups.TileGroup
 import com.unciv.ui.images.ImageGetter
 import kotlin.math.atan2
@@ -22,8 +24,9 @@ enum class RangeStroke(val width: Float, val color: Color, val shadowWidth: Floa
     /** Around the area reachable next turn */
     NextTurn(2f, Color.WHITE, 4f, .35f, dash = 8f, gap = 3f),
     /** Around an enemy the unit can attack */
-    Attack(2.6f, Color(237 / 255f, 41 / 255f, 57 / 255f, 1f));
-
+    Attack(2.6f, Color(237 / 255f, 41 / 255f, 57 / 255f, 1f)),
+    /** Around the chosen destination */
+    Destination(3f, Color(1f, 201 / 255f, 60 / 255f, 1f), 6f, .4f);
 
     companion object {
         /** The mock's outline shadow, #081928 */
@@ -61,11 +64,11 @@ internal class RangeEdges(private val tileGroup: TileGroup) : Actor() {
     override fun draw(batch: Batch, parentAlpha: Float) {
         val points = tileGroup.portraitPointScale
         val old = batch.packedColor
-        // Shadows first, then the white rings, then red on top where they share an edge
+        // Shadows first, then the white rings, then red and yellow on top where they share an edge
         for (pass in 0..2) for (s in 0 until count) {
             val i = s * 7
             val stroke = RangeStroke.entries[segments[i + 6].toInt()]
-            val onTop = stroke == RangeStroke.Attack
+            val onTop = stroke == RangeStroke.Attack || stroke == RangeStroke.Destination
             val width = when {
                 pass == 0 -> stroke.shadowWidth
                 pass == 1 && !onTop -> stroke.width
@@ -98,6 +101,74 @@ internal class RangeEdges(private val tileGroup: TileGroup) : Actor() {
         val sin = segments[i + 4]
         batch.draw(dot, x + segments[i] + cos * start + sin * width / 2f, y + segments[i + 1] + sin * start - cos * width / 2f,
             0f, 0f, max(0f, end - start), width, 1f, 1f, segments[i + 5])
+    }
+}
+
+/** The chosen destination's route: a dotted line from the unit over a soft shadow, and a badge with the number of turns
+ *  when it takes more than one. Drawn above the map like the other move UI, at a constant screen size. [points] run from
+ *  the unit's ground centre to the destination's, relative to this actor, whose bounds cover them. */
+internal class MoveRoute(private val tileGroup: TileGroup, private val points: FloatArray, turns: Int) : Group() {
+    private val dot: TextureRegion = ImageGetter.getWhiteDotDrawable().region
+    private val circle: TextureRegion = ImageGetter.getCircleDrawable().region
+    private val badge: Group? = if (turns < 2) null else object : Group() {
+        init {
+            isTransform = true
+            val shadow = ImageGetter.getCircle(RangeStroke.shadow.cpy().apply { a = .35f }, 21f)
+            shadow.setPosition(-10.5f, -11.3f)
+            val ring = ImageGetter.getCircle(Color.WHITE, 19.6f)
+            ring.setPosition(-9.8f, -9.8f)
+            val disc = ImageGetter.getCircle(Color(0x132435ff), 16.4f)
+            disc.setPosition(-8.2f, -8.2f)
+            val label = turns.toString().toLabel(Color.WHITE, 11)
+            label.pack()
+            label.setPosition(-label.width / 2f, -label.height / 2f)
+            for (actor in arrayOf<Actor>(shadow, ring, disc, label)) addActor(actor)
+        }
+    }
+
+    init {
+        touchable = Touchable.disabled
+        isTransform = false
+        badge?.let { addActor(it) }
+    }
+
+    override fun draw(batch: Batch, parentAlpha: Float) {
+        val scale = tileGroup.portraitPointScale
+        val old = batch.packedColor
+        // Shadow band 6pt wide, then yellow dots 3.6pt wide every 8pt, as the mock's "1 7" dash with round caps
+        batch.setColor(RangeStroke.shadow.r, RangeStroke.shadow.g, RangeStroke.shadow.b, .4f * parentAlpha)
+        val band = 6f * scale
+        for (p in 0 until points.size / 2 - 1) {
+            val x0 = points[p * 2]; val y0 = points[p * 2 + 1]
+            val dx = points[p * 2 + 2] - x0; val dy = points[p * 2 + 3] - y0
+            val length = sqrt(dx * dx + dy * dy)
+            if (length == 0f) continue
+            batch.draw(dot, x + x0 + dy / length * band / 2f, y + y0 - dx / length * band / 2f, 0f, 0f, length, band,
+                1f, 1f, atan2(dy, dx) * 180f / Math.PI.toFloat())
+        }
+        val dotSize = 3.6f * scale
+        val spacing = 8f * scale
+        val colour = RangeStroke.Destination.color
+        batch.setColor(colour.r, colour.g, colour.b, parentAlpha)
+        // The first dots would sit under the unit's feet
+        var next = 10f * scale
+        var walked = 0f
+        for (p in 0 until points.size / 2 - 1) {
+            val x0 = points[p * 2]; val y0 = points[p * 2 + 1]
+            val dx = points[p * 2 + 2] - x0; val dy = points[p * 2 + 3] - y0
+            val length = sqrt(dx * dx + dy * dy)
+            while (length > 0f && next <= walked + length) {
+                val t = (next - walked) / length
+                batch.draw(circle, x + x0 + dx * t - dotSize / 2f, y + y0 + dy * t - dotSize / 2f, dotSize, dotSize)
+                next += spacing
+            }
+            walked += length
+        }
+        batch.packedColor = old
+        // Constant screen size: the mock's badge sits 2pt right of and 4pt above the destination's centre
+        badge?.setScale(scale)
+        badge?.setPosition(points[points.size - 2] + 2f * scale, points[points.size - 1] + 4f * scale)
+        super.draw(batch, parentAlpha)
     }
 }
 

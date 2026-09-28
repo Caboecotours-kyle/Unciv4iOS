@@ -4,14 +4,32 @@ import com.badlogic.gdx.graphics.Color
 import com.badlogic.gdx.math.Vector2
 import com.unciv.logic.map.HexMath
 import com.unciv.ui.components.tilegroups.MapProjection
+import com.unciv.ui.components.tilegroups.WorldTileGroup
+import com.unciv.ui.components.tilegroups.layers.MoveRoute
 import com.unciv.ui.components.tilegroups.layers.RangeStroke
+import com.unciv.utils.Concurrency
+import com.unciv.utils.launchOnGLThread
 import com.unciv.view.MapUnitView
 import com.unciv.view.TileView
 
+/** A move worked out off the GL thread: [turns] turn ends from [origin], walked tile by tile as [steps] */
+internal class PortraitRoute(val origin: TileView, val turns: Int, val steps: List<TileView>) {
+    val destination get() = steps.last()
+
+    companion object {
+        /** Expands [turnEnds] as [MapUnitView.getShortestPath] returns them; null when there is no path */
+        fun of(unitView: MapUnitView, turnEnds: List<TileView>): PortraitRoute? {
+            if (turnEnds.isEmpty()) return null
+            val steps = try { unitView.getStepsAlongPath(turnEnds) } catch (_: Exception) { turnEnds }
+            return PortraitRoute(unitView.getTile(), turnEnds.size, steps)
+        }
+    }
+}
+
 /**
  * Portrait move range, direction A of the terrain proposal: the map outside this turn's reach dims, one white line
- * rings the tiles reachable this turn and a dashed one those reachable next turn, and attackable enemies get a red
- * hex. Built once per [WorldMapTileUpdater] update.
+ * rings the tiles reachable this turn and a dashed one those reachable next turn, the chosen destination gets a yellow
+ * hex, a dotted route and a turns badge, and attackable enemies a red hex. Built once per [WorldMapTileUpdater] update.
  */
 internal object PortraitMoveRange {
     /** The mock's dim, #10243a at 30% outside the range and 14% on next turn's tiles */
@@ -19,6 +37,7 @@ internal object PortraitMoveRange {
     private const val DIM = .3f
     private const val DIM_NEXT_TURN = .14f
     private val attackFill = Color(237 / 255f, 41 / 255f, 57 / 255f, 1f)
+    private val destinationFill = RangeStroke.Destination.color
 
     private val from = Vector2()
     private val to = Vector2()
@@ -42,6 +61,7 @@ internal object PortraitMoveRange {
             outline(nextTurn, RangeStroke.NextTurn, attackable) { it !in thisTurn }
         }
         showPortraitAttack(attackable)
+        showRoute(unitView)
     }
 
     /** Enemies the selected unit can attack: a red hex under them, ringed in red; the crosshair stays */
@@ -91,6 +111,72 @@ internal object PortraitMoveRange {
             to.sub(direction)
         }
         overlay.addRangeEdge(stroke, from, to)
+    }
+
+    /** The chosen destination: the route previewed for this unit, or the one it is already ordered along */
+    private fun WorldMapHolder.showRoute(unitView: MapUnitView) {
+        val preview = portraitRoutes[unitView]
+        val route = when {
+            preview != null -> preview.takeIf { it.origin == unitView.getTile() }
+            unitView.isMoving() -> standingRoute(unitView)
+            else -> null
+        }
+        val destination = route?.destination ?: if (preview == null && unitView.isMoving()) unitView.getMovementDestination() else null
+        if (destination == null || destination == unitView.getTile()) return
+        portraitRouteTarget = destination
+        val overlay = tileGroups[destination]?.layerOverlay ?: return
+        overlay.showRangeFill(destinationFill, .18f, .9f)
+        for (clock in CLOCK) edge(destination, clock, destination, .9f, RangeStroke.Destination)
+        if (route != null) setMoveRoute(route(unitView, route))
+    }
+
+    /** The route's points, stepping from the unit's ground centre through relative positions so a wrapped map stays whole */
+    private fun WorldMapHolder.route(unitView: MapUnitView, route: PortraitRoute): MoveRoute {
+        val unitGroup: WorldTileGroup = tileGroups[unitView.getTile()]!!
+        val points = FloatArray(route.steps.size * 2 + 2)
+        var previous = route.origin
+        val tileMapView = previous.getTileMap()
+        for ((i, step) in route.steps.withIndex()) {
+            currentTileSetStrings.projection.project(offset.set(tileMapView.getRelativeWorldPosition(previous, step))
+                .scl(MapProjection.TILE_RADIUS))
+            points[i * 2 + 2] = points[i * 2] + offset.x
+            points[i * 2 + 3] = points[i * 2 + 1] + offset.y
+            previous = step
+        }
+        // Bounds around the whole route (and the badge), so the map's culling keeps it while any of it is on screen
+        var minX = 0f; var minY = 0f; var maxX = 0f; var maxY = 0f
+        for (i in points.indices step 2) {
+            minX = minOf(minX, points[i]); maxX = maxOf(maxX, points[i])
+            minY = minOf(minY, points[i + 1]); maxY = maxOf(maxY, points[i + 1])
+        }
+        val pad = MapProjection.TILE_RADIUS
+        for (i in points.indices step 2) {
+            points[i] -= minX - pad
+            points[i + 1] -= minY - pad
+        }
+        return MoveRoute(unitGroup, points, route.turns).apply {
+            setBounds(unitGroup.x + unitGroup.groundCenterX + minX - pad, unitGroup.y + unitGroup.groundCenterY + minY - pad,
+                maxX - minX + 2 * pad, maxY - minY + 2 * pad)
+        }
+    }
+
+    /** A unit ordered somewhere further than this turn: its route is found once per position, off the GL thread */
+    private fun WorldMapHolder.standingRoute(unitView: MapUnitView): PortraitRoute? {
+        val unit = unitView.getUnit()
+        val key = "${unit.id} ${unit.currentTile.position} ${unit.currentMovement} ${unit.action}"
+        if (key == standingRouteKey) return standingRoute
+        standingRouteKey = key
+        standingRoute = null
+        val destination = unitView.getMovementDestination()
+        Concurrency.run("PortraitRoute") {
+            val route = try { PortraitRoute.of(unitView, unitView.getShortestPath(destination)) } catch (_: Exception) { null }
+            launchOnGLThread {
+                if (standingRouteKey != key) return@launchOnGLThread
+                standingRoute = route
+                if (route != null) worldScreen.shouldUpdate = true
+            }
+        }
+        return null
     }
 
     private val CLOCK = intArrayOf(12, 2, 4, 6, 8, 10)

@@ -68,6 +68,15 @@ class WorldMapHolder @JvmOverloads constructor(
 
     internal val unitConnectRoadPaths: HashMap<MapUnitView, List<TileView>> = HashMap()
 
+    /** Portrait: [unitMovementPaths] walked tile by tile, for the dotted route to the chosen destination */
+    internal val portraitRoutes = HashMap<MapUnitView, PortraitRoute>()
+    /** Portrait: the destination the move range marks this update, which then needs no selected-tile ring */
+    internal var portraitRouteTarget: TileView? = null
+    /** Portrait: the route of a selected unit already ordered further than this turn, and what it was found for */
+    internal var standingRoute: PortraitRoute? = null
+    internal var standingRouteKey: String? = null
+    private var moveRoute: Actor? = null
+
     private lateinit var tileGroupMap: TileGroupMap<WorldTileGroup>
 
     lateinit var currentTileSetStrings: TileSetStrings
@@ -317,11 +326,13 @@ class WorldMapHolder @JvmOverloads constructor(
         dragPreviewBusy = true
         Concurrency.run("PortraitDragPath") {
             val path = try { unit.getShortestPath(destination) } catch (_: UnitMovement.UnreachableDestinationException) { emptyList() }
+            val route = PortraitRoute.of(unit, path)
             launchOnGLThread {
                 dragPreviewBusy = false
                 if (generation != dragGeneration || dragUnit != unit) return@launchOnGLThread
                 if (dragTarget == destination) {
                     unitMovementPaths[unit] = ArrayList(path)
+                    if (route != null) portraitRoutes[unit] = route else portraitRoutes.remove(unit)
                     worldScreen.shouldUpdate = true
                 } else dragTarget?.let { previewUnitDrag(it) }
             }
@@ -449,6 +460,7 @@ class WorldMapHolder @JvmOverloads constructor(
         removeUnitActionOverlay()
         selectedTile = tileView
         unitMovementPaths.clear()
+        portraitRoutes.clear()
         unitConnectRoadPaths.clear()
 
         val unitTable = worldScreen.bottomUnitTable
@@ -515,6 +527,7 @@ class WorldMapHolder @JvmOverloads constructor(
         removeUnitActionOverlay()
         selectedTile = tileView
         unitMovementPaths.clear()
+        portraitRoutes.clear()
         unitConnectRoadPaths.clear()
         if (!worldScreen.canChangeState) return
         zoomToMoveTarget(tileView)
@@ -929,6 +942,7 @@ class WorldMapHolder @JvmOverloads constructor(
              */
 
             val unitToTurnsToTile = HashMap<MapUnitView, Int>()
+            val routes = HashMap<MapUnitView, PortraitRoute>()
             for (unitView in selectedUnits) {
                 val shortestPath = ArrayList<TileView>()
                 val turnsToGetThere = if (unitView.isAirUnit()) {
@@ -944,9 +958,11 @@ class WorldMapHolder @JvmOverloads constructor(
                 }
                 unitMovementPaths[unitView] = shortestPath
                 unitToTurnsToTile[unitView] = turnsToGetThere
+                if (currentTileSetStrings.projection.tilted) PortraitRoute.of(unitView, shortestPath)?.let { routes[unitView] = it }
             }
 
             launchOnGLThread {
+                portraitRoutes.putAll(routes)
                 val unitsWhoCanMoveThere = HashMap(unitToTurnsToTile.filter { it.value != 0 })
                 if (unitsWhoCanMoveThere.isEmpty()) { // give the regular tile overlays with no unit movement
                     addTileOverlays(tileView)
@@ -1062,6 +1078,13 @@ class WorldMapHolder @JvmOverloads constructor(
         }
         else
             table.moveBy(0f, 48f)
+    }
+
+    /** Portrait: replaces the dotted route to the chosen destination, drawn above the map layers but under the move buttons */
+    internal fun setMoveRoute(route: Actor?) {
+        moveRoute?.remove()
+        moveRoute = route
+        if (route != null) tileGroupMap.addAboveLayers(route)
     }
 
     /** Adds [actor] as a direct child of the TileGroupMap, rendered above all layer groups. */
