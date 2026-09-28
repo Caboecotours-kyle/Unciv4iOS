@@ -159,6 +159,12 @@ open class TileGroup(
         // Props resize themselves when drawn, so off-screen ones cost nothing here
         if (contentChanged) layerUnitArt.updateDamping()
         if (contentChanged || iconsChanged) layerUnitFlag.updatePortraitScale()
+        if (iconsChanged) {
+            layerResource.updatePortraitScale()
+            layerImprovement.updatePortraitScale()
+            layerYield.updatePortraitScale()
+            layerBorders.updatePortraitScale()
+        }
     }
 
     override fun hit(x: Float, y: Float, touchable: Boolean): Actor? {

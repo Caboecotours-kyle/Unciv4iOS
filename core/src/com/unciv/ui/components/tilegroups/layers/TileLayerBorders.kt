@@ -29,6 +29,8 @@ class TileLayerBorders(tileGroup: TileGroup, size: Float) : TileLayer(tileGroup,
     }
 
     private val portraitImages = ArrayList<Image>()
+    /** The border strokes among [portraitImages], resized on zoom */
+    private val portraitLines = ArrayList<Image>()
     private var portraitKey = ""
 
     private var previousTileOwner: ForeignCivView? = null
@@ -37,6 +39,7 @@ class TileLayerBorders(tileGroup: TileGroup, size: Float) : TileLayer(tileGroup,
     fun reset() {
         portraitImages.forEach { removeOwnedActor(it) }
         portraitImages.clear()
+        portraitLines.clear()
         portraitKey = ""
         if (borderSegments.isNotEmpty()) {
             for (borderSegment in borderSegments.values)
@@ -180,7 +183,7 @@ class TileLayerBorders(tileGroup: TileGroup, size: Float) : TileLayer(tileGroup,
             val tangent = Vector2(-direction.y, direction.x).scl(radius / 2f)
             val from = strings.projection.project(Vector2(midpoint).add(tangent))
             val to = strings.projection.project(Vector2(midpoint).sub(tangent))
-            val thickness = if (tileGroup.strategicView) 7f else 3.2f * 40f / 31f
+            val thickness = portraitLineThickness()
             addPortraitLine(from, to, thickness, outlineColor)
 
             // Adjacent owned tiles inset toward different centers; bridge their shared vertex.
@@ -212,6 +215,23 @@ class TileLayerBorders(tileGroup: TileGroup, size: Float) : TileLayer(tileGroup,
         }
         addOwnedActor(line)
         portraitImages.add(line)
+        portraitLines.add(line)
+    }
+
+    /** Strategic view draws thick lines; otherwise they keep their screen width at every zoom */
+    private fun portraitLineThickness() = if (tileGroup.strategicView) 7f else 3.2f * 40f / 31f * tileGroup.portraitIconScale
+
+    /** Zoom changed: resize the strokes around their centre line, no rebuild (runs per pinch frame) */
+    fun updatePortraitScale() {
+        if (!strings.projection.tilted || portraitLines.isEmpty()) return
+        val thickness = portraitLineThickness()
+        for (i in portraitLines.indices) {
+            val line = portraitLines[i]
+            if (line.height == thickness) continue
+            line.y += (line.height - thickness) / 2f
+            line.height = thickness
+            line.setOrigin(0f, thickness / 2f)
+        }
     }
 
     override fun doUpdate(viewingCiv: CivView?) {

@@ -84,10 +84,12 @@ class TileLayerUnitFlag(tileGroup: TileGroup, size: Float) : TileLayer(tileGroup
     private fun setIconPosition(slot: Int, icon: UnitIconGroup) {
         if (strings.projection.tilted) {
             val shared = tileGroup.tileView.militaryUnit != null && tileGroup.tileView.civilianUnit != null
-            val dx = if (shared) { if (slot == 1) -15f else 15f } else if (tileGroup.strategicView) 0f else 20f
+            // Beside the unit, which grows slower than the hex when zoomed in
+            val damping = if (tileGroup.strategicView) 1f else tileGroup.portraitDamping
+            val dx = damping * if (shared) { if (slot == 1) -15f else 15f } else if (tileGroup.strategicView) 0f else 20f
             val wrapper = portraitWrappers.getValue(icon)
             wrapper.x = tileX + tileGroup.groundCenterX + dx - icon.width * wrapper.scaleX / 2f
-            wrapper.y = tileY + tileGroup.groundCenterY - icon.height * wrapper.scaleY / 2f - if (tileGroup.strategicView) 0f else 7f
+            wrapper.y = tileY + tileGroup.groundCenterY - icon.height * wrapper.scaleY / 2f - if (tileGroup.strategicView) 0f else 7f * damping
             return
         }
         if (flagsAboveSprites) {
@@ -112,7 +114,7 @@ class TileLayerUnitFlag(tileGroup: TileGroup, size: Float) : TileLayer(tileGroup
                 val wrapper = Group().apply {
                     setSize(newIcon.width, newIcon.height)
                     addActor(newIcon)
-                    setScale(if (tileGroup.strategicView) 22f / 14f * tileGroup.portraitPointScale else 1f)
+                    setScale(portraitFlagScale())
                 }
                 portraitWrappers[newIcon] = wrapper
                 addOwnedActor(wrapper)
@@ -166,14 +168,21 @@ class TileLayerUnitFlag(tileGroup: TileGroup, size: Float) : TileLayer(tileGroup
         return airUnitTable
     }
 
+    /** Portrait flags keep their screen size at every zoom; strategic view draws them larger */
+    private fun portraitFlagScale() =
+        if (tileGroup.strategicView) 22f / 14f * tileGroup.portraitPointScale else tileGroup.portraitIconScale
+
+    /** Runs for every tile on each pinch frame: no allocation */
     fun updatePortraitScale() {
         if (!strings.projection.tilted) return
         updateBadgeVisibility()
-        for ((slot, icon) in listOf(0 to civilianUnitIcon, 1 to militaryUnitIcon)) {
-            if (icon == null) continue
-            portraitWrappers.getValue(icon).setScale(if (tileGroup.strategicView) 22f / 14f * tileGroup.portraitPointScale else 1f)
-            setIconPosition(slot, icon)
-        }
+        civilianUnitIcon?.let { updateFlag(0, it) }
+        militaryUnitIcon?.let { updateFlag(1, it) }
+    }
+
+    private fun updateFlag(slot: Int, icon: UnitIconGroup) {
+        portraitWrappers.getValue(icon).setScale(portraitFlagScale())
+        setIconPosition(slot, icon)
     }
 
     fun selectFlag(unitView: ForeignMapUnitView) {
