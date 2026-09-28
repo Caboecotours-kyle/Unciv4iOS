@@ -66,7 +66,8 @@ internal class TechPickerPortrait(
     private val science = civInfo.stats.statsForNextTurn.science
 
     private val art = TrayArt(screen.stage)
-    private val sheet = TraySheet(screen, art, minShare = 1f)
+    // Both tabs scroll their own content, so a body drag must scroll rather than close the sheet
+    private val sheet = TraySheet(screen, art, minShare = 1f).apply { bodyDragCloses = false }
     private val white = ImageGetter.getWhiteDotDrawable()
     /** The content below is laid out in mock points on the 393pt canvas and scaled by the sheet's stage units per point */
     private val contentWidth = 393f
