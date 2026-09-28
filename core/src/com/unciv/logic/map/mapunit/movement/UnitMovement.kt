@@ -82,6 +82,21 @@ class UnitMovement(val unit: MapUnit) {
                 else aStarPathingWithoutEscort
             return pathingMap.getMovementToTilesAtPosition()
         }
+        return classicMovementToTilesAtPosition(position, unitMovement, considerZoneOfControl, tilesToIgnoreBitset,
+            canPassThroughCache, movementCostCache, includeOtherEscortUnit)
+    }
+
+    /** [getMovementToTilesAtPosition] without A* pathfinding, whatever the setting */
+    @Readonly @Suppress("purity") // mutates passed parameter
+    private fun classicMovementToTilesAtPosition(
+        position: HexCoord,
+        unitMovement: Float,
+        considerZoneOfControl: Boolean = true,
+        tilesToIgnoreBitset: BitSet? = null,
+        canPassThroughCache: ArrayList<Boolean?> = ArrayList(),
+        movementCostCache: HashMap<Int, Float> = HashMap(),
+        includeOtherEscortUnit: Boolean = true
+    ): PathsToTilesWithinTurn {
         @LocalState val distanceToTiles = PathsToTilesWithinTurn()
 
         val currentUnitTile = unit.currentTile
@@ -347,18 +362,15 @@ class UnitMovement(val unit: MapUnit) {
     }
 
     /**
-     * Tiles the unit can end its move on next turn but not this turn: the second turn of the search [getShortestPath]
-     * runs, with the same caches and rules, so each of these is a destination [getShortestPath] reaches in two turns.
+     * Tiles the unit can end its move on next turn but not this turn: the second turn of the classic [getShortestPath]
+     * search, with the same caches and rules, so each of these is a destination the classic search reaches in two turns.
+     * It is the classic search whatever the A* setting, so repeated calls agree.
      * Empty for units that fly, paradrop or cannot move, and when no moves are left, as [getShortestPath] finds no path then.
      * Costs one [getMovementToTilesAtPosition] per tile on the edge of this turn's reach.
      */
     @Readonly
     fun getReachableTilesNextTurn(): Set<Tile> {
         if (unit.cache.cannotMove || unit.baseUnit.isAirUnit() || unit.isPreparingParadrop()) return emptySet()
-        if (UncivGame.Current.settings.useAStarPathfinding)
-            return aStarPathing.bfsAllMatchingTiles(2) { tile, node ->
-                node.turns == 1 && (isUnknownTileWeShouldAssumeToBePassable(tile) || canMoveTo(tile))
-            }.toSet()
         val currentTile = unit.getTile()
         val tileCount = currentTile.tileMap.tileList.size
         val passThroughCache = ArrayList<Boolean?>(tileCount)
@@ -366,7 +378,8 @@ class UnitMovement(val unit: MapUnit) {
         @LocalState val reached = BitSet(tileCount)
         reached.set(currentTile.zeroBasedIndex)
         val thisTurn = ArrayList<Tile>()
-        for (tile in getDistanceToTiles(true, passThroughCache, movementCostCache).keys) {
+        for (tile in classicMovementToTilesAtPosition(currentTile.position, unit.currentMovement, true, null,
+                passThroughCache, movementCostCache).keys) {
             if (tile == currentTile || !isUnknownTileWeShouldAssumeToBePassable(tile) && !canMoveTo(tile)) continue
             reached.set(tile.zeroBasedIndex)
             thisTurn.add(tile)
@@ -375,7 +388,7 @@ class UnitMovement(val unit: MapUnit) {
         val maxMovement = unit.getMaxMovement().toFloat()
         for (edge in thisTurn) {
             if (edge.neighbors.all { reached.get(it.zeroBasedIndex) }) continue
-            val paths = getMovementToTilesAtPosition(edge.position, maxMovement, false, reached, passThroughCache, movementCostCache)
+            val paths = classicMovementToTilesAtPosition(edge.position, maxMovement, false, reached, passThroughCache, movementCostCache)
             for (tile in paths.keys)
                 if (!reached.get(tile.zeroBasedIndex) && (isUnknownTileWeShouldAssumeToBePassable(tile) || canMoveTo(tile)))
                     nextTurn.add(tile)
