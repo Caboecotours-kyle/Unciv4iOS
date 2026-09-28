@@ -112,7 +112,7 @@ class MajorCivDiplomacyTable(private val diplomacyScreen: DiplomacyScreen) {
         val helloText = if (hate) otherCiv.nation.hateHello else otherCiv.nation.neutralHello
         val helloVoice = if (hate) "${otherCiv.civName}.hateHello" else "${otherCiv.civName}.neutralHello"
         val sheet = diplomacyScreen.portraitPage(otherCiv.nation.leaderName.ifEmpty { otherCiv.civName }, otherCiv.civName,
-            diplomacyScreen.leaderLead(otherCiv)) { diplomacyScreen.showPortraitList() }
+            diplomacyScreen.leaderLead(otherCiv), { diplomacyScreen.showPortraitList() }, otherCiv.nation.makeLink())
         sheet.minShare = .75f
         val atWar = viewingCiv.isAtWarWith(otherCiv)
         val notMyTurn = diplomacyScreen.isNotPlayersTurn()
@@ -184,9 +184,8 @@ class MajorCivDiplomacyTable(private val diplomacyScreen: DiplomacyScreen) {
 
     /** Portrait Demands: one row per demand, off once made or agreed; back returns to the civ's page */
     private fun showPortraitDemands(otherCiv: Civilization) {
-        val sheet = diplomacyScreen.portraitPage("Demands", otherCiv.civName, diplomacyScreen.leaderLead(otherCiv)) {
-            showPortraitPage(otherCiv, false)
-        }
+        val sheet = diplomacyScreen.portraitPage("Demands", otherCiv.civName, diplomacyScreen.leaderLead(otherCiv),
+            { showPortraitPage(otherCiv, false) }, otherCiv.nation.makeLink())
         val diplomacyManager = viewingCiv.getDiplomacyManager(otherCiv)!!
         val rows = Demand.entries.filter { it.show(viewingCiv) }.map { demand ->
             val done = otherCiv.popupAlerts.any { it.type == demand.demandAlert && it.value == viewingCiv.civID } // Already demanded

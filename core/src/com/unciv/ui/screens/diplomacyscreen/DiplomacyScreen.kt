@@ -145,7 +145,7 @@ class DiplomacyScreen(
         return image
     }
 
-    /** The leader's picture cut to a circle for the tray header, else the nation's emblem; tapping it opens the Civilopedia */
+    /** The leader's picture cut to a circle for the tray header, else the nation's emblem */
     internal fun leaderLead(civ: Civilization): Actor {
         val sheet = traySheet
         val file = if (civ.isCityState) null
@@ -169,8 +169,6 @@ class DiplomacyScreen(
             roundLeaderTexture = texture
             Image(texture)
         }
-        lead.touchable = Touchable.enabled
-        lead.onClick { openCivilopedia(civ.nation.makeLink()) }
         return lead
     }
 
@@ -308,11 +306,28 @@ class DiplomacyScreen(
     }
 
     /** Starts a portrait page on the tray sheet: header (with back when [onBack] is set), empty toolbar, body and footer.
-     *  On a pushed page Back and Escape step back like its back button; on the list they close. */
-    internal fun portraitPage(title: String, subtitle: String?, lead: Actor?, onBack: (() -> Unit)?): TraySheet {
+     *  On a pushed page Back and Escape step back like its back button; on the list they close.
+     *  With [pediaLink] the whole header (lead, name, subtitle) opens that Civilopedia entry, as the leader intro did;
+     *  dragging it still closes the sheet. */
+    internal fun portraitPage(title: String, subtitle: String?, lead: Actor?, onBack: (() -> Unit)?, pediaLink: String? = null): TraySheet {
         val sheet = traySheet
         sheet.minShare = .6f
-        sheet.header(title, subtitle, lead, onBack)
+        if (pediaLink == null) sheet.header(title, subtitle, lead, onBack)
+        else {
+            // The kit's header content, made one target: the 52pt lead alone is under 48 real points on a narrow phone
+            val text = Table().left()
+            text.add(title.toLabel(TrayColors.INK, sheet.font(23f), hideIcons = true).apply { wrap = true }).growX().left().row()
+            if (subtitle != null)
+                text.add(subtitle.toLabel(TrayColors.INK2, sheet.font(14.5f), hideIcons = true).apply { wrap = true }).growX().left().padTop(sheet.pt(3f))
+            val content = Table()
+            content.add().minHeight(sheet.touch).width(0f)
+            if (lead != null) content.add(lead).size(sheet.pt(52f)).padRight(sheet.pt(12f))
+            content.add(text).growX().minWidth(0f)
+            content.name = "portrait-civ-pedia"
+            content.touchable = Touchable.enabled
+            content.onClick { openCivilopedia(pediaLink) }
+            sheet.header(content, onBack)
+        }
         if (onBack != null) {
             sheet.findActor<Actor>("portrait-sheet-close")?.keyShortcuts?.clear()
             sheet.findActor<Actor>("portrait-sheet-back")?.keyShortcuts?.add(KeyCharAndCode.BACK)
@@ -647,7 +662,7 @@ class DiplomacyScreen(
             // The leader's answer on the tray sheet; the response button returns to their page
             showTray()
             val sheet = portraitPage(otherCiv.nation.leaderName.ifEmpty { otherCiv.civName }, otherCiv.civName,
-                leaderLead(otherCiv)) { updateRightSide(otherCiv) }
+                leaderLead(otherCiv), { updateRightSide(otherCiv) }, otherCiv.nation.makeLink())
             sheet.addToBody(portraitQuote(flavorText), 4f)
             sheet.footer().add(portraitButton(response, TraySheet.ButtonKind.Primary, null, true) { updateRightSide(otherCiv) }
                 .apply { keyShortcuts.add(KeyCharAndCode.SPACE) }).growX().padRight(0f)

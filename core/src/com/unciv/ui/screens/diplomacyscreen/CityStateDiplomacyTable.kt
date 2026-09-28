@@ -131,7 +131,7 @@ class CityStateDiplomacyTable(private val diplomacyScreen: DiplomacyScreen) {
 
         val sheet = diplomacyScreen.portraitPage(otherCiv.civName,
             "${otherCiv.cityStateType.name.tr()}  ·  ${manager.relationshipLevel().name.tr()} ($current)",
-            cityStateLead(otherCiv)) { diplomacyScreen.showPortraitList() }
+            cityStateLead(otherCiv), { diplomacyScreen.showPortraitList() }, otherCiv.nation.makeLink())
         sheet.minShare = .75f
 
         val ways = ArrayList<Way>()
@@ -298,15 +298,13 @@ class CityStateDiplomacyTable(private val diplomacyScreen: DiplomacyScreen) {
     private fun cityStateLead(otherCiv: Civilization): Actor {
         val sheet = diplomacyScreen.traySheet
         return ImageGetter.getImage("CityStateIcons/${otherCiv.cityStateType.name}").apply { color = otherCiv.nation.getInnerColor() }
-            .surroundWithCircle(sheet.pt(52f), color = otherCiv.nation.getOuterColor()).apply {
-                touchable = Touchable.enabled
-                onClick { diplomacyScreen.openCivilopedia(otherCiv.nation.makeLink()) }
-            }
+            .surroundWithCircle(sheet.pt(52f), color = otherCiv.nation.getOuterColor())
     }
 
     /** Portrait "All options": what the city-state is and offers, then every classic action as a row with its rules */
     private fun showPortraitAllOptions(otherCiv: Civilization) {
-        val sheet = diplomacyScreen.portraitPage(otherCiv.civName, "All options", cityStateLead(otherCiv)) { showPortraitPage(otherCiv) }
+        val sheet = diplomacyScreen.portraitPage(otherCiv.civName, "All options", cityStateLead(otherCiv),
+            { showPortraitPage(otherCiv) }, otherCiv.nation.makeLink())
         val manager = otherCiv.getDiplomacyManager(viewingCiv)!!
         val notMyTurn = diplomacyScreen.isNotPlayersTurn()
         val atWar = viewingCiv.isAtWarWith(otherCiv)
@@ -438,7 +436,8 @@ class CityStateDiplomacyTable(private val diplomacyScreen: DiplomacyScreen) {
 
     /** Portrait Give a Gift: one row per amount with the influence it buys */
     private fun showPortraitGoldGifts(otherCiv: Civilization) {
-        val sheet = diplomacyScreen.portraitPage("Give a Gift", otherCiv.civName, cityStateLead(otherCiv)) { showPortraitAllOptions(otherCiv) }
+        val sheet = diplomacyScreen.portraitPage("Give a Gift", otherCiv.civName, cityStateLead(otherCiv),
+            { showPortraitAllOptions(otherCiv) }, otherCiv.nation.makeLink())
         val rows = listOf(250, 500, 1000).map { giftAmount ->
             val influenceAmount = otherCiv.cityStateFunctions.influenceGainedByGift(viewingCiv, giftAmount)
             val enabled = viewingCiv.gold >= giftAmount && !diplomacyScreen.isNotPlayersTurn()
@@ -456,7 +455,8 @@ class CityStateDiplomacyTable(private val diplomacyScreen: DiplomacyScreen) {
 
     /** Portrait Gift Improvement: one row per improvable resource tile */
     private fun showPortraitImprovementGifts(otherCiv: Civilization) {
-        val sheet = diplomacyScreen.portraitPage("Gift Improvement", otherCiv.civName, cityStateLead(otherCiv)) { showPortraitAllOptions(otherCiv) }
+        val sheet = diplomacyScreen.portraitPage("Gift Improvement", otherCiv.civName, cityStateLead(otherCiv),
+            { showPortraitAllOptions(otherCiv) }, otherCiv.nation.makeLink())
         val rows = ArrayList<Actor>()
         for (improvableTile in getImprovableResourceTiles(otherCiv))
             for (tileImprovement in otherCiv.gameInfo.ruleset.tileImprovements.values) {
@@ -477,7 +477,8 @@ class CityStateDiplomacyTable(private val diplomacyScreen: DiplomacyScreen) {
 
     /** Portrait Tribute: how willing they are and why, then taking gold or a worker */
     private fun showPortraitTribute(otherCiv: Civilization) {
-        val sheet = diplomacyScreen.portraitPage("Tribute Willingness", otherCiv.civName, cityStateLead(otherCiv)) { showPortraitPage(otherCiv) }
+        val sheet = diplomacyScreen.portraitPage("Tribute Willingness", otherCiv.civName, cityStateLead(otherCiv),
+            { showPortraitPage(otherCiv) }, otherCiv.nation.makeLink())
         val willingness = Table().left()
         willingness.background = sheet.art.rounded(sheet.pt(18f)).tinted(TrayColors.CARD)
         willingness.pad(sheet.pt(12f), sheet.pt(14f), sheet.pt(12f), sheet.pt(14f))
