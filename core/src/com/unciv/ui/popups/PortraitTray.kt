@@ -25,6 +25,7 @@ import com.unciv.GUI
 import com.unciv.models.UncivSound
 import com.unciv.ui.components.extensions.toLabel
 import com.unciv.ui.components.input.KeyCharAndCode
+import com.unciv.ui.components.input.KeyShortcutDispatcher
 import com.unciv.ui.components.input.KeyboardBinding
 import com.unciv.ui.components.input.keyShortcuts
 import com.unciv.ui.components.input.onActivation
@@ -285,9 +286,13 @@ class TraySheet(
         if (onBack != null) headerTable.add(roundButton("OtherIcons/BackArrow", "portrait-sheet-back", onBack)).size(target).padRight(pt(4f))
         headerTable.add(content).growX().minWidth(0f)
         headerTable.add(roundButton("OtherIcons/Close", "portrait-sheet-close") { dismiss() }
-            .apply { keyShortcuts.add(KeyCharAndCode.BACK) }).size(target).padLeft(pt(8f))
+            .apply { keyShortcuts.add(backShortcut) }).size(target).padLeft(pt(8f))
         headerTable.pad(pt(6f), pt(if (onBack != null) 12f else 26f), pt(8f), pt(16f))
     }
+
+    /** Back one step above the world's own Back (Deselect then Quit, priority 0 on its default key), so a sheet without
+     *  a Popup's shortcut veto (the notifications digest) consumes Back alone instead of also asking to quit */
+    private val backShortcut = KeyShortcutDispatcher.KeyShortcut(KeyboardBinding.None, KeyCharAndCode.BACK, 1)
 
     /** 44pt round button in the header; the header cell makes its target [touch] square */
     private fun roundButton(icon: String, name: String, action: () -> Unit): Table = Table().apply {
