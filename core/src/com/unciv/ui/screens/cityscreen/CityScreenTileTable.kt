@@ -40,6 +40,9 @@ class CityScreenTileTable(private val cityScreen: CityScreen, private val tray: 
     val cityView: CityView = cityScreen.cityView
     /** The tray page's actions, for the sheet's footer; filled by [update] when [tray] is set */
     val trayActions = ArrayList<Actor>()
+    /** The tray page's fresh water fact (the legacy table lists it among the markup lines), for the sheet's header */
+    var trayFreshWater = false
+        private set
     /** 48 real screen points in stage units, for the buy menu that sits on the stage itself */
     private val stageTouch = max(48f, PortraitTileCard.touchPoints(cityScreen))
     /** The same in the portrait sheet's 393pt units, which the city sheet scales to the safe width */
@@ -153,6 +156,7 @@ class CityScreenTileTable(private val cityScreen: CityScreen, private val tray: 
         val card = PortraitTileCard(cityScreen, tileView, cityView.viewingCiv(), cityScreen.portraitStatIcons, cityView,
             hideUnits = cityScreen.isSpying, spyCity = if (cityScreen.isSpying) cityView else null,
             p = tray.p, touch = tray.touch, tray = tray)
+        trayFreshWater = card.freshWater
         card.yields(0f)?.let { innerTable.add(it).growX().padTop(tray.pt(4f)).row() }
         val info = ArrayList<Actor>()
         tileView.owningCity()?.let {

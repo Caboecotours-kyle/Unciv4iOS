@@ -92,7 +92,9 @@ internal class PortraitTileCard(
     private val unitLines = ArrayList<FormattedLine>()
     private val otherLines = ArrayList<FormattedLine>()
     private var impassable = false
-    private var freshWater = false
+    /** The fresh water fact of the markup; the city's tile page shows it in its own header */
+    var freshWater = false
+        private set
     /** [TileDescription] emits the defence line only for a nonzero bonus */
     private var defence = false
 

@@ -369,7 +369,6 @@ internal class CityPortraitView(private val screen: CityScreen) : Table() {
         toolbar.isVisible = !collapsed
         scroll.isVisible = !collapsed
         footer.isVisible = !collapsed
-        drawHeader(tile, construction)
         toolbar.clearChildren()
         if (tile == null) toolbar.add(yieldChips()).growX().pad(0f, pt(12f), pt(4f), pt(12f))
         content.clear()
@@ -387,6 +386,8 @@ internal class CityPortraitView(private val screen: CityScreen) : Table() {
             }
         }
         content.add().height(pt(12f)).row()
+        // After the content: the tile page's header reads what the tile table found (fresh water)
+        drawHeader(tile, construction)
         if (tile == null) footerRow.add(tabBar()).growX()
         if (footerRow.cells.isEmpty) endCell.setActor<Actor>(null).padTop(0f).height(max(pt(24f), inset + pt(8f)))
         else endCell.setActor<Actor>(footer).padTop(pt(4f)).height(Value.prefHeight)
@@ -472,7 +473,12 @@ internal class CityPortraitView(private val screen: CityScreen) : Table() {
                     .trim().replace("\n", "   ")
                 header.add(headerTitle(construction.name, subtitle.ifEmpty { null })).minWidth(0f).growX()
             }
-            tile != null -> header.add(headerTitle(tileName(tile), tileStatus(tile))).minWidth(0f).growX()
+            tile != null -> {
+                // "Unworked · Fresh water", as the map's tile sheet shows "Owner · Fresh water"
+                val subtitle = listOfNotNull(tileStatus(tile)?.tr(hideIcons = true),
+                    if (tileDetails.trayFreshWater) Constants.freshWater.tr() else null).joinToString(" · ")
+                header.add(headerTitle(tileName(tile), subtitle)).minWidth(0f).growX()
+            }
             onBack != null -> header.add(headerTitle("City details", city.name)).minWidth(0f).growX()
             else -> {
                 header.add(populationDisc(pt(52f))).size(pt(52f)).padRight(pt(12f))
