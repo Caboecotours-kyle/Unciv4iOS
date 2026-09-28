@@ -272,8 +272,8 @@ class TileGroupMap<T: TileGroup>(
     fun portraitUnitsPerPoint(viewport: Viewport): Float =
         ((viewport as? SafeAreaViewport)?.safeAreaBoundsInWorld?.width ?: viewport.worldWidth) / 393f
 
-    fun getDefaultZoom(viewport: Viewport): Float =
-        if (!projection.tilted) 1f else MapProjection.DEFAULT_ZOOM * portraitZoomScale(viewport)
+    fun getDefaultZoom(viewport: Viewport, zoom: Float = MapProjection.DEFAULT_ZOOM): Float =
+        if (!projection.tilted) 1f else zoom * portraitZoomScale(viewport)
 
     /** Move every layer of a tile to the same periodic copy, including its ground hit target. */
     fun updateWrappedPositions() {

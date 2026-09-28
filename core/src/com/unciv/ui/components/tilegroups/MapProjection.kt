@@ -32,9 +32,11 @@ class MapProjection(val verticalScale: Float) {
         const val COS_30 = 0.8660254f
         const val TILE_RADIUS = 40f
         const val PORTRAIT_RADIUS = 31f
-        const val DEFAULT_ZOOM = 1.6f
+        /** Portrait normalized zoom the map opens at */
+        const val DEFAULT_ZOOM = 2.1f
         /** Portrait normalized zoom every unit, prop and icon size is defined at */
         const val REFERENCE_ZOOM = 1.6f
+        const val MAX_ZOOM = 2.9f
 
         /** Units, cities and upright props grow as zoom^0.4 once zoomed in past the reference, so the hex wins */
         fun damping(zoom: Float) = if (zoom > REFERENCE_ZOOM) (zoom / REFERENCE_ZOOM).pow(-0.6f) else 1f

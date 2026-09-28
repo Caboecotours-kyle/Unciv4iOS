@@ -1239,7 +1239,7 @@ class WorldMapHolder @JvmOverloads constructor(
         if (currentTileSetStrings.projection.tilted) {
             val scale = tileGroupMap.portraitZoomScale(worldScreen.stage.viewport)
             minZoom = 0.5f * scale
-            maxZoom = 2.2f * scale
+            maxZoom = MapProjection.MAX_ZOOM * scale
             return
         }
         val maxWorldZoomOut = UncivGame.Current.settings.maxWorldZoomOut
