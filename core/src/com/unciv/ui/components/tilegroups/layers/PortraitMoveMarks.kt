@@ -11,12 +11,16 @@ import com.unciv.ui.components.tilegroups.TileGroup
 import com.unciv.ui.images.ImageGetter
 import kotlin.math.atan2
 import kotlin.math.max
+import kotlin.math.min
 import kotlin.math.sqrt
 
 /** Stroke styles of the portrait move range. Widths are in logical points and hold at every zoom. */
-enum class RangeStroke(val width: Float, val color: Color, val shadowWidth: Float = 0f, val shadowAlpha: Float = 0f) {
+enum class RangeStroke(val width: Float, val color: Color, val shadowWidth: Float = 0f, val shadowAlpha: Float = 0f,
+                       val dash: Float = 0f, val gap: Float = 0f) {
     /** Around the area reachable this turn */
     ThisTurn(2.8f, Color.WHITE, 5.5f, .4f),
+    /** Around the area reachable next turn */
+    NextTurn(2f, Color.WHITE, 4f, .35f, dash = 8f, gap = 3f),
     /** Around an enemy the unit can attack */
     Attack(2.6f, Color(237 / 255f, 41 / 255f, 57 / 255f, 1f));
 
@@ -73,7 +77,17 @@ internal class RangeEdges(private val tileGroup: TileGroup) : Actor() {
             else batch.setColor(stroke.color.r, stroke.color.g, stroke.color.b, parentAlpha)
             // Lines reach half a line width past their ends, so neighbouring edges close their corners
             val cap = stroke.width * points / 2f
-            line(batch, i, -cap, segments[i + 2] + cap, width)
+            if (stroke.dash == 0f) line(batch, i, -cap, segments[i + 2] + cap, width)
+            else {
+                // Round-capped dashes in the mock: the shadow dash runs one shadow cap past the line dash
+                val extra = if (pass == 0) (stroke.shadowWidth - stroke.width) / 2f * points else 0f
+                val period = (stroke.dash + stroke.gap) * points
+                var start = 0f
+                while (start < segments[i + 2]) {
+                    line(batch, i, start - extra, min(start + stroke.dash * points, segments[i + 2]) + extra, width)
+                    start += period
+                }
+            }
         }
         batch.packedColor = old
     }

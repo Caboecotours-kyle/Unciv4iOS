@@ -347,6 +347,43 @@ class UnitMovement(val unit: MapUnit) {
     }
 
     /**
+     * Tiles the unit can end its move on next turn but not this turn: the second turn of the search [getShortestPath]
+     * runs, with the same caches and rules, so each of these is a destination [getShortestPath] reaches in two turns.
+     * Empty for units that fly, paradrop or cannot move, and when no moves are left, as [getShortestPath] finds no path then.
+     * Costs one [getMovementToTilesAtPosition] per tile on the edge of this turn's reach.
+     */
+    @Readonly
+    fun getReachableTilesNextTurn(): Set<Tile> {
+        if (unit.cache.cannotMove || unit.baseUnit.isAirUnit() || unit.isPreparingParadrop()) return emptySet()
+        if (UncivGame.Current.settings.useAStarPathfinding)
+            return aStarPathing.bfsAllMatchingTiles(2) { tile, node ->
+                node.turns == 1 && (isUnknownTileWeShouldAssumeToBePassable(tile) || canMoveTo(tile))
+            }.toSet()
+        val currentTile = unit.getTile()
+        val tileCount = currentTile.tileMap.tileList.size
+        val passThroughCache = ArrayList<Boolean?>(tileCount)
+        val movementCostCache = HashMap<Int, Float>()
+        @LocalState val reached = BitSet(tileCount)
+        reached.set(currentTile.zeroBasedIndex)
+        val thisTurn = ArrayList<Tile>()
+        for (tile in getDistanceToTiles(true, passThroughCache, movementCostCache).keys) {
+            if (tile == currentTile || !isUnknownTileWeShouldAssumeToBePassable(tile) && !canMoveTo(tile)) continue
+            reached.set(tile.zeroBasedIndex)
+            thisTurn.add(tile)
+        }
+        @LocalState val nextTurn = LinkedHashSet<Tile>()
+        val maxMovement = unit.getMaxMovement().toFloat()
+        for (edge in thisTurn) {
+            if (edge.neighbors.all { reached.get(it.zeroBasedIndex) }) continue
+            val paths = getMovementToTilesAtPosition(edge.position, maxMovement, false, reached, passThroughCache, movementCostCache)
+            for (tile in paths.keys)
+                if (!reached.get(tile.zeroBasedIndex) && (isUnknownTileWeShouldAssumeToBePassable(tile) || canMoveTo(tile)))
+                    nextTurn.add(tile)
+        }
+        return nextTurn
+    }
+
+    /**
      * @param includeOtherEscortUnit determines whether or not this method will also check its the other escort unit if it has one
      * Leave it as default unless you know what [getReachableTilesInCurrentTurn] does.
      */

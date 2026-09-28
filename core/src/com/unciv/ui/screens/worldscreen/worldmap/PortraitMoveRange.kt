@@ -10,12 +10,14 @@ import com.unciv.view.TileView
 
 /**
  * Portrait move range, direction A of the terrain proposal: the map outside this turn's reach dims, one white line
- * rings the tiles reachable this turn, and attackable enemies get a red hex. Built once per [WorldMapTileUpdater] update.
+ * rings the tiles reachable this turn and a dashed one those reachable next turn, and attackable enemies get a red
+ * hex. Built once per [WorldMapTileUpdater] update.
  */
 internal object PortraitMoveRange {
-    /** The mock's dim, #10243a at 30% outside the range */
+    /** The mock's dim, #10243a at 30% outside the range and 14% on next turn's tiles */
     private val dim = Color(0x10243aff)
     private const val DIM = .3f
+    private const val DIM_NEXT_TURN = .14f
     private val attackFill = Color(237 / 255f, 41 / 255f, 57 / 255f, 1f)
 
     private val from = Vector2()
@@ -25,16 +27,19 @@ internal object PortraitMoveRange {
     fun WorldMapHolder.showPortraitMoveRange(unitView: MapUnitView, reachable: Collection<TileView>, attackable: Set<TileView>) {
         val unitTile = unitView.getTile()
         val thisTurn = HashSet<TileView>(reachable).apply { add(unitTile) }
-        // Out of moves: nothing to ring
+        // Out of moves: nothing to ring, and the pathfinder has no route either
         if (thisTurn.size > 1) {
+            val nextTurn = unitView.getReachableTilesNextTurn().filterTo(HashSet()) { it !in thisTurn }
             val civ = worldScreen.selectedGameView.civView
             for ((tileView, group) in tileGroups) {
                 if (tileView in thisTurn || tileView in attackable) continue
                 if (!tileView.isForceVisible() && !civ.hasExplored(tileView)) continue
-                group.layerTerrain.shade(dim, DIM)
-                group.layerFeatures.shade(dim, DIM)
+                val amount = if (tileView in nextTurn) DIM_NEXT_TURN else DIM
+                group.layerTerrain.shade(dim, amount)
+                group.layerFeatures.shade(dim, amount)
             }
             outline(thisTurn, RangeStroke.ThisTurn, attackable) { true }
+            outline(nextTurn, RangeStroke.NextTurn, attackable) { it !in thisTurn }
         }
         showPortraitAttack(attackable)
     }

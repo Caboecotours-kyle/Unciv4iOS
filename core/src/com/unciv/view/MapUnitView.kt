@@ -68,6 +68,8 @@ class MapUnitView internal constructor(
     @Readonly fun rulesetHasRoadImprovement(): Boolean = unit.currentTile.ruleset.roadImprovement != null
     @Readonly fun getReachableTilesInCurrentTurn(): List<TileView> =
         unit.movement.getReachableTilesInCurrentTurn().map { gameView.tileMapView.getTile(it) }.toList()
+    @Readonly fun getReachableTilesNextTurn(): List<TileView> =
+        unit.movement.getReachableTilesNextTurn().map { gameView.tileMapView.getTile(it) }
     @Readonly fun getUnitSwappableTiles(): List<TileView> =
         unit.movement.getUnitSwappableTiles().map { gameView.tileMapView.getTile(it) }.toList()
     @Readonly fun getValidRoadConnectionTiles(): List<TileView> =
