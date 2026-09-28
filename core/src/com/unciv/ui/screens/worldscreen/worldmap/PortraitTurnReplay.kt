@@ -10,7 +10,7 @@ import kotlin.math.max
 import kotlin.math.min
 
 internal class SeenUnit(val id: Int, val civID: String, val position: HexCoord, val landUnit: Boolean,
-                        val civilian: Boolean, val sprite: List<SpriteCopy>)
+                        val civilian: Boolean, val sprite: List<SpriteCopy>, val health: Int = 100, val baseUnit: String = "")
 
 /** What the viewing civ could see on the map. Values only, so a snapshot can outlive the screen that took it. */
 internal class SeenMap(val gameId: String, val gameIdentity: Int, val civID: String, val turn: Int, val maxUnitId: Int,
@@ -31,7 +31,7 @@ internal fun WorldMapHolder.seeMap(): SeenMap {
         for (unit in listOfNotNull(tile.militaryUnit, tile.civilianUnit)) {
             val slot = group.layerUnitArt.getSpriteSlot(unit)?.takeIf { it.unitId == unit.id } ?: continue
             units[unit.id] = SeenUnit(unit.id, unit.civ().civID, tile.position(),
-                !unit.getBaseUnit().isWaterUnit, unit.isCivilian(), SpriteCopy.of(slot))
+                !unit.getBaseUnit().isWaterUnit, unit.isCivilian(), SpriteCopy.of(slot), unit.unitHealth, unit.getBaseUnit().name)
         }
         if (tile.isCityCenter() && group.layerCityButton.hasButton())
             tile.owningCity()?.let { cities[it.getCity().id] = tile.position() }
@@ -151,18 +151,29 @@ internal class TurnReplay(
         for (old in before.units.values) {
             val from = groups[old.position] ?: continue
             val now = after.units[old.id]
+            // Own units heal at turn start, before any automated move: green pluses and "+N" where they end up
+            val healed = if (now != null && old.civID == viewingCiv.civID) (now.health - old.health).coerceAtLeast(0) else 0
             when {
                 now != null && now.position != old.position -> {
                     val to = groups[now.position] ?: continue
                     val path = findPath(old, from, to)
-                    if (path != null) tracks.add(Track(old.civID, 3, to, (path.size - 1) * .34f) { delay, speed ->
-                        motion.play(motion.HopClip(delay, speed, old.id, path, old.sprite, old.landUnit, { now.sprite }, .34f))
-                    }) else tracks.add(Track(old.civID, 3, to, .5f) { delay, speed ->
-                        motion.play(motion.FadeOutClip(delay, speed, from, old.sprite))
-                        motion.play(motion.SpawnClip(delay + .25f / speed, speed, old.id, to, now.sprite, ring = false))
+                    val move = if (path != null) (path.size - 1) * .34f else .55f
+                    val heal = healed > 0 && to.isViewable(civView)
+                    val natural = (if (path != null) move else .5f) + if (heal) 1.5f else 0f
+                    tracks.add(Track(old.civID, 3, to, natural) { delay, speed ->
+                        if (path != null)
+                            motion.play(motion.HopClip(delay, speed, old.id, path, old.sprite, old.landUnit, { now.sprite }, .34f))
+                        else {
+                            motion.play(motion.FadeOutClip(delay, speed, from, old.sprite))
+                            motion.play(motion.SpawnClip(delay + .25f / speed, speed, old.id, to, now.sprite, ring = false))
+                        }
+                        if (heal) motion.play(motion.HealClip(delay + move / speed, speed, to, healed))
                     })
                 }
-                now != null -> Unit
+                now != null -> if (healed > 0 && from.isViewable(civView))
+                    tracks.add(Track(old.civID, 4, from, 1.5f) { delay, speed ->
+                        motion.play(motion.HealClip(delay, speed, from, healed))
+                    })
                 old.id in existingIds -> tracks.add(Track(old.civID, 3, from, .25f) { delay, speed ->
                     motion.play(motion.FadeOutClip(delay, speed, from, old.sprite))
                 })

@@ -86,6 +86,7 @@ class WorldMapHolder @JvmOverloads constructor(
     private var idleAction: Action? = null
     private val portraitCombatCancels = HashSet<() -> Unit>()
     internal val motion = PortraitMotion(this)
+    internal val reactions = PortraitUnitReactions(this)
     internal var turnReplay: TurnReplay? = null
     /** When the camera glide started for a move ends, in [System.nanoTime] */
     private var cameraSettlesAt = 0L
@@ -826,6 +827,7 @@ class WorldMapHolder @JvmOverloads constructor(
 
     /** Called after each tile update: a city founded or a unit bought since the last one plays its motion. */
     internal fun observeMapChanges() {
+        reactions.observe()
         if (!currentTileSetStrings.projection.tilted) {
             liveMap = null
             goneUnits = emptyMap()
@@ -854,6 +856,14 @@ class WorldMapHolder @JvmOverloads constructor(
             if (!tile.tileView.isCityCenter() || before.units.values.any {
                     it.civID == unit.civID && it.position == unit.position && it.id !in now.units }) continue
             motion.play(motion.SpawnClip(0f, 1f, unit.id, tile, unit.sprite, ring = true))
+        }
+        // An upgrade or transform keeps the unit id and tile but not its type: it flashes into the new unit.
+        // Orders from the portrait HUD already play it; this covers the upgrade details menu.
+        for (unit in now.units.values) {
+            val old = before.units[unit.id] ?: continue
+            if (old.baseUnit == unit.baseUnit || old.position != unit.position || old.civID != unit.civID || unit.civID != now.civID) continue
+            val tile = groups[unit.position] ?: continue
+            if (!motion.isMoving(unit.id)) motion.play(motion.UpgradeClip(unit.id, tile, old.sprite) { unit.sprite })
         }
     }
 
