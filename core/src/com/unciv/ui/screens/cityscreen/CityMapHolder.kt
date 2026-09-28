@@ -2,6 +2,7 @@ package com.unciv.ui.screens.cityscreen
 
 import com.badlogic.gdx.utils.viewport.Viewport
 import com.unciv.ui.screens.basescreen.UncivStage
+import com.unciv.ui.components.tilegroups.MapProjection
 import com.unciv.ui.components.tilegroups.TileGroupMap
 import com.unciv.ui.components.widgets.ZoomableScrollPane
 
@@ -14,7 +15,8 @@ class CityMapHolder : ZoomableScrollPane(20f, 20f) {
     fun setDefaultZoom(viewport: Viewport) {
         val map = actor as TileGroupMap<*>
         if (map.mapVerticalScale == 1f) return
-        val defaultZoom = map.getDefaultZoom(viewport)
+        // The city screen keeps framing its whole workable area; only the world map opens closer
+        val defaultZoom = map.getDefaultZoom(viewport, MapProjection.REFERENCE_ZOOM)
         maxZoom = maxOf(maxZoom, defaultZoom)
         zoom(defaultZoom)
     }

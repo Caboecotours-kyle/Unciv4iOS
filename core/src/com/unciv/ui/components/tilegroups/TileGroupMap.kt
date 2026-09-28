@@ -17,6 +17,23 @@ import kotlin.math.min
 import kotlin.math.round
 
 
+/** One tile's upright art on a tilted map. Its children use map coordinates, so the row spans the whole map and
+ *  would never be culled; it skips them itself when its tile is well outside the view, so a frame only walks the
+ *  art of the tiles near the screen. */
+private class TiltedRow(private val tile: TileGroup) : Group() {
+    override fun draw(batch: Batch, parentAlpha: Float) {
+        val area = cullingArea
+        if (area != null && (tile.x + tile.width + ART_MARGIN < area.x || tile.x - ART_MARGIN > area.x + area.width
+                || tile.y + tile.height + ART_MARGIN < area.y || tile.y - ART_MARGIN > area.y + area.height)) return
+        super.draw(batch, parentAlpha)
+    }
+
+    companion object {
+        /** Past the tile's box: tall sprites, props spread over the hex and cloud puffs all stay well inside this */
+        const val ART_MARGIN = TileGroupMap.groupSize * 2
+    }
+}
+
 /**
  * A (potentially partial) map view
  * @param T [TileGroup] or a subclass ([WorldTileGroup], [CityTileGroup])
@@ -169,7 +186,7 @@ class TileGroupMap<T: TileGroup>(
         }
         for (group in sortedGroups) {
             // Only tilted maps interleave terrain and units. Non-transform groups preserve batching.
-            val row = if (mapVerticalScale != 1f) Group().apply {
+            val row = if (mapVerticalScale != 1f) TiltedRow(group).apply {
                 isTransform = false
                 touchable = Touchable.disabled
                 userObject = group
@@ -272,8 +289,8 @@ class TileGroupMap<T: TileGroup>(
     fun portraitUnitsPerPoint(viewport: Viewport): Float =
         ((viewport as? SafeAreaViewport)?.safeAreaBoundsInWorld?.width ?: viewport.worldWidth) / 393f
 
-    fun getDefaultZoom(viewport: Viewport): Float =
-        if (!projection.tilted) 1f else MapProjection.DEFAULT_ZOOM * portraitZoomScale(viewport)
+    fun getDefaultZoom(viewport: Viewport, zoom: Float = MapProjection.DEFAULT_ZOOM): Float =
+        if (!projection.tilted) 1f else zoom * portraitZoomScale(viewport)
 
     /** Move every layer of a tile to the same periodic copy, including its ground hit target. */
     fun updateWrappedPositions() {
@@ -314,6 +331,9 @@ class TileGroupMap<T: TileGroup>(
         if (shouldAct)
             super.act(delta)
     }
+
+    /** Adds [actor] over every map layer but under the direct children added before it (move buttons and the like) */
+    fun addAboveLayers(actor: Actor) = addActorAt(allMapLayers.size, actor)
 
     /** An overview can keep its own direct-child city markers interactive without game actions. */
     fun disableGameplayInput() {

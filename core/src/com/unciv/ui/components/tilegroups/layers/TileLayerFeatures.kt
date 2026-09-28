@@ -1,5 +1,6 @@
 package com.unciv.ui.components.tilegroups.layers
 
+import com.badlogic.gdx.graphics.Color
 import com.badlogic.gdx.scenes.scene2d.ui.Image
 import com.unciv.view.CivView
 import com.unciv.view.TileView
@@ -76,7 +77,12 @@ class TileLayerFeatures(tileGroup: TileGroup, size: Float) : TileLayer(tileGroup
 
     override fun doUpdate(viewingCiv: CivView?) {
         updateRoadImages(viewingCiv)
+        // Undo the portrait move range's shade (see [shade])
+        if (strings.projection.tilted) forEachOwnedActor { it.color.set(1f, 1f, 1f, it.color.a) }
     }
+
+    /** Portrait move range: tints the roads with their tile's terrain, see [TileLayerTerrain.shade] */
+    fun shade(color: Color, amount: Float) = forEachOwnedActor { it.color.shadeToward(color, amount) }
 
     fun dim() {
         forEachOwnedActor { it.color.a = 0.5f }

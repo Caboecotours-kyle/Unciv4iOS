@@ -68,6 +68,11 @@ class MapUnitView internal constructor(
     @Readonly fun rulesetHasRoadImprovement(): Boolean = unit.currentTile.ruleset.roadImprovement != null
     @Readonly fun getReachableTilesInCurrentTurn(): List<TileView> =
         unit.movement.getReachableTilesInCurrentTurn().map { gameView.tileMapView.getTile(it) }.toList()
+    @Readonly fun getReachableTilesNextTurn(): List<TileView> =
+        unit.movement.getReachableTilesNextTurn().map { gameView.tileMapView.getTile(it) }
+    /** Every tile walked along [turnEnds], as [getShortestPath] returns them, one list per turn; null for a turn that cannot be retraced */
+    @Readonly fun getStepsAlongPath(turnEnds: List<TileView>): List<List<TileView>?> =
+        unit.movement.getStepsAlongPath(turnEnds.map { it.unwrap() }).map { leg -> leg?.map { gameView.tileMapView.getTile(it) } }
     @Readonly fun getUnitSwappableTiles(): List<TileView> =
         unit.movement.getUnitSwappableTiles().map { gameView.tileMapView.getTile(it) }.toList()
     @Readonly fun getValidRoadConnectionTiles(): List<TileView> =

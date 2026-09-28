@@ -1,6 +1,7 @@
 package com.unciv.ui.components.tilegroups.layers
 
 import com.badlogic.gdx.graphics.Color
+import com.badlogic.gdx.scenes.scene2d.ui.Image
 import com.unciv.UncivGame
 import com.unciv.models.tilesets.TileSetCache
 import com.unciv.view.CivView
@@ -13,6 +14,8 @@ class UnitSpriteSlot {
     val spriteGroup = NonTransformGroup()
     var currentImageLocation = ""
     var unitId = -1
+    /** Portrait zoom damping the sprite was last sized with (see TileGroup.portraitDamping) */
+    var damping = 1f
 }
 
 class TileLayerUnitSprite(tileGroup: TileGroup, size: Float) : TileLayer(tileGroup, size) {
@@ -109,11 +112,57 @@ class TileLayerUnitSprite(tileGroup: TileGroup, size: Float) : TileLayer(tileGro
 
     /** Tall unit sprites hide each other on a shared tile, so a military and a civilian unit stand side by side. */
     private fun spreadSharedTile() {
+        if (strings.projection.tilted) return updateDamping()
         if (!TileSetCache.getCurrent().config.unitFlagsAboveSprites) return
         val shared = civilianSlot != null && militarySlot != null
         val baseX = tileGroup.hexagonImagePosition.first
         militarySlot?.spriteGroup?.children?.forEach { it.x = baseX - if (shared) size * 0.2f else 0f }
         civilianSlot?.spriteGroup?.children?.forEach { it.x = baseX + if (shared) size * 0.2f else 0f }
+    }
+
+    /** Portrait: sprites grow slower than the hex when zoomed in, around their ground anchor (their feet stand on the
+     *  ground centre), so poses and motion that scale or rotate around the image origin stay aligned. */
+    fun updateDamping() {
+        if (!strings.projection.tilted) return
+        placeDamped(militarySlot, true)
+        placeDamped(civilianSlot, false)
+    }
+
+    private val sharedTile get() = TileSetCache.getCurrent().config.unitFlagsAboveSprites && civilianSlot != null && militarySlot != null
+    /** Portrait: a city fills its hex, so a unit there steps aside to its front corner and stands a little smaller;
+     *  two units there take a corner each */
+    private val inCity get() = tileGroup.tileView.isCityCenter() && !tileGroup.strategicView
+
+    /** Portrait: where the [military] (or civilian) unit's feet stand, from the tile's ground centre */
+    fun standX(military: Boolean): Float {
+        val side = if (military) -1f else 1f
+        return when {
+            inCity -> (if (sharedTile) side else 1f) * CITY_STEP_X * tileGroup.hexagonImageWidth
+            sharedTile -> side * size * 0.2f * tileGroup.portraitDamping
+            else -> 0f
+        }
+    }
+    fun standY() = if (inCity) -CITY_STEP_Y * tileGroup.hexagonImageWidth else 0f
+
+    private fun placeDamped(slot: UnitSpriteSlot?, military: Boolean) {
+        val children = slot?.spriteGroup?.children ?: return
+        slot.damping = tileGroup.portraitDamping
+        val scale = slot.damping * if (inCity) CITY_SCALE else 1f
+        val hexWidth = tileGroup.hexagonImageWidth
+        for (i in 0 until children.size) {
+            val image = children[i] as? Image ?: continue
+            image.setSize(hexWidth * scale, image.prefHeight * hexWidth / image.prefWidth * scale)
+            image.setOrigin(tileGroup.hexagonImageOriginX * scale, tileGroup.hexagonImageOriginY * scale)
+            image.x = tileGroup.groundCenterX + standX(military) - image.originX
+            image.y = tileGroup.groundCenterY + standY() - image.originY
+        }
+    }
+
+    private companion object {
+        /** A unit in a city: its feet this far right and forward of the centre, in hex widths, and its size */
+        const val CITY_STEP_X = .22f
+        const val CITY_STEP_Y = .07f
+        const val CITY_SCALE = .82f
     }
 
     override fun determineVisibility() {

@@ -68,6 +68,15 @@ class WorldMapHolder @JvmOverloads constructor(
 
     internal val unitConnectRoadPaths: HashMap<MapUnitView, List<TileView>> = HashMap()
 
+    /** Portrait: [unitMovementPaths] walked tile by tile, for the dotted route to the chosen destination */
+    internal val portraitRoutes = HashMap<MapUnitView, PortraitRoute>()
+    /** Portrait: the destination the move range marks this update, which then needs no selected-tile ring */
+    internal var portraitRouteTarget: TileView? = null
+    /** Portrait: the route of a selected unit already ordered further than this turn, and what it was found for */
+    internal var standingRoute: PortraitRoute? = null
+    internal var standingRouteKey: String? = null
+    private var moveRoute: Actor? = null
+
     private lateinit var tileGroupMap: TileGroupMap<WorldTileGroup>
 
     lateinit var currentTileSetStrings: TileSetStrings
@@ -311,17 +320,26 @@ class WorldMapHolder @JvmOverloads constructor(
 
     private fun previewUnitDrag(destination: TileView) {
         dragTarget = destination
-        if (dragPreviewBusy) return
         val unit = dragUnit ?: return
+        // Back on the unit's own tile: no move to preview
+        if (destination == unit.getTile()) {
+            unitMovementPaths.remove(unit)
+            portraitRoutes.remove(unit)
+            worldScreen.shouldUpdate = true
+            return
+        }
+        if (dragPreviewBusy) return
         val generation = dragGeneration
         dragPreviewBusy = true
         Concurrency.run("PortraitDragPath") {
             val path = try { unit.getShortestPath(destination) } catch (_: UnitMovement.UnreachableDestinationException) { emptyList() }
+            val route = PortraitRoute.of(unit, path)
             launchOnGLThread {
                 dragPreviewBusy = false
                 if (generation != dragGeneration || dragUnit != unit) return@launchOnGLThread
                 if (dragTarget == destination) {
                     unitMovementPaths[unit] = ArrayList(path)
+                    if (route != null) portraitRoutes[unit] = route else portraitRoutes.remove(unit)
                     worldScreen.shouldUpdate = true
                 } else dragTarget?.let { previewUnitDrag(it) }
             }
@@ -449,6 +467,7 @@ class WorldMapHolder @JvmOverloads constructor(
         removeUnitActionOverlay()
         selectedTile = tileView
         unitMovementPaths.clear()
+        portraitRoutes.clear()
         unitConnectRoadPaths.clear()
 
         val unitTable = worldScreen.bottomUnitTable
@@ -515,6 +534,7 @@ class WorldMapHolder @JvmOverloads constructor(
         removeUnitActionOverlay()
         selectedTile = tileView
         unitMovementPaths.clear()
+        portraitRoutes.clear()
         unitConnectRoadPaths.clear()
         if (!worldScreen.canChangeState) return
         zoomToMoveTarget(tileView)
@@ -929,6 +949,7 @@ class WorldMapHolder @JvmOverloads constructor(
              */
 
             val unitToTurnsToTile = HashMap<MapUnitView, Int>()
+            val routes = HashMap<MapUnitView, PortraitRoute>()
             for (unitView in selectedUnits) {
                 val shortestPath = ArrayList<TileView>()
                 val turnsToGetThere = if (unitView.isAirUnit()) {
@@ -944,9 +965,11 @@ class WorldMapHolder @JvmOverloads constructor(
                 }
                 unitMovementPaths[unitView] = shortestPath
                 unitToTurnsToTile[unitView] = turnsToGetThere
+                if (currentTileSetStrings.projection.tilted) PortraitRoute.of(unitView, shortestPath)?.let { routes[unitView] = it }
             }
 
             launchOnGLThread {
+                portraitRoutes.putAll(routes)
                 val unitsWhoCanMoveThere = HashMap(unitToTurnsToTile.filter { it.value != 0 })
                 if (unitsWhoCanMoveThere.isEmpty()) { // give the regular tile overlays with no unit movement
                     addTileOverlays(tileView)
@@ -1064,6 +1087,13 @@ class WorldMapHolder @JvmOverloads constructor(
             table.moveBy(0f, 48f)
     }
 
+    /** Portrait: replaces the dotted route to the chosen destination, drawn above the map layers but under the move buttons */
+    internal fun setMoveRoute(route: Actor?) {
+        moveRoute?.remove()
+        moveRoute = route
+        if (route != null) tileGroupMap.addAboveLayers(route)
+    }
+
     /** Adds [actor] as a direct child of the TileGroupMap, rendered above all layer groups. */
     fun addActorToTileGroupMap(actor: Actor) = tileGroupMap.addActor(actor)
 
@@ -1167,21 +1197,38 @@ class WorldMapHolder @JvmOverloads constructor(
         return true
     }
 
+    /** The zoom last applied to the tiles of [zoomAppliedTo]: a repeat call (same zoom, same tiles) skips the tile loop */
+    private var zoomAppliedTo: TileGroupMap<WorldTileGroup>? = null
+    private var zoomAppliedScale = 0f
+    private var zoomAppliedPointScale = 0f
+
     override fun zoom(zoomScale: Float) {
         super.zoom(zoomScale)
-        if (::tileGroupMap.isInitialized && currentTileSetStrings.projection.tilted) {
-            val strategic = normalizedZoom < 0.8f
-            val pointScale = tileGroupMap.portraitUnitsPerPoint(worldScreen.stage.viewport) / scaleX
-            var changed = false
-            for (group in tileGroups.values) {
-                changed = changed || group.strategicView != strategic
-                group.strategicView = strategic
-                group.portraitPointScale = pointScale
-                group.layerUnitFlag.updatePortraitScale()
-            }
-            if (changed) worldScreen.shouldUpdate = true
-        }
+        if (::tileGroupMap.isInitialized && currentTileSetStrings.projection.tilted) applyPortraitZoom()
         clampCityButtonSize()
+    }
+
+    /** Portrait: the hex grows 1:1 with zoom, units and props grow slower and icons keep their screen size.
+     *  Runs on every pinch frame over every tile, so it only resizes actors in place. */
+    private fun applyPortraitZoom() {
+        val pointScale = tileGroupMap.portraitUnitsPerPoint(worldScreen.stage.viewport) / scaleX
+        if (zoomAppliedTo === tileGroupMap && zoomAppliedScale == scaleX && zoomAppliedPointScale == pointScale) return
+        zoomAppliedTo = tileGroupMap
+        zoomAppliedScale = scaleX
+        zoomAppliedPointScale = pointScale
+        val zoom = normalizedZoom
+        val strategic = zoom < 0.8f
+        val damping = MapProjection.damping(zoom)
+        val iconScale = MapProjection.iconScale(zoom)
+        val lodTier = MapProjection.lodTier(zoom)
+        var changed = false
+        for (group in tileGroups.values) {
+            changed = changed || group.strategicView != strategic
+            group.strategicView = strategic
+            group.portraitPointScale = pointScale
+            group.applyPortraitZoom(damping, iconScale, lodTier)
+        }
+        if (changed) worldScreen.shouldUpdate = true
     }
 
     /** We don't want the city buttons becoming too large when zooming out */
@@ -1222,7 +1269,7 @@ class WorldMapHolder @JvmOverloads constructor(
         if (currentTileSetStrings.projection.tilted) {
             val scale = tileGroupMap.portraitZoomScale(worldScreen.stage.viewport)
             minZoom = 0.5f * scale
-            maxZoom = 2.2f * scale
+            maxZoom = MapProjection.MAX_ZOOM * scale
             return
         }
         val maxWorldZoomOut = UncivGame.Current.settings.maxWorldZoomOut

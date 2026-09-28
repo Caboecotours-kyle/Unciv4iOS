@@ -82,6 +82,21 @@ class UnitMovement(val unit: MapUnit) {
                 else aStarPathingWithoutEscort
             return pathingMap.getMovementToTilesAtPosition()
         }
+        return classicMovementToTilesAtPosition(position, unitMovement, considerZoneOfControl, tilesToIgnoreBitset,
+            canPassThroughCache, movementCostCache, includeOtherEscortUnit)
+    }
+
+    /** [getMovementToTilesAtPosition] without A* pathfinding, whatever the setting */
+    @Readonly @Suppress("purity") // mutates passed parameter
+    private fun classicMovementToTilesAtPosition(
+        position: HexCoord,
+        unitMovement: Float,
+        considerZoneOfControl: Boolean = true,
+        tilesToIgnoreBitset: BitSet? = null,
+        canPassThroughCache: ArrayList<Boolean?> = ArrayList(),
+        movementCostCache: HashMap<Int, Float> = HashMap(),
+        includeOtherEscortUnit: Boolean = true
+    ): PathsToTilesWithinTurn {
         @LocalState val distanceToTiles = PathsToTilesWithinTurn()
 
         val currentUnitTile = unit.currentTile
@@ -344,6 +359,96 @@ class UnitMovement(val unit: MapUnit) {
             canParadropOn(destination, unit.currentTile.aerialDistanceTo(destination))
         else ->
             specificFunction(destination)  // Note: Could pass destination as implicit closure from outer fun to lambda, but explicit is clearer
+    }
+
+    /**
+     * Tiles the unit can end its move on next turn but not this turn. This is the second turn of the classic
+     * [getShortestPath] search, with its caches and rules, so each of these is a destination the classic search reaches
+     * in two turns.
+     *
+     * Empty with A* pathfinding on: A* ranks routes by its own rules (zone of control, escorts), so a classic set could
+     * promise a tile its orders take three turns to reach, and its cached search cannot be asked the same question twice.
+     *
+     * [getShortestPath] floods a full turn of movement out of every tile it can stop on this turn, never re-entering
+     * those tiles. Its second-turn tiles are those next to a tile one of these floods reaches with movement to spare, so
+     * one search seeded with all of them at once, keeping the least movement spent per tile, finds exactly the same set
+     * while walking each tile once.
+     *
+     * Empty for units that fly, paradrop or cannot move, and when no moves are left, as [getShortestPath] finds no path then.
+     */
+    @Readonly @Suppress("purity") // shares the edge-key helper classicMovementToTilesAtPosition uses
+    fun getReachableTilesNextTurn(): Set<Tile> {
+        if (unit.cache.cannotMove || unit.baseUnit.isAirUnit() || unit.isPreparingParadrop()
+            || UncivGame.Current.settings.useAStarPathfinding) return emptySet()
+        val currentTile = unit.getTile()
+        val tileCount = currentTile.tileMap.tileList.size
+        val passThroughCache = ArrayList<Boolean?>(tileCount)
+        val movementCostCache = HashMap<Int, Float>()
+        @LocalState val reached = BitSet(tileCount)
+        reached.set(currentTile.zeroBasedIndex)
+        @LocalState var tilesToCheck = ArrayList<Tile>()
+        val thisTurn = classicMovementToTilesAtPosition(currentTile.position, unit.currentMovement, true, null,
+            passThroughCache, movementCostCache)
+        for (tile in thisTurn.keys) {
+            if (tile == currentTile || !isUnknownTileWeShouldAssumeToBePassable(tile) && !canMoveTo(tile)) continue
+            reached.set(tile.zeroBasedIndex)
+            tilesToCheck.add(tile)
+        }
+        if (tilesToCheck.isEmpty()) return emptySet()
+
+        // As classicMovementToTilesAtPosition from each of them with a full turn and zone of control ignored
+        val maxMovement = unit.getMaxMovement().toFloat()
+        val escort = unit.getOtherEscortUnit().takeIf { unit.isEscorting() }
+        if (escort != null && escort.currentMovement == 0f) return emptySet()
+        val usableMovement = if (escort != null) minOf(maxMovement, escort.currentMovement) else maxMovement
+        @LocalState val spent = FloatArray(tileCount) { Float.MAX_VALUE }
+        for (tile in tilesToCheck) spent[tile.zeroBasedIndex] = 0f
+        @LocalState val nextTurn = HashSet<Tile>()
+        while (tilesToCheck.isNotEmpty()) {
+            @LocalState val updatedTiles = ArrayList<Tile>()
+            for (tileToCheck in tilesToCheck) {
+                val tileToCheckMovement = spent[tileToCheck.zeroBasedIndex]
+                for (neighbor in tileToCheck.neighbors) {
+                    val index = neighbor.zeroBasedIndex
+                    if (reached.get(index)) continue
+                    var totalDistanceToTile: Float = when {
+                        !neighbor.isExplored(unit.civ) -> tileToCheckMovement + 1f
+                        !passThroughCache.getOrPut(index) { canPassThrough(neighbor) } -> maxMovement
+                        else -> tileToCheckMovement + movementCostCache.getOrPut(HexMath.tilesAndNeighborUniqueIndex(tileToCheck, neighbor)) {
+                            MovementCost.getMovementCostBetweenAdjacentTilesEscort(unit, tileToCheck, neighbor, false, true)
+                        }
+                    }
+                    if (spent[index] > totalDistanceToTile) {
+                        if (totalDistanceToTile < usableMovement - Constants.minimumMovementEpsilon) updatedTiles += neighbor
+                        else totalDistanceToTile = usableMovement
+                        if (spent[index] == Float.MAX_VALUE
+                                && (isUnknownTileWeShouldAssumeToBePassable(neighbor) || canMoveTo(neighbor)))
+                            nextTurn.add(neighbor)
+                        spent[index] = totalDistanceToTile
+                    }
+                }
+            }
+            tilesToCheck = updatedTiles
+        }
+        return nextTurn
+    }
+
+    /**
+     * Every tile walked along [turnEnds], the turn-by-turn path [getShortestPath] returns (A* or not), one list per turn
+     * starting after the previous turn's end. Each turn is retraced with the classic search; a turn it cannot retrace
+     * (the map changed since) is null.
+     */
+    @Readonly
+    fun getStepsAlongPath(turnEnds: List<Tile>): List<List<Tile>?> {
+        @LocalState val legs = ArrayList<List<Tile>?>()
+        var from = unit.getTile()
+        for ((turn, end) in turnEnds.withIndex()) {
+            val leg = if (turn == 0) classicMovementToTilesAtPosition(from.position, unit.currentMovement)
+                else classicMovementToTilesAtPosition(from.position, unit.getMaxMovement().toFloat(), false)
+            legs.add(if (leg.containsKey(end)) leg.getPathToTile(end) else null)
+            from = end
+        }
+        return legs
     }
 
     /**

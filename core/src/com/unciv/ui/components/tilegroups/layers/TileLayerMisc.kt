@@ -2,6 +2,7 @@ package com.unciv.ui.components.tilegroups.layers
 
 import com.badlogic.gdx.graphics.Color
 import com.badlogic.gdx.scenes.scene2d.Actor
+import com.badlogic.gdx.scenes.scene2d.Group
 import com.badlogic.gdx.scenes.scene2d.Touchable
 import com.badlogic.gdx.scenes.scene2d.ui.Image
 import com.badlogic.gdx.utils.Align
@@ -38,6 +39,14 @@ private class MapArrow(val targetTile: TileView, val arrowType: MapArrowType, va
         is TintedMapArrow -> getArrowImage("Generic", layer).apply { color = arrowType.color }
         else -> getArrowImage("Generic", layer)
     }
+}
+
+/** Portrait icons hold the screen size they have at the reference zoom; strategic view keeps today's size.
+ *  A transform (and its batch flush) only while the icon is actually scaled. */
+private fun Group.setPortraitIconScale(tileGroup: TileGroup, baseScale: Float = 1f) {
+    val scale = baseScale * if (tileGroup.strategicView) 1f else tileGroup.portraitIconScale
+    setScale(scale)
+    isTransform = scale != 1f
 }
 
 class TileLayerYield(tileGroup: TileGroup, size: Float) : TileLayer(tileGroup, size){
@@ -91,6 +100,11 @@ class TileLayerYield(tileGroup: TileGroup, size: Float) : TileLayer(tileGroup, s
             this.y = tileY + tileGroup.height * 0.25f - height / 2
             isVisible = true
         }
+        updatePortraitScale()
+    }
+
+    fun updatePortraitScale() {
+        if (strings.projection.tilted) yields?.setPortraitIconScale(tileGroup, 0.7f)
     }
 
     fun setYieldVisible(isVisible: Boolean) {
@@ -133,9 +147,11 @@ class TileLayerResource(tileGroup: TileGroup, size: Float) : TileLayer(tileGroup
         // Get a fresh Icon if and only if necessary
         if (resourceName != null && effectiveVisible && resourceIcon == null) {
             val icon = ImageGetter.getResourcePortrait(resourceName!!, 20f, resourceAmount)
+            icon.setOrigin(Align.center)
             addOwnedActor(icon)
             resourceIcon = icon
         }
+        if (strings.projection.tilted) (resourceIcon as? Group)?.setPortraitIconScale(tileGroup)
         resourceIcon?.let { placeResourceIcon(it) }
 
         resourceIcon?.isVisible = effectiveVisible
@@ -168,8 +184,7 @@ class TileLayerResource(tileGroup: TileGroup, size: Float) : TileLayer(tileGroup
 
                 resourceProvidedIcon = group
             }
-            // Slightly extruding out from the resource icon
-            resourceProvidedIcon?.setPosition(resourceIcon!!.right + 3f, resourceIcon!!.top + 3f, Align.topRight)
+            placeProvidedIcon()
 
             if (!shouldResourceProvidedBeDisplayed && resourceProvidedIcon != null){
                 removeOwnedActor(resourceProvidedIcon!!)
@@ -189,6 +204,22 @@ class TileLayerResource(tileGroup: TileGroup, size: Float) : TileLayer(tileGroup
             icon.x = tileX + (tileGroup.width - icon.width) / 2 - 22f
             icon.y = tileY + (tileGroup.height - icon.height) / 2 + 10f
         }
+    }
+
+    /** Slightly extruding out from the resource icon, as drawn (scaled around its centre) */
+    private fun placeProvidedIcon() {
+        val icon = resourceIcon ?: return
+        val provided = resourceProvidedIcon ?: return
+        provided.setPosition(icon.x + icon.width * (1f + icon.scaleX) / 2f + 3f,
+            icon.y + icon.height * (1f + icon.scaleY) / 2f + 3f, Align.topRight)
+    }
+
+    fun updatePortraitScale() {
+        if (!strings.projection.tilted) return
+        val icon = resourceIcon as? Group ?: return
+        icon.setPortraitIconScale(tileGroup)
+        placeResourceIcon(icon)
+        placeProvidedIcon()
     }
 
     fun reset() {
@@ -244,11 +275,17 @@ class TileLayerImprovement(tileGroup: TileGroup, size: Float) : TileLayer(tileGr
             // Centre on tile, offset left and down
             icon.x = tileX + (tileGroup.width - icon.width) / 2 - 22f
             icon.y = tileY + (tileGroup.height - icon.height) / 2 - 12f
+            icon.setOrigin(Align.center)
             addOwnedActor(icon)
             improvementIcon = icon
         }
 
         improvementIcon?.isVisible = show
+        updatePortraitScale()
+    }
+
+    fun updatePortraitScale() {
+        if (strings.projection.tilted) (improvementIcon as? Group)?.setPortraitIconScale(tileGroup)
     }
 
     override fun determineVisibility() {
