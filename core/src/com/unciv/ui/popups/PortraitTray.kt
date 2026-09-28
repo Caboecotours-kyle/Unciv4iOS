@@ -340,6 +340,9 @@ class TraySheet(
     private var phase = Phase.Rest
     private var time = 0f
     private var from = 0f
+    /** Alpha and scrim when a dismiss starts, so an interrupted opening fades out from where it was */
+    private var fromAlpha = 1f
+    private var fromScrim = 1f
     /** The frame that opens the sheet may carry the time spent building it; motion starts on the next one */
     private var skipDelta = false
     /** Scrim strength 0..1 for the host to draw: follows the rise, the drag and the dismiss */
@@ -408,6 +411,8 @@ class TraySheet(
         touchable = Touchable.disabled
         time = 0f
         from = offset
+        fromAlpha = color.a
+        fromScrim = scrim
         phase = if (reduceMotion) Phase.FadeOut else Phase.Leave
     }
 
@@ -431,7 +436,7 @@ class TraySheet(
             Phase.Leave -> {
                 val k = min(1f, time / .2f)
                 offset = from + (travel() - from) * k * k * k
-                scrim = (1f - offset / travel()).coerceAtLeast(0f)
+                scrim = min(fromScrim, 1f - offset / travel()).coerceAtLeast(0f)
                 if (k >= 1f) gone()
             }
             Phase.FadeIn -> {
@@ -440,8 +445,9 @@ class TraySheet(
                 if (time >= .15f) settle()
             }
             Phase.FadeOut -> {
-                color.a = (1f - time / .15f).coerceAtLeast(0f)
-                scrim = color.a
+                val left = (1f - time / .15f).coerceAtLeast(0f)
+                color.a = fromAlpha * left
+                scrim = fromScrim * left
                 if (time >= .15f) gone()
             }
             else -> {}
