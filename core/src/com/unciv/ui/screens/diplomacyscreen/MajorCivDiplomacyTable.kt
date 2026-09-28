@@ -111,7 +111,8 @@ class MajorCivDiplomacyTable(private val diplomacyScreen: DiplomacyScreen) {
         val hate = otherCivDiplomacyManager.isRelationshipLevelLE(RelationshipLevel.Enemy)
         val helloText = if (hate) otherCiv.nation.hateHello else otherCiv.nation.neutralHello
         val helloVoice = if (hate) "${otherCiv.civName}.hateHello" else "${otherCiv.civName}.neutralHello"
-        val sheet = diplomacyScreen.portraitPage(otherCiv.nation.leaderName.ifEmpty { otherCiv.civName }, otherCiv.civName,
+        // The legacy display name: leader title, civ, and the Human/AI indicator when several humans play
+        val sheet = diplomacyScreen.portraitPage(otherCiv.getLeaderDisplayName(), null,
             diplomacyScreen.leaderLead(otherCiv), { diplomacyScreen.showPortraitList() }, otherCiv.nation.makeLink())
         sheet.minShare = .75f
         val atWar = viewingCiv.isAtWarWith(otherCiv)
@@ -184,7 +185,7 @@ class MajorCivDiplomacyTable(private val diplomacyScreen: DiplomacyScreen) {
 
     /** Portrait Demands: one row per demand, off once made or agreed; back returns to the civ's page */
     private fun showPortraitDemands(otherCiv: Civilization) {
-        val sheet = diplomacyScreen.portraitPage("Demands", otherCiv.civName, diplomacyScreen.leaderLead(otherCiv),
+        val sheet = diplomacyScreen.portraitPage("Demands", otherCiv.getLeaderDisplayName(), diplomacyScreen.leaderLead(otherCiv),
             { showPortraitPage(otherCiv, false) }, otherCiv.nation.makeLink())
         val diplomacyManager = viewingCiv.getDiplomacyManager(otherCiv)!!
         val rows = Demand.entries.filter { it.show(viewingCiv) }.map { demand ->

@@ -661,7 +661,7 @@ class DiplomacyScreen(
         if (isPortrait()) {
             // The leader's answer on the tray sheet; the response button returns to their page
             showTray()
-            val sheet = portraitPage(otherCiv.nation.leaderName.ifEmpty { otherCiv.civName }, otherCiv.civName,
+            val sheet = portraitPage(otherCiv.getLeaderDisplayName(), null,
                 leaderLead(otherCiv), { updateRightSide(otherCiv) }, otherCiv.nation.makeLink())
             sheet.addToBody(portraitQuote(flavorText), 4f)
             sheet.footer().add(portraitButton(response, TraySheet.ButtonKind.Primary, null, true) { updateRightSide(otherCiv) }
