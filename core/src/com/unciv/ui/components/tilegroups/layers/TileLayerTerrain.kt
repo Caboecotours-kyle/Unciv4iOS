@@ -201,6 +201,10 @@ class TileLayerTerrain(tileGroup: TileGroup, size: Float) : TileLayer(tileGroup,
         // Strategic view draws no props; switching to it rebuilds these images anyway
         val propsByImage = if (tileGroup.strategicView) null else strings.tileSetConfig.props.takeIf { it.isNotEmpty() }
         val newProps = if (propsByImage == null) null else ArrayList<PropImage>()
+        // A city or an improvement takes the whole hex: the ground's own upright decor (tufts, flowers, pebbles,
+        // shore palms) stays off it, while its ground art and the props of what stands there remain
+        val busy = propsByImage != null && UncivGame.Current.settings.showPixelImprovements
+            && tileGroup.tileView.getShownImprovement() != null
 
         for (baseLocation in tileBaseImageLocations) {
             // Here we check what actual tiles exist, and pick one - not at random, but based on the tile location,
@@ -253,8 +257,9 @@ class TileLayerTerrain(tileGroup: TileGroup, size: Float) : TileLayer(tileGroup,
 
             // Any drawn image may carry props, edges included
             val props = propsByImage?.get(mapLocation) ?: continue
+            val bareGround = busy && (baseLocation.contains("/Edges/") || baseLocation.endsWith("/" + tileGroup.tileView.baseTerrain))
             for (prop in props)
-                if (ImageGetter.imageExists(prop.image)) newProps!!.add(PropImage(prop, image, mapLocation))
+                if ((!bareGround || prop.ground) && ImageGetter.imageExists(prop.image)) newProps!!.add(PropImage(prop, image, mapLocation))
         }
 
         // After all of the tile's images, so edge bands and overlays never paint over them: ground art first, then back to front
