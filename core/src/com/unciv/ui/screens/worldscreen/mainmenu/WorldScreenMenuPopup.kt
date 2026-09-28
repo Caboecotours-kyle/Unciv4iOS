@@ -116,8 +116,10 @@ class WorldScreenMenuPopup(
         open(force = true)
     }
 
-    /** Rotated or resized while open: reopen, so landscape gets the boxed stack and portrait a sheet at the new scale */
+    /** Rotated or resized while open: rebuild for the current orientation, the boxed stack in landscape and a sheet at
+     *  the new scale in portrait. A boxed menu that stays in landscape re-fits itself as before. */
     override fun onMetricsChanged() {
+        if (!tray && !worldScreen.isPortrait()) return
         close()
         WorldScreenMenuPopup(worldScreen, expertMode)
     }
