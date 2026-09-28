@@ -1,6 +1,8 @@
 package com.unciv.ui.screens.cityscreen
 
 import com.badlogic.gdx.graphics.Color
+import com.badlogic.gdx.scenes.scene2d.Actor
+import com.badlogic.gdx.scenes.scene2d.Touchable
 import com.badlogic.gdx.scenes.scene2d.ui.Table
 import com.badlogic.gdx.scenes.scene2d.ui.TextButton
 import com.badlogic.gdx.utils.Align
@@ -20,6 +22,7 @@ import com.unciv.ui.components.tilegroups.CityTileState
 import com.unciv.ui.images.ImageGetter
 import com.unciv.ui.popups.AnimatedMenuPopup
 import com.unciv.ui.popups.AnimatedMenuPopup.Companion.addContextMenu
+import com.unciv.ui.popups.TraySheet
 import com.unciv.ui.screens.basescreen.BaseScreen
 import com.unciv.ui.screens.civilopediascreen.FormattedLine.IconDisplay
 import com.unciv.ui.screens.civilopediascreen.MarkupRenderer
@@ -30,9 +33,12 @@ import yairm210.purity.annotations.Readonly
 import kotlin.math.roundToInt
 import kotlin.math.max
 
-class CityScreenTileTable(private val cityScreen: CityScreen) : Table() {
+/** @param tray The portrait city sheet's kit: set, the tile shows as a pushed tray page and its actions go to [trayActions] */
+class CityScreenTileTable(private val cityScreen: CityScreen, private val tray: TraySheet? = null) : Table() {
     private val innerTable = Table()
     val cityView: CityView = cityScreen.cityView
+    /** The tray page's actions, for the sheet's footer; filled by [update] when [tray] is set */
+    val trayActions = ArrayList<Actor>()
     /** 48 real screen points in stage units, for the buy menu that sits on the stage itself */
     private val stageTouch = max(48f, PortraitTileCard.touchPoints(cityScreen))
     /** The same in the portrait sheet's 393pt units, which the city sheet scales to the safe width */
@@ -44,7 +50,10 @@ class CityScreenTileTable(private val cityScreen: CityScreen) : Table() {
             tintColor = if (cityScreen.isPortrait()) Color.valueOf("20394f")
                 else BaseScreen.skinStrings.skinConfig.baseColor.darken(0.5f)
         )
-        if (cityScreen.isPortrait()) add(innerTable).width(369f)
+        if (tray != null) {
+            innerTable.background = null
+            add(innerTable).growX()
+        } else if (cityScreen.isPortrait()) add(innerTable).width(369f)
         else {
             add(innerTable).pad(2f).fill()
             background = BaseScreen.skinStrings.getUiBackground("CityScreen/CityScreenTileTable/Background", tintColor = Color.WHITE)
@@ -59,6 +68,7 @@ class CityScreenTileTable(private val cityScreen: CityScreen) : Table() {
         }
         isVisible = true
         innerTable.clearChildren()
+        if (tray != null) return updateTray(tileView, tray)
 
         val stats = tileView.getTileStats(cityView.viewingCiv(), cityView)
         innerTable.pad(if (cityScreen.isPortrait()) 12f else 5f)
@@ -136,6 +146,69 @@ class CityScreenTileTable(private val cityScreen: CityScreen) : Table() {
         pack()
     }
 
+    /** The city sheet's tile page: yield chips, the tile card's rows with owner and worker, actions for the footer */
+    private fun updateTray(tileView: TileView, tray: TraySheet) {
+        trayActions.clear()
+        val card = PortraitTileCard(cityScreen, tileView, cityView.viewingCiv(), cityScreen.portraitStatIcons, cityView,
+            hideUnits = cityScreen.isSpying, spyCity = if (cityScreen.isSpying) cityView else null,
+            p = tray.p, touch = tray.touch, tray = tray)
+        card.yields(0f)?.let { innerTable.add(it).growX().padTop(tray.pt(4f)).row() }
+        val info = ArrayList<Actor>()
+        tileView.owningCity()?.let {
+            info += tray.row("Owned by [${it.name}]", lead = tray.disc(ImageGetter.getImage("OtherIcons/Cities"), TraySheet.Tone.Fill))
+        }
+        tileView.getWorkingCity()?.let {
+            info += tray.row("Worked by [${it.name}]", lead = tray.disc(ImageGetter.getImage("StatIcons/Specialist"), TraySheet.Tone.Fill))
+        }
+        innerTable.add(tray.section("On this tile")).growX().row()
+        innerTable.add(card.rows(info, baseRow = true)).growX().row()
+
+        // Same actions, gates and commands as the tile table below; the sheet lays them out in its footer
+        if (cityScreen.tileStates()[tileView] == CityTileState.WORKABLE && cityScreen.canChangeState && !cityView.isPuppet()) {
+            val assign = !tileView.providesYield()
+            trayActions += trayButton(tray, if (assign) "Assign citizen" else "Unassign",
+                if (assign) TraySheet.ButtonKind.Primary else TraySheet.ButtonKind.Secondary,
+                !assign || cityView.getFreePopulation() > 0) { cityScreen.toggleTileWorked(tileView) }
+        }
+        if (cityView.isWorked(tileView)) {
+            val locked = tileView.isLocked()
+            trayActions += trayButton(tray, if (locked) "Unlock" else "Lock", TraySheet.ButtonKind.Secondary, cityScreen.canChangeState) {
+                if (locked) cityView.tryUnlockTile(tileView) else cityView.tryLockTile(tileView)
+                update(tileView)
+                cityScreen.updateAsync()
+            }
+        }
+        if (cityView.canBuyTile(tileView)) {
+            val goldCostOfTile = cityView.getGoldCostOfTile(tileView)
+            val enabled = cityScreen.canChangeState && cityView.viewingCiv().hasStatToBuy(Stat.Gold, goldCostOfTile)
+            lateinit var buyTileButton: Table
+            buyTileButton = trayButton(tray, "Buy for [$goldCostOfTile] gold", TraySheet.ButtonKind.Primary, enabled) {
+                buyTileButton.touchable = Touchable.disabled
+                cityScreen.askToBuyTile(tileView)
+            }
+            buyTileButton.name = "portrait-buy-tile-button"
+            buyTileButton.addContextMenu { TileBuyMenu(buyTileButton) }
+            trayActions += buyTileButton
+        }
+        if (tileView.isCityCenter()) {
+            val otherCityView = tileView.owningCity()?.tryGetCityView()
+            if (otherCityView != null && otherCityView != cityView)
+                trayActions += trayButton(tray, "Move to city", TraySheet.ButtonKind.Secondary) {
+                    cityScreen.game.replaceCurrentScreen { CityScreen(otherCityView) }
+                }
+        }
+        pack()
+    }
+
+    /** The kit's button, greyed out and inert when not [enabled] */
+    private fun trayButton(tray: TraySheet, text: String, kind: TraySheet.ButtonKind, enabled: Boolean = true, action: () -> Unit): Table =
+        tray.button(text, kind) { action() }.apply {
+            if (!enabled) {
+                touchable = Touchable.disabled
+                color.a = .45f
+            }
+        }
+
     /** The Tiles tab card's worker toggle: Work this tile for an unworked workable tile, Unassign for a worked one */
     private fun addWorkAction(tileView: TileView) {
         if (cityScreen.tileStates()[tileView] != CityTileState.WORKABLE || !cityScreen.canChangeState || cityView.isPuppet()) return
@@ -185,7 +258,7 @@ class CityScreenTileTable(private val cityScreen: CityScreen) : Table() {
         return statsTable
     }
 
-    private inner class TileBuyMenu(buyTileButton: TextButton) : AnimatedMenuPopup(stage, buyTileButton) {
+    private inner class TileBuyMenu(buyTileButton: Actor) : AnimatedMenuPopup(stage, buyTileButton) {
         override fun createContentTable(): Table? {
             val maxRing = cityView.getWorkRange()
             val counts = IntArray(maxRing + 1) { countBuyableInRing(it) }

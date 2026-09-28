@@ -315,8 +315,9 @@ internal class PortraitTileCard(
             listOf(healthBar(unit.unitHealth)), line.link)
     }
 
-    /** Rows in the order the brief sets: resource, wonder, improvements, terrain, impassable, units, then anything else */
-    fun rows(): Table {
+    /** Rows in the order the brief sets: resource, wonder, improvements, terrain, impassable, units, then anything else.
+     *  The city's tile page opts in to [extra] rows at the end and a [baseRow] for the base terrain even under features. */
+    fun rows(extra: List<Actor> = emptyList(), baseRow: Boolean = false): Table {
         val table = Table()
         val trayRows = ArrayList<Actor>()
         fun add(row: Actor) {
@@ -337,7 +338,7 @@ internal class PortraitTileCard(
             add(row(iconBox(ImageGetter.getImprovementPortrait(name, pt(34f)), light = true), line.text, link = line.link))
         }
         // Without a feature the base terrain carries the row, so a bare tile still opens its entry and shows its defence
-        val features = featureLines.ifEmpty { listOfNotNull(baseLine) }
+        val features = if (baseRow) listOfNotNull(baseLine) + featureLines else featureLines.ifEmpty { listOfNotNull(baseLine) }
         for ((index, line) in features.withIndex()) {
             val name = line.link.substringAfter('/')
             val icon = tileImage(pt(34f), pt(34f), if (name == tileView.baseTerrain) emptyList() else listOf(name))
@@ -350,6 +351,7 @@ internal class PortraitTileCard(
             val rendered = MarkupRenderer.render(otherLines, labelWidth = pt(320f), padding = pt(4f), iconDisplay = IconDisplay.None) { openLink(it) }
             add(if (tray != null) Table().apply { this.add(rendered).growX().pad(pt(8f), pt(14f), pt(8f), pt(14f)) } else rendered)
         }
+        extra.forEach { add(it) }
         return if (tray != null) tray.card(trayRows) else table
     }
 }
