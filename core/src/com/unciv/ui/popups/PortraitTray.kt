@@ -256,7 +256,9 @@ class TraySheet(
         top.touchable = Touchable.enabled
         top.add(Image(art.rounded(pt(2.5f)).tinted(TrayColors.HANDLE))).size(pt(40f), pt(5f)).padTop(pt(8f)).row()
         top.add(headerTable).growX().minHeight(pt(72f))
-        top.addListener(DragToClose())
+        top.addListener(DragToClose(fromBody = false))
+        // Capture phase: it sees a body drag before the list scrolls or a row takes the tap
+        pane.addCaptureListener(DragToClose(fromBody = true))
         add(top).growX().row()
         add(toolbarTable).growX().row()
         paneCell = add(pane).growX().padLeft(pt(12f)).padRight(pt(12f))
@@ -418,6 +420,12 @@ class TraySheet(
 
     private fun travel() = height + pt(12f)
 
+    /** Whether a downward drag in the body at scroll top closes the sheet (the mock's default). Turn it off for a body
+     *  that pans its own content (a tree, a map). The handle and header always drag. */
+    var bodyDragCloses = true
+
+    private fun atTop() = pane.scrollY <= .5f && pane.visualScrollY <= .5f
+
     override fun act(delta: Float) {
         super.act(delta)
         if (phase == Phase.Rest || phase == Phase.Drag) return
@@ -476,8 +484,10 @@ class TraySheet(
         return 1f - exp(-z * w * t) * (cos(wd * t) + z * w / wd * sin(wd * t))
     }
 
-    /** Handle and header follow the finger down; past 72pt or faster than 800pt/s it closes, otherwise it springs back */
-    private inner class DragToClose : InputListener() {
+    /** Handle and header follow the finger down; past 72pt or faster than 800pt/s it closes, otherwise it springs back.
+     *  [fromBody]: the same from the body, only while it is scrolled to the top and the drag goes down; any other body
+     *  drag stays a scroll, and a touch that does not move stays a row tap. */
+    private inner class DragToClose(private val fromBody: Boolean) : InputListener() {
         private var startY = 0f
         private var startX = 0f
         private var tracking = false
@@ -488,6 +498,7 @@ class TraySheet(
 
         override fun touchDown(event: InputEvent, x: Float, y: Float, pointer: Int, button: Int): Boolean {
             if (pointer != 0 || button != 0 || isLeaving || phase == Phase.Rise || phase == Phase.FadeIn) return false
+            if (fromBody && (!bodyDragCloses || !atTop())) return false
             startX = event.stageX
             startY = event.stageY
             from = offset
@@ -506,11 +517,12 @@ class TraySheet(
                 val slop = max(pt(10f), touch / 5f)
                 val side = abs(event.stageX - startX)
                 if (side > slop && side >= down) { tracking = false; return }
+                if (fromBody && (-down > slop || !atTop())) { tracking = false; return }
                 if (down <= slop) return
                 dragging = true
                 phase = Phase.Drag
-                // The drag owns this touch now: no header button activates on release
-                event.stage.cancelTouchFocusExcept(this, top)
+                // The drag owns this touch now: no header button or row activates on release, the list does not scroll
+                event.stage.cancelTouchFocusExcept(this, if (fromBody) pane else top)
             }
             val now = System.nanoTime()
             val dt = (now - lastTime) / 1e9f
