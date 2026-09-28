@@ -86,10 +86,16 @@ class TileLayerUnitFlag(tileGroup: TileGroup, size: Float) : TileLayer(tileGroup
             val shared = tileGroup.tileView.militaryUnit != null && tileGroup.tileView.civilianUnit != null
             // Beside the unit, which grows slower than the hex when zoomed in
             val damping = if (tileGroup.strategicView) 1f else tileGroup.portraitDamping
-            val dx = damping * if (shared) { if (slot == 1) -15f else 15f } else if (tileGroup.strategicView) 0f else 20f
+            var dx = damping * if (shared) { if (slot == 1) -15f else 15f } else if (tileGroup.strategicView) 0f else 20f
+            var dy = if (tileGroup.strategicView) 0f else -7f * damping
+            // A unit in a city steps aside (see TileLayerUnitSprite.standX); its flag goes with it, clear of the banner
+            if (tileGroup.tileView.isCityCenter() && !tileGroup.strategicView) {
+                dx = tileGroup.layerUnitArt.standX(slot == 1) + dx * CITY_FLAG_OFFSET
+                dy = CITY_FLAG_RISE * damping
+            }
             val wrapper = portraitWrappers.getValue(icon)
             wrapper.x = tileX + tileGroup.groundCenterX + dx - icon.width * wrapper.scaleX / 2f
-            wrapper.y = tileY + tileGroup.groundCenterY - icon.height * wrapper.scaleY / 2f - if (tileGroup.strategicView) 0f else 7f * damping
+            wrapper.y = tileY + tileGroup.groundCenterY - icon.height * wrapper.scaleY / 2f + dy
             return
         }
         if (flagsAboveSprites) {
@@ -234,5 +240,12 @@ class TileLayerUnitFlag(tileGroup: TileGroup, size: Float) : TileLayer(tileGroup
 
     override fun determineVisibility() {
         isVisible = civilianUnitIcon != null || militaryUnitIcon != null || progressBadge != null
+    }
+
+    private companion object {
+        /** A unit in a city stands smaller, so its flag keeps closer: this share of the usual offset beside it */
+        const val CITY_FLAG_OFFSET = .6f
+        /** ...and sits this far above the ground centre, over the city banner */
+        const val CITY_FLAG_RISE = 8f
     }
 }

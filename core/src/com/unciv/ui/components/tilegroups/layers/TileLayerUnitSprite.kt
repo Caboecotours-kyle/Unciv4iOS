@@ -124,24 +124,45 @@ class TileLayerUnitSprite(tileGroup: TileGroup, size: Float) : TileLayer(tileGro
      *  ground centre), so poses and motion that scale or rotate around the image origin stay aligned. */
     fun updateDamping() {
         if (!strings.projection.tilted) return
-        val spread = if (TileSetCache.getCurrent().config.unitFlagsAboveSprites && civilianSlot != null && militarySlot != null)
-            size * 0.2f else 0f
-        placeDamped(militarySlot, -spread)
-        placeDamped(civilianSlot, spread)
+        placeDamped(militarySlot, true)
+        placeDamped(civilianSlot, false)
     }
 
-    private fun placeDamped(slot: UnitSpriteSlot?, spread: Float) {
+    private val sharedTile get() = TileSetCache.getCurrent().config.unitFlagsAboveSprites && civilianSlot != null && militarySlot != null
+    /** Portrait: a city fills its hex, so a unit there steps aside to its front corner and stands a little smaller;
+     *  two units there take a corner each */
+    private val inCity get() = tileGroup.tileView.isCityCenter() && !tileGroup.strategicView
+
+    /** Portrait: where the [military] (or civilian) unit's feet stand, from the tile's ground centre */
+    fun standX(military: Boolean): Float {
+        val side = if (military) -1f else 1f
+        return when {
+            inCity -> (if (sharedTile) side else 1f) * CITY_STEP_X * tileGroup.hexagonImageWidth
+            sharedTile -> side * size * 0.2f * tileGroup.portraitDamping
+            else -> 0f
+        }
+    }
+    fun standY() = if (inCity) -CITY_STEP_Y * tileGroup.hexagonImageWidth else 0f
+
+    private fun placeDamped(slot: UnitSpriteSlot?, military: Boolean) {
         val children = slot?.spriteGroup?.children ?: return
         slot.damping = tileGroup.portraitDamping
-        val damping = slot.damping
+        val scale = slot.damping * if (inCity) CITY_SCALE else 1f
         val hexWidth = tileGroup.hexagonImageWidth
         for (i in 0 until children.size) {
             val image = children[i] as? Image ?: continue
-            image.setSize(hexWidth * damping, image.prefHeight * hexWidth / image.prefWidth * damping)
-            image.setOrigin(tileGroup.hexagonImageOriginX * damping, tileGroup.hexagonImageOriginY * damping)
-            image.x = tileGroup.groundCenterX + spread * damping - image.originX
-            image.y = tileGroup.groundCenterY - image.originY
+            image.setSize(hexWidth * scale, image.prefHeight * hexWidth / image.prefWidth * scale)
+            image.setOrigin(tileGroup.hexagonImageOriginX * scale, tileGroup.hexagonImageOriginY * scale)
+            image.x = tileGroup.groundCenterX + standX(military) - image.originX
+            image.y = tileGroup.groundCenterY + standY() - image.originY
         }
+    }
+
+    private companion object {
+        /** A unit in a city: its feet this far right and forward of the centre, in hex widths, and its size */
+        const val CITY_STEP_X = .22f
+        const val CITY_STEP_Y = .07f
+        const val CITY_SCALE = .82f
     }
 
     override fun determineVisibility() {
