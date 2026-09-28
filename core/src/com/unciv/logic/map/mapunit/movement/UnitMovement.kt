@@ -430,21 +430,21 @@ class UnitMovement(val unit: MapUnit) {
     }
 
     /**
-     * Every tile walked along [turnEnds], the turn-by-turn path [getShortestPath] returns, starting after the unit's tile.
-     * A leg that cannot be retraced (A* pathfinding, or the map changed) stays a single step to its turn's end.
+     * Every tile walked along [turnEnds], the turn-by-turn path [getShortestPath] returns (A* or not), one list per turn
+     * starting after the previous turn's end. Each turn is retraced with the classic search; a turn it cannot retrace
+     * (the map changed since) is null.
      */
     @Readonly
-    fun getStepsAlongPath(turnEnds: List<Tile>): List<Tile> {
-        @LocalState val steps = ArrayList<Tile>()
+    fun getStepsAlongPath(turnEnds: List<Tile>): List<List<Tile>?> {
+        @LocalState val legs = ArrayList<List<Tile>?>()
         var from = unit.getTile()
         for ((turn, end) in turnEnds.withIndex()) {
-            val leg = if (UncivGame.Current.settings.useAStarPathfinding) null
-                else if (turn == 0) getDistanceToTiles()
-                else getMovementToTilesAtPosition(from.position, unit.getMaxMovement().toFloat(), false)
-            if (leg != null && leg.containsKey(end)) steps.addAll(leg.getPathToTile(end)) else steps.add(end)
+            val leg = if (turn == 0) classicMovementToTilesAtPosition(from.position, unit.currentMovement)
+                else classicMovementToTilesAtPosition(from.position, unit.getMaxMovement().toFloat(), false)
+            legs.add(if (leg.containsKey(end)) leg.getPathToTile(end) else null)
             from = end
         }
-        return steps
+        return legs
     }
 
     /**

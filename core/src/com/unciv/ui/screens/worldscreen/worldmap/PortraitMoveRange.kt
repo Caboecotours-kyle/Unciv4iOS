@@ -12,18 +12,28 @@ import com.unciv.utils.launchOnGLThread
 import com.unciv.view.MapUnitView
 import com.unciv.view.TileView
 
-/** A move worked out off the GL thread: [turns] turn ends from [origin], walked tile by tile as [steps] */
-internal class PortraitRoute(val origin: TileView, val turns: Int, val steps: List<TileView>) {
+/** A move worked out off the GL thread: [turns] turn ends from [origin], walked tile by tile as [steps]. [jumps] holds
+ *  the indexes of steps reached by a turn that could not be retraced, which the route must not join with dots. */
+internal class PortraitRoute(val origin: TileView, val turns: Int, val steps: List<TileView>, val jumps: Set<Int>) {
     val destination get() = steps.last()
 
     companion object {
         /** Expands [turnEnds] as [MapUnitView.getShortestPath] returns them; null when there is no path or nothing to walk */
         fun of(unitView: MapUnitView, turnEnds: List<TileView>): PortraitRoute? {
             if (turnEnds.isEmpty()) return null
-            val steps = try { unitView.getStepsAlongPath(turnEnds) } catch (_: Exception) { turnEnds }
+            val legs = try { unitView.getStepsAlongPath(turnEnds) } catch (_: Exception) { turnEnds.map { null } }
+            val steps = ArrayList<TileView>()
+            val jumps = HashSet<Int>()
+            for ((turn, leg) in legs.withIndex()) {
+                if (leg != null) steps.addAll(leg)
+                else {
+                    jumps.add(steps.size)
+                    steps.add(turnEnds[turn])
+                }
+            }
             // A path to the unit's own tile walks nowhere
             if (steps.isEmpty()) return null
-            return PortraitRoute(unitView.getTile(), turnEnds.size, steps)
+            return PortraitRoute(unitView.getTile(), turnEnds.size, steps, jumps)
         }
     }
 }
@@ -182,7 +192,8 @@ internal object PortraitMoveRange {
             points[i] -= minX - pad
             points[i + 1] -= minY - pad
         }
-        return MoveRoute(unitGroup, points, route.turns).apply {
+        val walked = BooleanArray(route.steps.size) { it !in route.jumps }
+        return MoveRoute(unitGroup, points, walked, route.turns).apply {
             setBounds(unitGroup.x + unitGroup.groundCenterX + minX - pad, unitGroup.y + unitGroup.groundCenterY + minY - pad,
                 maxX - minX + 2 * pad, maxY - minY + 2 * pad)
         }

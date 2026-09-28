@@ -106,8 +106,10 @@ internal class RangeEdges(private val tileGroup: TileGroup) : Actor() {
 
 /** The chosen destination's route: a dotted line from the unit over a soft shadow, and a badge with the number of turns
  *  when it takes more than one. Drawn above the map like the other move UI, at a constant screen size. [points] run from
- *  the unit's ground centre to the destination's, relative to this actor, whose bounds cover them. */
-internal class MoveRoute(private val tileGroup: TileGroup, private val points: FloatArray, turns: Int) : Group() {
+ *  the unit's ground centre to the destination's, relative to this actor, whose bounds cover them; a segment that is not
+ *  [walked] (a turn the route could not retrace) gets no dots. */
+internal class MoveRoute(private val tileGroup: TileGroup, private val points: FloatArray, private val walked: BooleanArray,
+                         turns: Int) : Group() {
     private val dot: TextureRegion = ImageGetter.getWhiteDotDrawable().region
     private val circle: TextureRegion = ImageGetter.getCircleDrawable().region
     private val badge: Group? = if (turns < 2) null else object : Group() {
@@ -142,7 +144,7 @@ internal class MoveRoute(private val tileGroup: TileGroup, private val points: F
             val x0 = points[p * 2]; val y0 = points[p * 2 + 1]
             val dx = points[p * 2 + 2] - x0; val dy = points[p * 2 + 3] - y0
             val length = sqrt(dx * dx + dy * dy)
-            if (length == 0f) continue
+            if (length == 0f || !walked[p]) continue
             batch.draw(dot, x + x0 + dy / length * band / 2f, y + y0 - dx / length * band / 2f, 0f, 0f, length, band,
                 1f, 1f, atan2(dy, dx) * 180f / Math.PI.toFloat())
         }
@@ -152,17 +154,17 @@ internal class MoveRoute(private val tileGroup: TileGroup, private val points: F
         batch.setColor(colour.r, colour.g, colour.b, parentAlpha)
         // The first dots would sit under the unit's feet
         var next = 10f * scale
-        var walked = 0f
+        var along = 0f
         for (p in 0 until points.size / 2 - 1) {
             val x0 = points[p * 2]; val y0 = points[p * 2 + 1]
             val dx = points[p * 2 + 2] - x0; val dy = points[p * 2 + 3] - y0
             val length = sqrt(dx * dx + dy * dy)
-            while (length > 0f && next <= walked + length) {
-                val t = (next - walked) / length
-                batch.draw(circle, x + x0 + dx * t - dotSize / 2f, y + y0 + dy * t - dotSize / 2f, dotSize, dotSize)
+            while (length > 0f && next <= along + length) {
+                val t = (next - along) / length
+                if (walked[p]) batch.draw(circle, x + x0 + dx * t - dotSize / 2f, y + y0 + dy * t - dotSize / 2f, dotSize, dotSize)
                 next += spacing
             }
-            walked += length
+            along += length
         }
         batch.packedColor = old
         // Constant screen size: the mock's badge sits 2pt right of and 4pt above the destination's centre
