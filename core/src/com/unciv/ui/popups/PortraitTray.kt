@@ -851,18 +851,18 @@ open class PortraitTray(
     private var outdated = false
 
     /** A rotation or resize that keeps this screen (iOS does) leaves the sheet's scale, touch sizes and portrait layout
-     *  stale: hand over to [onMetricsChanged] once. */
+     *  stale: hand over to [onMetricsChanged] once. A tray already closing just finishes closing, it is never reopened. */
     private fun metricsChanged(): Boolean {
         if (outdated) return true
         if (abs(stageToShowOn.width - builtWidth) < .5f && abs(stageToShowOn.height - builtHeight) < .5f
             && Gdx.graphics.width == builtWindowWidth) return false
         outdated = true
-        onMetricsChanged()
+        if (sheet.isLeaving) close() else onMetricsChanged()
         return true
     }
 
     /** The screen was rotated or resized under an open tray. The default closes it (portrait sheets have no landscape
-     *  layout); override to reopen a fresh one, as the game menu does. */
+     *  layout); override to reopen a fresh one, as the game menu does. Not called for a tray that is already closing. */
     protected open fun onMetricsChanged() = close()
 
     override fun act(delta: Float) {
