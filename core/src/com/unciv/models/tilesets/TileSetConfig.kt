@@ -23,7 +23,8 @@ class TileSetConfig {
     var mapVerticalScale: Float = 1f
     var tileScales: HashMap<String, Float> = HashMap()
     var ruleVariants: HashMap<String, Array<String>> = HashMap()
-    /** Portrait only: sprites drawn over a Tilted image, keyed by that image's final location. Kept ground first, then back to front. */
+    /** Portrait only: sprites drawn over a tile, keyed by the final location of a Tilted image it draws (edges included).
+     *  Kept ground first, then back to front. */
     var props: HashMap<String, Array<TileProp>> = HashMap()
 
     fun clone(): TileSetConfig {
@@ -81,6 +82,7 @@ class TileProp {
     var ground = false
 
     companion object {
-        val drawOrder: Comparator<TileProp> = compareBy<TileProp> { !it.ground }.thenByDescending { it.y }
+        /** Ground art first in listed order, then upright props back to front */
+        val drawOrder: Comparator<TileProp> = compareBy<TileProp> { !it.ground }.thenByDescending { if (it.ground) 0f else it.y }
     }
 }
