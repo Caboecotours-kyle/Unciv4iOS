@@ -320,8 +320,15 @@ class WorldMapHolder @JvmOverloads constructor(
 
     private fun previewUnitDrag(destination: TileView) {
         dragTarget = destination
-        if (dragPreviewBusy) return
         val unit = dragUnit ?: return
+        // Back on the unit's own tile: no move to preview
+        if (destination == unit.getTile()) {
+            unitMovementPaths.remove(unit)
+            portraitRoutes.remove(unit)
+            worldScreen.shouldUpdate = true
+            return
+        }
+        if (dragPreviewBusy) return
         val generation = dragGeneration
         dragPreviewBusy = true
         Concurrency.run("PortraitDragPath") {

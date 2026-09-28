@@ -17,10 +17,12 @@ internal class PortraitRoute(val origin: TileView, val turns: Int, val steps: Li
     val destination get() = steps.last()
 
     companion object {
-        /** Expands [turnEnds] as [MapUnitView.getShortestPath] returns them; null when there is no path */
+        /** Expands [turnEnds] as [MapUnitView.getShortestPath] returns them; null when there is no path or nothing to walk */
         fun of(unitView: MapUnitView, turnEnds: List<TileView>): PortraitRoute? {
             if (turnEnds.isEmpty()) return null
             val steps = try { unitView.getStepsAlongPath(turnEnds) } catch (_: Exception) { turnEnds }
+            // A path to the unit's own tile walks nowhere
+            if (steps.isEmpty()) return null
             return PortraitRoute(unitView.getTile(), turnEnds.size, steps)
         }
     }
