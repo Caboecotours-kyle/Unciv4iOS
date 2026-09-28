@@ -362,13 +362,18 @@ class UnitMovement(val unit: MapUnit) {
     }
 
     /**
-     * Tiles the unit can end its move on next turn but not this turn: the second turn of the classic [getShortestPath]
-     * search, with the same caches and rules, so each of these is a destination the classic search reaches in two turns.
-     * It is the classic search whatever the A* setting, so repeated calls agree.
+     * Tiles the unit can end its move on next turn but not this turn. This is the second turn of the classic
+     * [getShortestPath] search, with its caches and rules, so each of these is a destination the classic search reaches
+     * in two turns. It is the classic search whatever the A* setting, so repeated calls agree.
+     *
+     * [getShortestPath] floods a full turn of movement out of every tile it can stop on this turn, never re-entering
+     * those tiles. Its second-turn tiles are those next to a tile one of these floods reaches with movement to spare, so
+     * one search seeded with all of them at once, keeping the least movement spent per tile, finds exactly the same set
+     * while walking each tile once.
+     *
      * Empty for units that fly, paradrop or cannot move, and when no moves are left, as [getShortestPath] finds no path then.
-     * Costs one [getMovementToTilesAtPosition] per tile on the edge of this turn's reach.
      */
-    @Readonly
+    @Readonly @Suppress("purity") // shares the edge-key helper classicMovementToTilesAtPosition uses
     fun getReachableTilesNextTurn(): Set<Tile> {
         if (unit.cache.cannotMove || unit.baseUnit.isAirUnit() || unit.isPreparingParadrop()) return emptySet()
         val currentTile = unit.getTile()
@@ -377,21 +382,49 @@ class UnitMovement(val unit: MapUnit) {
         val movementCostCache = HashMap<Int, Float>()
         @LocalState val reached = BitSet(tileCount)
         reached.set(currentTile.zeroBasedIndex)
-        val thisTurn = ArrayList<Tile>()
-        for (tile in classicMovementToTilesAtPosition(currentTile.position, unit.currentMovement, true, null,
-                passThroughCache, movementCostCache).keys) {
+        @LocalState var tilesToCheck = ArrayList<Tile>()
+        val thisTurn = classicMovementToTilesAtPosition(currentTile.position, unit.currentMovement, true, null,
+            passThroughCache, movementCostCache)
+        for (tile in thisTurn.keys) {
             if (tile == currentTile || !isUnknownTileWeShouldAssumeToBePassable(tile) && !canMoveTo(tile)) continue
             reached.set(tile.zeroBasedIndex)
-            thisTurn.add(tile)
+            tilesToCheck.add(tile)
         }
-        @LocalState val nextTurn = LinkedHashSet<Tile>()
+        if (tilesToCheck.isEmpty()) return emptySet()
+
+        // As classicMovementToTilesAtPosition from each of them with a full turn and zone of control ignored
         val maxMovement = unit.getMaxMovement().toFloat()
-        for (edge in thisTurn) {
-            if (edge.neighbors.all { reached.get(it.zeroBasedIndex) }) continue
-            val paths = classicMovementToTilesAtPosition(edge.position, maxMovement, false, reached, passThroughCache, movementCostCache)
-            for (tile in paths.keys)
-                if (!reached.get(tile.zeroBasedIndex) && (isUnknownTileWeShouldAssumeToBePassable(tile) || canMoveTo(tile)))
-                    nextTurn.add(tile)
+        val escort = unit.getOtherEscortUnit().takeIf { unit.isEscorting() }
+        if (escort != null && escort.currentMovement == 0f) return emptySet()
+        val usableMovement = if (escort != null) minOf(maxMovement, escort.currentMovement) else maxMovement
+        @LocalState val spent = FloatArray(tileCount) { Float.MAX_VALUE }
+        for (tile in tilesToCheck) spent[tile.zeroBasedIndex] = 0f
+        @LocalState val nextTurn = HashSet<Tile>()
+        while (tilesToCheck.isNotEmpty()) {
+            @LocalState val updatedTiles = ArrayList<Tile>()
+            for (tileToCheck in tilesToCheck) {
+                val tileToCheckMovement = spent[tileToCheck.zeroBasedIndex]
+                for (neighbor in tileToCheck.neighbors) {
+                    val index = neighbor.zeroBasedIndex
+                    if (reached.get(index)) continue
+                    var totalDistanceToTile: Float = when {
+                        !neighbor.isExplored(unit.civ) -> tileToCheckMovement + 1f
+                        !passThroughCache.getOrPut(index) { canPassThrough(neighbor) } -> maxMovement
+                        else -> tileToCheckMovement + movementCostCache.getOrPut(HexMath.tilesAndNeighborUniqueIndex(tileToCheck, neighbor)) {
+                            MovementCost.getMovementCostBetweenAdjacentTilesEscort(unit, tileToCheck, neighbor, false, true)
+                        }
+                    }
+                    if (spent[index] > totalDistanceToTile) {
+                        if (totalDistanceToTile < usableMovement - Constants.minimumMovementEpsilon) updatedTiles += neighbor
+                        else totalDistanceToTile = usableMovement
+                        if (spent[index] == Float.MAX_VALUE
+                                && (isUnknownTileWeShouldAssumeToBePassable(neighbor) || canMoveTo(neighbor)))
+                            nextTurn.add(neighbor)
+                        spent[index] = totalDistanceToTile
+                    }
+                }
+            }
+            tilesToCheck = updatedTiles
         }
         return nextTurn
     }
