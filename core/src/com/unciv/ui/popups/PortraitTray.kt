@@ -839,7 +839,35 @@ open class PortraitTray(
     fun dismiss() = if (tray) sheet.dismiss() else close()
 
     override fun onVisibleAreaChanged(visibleArea: Rectangle) {
-        if (tray) sheet.fit() else super.onVisibleAreaChanged(visibleArea)
+        if (!tray) return super.onVisibleAreaChanged(visibleArea)
+        if (metricsChanged()) return
+        sheet.fit()
+    }
+
+    /** Stage and window size the sheet's scale and touch sizes were computed for */
+    private val builtWidth = stageToShowOn.width
+    private val builtHeight = stageToShowOn.height
+    private val builtWindowWidth = Gdx.graphics.width
+    private var outdated = false
+
+    /** A rotation or resize that keeps this screen (iOS does) leaves the sheet's scale, touch sizes and portrait layout
+     *  stale: hand over to [onMetricsChanged] once. */
+    private fun metricsChanged(): Boolean {
+        if (outdated) return true
+        if (abs(stageToShowOn.width - builtWidth) < .5f && abs(stageToShowOn.height - builtHeight) < .5f
+            && Gdx.graphics.width == builtWindowWidth) return false
+        outdated = true
+        onMetricsChanged()
+        return true
+    }
+
+    /** The screen was rotated or resized under an open tray. The default closes it (portrait sheets have no landscape
+     *  layout); override to reopen a fresh one, as the game menu does. */
+    protected open fun onMetricsChanged() = close()
+
+    override fun act(delta: Float) {
+        if (tray && stage != null && metricsChanged()) return
+        super.act(delta)
     }
 
     override fun drawBackground(batch: Batch, parentAlpha: Float, x: Float, y: Float) {

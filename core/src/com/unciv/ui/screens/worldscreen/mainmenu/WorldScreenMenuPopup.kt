@@ -21,7 +21,7 @@ import com.unciv.ui.screens.worldscreen.WorldScreen
  */
 class WorldScreenMenuPopup(
     val worldScreen: WorldScreen,
-    expertMode: Boolean = false
+    private val expertMode: Boolean = false
 ) : PortraitTray(worldScreen, tray = worldScreen.isPortrait(), scrollable = Scrollability.All) {
     private var singleColumn = true
     private fun <T: Actor?> Cell<T>.nextColumn() {
@@ -114,6 +114,12 @@ class WorldScreenMenuPopup(
             options, optionsWithDebug, music, console, exit)
 
         open(force = true)
+    }
+
+    /** Rotated or resized while open: reopen, so landscape gets the boxed stack and portrait a sheet at the new scale */
+    override fun onMetricsChanged() {
+        close()
+        WorldScreenMenuPopup(worldScreen, expertMode)
     }
 
     /** The boxed button stack, unchanged */
