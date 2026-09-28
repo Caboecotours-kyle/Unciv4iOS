@@ -23,19 +23,26 @@ import com.unciv.ui.components.fonts.Fonts
 import com.unciv.ui.components.input.onClick
 import com.unciv.ui.images.ImageGetter
 import com.unciv.ui.popups.ConfirmPopup
+import com.unciv.ui.popups.TrayColors
 import com.unciv.ui.popups.closeAllPopups
 import com.unciv.ui.screens.basescreen.BaseScreen
+import com.unciv.ui.screens.worldscreen.PortraitTileCard
+import kotlin.math.max
 
 /** This is the bottom-right table in the city screen that shows the currently selected construction */
 class ConstructionInfoTable(val cityScreen: CityScreen) : Table() {
     private val selectedConstructionTable = Table()
     private val buyButtonFactory = BuyButtonFactory(cityScreen)
     private val cityView get() = cityScreen.cityView
+    /** Portrait: false when the city sheet's own header already shows the construction */
+    var portraitHeader = true
+    /** Portrait targets on the 393pt canvas the city sheet scales to the safe width: never under 48 real points */
+    private val touch = max(48f, PortraitTileCard.touchPoints(cityScreen) * 393f / cityScreen.safeAreaBoundsInWorld().width)
 
     init {
         selectedConstructionTable.background = BaseScreen.skinStrings.getUiBackground(
             "CityScreen/ConstructionInfoTable/SelectedConstructionTable",
-            tintColor = if (cityScreen.isPortrait()) Color.valueOf("20394f")
+            tintColor = if (cityScreen.isPortrait()) TrayColors.CARD
                 else BaseScreen.skinStrings.skinConfig.baseColor.darken(0.5f)
         )
         if (cityScreen.isPortrait()) add(selectedConstructionTable).width(369f)
@@ -131,20 +138,22 @@ class ConstructionInfoTable(val cityScreen: CityScreen) : Table() {
         val cityConstructions = cityView.constructions
         selectedConstructionTable.pad(12f)
 
-        val header = Table()
-        header.add(ImageGetter.getConstructionPortrait(construction.name, 50f).apply {
-            val link = (construction as? IRulesetObject)?.makeLink() ?: return@apply
-            if (link.isNotEmpty()) {
-                touchable = Touchable.enabled
-                onClick { cityScreen.openCivilopedia(link) }
-            }
-        }).size(50f).padRight(12f)
-        val specialConstruction = PerpetualConstruction.perpetualConstructionsMap[construction.name]
-        val title = construction.name.tr(hideIcons = true) +
-            (specialConstruction?.let { cityView.getProductionTooltip(it) }
-                ?: cityConstructions.getTurnsToConstructionString(construction))
-        header.add(Label(title, BaseScreen.skin).apply { wrap = true }).width(271f).left()
-        selectedConstructionTable.add(header).width(345f).left().row()
+        if (portraitHeader) {
+            val header = Table()
+            header.add(ImageGetter.getConstructionPortrait(construction.name, 50f).apply {
+                val link = (construction as? IRulesetObject)?.makeLink() ?: return@apply
+                if (link.isNotEmpty()) {
+                    touchable = Touchable.enabled
+                    onClick { cityScreen.openCivilopedia(link) }
+                }
+            }).size(50f).padRight(12f)
+            val specialConstruction = PerpetualConstruction.perpetualConstructionsMap[construction.name]
+            val title = construction.name.tr(hideIcons = true) +
+                (specialConstruction?.let { cityView.getProductionTooltip(it) }
+                    ?: cityConstructions.getTurnsToConstructionString(construction))
+            header.add(Label(title, BaseScreen.skin).apply { wrap = true }).width(271f).left()
+            selectedConstructionTable.add(header).width(345f).left().row()
+        }
 
         val description = when (construction) {
             is BaseUnit -> cityView.getUnitDescription(construction)
@@ -154,12 +163,12 @@ class ConstructionInfoTable(val cityScreen: CityScreen) : Table() {
             else -> ""
         }
         selectedConstructionTable.add(Label(description, BaseScreen.skin).apply { wrap = true })
-            .width(345f).left().padTop(12f).row()
+            .width(345f).left().padTop(if (portraitHeader) 12f else 0f).row()
 
         if (cityConstructions.isBuilt(construction.name)) showSellButton(construction)
         else for (button in buyButtonFactory.getBuyButtons(construction)) {
             selectedConstructionTable.add(stylePortraitButton(button, true))
-                .width(345f).height(48f).padTop(8f).row()
+                .width(345f).height(touch).padTop(8f).row()
         }
         if (construction is BaseUnit) {
             val baseUnit = construction.name
@@ -167,7 +176,7 @@ class ConstructionInfoTable(val cityScreen: CityScreen) : Table() {
             if (usePromotions != null) {
                 selectedConstructionTable.add("Use default promotions".toCheckBox(usePromotions) {
                     cityView.trySetUnitShouldUseSavedPromotion(baseUnit, it)
-                }).width(345f).height(48f).left().padTop(8f).row()
+                }).width(345f).height(touch).left().padTop(8f).row()
             }
         }
     }
@@ -197,7 +206,7 @@ class ConstructionInfoTable(val cityScreen: CityScreen) : Table() {
                 val sellBuildingButton = sellText.toTextButton()
                 row()
                 if (cityScreen.isPortrait())
-                    add(stylePortraitButton(sellBuildingButton, false)).width(345f).height(48f).padTop(8f).row()
+                    add(stylePortraitButton(sellBuildingButton, false)).width(345f).height(touch).padTop(8f).row()
                 else add(sellBuildingButton).padTop(5f).colspan(2).center()
 
                 val isFree = cityScreen.hasFreeBuilding(construction)

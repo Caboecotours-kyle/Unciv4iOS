@@ -27,7 +27,6 @@ import com.unciv.ui.components.extensions.isEnabled
 import com.unciv.ui.components.extensions.surroundWithCircle
 import com.unciv.ui.components.extensions.toLabel
 import com.unciv.ui.components.fonts.Fonts
-import com.unciv.ui.components.input.KeyCharAndCode
 import com.unciv.ui.components.input.KeyboardBinding
 import com.unciv.ui.components.input.keyShortcuts
 import com.unciv.ui.components.input.onActivation
@@ -144,28 +143,17 @@ class TechPickerScreen(
 
     private fun initPortrait(centerOnTech: Technology?) {
         pickerPane.remove()
-        globalShortcuts.add(KeyCharAndCode.BACK) { game.popScreen() }
+        // Back and Escape close through the sheet's own close button, with its motion
         globalShortcuts.add(KeyboardBinding.Civilopedia) { selectedTech?.let { openCivilopedia(it.makeLink()) } }
         rightSideButton.setText(if (freeTechPick) "Pick a free tech".tr() else "Pick a tech".tr())
 
-        val safeArea = safeAreaBoundsInWorld()
+        // The map stays behind the tray sheet, which sits flush on the canvas bottom and draws the scrim itself
         val drawingBounds = portraitCanvasBounds()
         val map = PortraitMapBackdrop(civInfo)
         portraitMapBackdrop = map
         map.setBounds(drawingBounds.x, drawingBounds.y, drawingBounds.width, drawingBounds.height)
         stage.addActor(map)
-        val shade = Image(ImageGetter.getWhiteDotDrawable()).apply {
-            color = Color(0f, 0f, 0f, .35f)
-            touchable = Touchable.disabled
-            setBounds(drawingBounds.x, drawingBounds.y, drawingBounds.width, drawingBounds.height)
-        }
-        stage.addActor(shade)
-        val logicalWidth = 393f
-        val scale = safeArea.width / logicalWidth
-        val view = TechPickerPortrait(this, logicalWidth, startOnTree = startOnTree ?: (centerOnTech != null))
-        view.isTransform = true
-        view.setBounds(safeArea.x, safeArea.y, logicalWidth, safeArea.height / scale - portraitChromeGaps(logicalWidth).first)
-        view.setScale(scale)
+        val view = TechPickerPortrait(this, startOnTree = startOnTree ?: (centerOnTech != null))
         stage.addActor(view)
         portraitView = view
 
@@ -176,6 +164,7 @@ class TechPickerScreen(
             if (centerOnTech != null) centerOnTechnology(centerOnTech)
             view.refresh()
         }
+        view.rise()
     }
 
     /** Portrait only: drop the selection and go back to the queue as it was when the screen opened */

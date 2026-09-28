@@ -1,9 +1,14 @@
 package com.unciv.ui.screens.diplomacyscreen
 
 import com.badlogic.gdx.graphics.Color
+import com.badlogic.gdx.graphics.Pixmap
 import com.badlogic.gdx.graphics.Texture
+import com.badlogic.gdx.graphics.g2d.Batch
 import com.badlogic.gdx.scenes.scene2d.Actor
+import com.badlogic.gdx.scenes.scene2d.Group
+import com.badlogic.gdx.scenes.scene2d.Stage
 import com.badlogic.gdx.scenes.scene2d.Touchable
+import com.badlogic.gdx.scenes.scene2d.ui.Image
 import com.badlogic.gdx.scenes.scene2d.ui.SplitPane
 import com.badlogic.gdx.scenes.scene2d.ui.Table
 import com.badlogic.gdx.scenes.scene2d.ui.TextButton
@@ -31,13 +36,16 @@ import com.unciv.ui.components.extensions.toTextButton
 import com.unciv.ui.components.fonts.Fonts
 import com.unciv.ui.components.input.KeyCharAndCode
 import com.unciv.ui.components.input.KeyboardBinding
-import com.unciv.ui.components.input.SwipeDownToClose
 import com.unciv.ui.components.input.keyShortcuts
 import com.unciv.ui.components.input.onActivation
 import com.unciv.ui.components.input.onClick
 import com.unciv.ui.components.tilegroups.citybutton.InfluenceTable
 import com.unciv.ui.images.ImageGetter
 import com.unciv.ui.popups.ConfirmPopup
+import com.unciv.ui.popups.TrayArt
+import com.unciv.ui.popups.TrayColors
+import com.unciv.ui.popups.TraySheet
+import com.unciv.ui.popups.tinted
 import com.unciv.ui.screens.basescreen.BaseScreen
 import com.unciv.ui.screens.basescreen.RecreateOnResize
 import com.unciv.ui.screens.basescreen.portraitCanvasBounds
@@ -45,6 +53,7 @@ import com.unciv.ui.screens.pickerscreens.PortraitMapBackdrop
 import com.unciv.view.CivView
 import com.unciv.view.ForeignCivView
 import kotlin.math.floor
+import kotlin.math.hypot
 import com.unciv.ui.components.widgets.AutoScrollPane as ScrollPane
 
 /**
@@ -63,16 +72,10 @@ class DiplomacyScreen(
 ): BaseScreen(), RecreateOnResize {
     companion object {
         private const val nationIconSize = 100f
-        /** Portrait list rows put a smaller icon beside the name */
-        private const val portraitIconSize = 60f
         private const val nationIconPad = 10f
         private const val closeButtonSize = 50f
         /** distance of the floating close button from the top and right */
         private const val closeButtonPad = 10f
-        /** Portrait list sheet leaves this much map visible above it (approved mock: sheet top at 120px) */
-        private const val sheetTopGap = 64f
-        private val sheetColor = Color.valueOf("122536")
-        private val ink2 = Color.valueOf("b7cde0")
     }
 
     internal val viewingCiv: Civilization = viewingCivView.getCiv()
@@ -100,7 +103,11 @@ class DiplomacyScreen(
 
     private val splitPane = SplitPaneCenteringLeftSide()
 
-    /** Portrait replaces the side-by-side split with one full-width page: the civ list, or one civ's details */
+    /** Portrait: the civ list and each civ's pages are one tray sheet over the map (see [showPortraitList]) */
+    private var tray: TrayHost? = null
+    /** The portrait tray sheet; pages rebuild its header, body and footer */
+    internal val traySheet: TraySheet get() = tray!!.sheet
+    /** Portrait Trade keeps its full-width page with a way back to the list */
     private val portraitHolder = Table()
 
     private val closeButton = if (isPortrait()) ImageGetter.getImage("OtherIcons/Close").apply {
@@ -111,6 +118,7 @@ class DiplomacyScreen(
         keyShortcuts.add(KeyCharAndCode.BACK)
     } else getCloseButton(closeButtonSize) { game.popScreen() }
     private var leaderPortraitTexture: Texture? = null
+    private var roundLeaderTexture: Texture? = null
     private var portraitBackdrop: PortraitMapBackdrop? = null
 
     internal fun stylePortraitPrimary(button: TextButton) {
@@ -137,6 +145,33 @@ class DiplomacyScreen(
         return image
     }
 
+    /** The leader's picture cut to a circle for the tray header, else the nation's emblem */
+    internal fun leaderLead(civ: Civilization): Actor {
+        val sheet = traySheet
+        val file = if (civ.isCityState) null
+            else ImageGetter.findExternalImage("Leaders/p_${civ.nation.leaderName.substringBefore(' ')}_thumb")
+        val lead: Actor = if (file == null) ImageGetter.getNationPortrait(civ.nation, sheet.pt(52f))
+        else {
+            val square = Pixmap(file)
+            val size = minOf(square.width, square.height)
+            val round = Pixmap(size, size, Pixmap.Format.RGBA8888)
+            round.blending = Pixmap.Blending.None
+            val radius = size / 2f
+            for (y in 0 until size) for (x in 0 until size) {
+                val coverage = (radius + .5f - hypot(x + .5f - radius, y + .5f - radius)).coerceIn(0f, 1f)
+                val pixel = square.getPixel(x + (square.width - size) / 2, y + (square.height - size) / 2)
+                round.drawPixel(x, y, (pixel and 0xffffff00.toInt()) or ((pixel and 0xff) * coverage).toInt())
+            }
+            square.dispose()
+            roundLeaderTexture?.dispose()
+            val texture = Texture(round).apply { setFilter(Texture.TextureFilter.Linear, Texture.TextureFilter.Linear) }
+            round.dispose()
+            roundLeaderTexture = texture
+            Image(texture)
+        }
+        return lead
+    }
+
     internal fun isNotPlayersTurn() = !GUI.isAllowedChangeState()
 
     init {
@@ -150,7 +185,6 @@ class DiplomacyScreen(
             val canvas = portraitCanvasBounds()
             portraitBackdrop = PortraitMapBackdrop(viewingCiv).apply {
                 setBounds(canvas.x, canvas.y, canvas.width, canvas.height)
-                isVisible = false
                 this@DiplomacyScreen.stage.addActor(this)
             }
             val safe = safeAreaBoundsInWorld()
@@ -158,6 +192,8 @@ class DiplomacyScreen(
             portraitHolder.setBounds(safe.x, safe.y, portraitWidth, portraitHeight)
             portraitHolder.setScale(portraitScale)
             stage.addActor(portraitHolder)
+            tray = TrayHost(this).also { stage.addActor(it) }
+            traySheet.onGone = { game.popScreen() }
             showPortraitList()
         } else {
             splitPane.setFillParent(true)
@@ -178,6 +214,7 @@ class DiplomacyScreen(
         }
 
         globalShortcuts.add(KeyboardBinding.Civilopedia) { openCivilopedia() }
+        if (isPortrait()) traySheet.rise()
     }
 
     override fun getCivilopediaRuleset() = viewingCivView.ruleset
@@ -203,68 +240,132 @@ class DiplomacyScreen(
         }
     }
 
-    /** Portrait: the civ list is a sheet over the map, with its own header and close */
-    private fun showPortraitList() {
+    /** Portrait: the tray sheet (list and civ pages) is on screen, the Trade page is not */
+    private fun showTray() {
         portraitBackdrop?.isVisible = true
         closeButton.isVisible = false
         portraitHolder.clear()
-        val knownCivs = viewingCiv.diplomacyFunctions.getKnownCivsSorted().toList()
-        val sheet = Table().apply {
-            background = skinStrings.getUiBackground("DiplomacyScreen/PortraitSheet",
-                skinStrings.roundedTopEdgeRectangleSmallShape, sheetColor)
-        }
-        sheet.add(ImageGetter.getWhiteDot().apply { color = Color(1f, 1f, 1f, .3f) })
-            .size(44f, 5f).padTop(8f).row()
-        val header = getPortraitSheetHeader(knownCivs)
-        sheet.add(header).growX().row()
-        // Grab bar and header are the drag zone; swiping them down closes like ×
-        sheet.touchable = Touchable.enabled
-        header.touchable = Touchable.enabled
-        sheet.addListener(SwipeDownToClose(sheet, header) { game.popScreen() })
-        if (knownCivs.isEmpty()) {
-            val guidance = Table().apply {
-                background = skinStrings.getUiBackground("DiplomacyScreen/PortraitEmpty",
-                    skinStrings.roundedEdgeRectangleShape, Color.valueOf("1c3249"))
-                pad(16f)
-                val icon = ImageGetter.getImage("OtherIcons/Diplomacy")
-                add(icon).size(48f).padRight(14f)
-                val copy = Table()
-                copy.add("Meet another civilization!".toLabel(Color.WHITE, 16, hideIcons = true)).left().row()
-                copy.add("Explore the map until you encounter another civilization!".toLabel(ink2, 14, hideIcons = true)
-                    .apply { wrap = true }).width(portraitWidth - 124f).left().padTop(4f)
-                add(copy).growX()
-            }
-            sheet.add(guidance).width(portraitWidth - 28f).padTop(10f).row()
-        }
-        sheet.add(leftSideScroll).grow()
-        portraitHolder.add(sheet).grow().padTop(sheetTopGap)
+        portraitHolder.isVisible = false
+        val host = tray!!
+        if (traySheet.parent == null) host.addActor(traySheet)
     }
 
-    private fun getPortraitSheetHeader(knownCivs: List<Civilization>) = Table().apply {
-        pad(10f, 16f, 6f, 16f)
+    /** Portrait: the civ list, a tray sheet over the map with its own header and close */
+    internal fun showPortraitList() {
+        showTray()
+        val knownCivs = viewingCiv.diplomacyFunctions.getKnownCivsSorted().toList()
+        val sheet = portraitPage("Diplomacy", getMetSubtitle(knownCivs), null, null)
+        sheet.minShare = 0f
+        val rows = ArrayList<Actor>()
+        if (!viewingCiv.isSpectator())
+            rows += sheet.row(viewingCiv.nation.leaderName,
+                "${viewingCiv.civName}, you  ·  Score ${viewingCiv.calculateTotalScore().toInt()}",
+                lead = ImageGetter.getNationPortrait(viewingCiv.nation, sheet.pt(44f)), chevron = false)
+        for (civ in knownCivs) rows += getPortraitCivRow(civ)
+        if (rows.isNotEmpty()) {
+            sheet.addToBody(sheet.section("Everyone you have met"))
+            sheet.addToBody(sheet.card(rows))
+        }
+        if (knownCivs.isEmpty()) {
+            sheet.addToBody(sheet.emptyState("OtherIcons/Diplomacy", "Meet another civilization!"))
+            sheet.addToBody("Explore the map until you encounter another civilization!".toLabel(TrayColors.INK2, sheet.font(14.5f), Align.center, hideIcons = true)
+                .apply { wrap = true }).padLeft(sheet.pt(20f)).padRight(sheet.pt(20f)).padTop(-sheet.pt(18f)).padBottom(sheet.pt(12f))
+        }
+        sheet.fit()
+    }
+
+    private fun getMetSubtitle(knownCivs: List<Civilization>): String {
         val majors = knownCivs.count { !it.isCityState }
         val cityStates = knownCivs.count { it.isCityState }
         val met = listOfNotNull(
             if (majors > 0) "$majors " + (if (majors == 1) "civilization" else "civilizations") else null,
             if (cityStates > 0) "$cityStates " + (if (cityStates == 1) "city-state" else "city-states") else null
         )
-        val subtitle = if (met.isEmpty()) "Nobody met yet" else met.joinToString(" and ") + " met"
-        val titles = Table()
-        titles.add("Diplomacy".toLabel(fontSize = 23)).left().row()
-        titles.add(subtitle.toLabel(ink2, 14)).left().padTop(1f)
-        add(titles).expandX().left()
-        val close = ImageGetter.getImage("OtherIcons/Close").apply {
-            color = ink2
-            setSize(18f, 18f)
-        }.surroundWithCircle(48f, resizeActor = false, color = Color(1f, 1f, 1f, .09f))
-        close.onActivation { game.popScreen() }
-        close.keyShortcuts.add(KeyCharAndCode.BACK)
-        add(close).size(48f)
+        return if (met.isEmpty()) "Nobody met yet" else met.joinToString(" and ") + " met"
     }
 
-    /** Portrait: after any right-side content change, show it full width with a way back to the list */
+    /** One met civ: emblem, leader (or city-state) name, and where you stand; a city-state with quests for you says so */
+    private fun getPortraitCivRow(civ: Civilization): Actor {
+        val sheet = traySheet
+        val diplomacy = civ.getDiplomacyManager(viewingCiv)!!
+        val level = diplomacy.relationshipLevel()
+        val standing = when {
+            civ.isAtWarWith(viewingCiv) -> DiplomaticStatus.War.name.tr()
+            civ.isHuman() && viewingCiv.isHuman() -> getHumanRelationshipText(diplomacy).tr()
+            diplomacy.diplomaticStatus == DiplomaticStatus.DefensivePact -> Constants.defensivePact.tr()
+            civ.isCityState -> "${level.name.tr()} (${diplomacy.getInfluence().toInt()})"
+            else -> level.name.tr()
+        }
+        val who = if (civ.isCityState) civ.cityStateType.name.tr() else civ.civName.tr(hideIcons = true)
+        val title = if (civ.isCityState || civ.nation.leaderName.isEmpty()) civ.civName else civ.nation.leaderName
+        val quest = if (civ.isCityState && civ.questManager.haveQuestsFor(viewingCiv))
+            sheet.pill("Quest", TrayColors.LOCK_BG, TrayColors.LOCK_INK) else null
+        return sheet.row(title, "$who  ·  $standing", lead = ImageGetter.getNationPortrait(civ.nation, sheet.pt(44f)), trailing = quest) {
+            updateRightSide(civ)
+        }.apply { name = "portrait-civ-${civ.civName}" }
+    }
+
+    /** Starts a portrait page on the tray sheet: header (with back when [onBack] is set), empty toolbar, body and footer.
+     *  On a pushed page Back and Escape step back like its back button; on the list they close.
+     *  With [pediaLink] the whole header (lead, name, subtitle) opens that Civilopedia entry, as the leader intro did;
+     *  dragging it still closes the sheet. */
+    internal fun portraitPage(title: String, subtitle: String?, lead: Actor?, onBack: (() -> Unit)?, pediaLink: String? = null): TraySheet {
+        val sheet = traySheet
+        sheet.minShare = .6f
+        if (pediaLink == null) sheet.header(title, subtitle, lead, onBack)
+        else {
+            // The kit's header content, made one target: the 52pt lead alone is under 48 real points on a narrow phone
+            val text = Table().left()
+            text.add(title.toLabel(TrayColors.INK, sheet.font(23f), hideIcons = true).apply { wrap = true }).growX().left().row()
+            if (subtitle != null)
+                text.add(subtitle.toLabel(TrayColors.INK2, sheet.font(14.5f), hideIcons = true).apply { wrap = true }).growX().left().padTop(sheet.pt(3f))
+            val content = Table()
+            content.add().minHeight(sheet.touch).width(0f)
+            if (lead != null) content.add(lead).size(sheet.pt(52f)).padRight(sheet.pt(12f))
+            content.add(text).growX().minWidth(0f)
+            content.name = "portrait-civ-pedia"
+            content.touchable = Touchable.enabled
+            content.onClick { openCivilopedia(pediaLink) }
+            sheet.header(content, onBack)
+        }
+        if (onBack != null) {
+            sheet.findActor<Actor>("portrait-sheet-close")?.keyShortcuts?.clear()
+            sheet.findActor<Actor>("portrait-sheet-back")?.keyShortcuts?.add(KeyCharAndCode.BACK)
+        }
+        sheet.toolbar(null)
+        sheet.removeFooter()
+        sheet.body.clear()
+        return sheet
+    }
+
+    /** The leader's words in the mock's speech bubble */
+    internal fun portraitQuote(text: String): Actor {
+        val sheet = traySheet
+        return Table().apply {
+            left()
+            add(Table().apply {
+                background = sheet.art.rounded(sheet.pt(16f)).tinted(TrayColors.FILL)
+                add(text.toLabel(TrayColors.INK, sheet.font(15f), hideIcons = true).apply { wrap = true })
+                    .growX().pad(sheet.pt(10f), sheet.pt(14f), sheet.pt(10f), sheet.pt(14f))
+            }).left().growX()
+            add().width(sheet.pt(40f))
+        }
+    }
+
+    /** Footer button that can be off: an unavailable action stays visible, dimmed and inert */
+    internal fun portraitButton(text: String, kind: TraySheet.ButtonKind, icon: String?, enabled: Boolean, action: () -> Unit): Actor =
+        traySheet.button(text, kind, icon) { action() }.apply {
+            if (!enabled) {
+                touchable = Touchable.disabled
+                color.a = .45f
+            }
+        }
+
+    /** Portrait Trade: its own full-width page over the map, with a way back to the list */
     private fun showPortraitDetail() {
         if (!isPortrait()) return
+        tray?.let { traySheet.remove() }
+        portraitHolder.isVisible = true
         closeButton.isVisible = true
         portraitHolder.clear()
         val back = "‹  Back".toTextButton()
@@ -290,27 +391,9 @@ class DiplomacyScreen(
     }
 
     internal fun updateLeftSideTable(selectCiv: Civilization?) {
+        if (isPortrait()) return // the portrait list is rebuilt whenever it is shown
         leftSideTable.clear()
         leftSideTable.add().padBottom(closeButtonPad).row()  // no default pad, and make distance of first civ to top same as for the close button
-
-        if (isPortrait() && !viewingCiv.isSpectator()) {
-            leftSideTable.add("Everyone you have met".toLabel(ink2, 14, hideIcons = true))
-                .left().pad(8f, 16f, 6f, 16f).row()
-            val ownRow = Table().apply {
-                background = skinStrings.getUiBackground("DiplomacyScreen/PortraitOwnRow",
-                    skinStrings.roundedEdgeRectangleShape, Color.valueOf("1c3249"))
-                pad(10f)
-                add(ImageGetter.getNationPortrait(viewingCiv.nation, 46f)).size(46f).padRight(12f)
-                val text = Table()
-                text.add(viewingCiv.nation.leaderName.toLabel(Color.WHITE, 17, hideIcons = true)
-                    .apply { wrap = true }).width(portraitWidth - 116f).left().row()
-                text.add("${viewingCiv.civName}, you  ·  Score ${viewingCiv.calculateTotalScore().toInt()}"
-                    .toLabel(ink2, 14, hideIcons = true).apply { wrap = true })
-                    .width(portraitWidth - 116f).left().padTop(2f)
-                add(text).growX()
-            }
-            leftSideTable.add(ownRow).growX().pad(0f, 14f, 8f, 14f).row()
-        }
 
         var selectCivY = 0f
 
@@ -319,7 +402,7 @@ class DiplomacyScreen(
                 selectCivY = leftSideTable.prefHeight
             }
 
-            val civIndicator = ImageGetter.getNationPortrait(civ.nation, if (isPortrait()) portraitIconSize else nationIconSize)
+            val civIndicator = ImageGetter.getNationPortrait(civ.nation, nationIconSize)
 
             val diplomacy = civ.getDiplomacyManager(viewingCiv)!!
             val relationLevel = diplomacy.relationshipLevel()
@@ -361,14 +444,8 @@ class DiplomacyScreen(
             // The wrapper serves only to highlight the selected civ better
             val civButton = Table().apply {
                 defaults().pad(nationIconPad)
-                if (isPortrait()) {
-                    // one full-width row per civ: icon beside the name
-                    add(civIndicator)
-                    add(civNameLabel).expandX().left()
-                } else {
-                    add(civIndicator).row()
-                    add(civNameLabel).row()
-                }
+                add(civIndicator).row()
+                add(civNameLabel).row()
                 onClick {
                     updateRightSide(civ)
                     highlightCiv(this)
@@ -381,8 +458,7 @@ class DiplomacyScreen(
 
         if (selectCivY != 0f) {
             leftSideScroll.layout()
-            leftSideScroll.scrollY = selectCivY + (nationIconSize + 2 * nationIconPad -
-                if (isPortrait()) portraitHeight else stage.height) / 2
+            leftSideScroll.scrollY = selectCivY + (nationIconSize + 2 * nationIconPad - stage.height) / 2
             leftSideScroll.updateVisualScroll()
         }
     }
@@ -394,17 +470,19 @@ class DiplomacyScreen(
     }
 
     internal fun updateRightSide(otherCiv: Civilization) {
-        portraitBackdrop?.isVisible = false
-        rightSideTable.clear()
         UncivGame.Current.musicController.chooseTrack(otherCiv.civName,
             MusicMood.peaceOrWar(viewingCiv.isAtWarWith(otherCiv)),MusicTrackChooserFlags.setSelectNation)
+        if (isPortrait()) {
+            // Portrait: the civ's page is pushed onto the tray sheet, back returns to the list
+            showTray()
+            if (otherCiv.isCityState) CityStateDiplomacyTable(this).showPortraitPage(otherCiv)
+            else MajorCivDiplomacyTable(this).showPortraitPage(otherCiv)
+            return
+        }
+        rightSideTable.clear()
         val content = if (otherCiv.isCityState) CityStateDiplomacyTable(this).getCityStateDiplomacyTable(otherCiv)
             else MajorCivDiplomacyTable(this).getMajorCivDiplomacyTable(otherCiv)
-        val detailHeight = if (isPortrait()) portraitHeight - closeButtonSize - 2 * closeButtonPad else stage.height
-        if (isPortrait() && otherCiv.isCityState)
-            rightSideTable.add(content).width(portraitWidth).height(detailHeight)
-        else rightSideTable.add(ScrollPane(content)).height(detailHeight)
-        showPortraitDetail()
+        rightSideTable.add(ScrollPane(content)).height(stage.height)
     }
 
     //region Major Civ Diplomacy
@@ -508,18 +586,33 @@ class DiplomacyScreen(
             declareWarButton.disable()
             declareWarButton.setText(declareWarButton.text.toString() + " (${turnsToPeaceTreaty.tr()}${Fonts.turn})")
         }
-        declareWarButton.onClick {
-            ConfirmPopup(this, getDeclareWarButtonText(otherCiv), "Declare war") {
-                diplomacyManager.declareWar()
-                setRightSideFlavorText(otherCiv, otherCiv.nation.attacked, "Very well.")
-                updateLeftSideTable(otherCiv)
-                val music = UncivGame.Current.musicController
-                music.chooseTrack(otherCiv.civName, MusicMood.War, MusicTrackChooserFlags.setSpecific)
-                music.playVoice("${otherCiv.civName}.attacked")
-            }.open()
-        }
+        declareWarButton.onClick { confirmDeclareWar(diplomacyManager, otherCiv) }
         if (isNotPlayersTurn()) declareWarButton.disable()
         return declareWarButton
+    }
+
+    /** Portrait row for Declare war: last, in danger red, still confirming; waits out a peace treaty like the button */
+    internal fun getDeclareWarRow(diplomacyManager: DiplomacyManager, otherCiv: Civilization): Actor {
+        val sheet = traySheet
+        val turnsToPeaceTreaty = diplomacyManager.turnsToPeaceTreaty()
+        val enabled = turnsToPeaceTreaty <= 0 && !isNotPlayersTurn()
+        return sheet.row("Declare war",
+            meta = if (turnsToPeaceTreaty > 0) "${turnsToPeaceTreaty.tr()}${Fonts.turn}" else null,
+            lead = sheet.disc(ImageGetter.getImage("OtherIcons/Fire"), TraySheet.Tone.Danger, recolor = false),
+            state = if (enabled) TraySheet.RowState.Danger else TraySheet.RowState.Disabled,
+            onTap = if (enabled) ({ confirmDeclareWar(diplomacyManager, otherCiv) }) else null)
+            .apply { name = "portrait-declare-war" }
+    }
+
+    private fun confirmDeclareWar(diplomacyManager: DiplomacyManager, otherCiv: Civilization) {
+        ConfirmPopup(this, getDeclareWarButtonText(otherCiv), "Declare war") {
+            diplomacyManager.declareWar()
+            setRightSideFlavorText(otherCiv, otherCiv.nation.attacked, "Very well.")
+            updateLeftSideTable(otherCiv)
+            val music = UncivGame.Current.musicController
+            music.chooseTrack(otherCiv.civName, MusicMood.War, MusicTrackChooserFlags.setSpecific)
+            music.playVoice("${otherCiv.civName}.attacked")
+        }.open()
     }
 
     private fun getDeclareWarButtonText(otherCiv: Civilization): String {
@@ -565,6 +658,17 @@ class DiplomacyScreen(
         flavorText: String,
         response: String
     ) {
+        if (isPortrait()) {
+            // The leader's answer on the tray sheet; the response button returns to their page
+            showTray()
+            val sheet = portraitPage(otherCiv.getLeaderDisplayName(), null,
+                leaderLead(otherCiv), { updateRightSide(otherCiv) }, otherCiv.nation.makeLink())
+            sheet.addToBody(portraitQuote(flavorText), 4f)
+            sheet.footer().add(portraitButton(response, TraySheet.ButtonKind.Primary, null, true) { updateRightSide(otherCiv) }
+                .apply { keyShortcuts.add(KeyCharAndCode.SPACE) }).growX().padRight(0f)
+            sheet.fit()
+            return
+        }
         val diplomacyTable = Table()
         diplomacyTable.defaults().pad(10f)
         diplomacyTable.add(LeaderIntroTable(otherCiv))
@@ -578,16 +682,20 @@ class DiplomacyScreen(
 
         rightSideTable.clear()
         rightSideTable.add(diplomacyTable)
-        showPortraitDetail()
     }
 
     internal fun getGoToOnMapButton(civilization: Civilization): TextButton {
         val goToOnMapButton = "Go to on map".toTextButton()
-        goToOnMapButton.onClick {
-            val worldScreen = UncivGame.Current.resetToWorldScreen()
-            worldScreen.mapHolder.setCenterPosition(civilization.getCapital()!!.location.toHexCoord(), selectUnit = false)
-        }
+        goToOnMapButton.onClick { goToOnMap(civilization) }
         return goToOnMapButton
+    }
+
+    internal fun getGoToOnMapRow(civilization: Civilization): Actor = traySheet.row("Go to on map",
+        lead = traySheet.disc(ImageGetter.getImage("OtherIcons/CrosshairB"))) { goToOnMap(civilization) }
+
+    private fun goToOnMap(civilization: Civilization) {
+        val worldScreen = UncivGame.Current.resetToWorldScreen()
+        worldScreen.mapHolder.setCenterPosition(civilization.getCapital()!!.location.toHexCoord(), selectUnit = false)
     }
 
     /** Calculate a width for [TradeTable] two-column layout, called from [OfferColumnsTable]
@@ -615,7 +723,37 @@ class DiplomacyScreen(
 
     override fun dispose() {
         leaderPortraitTexture?.dispose()
+        roundLeaderTexture?.dispose()
         portraitBackdrop?.dispose()
         super.dispose()
+    }
+}
+
+/** Stage-wide host of the portrait tray sheet: draws the mock's scrim over the map as the sheet rises, is dragged and
+ *  leaves, and frees the sheet's textures when the screen goes away */
+private class TrayHost(private val screen: BaseScreen) : Group() {
+    val art = TrayArt(screen.stage)
+    val sheet = TraySheet(screen, art)
+    private val white = ImageGetter.getWhiteDotDrawable()
+
+    init {
+        name = "portrait-diplomacy-sheet"
+        touchable = Touchable.childrenOnly
+        setBounds(0f, 0f, screen.stage.width, screen.stage.height)
+        addActor(sheet)
+    }
+
+    override fun draw(batch: Batch, parentAlpha: Float) {
+        if (sheet.parent == this) {
+            val canvas = screen.portraitCanvasBounds()
+            batch.setColor(TrayColors.SCRIM.r, TrayColors.SCRIM.g, TrayColors.SCRIM.b, TrayColors.SCRIM.a * sheet.scrim * parentAlpha)
+            white.draw(batch, canvas.x, canvas.y, canvas.width, canvas.height)
+        }
+        super.draw(batch, parentAlpha)
+    }
+
+    override fun setStage(stage: Stage?) {
+        super.setStage(stage)
+        if (stage == null) art.release()
     }
 }

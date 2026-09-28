@@ -38,7 +38,6 @@ import com.unciv.ui.popups.ConfirmPopup
 import com.unciv.ui.popups.ToastPopup
 import com.unciv.ui.popups.closeAllPopups
 import com.unciv.ui.screens.basescreen.BaseScreen
-import com.unciv.ui.screens.basescreen.portraitCanvasBounds
 import com.unciv.ui.screens.basescreen.RecreateOnResize
 import com.unciv.ui.screens.worldscreen.WorldScreen
 import com.unciv.utils.Concurrency
@@ -186,16 +185,10 @@ class CityScreen(
         stage.addActor(cityPickerTable)  // add late so it's top in Z-order and doesn't get covered in cramped portrait
         stage.addActor(exitCityButton)
         if (isPortrait()) {
-            val safe = safeAreaBoundsInWorld()
-            val canvas = portraitCanvasBounds()
-            val logicalWidth = 393f
-            val scale = safe.width / logicalWidth
-            portraitView = CityPortraitView(this, logicalWidth).also {
-                it.isTransform = true
-                it.setBounds(safe.x, safe.y, logicalWidth,
-                    ((canvas.y + canvas.height - safe.y) / scale - 250f).coerceAtLeast(390f))
-                it.setScale(scale)
+            // The tray sheet pins itself to the canvas bottom and fills behind the home indicator
+            portraitView = CityPortraitView(this).also {
                 stage.addActor(it)
+                it.fit()
             }
         }
 

@@ -26,10 +26,13 @@ import com.unciv.ui.components.widgets.AutoScrollPane
 import com.unciv.ui.components.widgets.ExpanderTab
 import com.unciv.ui.components.UncivTooltip.Companion.addTooltip
 import com.unciv.ui.images.ImageGetter
+import com.unciv.ui.popups.TrayColors
 import com.unciv.ui.screens.basescreen.BaseScreen
 import com.unciv.ui.screens.overviewscreen.EmpireOverviewCategories
+import com.unciv.ui.screens.worldscreen.PortraitTileCard
 import com.unciv.view.CityView
 import kotlin.math.ceil
+import kotlin.math.max
 import kotlin.math.roundToInt
 
 class CityStatsTable(private val cityScreen: CityScreen,
@@ -39,6 +42,8 @@ class CityStatsTable(private val cityScreen: CityScreen,
     // table within this Table. Slightly smaller creates border
     private val miniStatsTable = MiniStatsTable(ExpanderTab.wasOpen("CityStatsTable"))
     private val lowerTable = Table() // table that will be in the ScrollPane
+    /** Portrait targets on the 393pt canvas the city sheet scales to the safe width: never under 48 real points */
+    private val touch = max(48f, PortraitTileCard.touchPoints(cityScreen) * 393f / cityScreen.safeAreaBoundsInWorld().width)
     private val lowerPane = AutoScrollPane(lowerTable)
     private var lowerCell: Cell<AutoScrollPane>? = null
 
@@ -89,7 +94,7 @@ class CityStatsTable(private val cityScreen: CityScreen,
         lowerTable.defaults().space(4f)
 
         if (cityScreen.isPortrait()) {
-            lowerTable.background = portraitBackground(Color.valueOf("20394f"))
+            lowerTable.background = portraitBackground(TrayColors.CARD)
             add(lowerTable).width(369f)
         } else add(expander).growX()
     }
@@ -134,7 +139,7 @@ class CityStatsTable(private val cityScreen: CityScreen,
             .padTop(12f).padBottom(6f).row()
     }
 
-    private fun portraitRow(actor: Actor, height: Float = 48f) {
+    private fun portraitRow(actor: Actor, height: Float = touch) {
         lowerTable.add(actor).width(345f).minHeight(height).fillY().left().padBottom(8f).row()
     }
 
@@ -188,7 +193,7 @@ class CityStatsTable(private val cityScreen: CityScreen,
                     cityScreen.updateAsync()
                 }
             }
-            statGrid.add(chip).width(109f).height(48f).padRight(if (column == 2) 0f else 6f).padBottom(6f)
+            statGrid.add(chip).width(109f).height(touch).padRight(if (column == 2) 0f else 6f).padBottom(6f)
             column++
             if (column == 3) { statGrid.row(); column = 0 }
         }
@@ -291,7 +296,7 @@ class CityStatsTable(private val cityScreen: CityScreen,
                 cityScreen.updateAsync()
             }
             button.label.wrap = true
-            grid.add(button).width(168f).minHeight(48f).padRight(if (column == 0) 9f else 0f).padBottom(8f)
+            grid.add(button).width(168f).minHeight(touch).padRight(if (column == 0) 9f else 0f).padBottom(8f)
             column++
             if (column == 2) { grid.row(); column = 0 }
         }
@@ -320,10 +325,10 @@ class CityStatsTable(private val cityScreen: CityScreen,
             val actions = Table()
             actions.add(portraitButton("Breakdown") {
                 GreatPersonPointsBreakdownPopup(cityScreen, breakdown, name)
-            }).width(168f).height(48f).padRight(9f)
+            }).width(168f).height(touch).padRight(9f)
             actions.add(portraitButton("All great people") {
                 GreatPersonPointsBreakdownPopup(cityScreen, breakdown, null)
-            }).width(168f).height(48f)
+            }).width(168f).height(touch)
             portraitRow(actions)
         }
     }
@@ -359,12 +364,12 @@ class CityStatsTable(private val cityScreen: CityScreen,
                 actions.add(portraitButton("−", assigned > 0 && !cityView.isPuppet()) {
                     cityView.tryUnassignSpecialist(name)
                     cityScreen.updateAsync()
-                }).width(168f).height(48f).padRight(9f)
+                }).width(168f).height(touch).padRight(9f)
                 actions.add(portraitButton("+", assigned < maximum && !cityView.isPuppet() &&
                     cityView.getFreePopulation() > 0) {
                     cityView.tryAssignSpecialist(name)
                     cityScreen.updateAsync()
-                }).width(168f).height(48f)
+                }).width(168f).height(touch)
                 portraitRow(actions)
             }
         }
