@@ -50,6 +50,14 @@ open class TileGroup(
     var isForMapEditorIcon = false
     var strategicView = false
     var portraitPointScale = 1f
+    /** Portrait zoom state set by the world map on each zoom (see [MapProjection.damping]); other maps keep the reference zoom */
+    var portraitDamping = 1f
+        private set
+    var portraitIconScale = 1f
+        private set
+    var portraitLodTier = 0
+        private set
+    private var zoomAppliedInStrategicView = false
 
     @Suppress("LeakingThis") val layerTerrain = TileLayerTerrain(this, groupSize)
     @Suppress("LeakingThis") val layerFeatures = TileLayerFeatures(this, groupSize)
@@ -137,6 +145,19 @@ open class TileGroup(
         setAllLayersVisible(true)
 
         for (layer in allLayers) layer.update(viewingCiv)
+    }
+
+    /** Resizes zoom-dependent art in place, no rebuild: runs for every tile on each pinch frame, so it stays allocation-free and cheap */
+    fun applyPortraitZoom(damping: Float, iconScale: Float, lodTier: Int) {
+        val strategicChanged = zoomAppliedInStrategicView != strategicView
+        val contentChanged = strategicChanged || damping != portraitDamping || lodTier != portraitLodTier
+        val iconsChanged = strategicChanged || iconScale != portraitIconScale
+        zoomAppliedInStrategicView = strategicView
+        portraitDamping = damping
+        portraitIconScale = iconScale
+        portraitLodTier = lodTier
+        if (contentChanged) layerUnitArt.updateDamping()
+        if (contentChanged || iconsChanged) layerUnitFlag.updatePortraitScale()
     }
 
     override fun hit(x: Float, y: Float, touchable: Boolean): Actor? {

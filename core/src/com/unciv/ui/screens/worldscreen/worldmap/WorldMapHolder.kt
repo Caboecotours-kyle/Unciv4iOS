@@ -1167,21 +1167,38 @@ class WorldMapHolder @JvmOverloads constructor(
         return true
     }
 
+    /** The zoom last applied to the tiles of [zoomAppliedTo]: a repeat call (same zoom, same tiles) skips the tile loop */
+    private var zoomAppliedTo: TileGroupMap<WorldTileGroup>? = null
+    private var zoomAppliedScale = 0f
+    private var zoomAppliedPointScale = 0f
+
     override fun zoom(zoomScale: Float) {
         super.zoom(zoomScale)
-        if (::tileGroupMap.isInitialized && currentTileSetStrings.projection.tilted) {
-            val strategic = normalizedZoom < 0.8f
-            val pointScale = tileGroupMap.portraitUnitsPerPoint(worldScreen.stage.viewport) / scaleX
-            var changed = false
-            for (group in tileGroups.values) {
-                changed = changed || group.strategicView != strategic
-                group.strategicView = strategic
-                group.portraitPointScale = pointScale
-                group.layerUnitFlag.updatePortraitScale()
-            }
-            if (changed) worldScreen.shouldUpdate = true
-        }
+        if (::tileGroupMap.isInitialized && currentTileSetStrings.projection.tilted) applyPortraitZoom()
         clampCityButtonSize()
+    }
+
+    /** Portrait: the hex grows 1:1 with zoom, units and props grow slower and icons keep their screen size.
+     *  Runs on every pinch frame over every tile, so it only resizes actors in place. */
+    private fun applyPortraitZoom() {
+        val pointScale = tileGroupMap.portraitUnitsPerPoint(worldScreen.stage.viewport) / scaleX
+        if (zoomAppliedTo === tileGroupMap && zoomAppliedScale == scaleX && zoomAppliedPointScale == pointScale) return
+        zoomAppliedTo = tileGroupMap
+        zoomAppliedScale = scaleX
+        zoomAppliedPointScale = pointScale
+        val zoom = normalizedZoom
+        val strategic = zoom < 0.8f
+        val damping = MapProjection.damping(zoom)
+        val iconScale = MapProjection.iconScale(zoom)
+        val lodTier = MapProjection.lodTier(zoom)
+        var changed = false
+        for (group in tileGroups.values) {
+            changed = changed || group.strategicView != strategic
+            group.strategicView = strategic
+            group.portraitPointScale = pointScale
+            group.applyPortraitZoom(damping, iconScale, lodTier)
+        }
+        if (changed) worldScreen.shouldUpdate = true
     }
 
     /** We don't want the city buttons becoming too large when zooming out */

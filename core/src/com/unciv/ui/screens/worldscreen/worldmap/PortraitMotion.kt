@@ -27,8 +27,9 @@ import kotlin.math.min
 import kotlin.math.sin
 import kotlin.math.sqrt
 
-/** One colored layer of a unit sprite, copied so motion can draw a unit whose slot is gone or belonged to the previous screen. */
-internal class SpriteCopy(image: Image) {
+/** One colored layer of a unit sprite, copied so motion can draw a unit whose slot is gone or belonged to the previous screen.
+ *  [damping] is the portrait zoom damping the sprite was sized with, so a copy drawn after a zoom is resized to match. */
+internal class SpriteCopy(image: Image, private val damping: Float = 1f) {
     private val drawable: Drawable = image.drawable
     private val tint = image.color.cpy()
     private val x = image.x
@@ -40,16 +41,21 @@ internal class SpriteCopy(image: Image) {
     private val scaleX = image.scaleX
     private val scaleY = image.scaleY
 
-    fun toImage() = Image(drawable).apply {
-        setBounds(this@SpriteCopy.x, this@SpriteCopy.y, this@SpriteCopy.width, this@SpriteCopy.height)
-        setOrigin(this@SpriteCopy.originX, this@SpriteCopy.originY)
+    /** Sized for [home]'s current zoom around the sprite's ground anchor (its origin) */
+    fun toImage(home: TileGroup) = Image(drawable).apply {
+        val k = home.portraitDamping / damping
+        val anchorX = home.groundCenterX + (this@SpriteCopy.x + this@SpriteCopy.originX - home.groundCenterX) * k
+        val anchorY = home.groundCenterY + (this@SpriteCopy.y + this@SpriteCopy.originY - home.groundCenterY) * k
+        setSize(this@SpriteCopy.width * k, this@SpriteCopy.height * k)
+        setOrigin(this@SpriteCopy.originX * k, this@SpriteCopy.originY * k)
+        setPosition(anchorX - originX, anchorY - originY)
         setScale(this@SpriteCopy.scaleX, this@SpriteCopy.scaleY)
         color = tint.cpy()
         touchable = Touchable.disabled
     }
 
     companion object {
-        fun of(slot: UnitSpriteSlot) = slot.spriteGroup.children.filterIsInstance<Image>().map { SpriteCopy(it) }
+        fun of(slot: UnitSpriteSlot) = slot.spriteGroup.children.filterIsInstance<Image>().map { SpriteCopy(it, slot.damping) }
     }
 }
 
@@ -219,7 +225,8 @@ internal class PortraitMotion(private val holder: WorldMapHolder) {
         }
     }
 
-    private fun unitScale(group: TileGroup) = group.hexagonImageWidth / 86.6f
+    /** Motion offsets and effects are sized to the unit, which grows slower than the hex when zoomed in */
+    private fun unitScale(group: TileGroup) = group.hexagonImageWidth / 86.6f * group.portraitDamping
     private fun groundX(group: TileGroup) = group.x + group.groundCenterX
     private fun groundY(group: TileGroup) = group.y + group.groundCenterY
 
@@ -244,7 +251,7 @@ internal class PortraitMotion(private val holder: WorldMapHolder) {
         fun setSprite(sprite: List<SpriteCopy>) {
             ghost.clearChildren()
             flashLayers = null
-            for (layer in sprite) ghost.addActor(layer.toImage())
+            for (layer in sprite) ghost.addActor(layer.toImage(home))
         }
 
         /** Brightens the sprite toward white by [amount], with additive copies of its layers made on first use */

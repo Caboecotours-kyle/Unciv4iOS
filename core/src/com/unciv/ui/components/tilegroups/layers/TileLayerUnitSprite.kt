@@ -1,6 +1,7 @@
 package com.unciv.ui.components.tilegroups.layers
 
 import com.badlogic.gdx.graphics.Color
+import com.badlogic.gdx.scenes.scene2d.ui.Image
 import com.unciv.UncivGame
 import com.unciv.models.tilesets.TileSetCache
 import com.unciv.view.CivView
@@ -13,6 +14,8 @@ class UnitSpriteSlot {
     val spriteGroup = NonTransformGroup()
     var currentImageLocation = ""
     var unitId = -1
+    /** Portrait zoom damping the sprite was last sized with (see TileGroup.portraitDamping) */
+    var damping = 1f
 }
 
 class TileLayerUnitSprite(tileGroup: TileGroup, size: Float) : TileLayer(tileGroup, size) {
@@ -109,11 +112,36 @@ class TileLayerUnitSprite(tileGroup: TileGroup, size: Float) : TileLayer(tileGro
 
     /** Tall unit sprites hide each other on a shared tile, so a military and a civilian unit stand side by side. */
     private fun spreadSharedTile() {
+        if (strings.projection.tilted) return updateDamping()
         if (!TileSetCache.getCurrent().config.unitFlagsAboveSprites) return
         val shared = civilianSlot != null && militarySlot != null
         val baseX = tileGroup.hexagonImagePosition.first
         militarySlot?.spriteGroup?.children?.forEach { it.x = baseX - if (shared) size * 0.2f else 0f }
         civilianSlot?.spriteGroup?.children?.forEach { it.x = baseX + if (shared) size * 0.2f else 0f }
+    }
+
+    /** Portrait: sprites grow slower than the hex when zoomed in, around their ground anchor (their feet stand on the
+     *  ground centre), so poses and motion that scale or rotate around the image origin stay aligned. */
+    fun updateDamping() {
+        if (!strings.projection.tilted) return
+        val spread = if (TileSetCache.getCurrent().config.unitFlagsAboveSprites && civilianSlot != null && militarySlot != null)
+            size * 0.2f else 0f
+        placeDamped(militarySlot, -spread)
+        placeDamped(civilianSlot, spread)
+    }
+
+    private fun placeDamped(slot: UnitSpriteSlot?, spread: Float) {
+        val children = slot?.spriteGroup?.children ?: return
+        slot.damping = tileGroup.portraitDamping
+        val damping = slot.damping
+        val hexWidth = tileGroup.hexagonImageWidth
+        for (i in 0 until children.size) {
+            val image = children[i] as? Image ?: continue
+            image.setSize(hexWidth * damping, image.prefHeight * hexWidth / image.prefWidth * damping)
+            image.setOrigin(tileGroup.hexagonImageOriginX * damping, tileGroup.hexagonImageOriginY * damping)
+            image.x = tileGroup.groundCenterX + spread * damping - image.originX
+            image.y = tileGroup.groundCenterY - image.originY
+        }
     }
 
     override fun determineVisibility() {
