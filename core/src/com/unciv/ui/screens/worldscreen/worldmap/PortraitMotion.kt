@@ -413,7 +413,8 @@ internal class PortraitMotion(private val holder: WorldMapHolder) {
             }
         }
 
-        private fun cityImages() = center.layerTerrain.tileBaseImages.filter { it !is GroundImage && it.name?.contains("City center") == true }
+        private fun cityImages() = center.layerTerrain.tileBaseImages.filter { it !is GroundImage && it.name?.contains("City center") == true } +
+            center.layerTerrain.propImages.filter { it.ownerLocation.contains("City center") }
         private fun borderActors() = territory.flatMap { it.layerBorders.ownedActors }
         private fun bannerActors() = center.layerCityButton.ownedActors.toList()
 

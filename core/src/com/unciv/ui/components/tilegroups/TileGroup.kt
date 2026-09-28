@@ -156,6 +156,7 @@ open class TileGroup(
         portraitDamping = damping
         portraitIconScale = iconScale
         portraitLodTier = lodTier
+        // Props resize themselves when drawn, so off-screen ones cost nothing here
         if (contentChanged) layerUnitArt.updateDamping()
         if (contentChanged || iconsChanged) layerUnitFlag.updatePortraitScale()
     }

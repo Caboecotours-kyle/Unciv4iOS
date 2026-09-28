@@ -23,6 +23,8 @@ class TileSetConfig {
     var mapVerticalScale: Float = 1f
     var tileScales: HashMap<String, Float> = HashMap()
     var ruleVariants: HashMap<String, Array<String>> = HashMap()
+    /** Portrait only: sprites drawn over a Tilted image, keyed by that image's final location. Kept ground first, then back to front. */
+    var props: HashMap<String, Array<TileProp>> = HashMap()
 
     fun clone(): TileSetConfig {
         val toReturn = TileSetConfig()
@@ -38,6 +40,7 @@ class TileSetConfig {
         toReturn.mapVerticalScale = mapVerticalScale
         toReturn.tileScales = tileScales
         toReturn.ruleVariants.putAll(ruleVariants.map { Pair(it.key, it.value.clone()) })
+        toReturn.props.putAll(props.map { Pair(it.key, it.value.clone()) })
         return toReturn
     }
 
@@ -58,5 +61,26 @@ class TileSetConfig {
         for ((tileSetString, renderOrder) in other.ruleVariants) {
             ruleVariants[tileSetString] = renderOrder
         }
+        for ((imageLocation, imageProps) in other.props) {
+            props[imageLocation] = imageProps.sortedWith(TileProp.drawOrder).toTypedArray()
+        }
+    }
+}
+
+/** One sprite of a Tilted tile image; see [TileSetConfig.props]. Positions and sizes are fractions of the hex image width. */
+class TileProp {
+    var image = ""
+    /** Bottom centre relative to the tile's ground centre, on screen (already projected), y up */
+    var x = 0f
+    var y = 0f
+    /** Drawn width at the reference zoom; the height follows the sprite */
+    var w = 0f
+    /** Lowest level of detail that shows it */
+    var lod = 0
+    /** Flat ground art: scales with the hex and draws before upright props */
+    var ground = false
+
+    companion object {
+        val drawOrder: Comparator<TileProp> = compareBy<TileProp> { !it.ground }.thenByDescending { it.y }
     }
 }

@@ -1,11 +1,14 @@
 package com.unciv.ui.components.tilegroups.layers
 
 import com.badlogic.gdx.graphics.Color
+import com.badlogic.gdx.graphics.g2d.Batch
+import com.badlogic.gdx.scenes.scene2d.Touchable
 import com.badlogic.gdx.scenes.scene2d.ui.Image
 import com.unciv.UncivGame
 import com.unciv.view.CivView
 import com.unciv.view.TileView
 import com.unciv.logic.map.NeighborDirection
+import com.unciv.models.tilesets.TileProp
 import com.unciv.ui.components.tilegroups.TileGroup
 import com.unciv.ui.images.ImageGetter
 import com.unciv.ui.screens.basescreen.BaseScreen
@@ -15,6 +18,8 @@ import kotlin.random.Random
 class TileLayerTerrain(tileGroup: TileGroup, size: Float) : TileLayer(tileGroup, size) {
 
     val tileBaseImages: ArrayList<Image> = ArrayList()
+    /** Portrait tileset props of [tileBaseImages], each drawn right after the image it belongs to */
+    val propImages: ArrayList<PropImage> = ArrayList()
     private var tileImageIdentifiers = listOf<String>()
     private var previousStrategicView = false
     private var bottomRightRiverImage: Image? = null
@@ -188,6 +193,8 @@ class TileLayerTerrain(tileGroup: TileGroup, size: Float) : TileLayer(tileGroup,
 
         for (image in tileBaseImages) removeOwnedActor(image)
         tileBaseImages.clear()
+        for (image in propImages) removeOwnedActor(image)
+        propImages.clear()
 
         var nextMapIdx = mapInsertIdx
         var nextOwnedIdx = ownedInsertIdx
@@ -240,6 +247,52 @@ class TileLayerTerrain(tileGroup: TileGroup, size: Float) : TileLayer(tileGroup,
             } else {
                 image.setHexagonSize()
             }
+
+            // Strategic view draws no props; switching to it rebuilds these images anyway
+            val props = if (tileGroup.strategicView) null else strings.tileSetConfig.props[mapLocation]
+            if (props != null) for (prop in props) {
+                if (!ImageGetter.imageExists(prop.image)) continue
+                val propImage = PropImage(prop, mapLocation)
+                propImages.add(propImage)
+                if (nextMapIdx >= 0) {
+                    ownedActors.add(nextOwnedIdx++, propImage)
+                    actorParent!!.addActorAt(nextMapIdx++, propImage)
+                } else addOwnedActor(propImage)
+                propImage.place()
+            }
+        }
+    }
+
+    /** A tileset prop (see [TileSetConfig.props]): anchored at its bottom centre, hidden below its level of detail.
+     *  It resizes itself for the current zoom when drawn, so a pinch costs only the props on screen. */
+    inner class PropImage(val prop: TileProp, val ownerLocation: String) : Image(ImageGetter.getDrawable(prop.image)) {
+        var shownAtZoom = true
+            private set
+        private var placedDamping = Float.NaN
+        private var placedTier = -1
+        private var placedStrategic = false
+
+        init { touchable = Touchable.disabled }
+
+        override fun draw(batch: Batch?, parentAlpha: Float) {
+            if (placedDamping != tileGroup.portraitDamping || placedTier != tileGroup.portraitLodTier
+                || placedStrategic != tileGroup.strategicView) place()
+            if (shownAtZoom) super.draw(batch, parentAlpha)
+        }
+
+        fun place() {
+            placedDamping = tileGroup.portraitDamping
+            placedTier = tileGroup.portraitLodTier
+            placedStrategic = tileGroup.strategicView
+            val hexWidth = tileGroup.hexagonImageWidth
+            // Upright props grow slower than the hex; their spread over the hex does not
+            val width = prop.w * hexWidth * if (prop.ground) 1f else placedDamping
+            val height = width * prefHeight / prefWidth
+            val anchorX = tileX + tileGroup.groundCenterX + prop.x * hexWidth
+            val anchorY = tileY + tileGroup.groundCenterY + prop.y * hexWidth
+            setBounds(anchorX - width / 2f, anchorY, width, height)
+            setOrigin(width / 2f, 0f)
+            shownAtZoom = !placedStrategic && placedTier >= prop.lod
         }
     }
 
@@ -269,6 +322,7 @@ class TileLayerTerrain(tileGroup: TileGroup, size: Float) : TileLayer(tileGroup,
 
         for ((index, image) in tileBaseImages.withIndex())
             image.color = if (index == 0) baseTerrainColor else color
+        for (image in propImages) image.color = color
     }
 
     private fun updateRivers(displayBottomRight: Boolean, displayBottom: Boolean, displayBottomLeft: Boolean) {
@@ -302,6 +356,7 @@ class TileLayerTerrain(tileGroup: TileGroup, size: Float) : TileLayer(tileGroup,
         for (image in tileBaseImages) {
             image.color.lerp(BaseScreen.clearColor, 1-brightness)
         }
+        for (image in propImages) image.color.lerp(BaseScreen.clearColor, 1 - brightness)
     }
 
     override fun doUpdate(viewingCiv: CivView?) {
