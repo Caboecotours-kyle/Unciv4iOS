@@ -11,6 +11,9 @@ import com.unciv.ui.components.extensions.colorFromRGB
 import com.unciv.view.AttackableTileView
 import com.unciv.view.CivView
 import com.unciv.view.MapUnitView
+import com.unciv.view.TileView
+import com.unciv.ui.screens.worldscreen.worldmap.PortraitMoveRange.showPortraitAttack
+import com.unciv.ui.screens.worldscreen.worldmap.PortraitMoveRange.showPortraitMoveRange
 
 object WorldMapTileUpdater {
 
@@ -112,6 +115,11 @@ object WorldMapTileUpdater {
         }
 
         val isAirUnit = unitView.isAirUnit()
+        val portrait = currentTileSetStrings.projection.tilted
+        // Portrait ground and sea moves outline their range instead of washing each tile (see PortraitMoveRange)
+        val portraitRange = portrait && !isAirUnit && !unitView.isPreparingParadrop()
+            && unitView == worldScreen.bottomUnitTable.selectedUnit
+        val portraitReach = ArrayList<TileView>()
         val moveTileOverlayColor = if (unitView.isPreparingParadrop()) Color.BLUE else Color.WHITE
         val tilesInMoveRange = unitView.getReachableTilesInCurrentTurn()
         // Prepare special Nuke blast radius display
@@ -141,7 +149,8 @@ object WorldMapTileUpdater {
             if (unitView.canMoveTo(tileView) ||
                 unitView.isUnknownTileWeShouldAssumeToBePassable(tileView) && !isAirUnit
             ) {
-                if (UncivGame.Current.settings.useCirclesToIndicateMovableTiles) {
+                if (portraitRange) portraitReach.add(tileView)
+                else if (UncivGame.Current.settings.useCirclesToIndicateMovableTiles) {
                     val alpha = if (UncivGame.Current.settings.singleTapMove) 0.7f else 0.3f
                     group.layerOverlay.showHighlight(moveTileOverlayColor, alpha)
                 }
@@ -185,6 +194,7 @@ object WorldMapTileUpdater {
 
         // Z-Layer: 6
         // Highlight attackable tiles
+        val portraitAttack = HashSet<TileView>()
         if (unitView.isMilitary()) {
             // For nukes, getAttackableEnemies already only returns tiles that are legal to nuke
             // (per Nuke.mayUseNuke) regardless of visible enemies on them; for everything else we still only
@@ -196,7 +206,9 @@ object WorldMapTileUpdater {
 
             for (attackableTile in attackableTiles) {
                 val tileGroupToAttack = tileGroups[attackableTile.getTileToAttack()]!!
-                tileGroupToAttack.layerOverlay.showHighlight(colorFromRGB(237, 41, 57))
+                // Portrait: a red hex and outline instead of the ring (see PortraitMoveRange)
+                if (portrait) portraitAttack.add(attackableTile.getTileToAttack())
+                else tileGroupToAttack.layerOverlay.showHighlight(colorFromRGB(237, 41, 57))
                 tileGroupToAttack.layerOverlay.showCrosshair(
                     // the targets which cannot be attacked without movements shown as orange-ish
                     if (attackableTile.getTileToAttackFrom() != unitView.getTile())
@@ -207,6 +219,9 @@ object WorldMapTileUpdater {
                     tileGroups[attackableTile.getTileToAttackFrom()]!!.layerOverlay.showHighlight(Color.SKY, 0.7f)
             }
         }
+
+        if (portraitRange) showPortraitMoveRange(unitView, portraitReach, portraitAttack)
+        else if (portraitAttack.isNotEmpty()) showPortraitAttack(portraitAttack)
 
         // Z-Layer: 7
         // Highlight best tiles for city founding

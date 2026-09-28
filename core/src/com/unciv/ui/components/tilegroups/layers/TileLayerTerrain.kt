@@ -343,7 +343,14 @@ class TileLayerTerrain(tileGroup: TileGroup, size: Float) : TileLayer(tileGroup,
         for ((index, image) in tileBaseImages.withIndex())
             image.color = if (index == 0) baseTerrainColor else color
         for (image in propImages) image.color = image.owner.color
+        // Rivers keep their colour otherwise, and the portrait move range shades them
+        if (strings.projection.tilted) for (river in arrayOf(bottomRightRiverImage, bottomRiverImage, bottomLeftRiverImage))
+            river?.color?.set(Color.WHITE)
     }
+
+    /** Portrait move range: tints every image of this tile toward [color] by [amount], like a translucent hexagon laid
+     *  over the tile and its props but under its units. The next update's colours undo it. */
+    fun shade(color: Color, amount: Float) = forEachOwnedActor { it.color.shadeToward(color, amount) }
 
     private fun updateRivers(displayBottomRight: Boolean, displayBottom: Boolean, displayBottomLeft: Boolean) {
         bottomRightRiverImage = updateRiver(bottomRightRiverImage,displayBottomRight, strings.bottomRightRiver)

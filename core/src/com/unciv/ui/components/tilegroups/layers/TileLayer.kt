@@ -51,6 +51,22 @@ abstract class TileLayer(val tileGroup: TileGroup, val size: Float) {
         else tileGroup.addActor(actor)
     }
 
+    /** On a tilted map, where a tile's layers share one row, adds [actor] just before [below]'s first actor in that
+     *  row, so it draws under them (the tile's units, say); otherwise as [addOwnedActor]. */
+    protected fun addOwnedActorBelow(actor: Actor, below: TileLayer) {
+        val parent = actorParent
+        if (parentMapLayer == null || parent == null) return addOwnedActor(actor)
+        var index = -1
+        below._ownedActors?.let { actors ->
+            for (other in actors) {
+                val i = parent.children.indexOf(other, true)
+                if (i >= 0 && (index < 0 || i < index)) index = i
+            }
+        }
+        ownedActors.add(actor)
+        if (index < 0) parent.addActor(actor) else parent.addActorAt(index, actor)
+    }
+
     protected fun removeOwnedActor(actor: Actor) {
         if (_ownedActors == null) return
         if (!_ownedActors!!.remove(actor)) return

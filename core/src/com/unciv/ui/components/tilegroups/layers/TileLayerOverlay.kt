@@ -1,6 +1,7 @@
 package com.unciv.ui.components.tilegroups.layers
 
 import com.badlogic.gdx.graphics.Color
+import com.badlogic.gdx.math.Vector2
 import com.badlogic.gdx.scenes.scene2d.ui.Image
 import com.unciv.view.CivView
 import com.unciv.ui.components.tilegroups.TileGroup
@@ -13,6 +14,9 @@ class TileLayerOverlay(tileGroup: TileGroup, size: Float) : TileLayer(tileGroup,
     private var goodCityLocationIndicator: Image? = null
     private var fog: Image? = null
     private var unexplored: Image? = null
+    /** Portrait move range marks, drawn under this tile's units */
+    private var rangeFill: Image? = null
+    private var rangeEdges: RangeEdges? = null
 
     private fun getHighlight() = getGroundImage(strings.highlight).setHexagonSize()
     private fun getCrosshair() = getGroundImage(strings.crosshair).setHexagonSize()
@@ -72,7 +76,34 @@ class TileLayerOverlay(tileGroup: TileGroup, size: Float) : TileLayer(tileGroup,
         determineVisibility()
     }
 
+    /** Portrait: tints the ground hexagon under this tile's units, [scale] 1 being the whole hex */
+    fun showRangeFill(color: Color, alpha: Float, scale: Float = 1f) {
+        rangeFill?.let { removeOwnedActor(it) }
+        rangeFill = rangeFill(color, alpha, scale).also { addOwnedActorBelow(it, tileGroup.layerUnitArt) }
+        determineVisibility()
+    }
+
+    /** Portrait: adds a move range outline segment, [from] and [to] relative to this tile's ground centre */
+    fun addRangeEdge(stroke: RangeStroke, from: Vector2, to: Vector2) {
+        val edges = rangeEdges ?: RangeEdges(tileGroup).also {
+            it.setPosition(tileX + tileGroup.groundCenterX, tileY + tileGroup.groundCenterY)
+            addOwnedActorBelow(it, tileGroup.layerUnitArt)
+            rangeEdges = it
+            determineVisibility()
+        }
+        edges.add(stroke, from, to)
+    }
+
+    fun hideRange() {
+        rangeFill?.let { removeOwnedActor(it) }
+        rangeFill = null
+        rangeEdges?.let { removeOwnedActor(it) }
+        rangeEdges = null
+        determineVisibility()
+    }
+
     fun reset() {
+        hideRange()
         hideHighlight()
         hideCrosshair()
         hideGoodCityLocationIndicator()
@@ -125,6 +156,7 @@ class TileLayerOverlay(tileGroup: TileGroup, size: Float) : TileLayer(tileGroup,
 
     override fun determineVisibility() {
         isVisible = fog != null || unexplored != null || highlight != null || crosshair != null || goodCityLocationIndicator != null
+            || rangeFill != null || rangeEdges != null
     }
 
 }

@@ -127,6 +127,7 @@ open class TileGroup(
         layerOverlay.hideHighlight()
         layerOverlay.hideCrosshair()
         layerOverlay.hideGoodCityLocationIndicator()
+        layerOverlay.hideRange()
 
         // Do not update layers if tile is not explored by viewing player
         if (viewingCiv != null && !(tileView.isForceVisible() || viewingCiv.hasExplored(tileView))) {
