@@ -178,8 +178,8 @@
             {"image": "TileSets/Polytopia/Props/Fallout", "x": 0.0, "y": -0.19, "w": 0.664, "lod": 0}
         ],
         "TileSets/Polytopia/Tilted/Tiles/Farm": [
-            {"image": "TileSets/Polytopia/Props/Crop-sprouts", "x": 0.0, "y": -0.247, "w": 0.72, "lod": 2, "ground": true},
             {"image": "TileSets/Polytopia/Props/Crop-rows", "x": 0.0, "y": -0.277, "w": 0.796, "lod": 0, "ground": true},
+            {"image": "TileSets/Polytopia/Props/Crop-sprouts", "x": 0.0, "y": -0.247, "w": 0.72, "lod": 2, "ground": true},
             {"image": "TileSets/Polytopia/Props/Imp-Farm", "x": -0.194, "y": -0.035, "w": 0.363, "lod": 0}
         ],
         "TileSets/Polytopia/Tilted/Tiles/Fish": [
@@ -385,9 +385,9 @@
             {"image": "TileSets/Polytopia/Props/Wave", "x": 0.166, "y": -0.18, "w": 0.145, "lod": 2, "ground": true}
         ],
         "TileSets/Polytopia/Tilted/Tiles/Ocean2": [
-            {"image": "TileSets/Polytopia/Props/Wave", "x": -0.06, "y": -0.004, "w": 0.145, "lod": 2, "ground": true},
+            {"image": "TileSets/Polytopia/Props/Wave", "x": -0.242, "y": -0.078, "w": 0.145, "lod": 1, "ground": true},
             {"image": "TileSets/Polytopia/Props/Wave", "x": 0.114, "y": -0.019, "w": 0.145, "lod": 1, "ground": true},
-            {"image": "TileSets/Polytopia/Props/Wave", "x": -0.242, "y": -0.078, "w": 0.145, "lod": 1, "ground": true}
+            {"image": "TileSets/Polytopia/Props/Wave", "x": -0.06, "y": -0.004, "w": 0.145, "lod": 2, "ground": true}
         ],
         "TileSets/Polytopia/Tilted/Tiles/Offshore Platform": [
             {"image": "TileSets/Polytopia/Props/Imp-Offshore Platform", "x": -0.063, "y": -0.179, "w": 0.444, "lod": 0}

@@ -665,10 +665,10 @@ def prop_sprites(eras, wonders, resources, improvements):
 
 
 def props_json():
-    """One prop per line: ground first, then upright back to front."""
+    """One prop per line: ground first in the order added (crop rows under their sprouts), then upright back to front."""
     keys = []
     for k in sorted(PROPS):
-        items = sorted(PROPS[k], key=lambda e: (not e.get("ground", False), -e["y"]))
+        items = sorted(PROPS[k], key=lambda e: (not e.get("ground", False), 0 if e.get("ground", False) else -e["y"]))
         keys.append(f"        {json.dumps(k)}: [\n" + ",\n".join(f"            {json.dumps(e)}" for e in items) + "\n        ]")
     return "{\n" + ",\n".join(keys) + "\n    }"
 
